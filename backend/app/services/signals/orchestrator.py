@@ -1,6 +1,5 @@
 """Signals service: Scout/Profiler signal search + batch generation."""
 import json
-import re
 import asyncio
 import uuid
 from datetime import datetime, timezone
@@ -11,17 +10,10 @@ import requests
 from app.core.config import tavily_api_key, claude_sonnet_model
 from app.core.exceptions import (
     ServiceError,
-    SignalActionValidationError,
-    SignalNotFoundError,
     UnsupportedComponentError,
 )
 from app.models.market_research import MarketRequest
-from app.models.signals import SignalActionRequest, SignalAskRequest
-from app.services._llm_helpers import (
-    CLAUDE_RESEARCH_MAX_TOKENS,
-    _tavily_context_and_urls,
-    _claude_messages_text,
-)
+from app.models.signals import SignalAskRequest
 from app.services._retrieval import (
     _build_signal_context_queries,
     _fetch_pinecone_supporting_context,
@@ -34,280 +26,21 @@ from app.services._claude_budget import (
     _reserve_claude_signal_budget,
     _finalize_claude_signal_budget,
 )
+from app.services.signals.persistence import (
+    _load_signals_for_user,
+    record_signal_action,
+)
+from app.services.signals.prompts import (
+    _SCOUT_PROMPT_TEMPLATE,
+    _PROFILER_PROMPT_TEMPLATE,
+)
+from app.services.signals.llm import _signals_agent_output
+from app.services.signals.parsing import (
+    _parse_search_signals_response,
+    _normalize_search_signals_result,
+)
 
 from app.core.logging import logger
-
-
-def _signals_agent_output(agent_chain, prompt: str, company_profile_seed: str, llm_backend: str) -> tuple:
-    """Returns (model_output_text, tavily_urls) for signal JSON parsing."""
-    tavily_urls: List[str] = []
-    if llm_backend != "claude":
-        raw_response = agent_chain.invoke({"input": prompt})
-        response = raw_response["output"]
-        try:
-            if hasattr(raw_response, "intermediate_steps"):
-                for step in raw_response.intermediate_steps:
-                    if len(step) > 1 and isinstance(step[1], list):
-                        for result in step[1]:
-                            if isinstance(result, dict) and "url" in result:
-                                tavily_urls.append(result["url"])
-            if not tavily_urls:
-                url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+'
-                found_urls = re.findall(url_pattern, response)
-                tavily_urls = list(set(found_urls))[:5]
-        except Exception:
-            pass
-        return response, tavily_urls
-
-    seed = " ".join(str(company_profile_seed).split())[:1200]
-    web_ctx, tavily_urls = _tavily_context_and_urls(
-        f"B2B market competitor industry news ICP customer trends 2026 {seed}"
-    )
-    augmented = f"{prompt}\n\nWEB SEARCH RESULTS:\n{web_ctx}\n"
-    response = _claude_messages_text(augmented, max_tokens=CLAUDE_RESEARCH_MAX_TOKENS)
-    if not tavily_urls:
-        url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+'
-        found_urls = re.findall(url_pattern, response)
-        tavily_urls = list(set(found_urls))[:5]
-    return response, tavily_urls
-
-
-# ---------------------------------------------------------------------------
-# Prompt templates (persona-specific; shared structure)
-# ---------------------------------------------------------------------------
-
-_SCOUT_PROMPT_TEMPLATE = """Task: Research and identify a high-quality, actionable market signal for a sales scout agent. This signal should help the sales team understand market opportunities, competitor movements, or industry trends that could impact their sales strategy.
-
-STEP 1 - COMPANY PROFILE DATA:
-Review the complete company profile data below. Extract all relevant information about the company's industry, target markets, regions, company size, strategic goals, and any other relevant attributes.
-
-Company Profile Data:
-{context_json}
-{leads_section}
-{existing_headlines_section}
-
-STEP 2 - RESEARCH REQUIREMENTS (CRITICAL):
-You MUST use the WebSearch tool to find a REAL, RECENT, and ACTIONABLE market signal. Based on the company profile above, perform comprehensive research to identify:
-
-1. Market Opportunity Signals:
-   - Search for recent market growth, trends, or opportunities in the company's industry
-   - Find market size changes, adoption rates, or emerging segments
-   - Example searches: "[industry] market trends [regions] 2026"
-   - Example searches: "[industry] growth opportunities 2026"
-
-2. Competitor Activity Signals:
-   - Search for competitor funding rounds, product launches, or strategic moves
-   - Find market share changes or competitive landscape shifts
-   - Example searches: "[industry] competitor funding 2026"
-   - Example searches: "[industry] competitor product launch 2026"
-
-3. Industry Trend Signals:
-   - Search for technology adoption, regulatory changes, or industry shifts
-   - Find emerging trends that could impact sales strategy
-   - Example searches: "[industry] technology adoption 2026"
-   - Example searches: "[industry] regulatory changes 2026"
-
-4. Market Dynamics Signals:
-   - Search for buying behavior changes, market disruptions, or new opportunities
-   - Find signals that indicate market readiness or buying intent
-   - Example searches: "[industry] buying trends [regions] 2026"
-   - Example searches: "[industry] market disruption 2026"
-
-IMPORTANT RESEARCH GUIDELINES:
-- Perform at least 5-7 WebSearch queries to find the BEST signal
-- Focus on RECENT signals from 2026 and recent past (within last 1-3 months when possible)
-- CURRENT YEAR IS 2026 - Do NOT use future dates like 2027 in signals. Use actual current dates from 2026 or recent past dates.
-- The signal must be REAL and ACTIONABLE - not generic
-- Extract industry and target markets from the company profile
-- Cross-reference multiple sources to verify signal accuracy
-- Find 1-2 different source URLs for the signal (preferably from different publications/sources)
-- Prioritize signals that are relevant to the company's specific industry and target markets
-- Generate 3 thoughtful NBA questions that help users dive deeper into the signal's implications
-
-STEP 3 - OUTPUT FORMAT:
-Return your findings in the following exact JSON format (use exact keys as shown):
-
-{{
-  "headline": "[Compelling, specific headline about the signal - must be real and recent]",
-  "snippet": "[Brief 1-2 sentence summary of the signal]",
-  "description": "[One full paragraph (4-6 sentences) providing detailed context about the signal. Explain what the signal means, why it matters for the company's sales strategy, what opportunities or challenges it presents, and how the sales team should respond. Make it descriptive and actionable.]",
-  "sourceUrl": "[Real source URL where this signal was found]",
-  "sourceLabel": "[Source type: Industry report, News article, Research report, Funding news, etc.]",
-  "source": [
-    {{
-      "citation": "[Publication name - Article title - Date if available, e.g., 'TechCrunch - AI Market Growth Report - January 15, 2026']. Use actual dates from 2026 or recent past, NOT future dates.",
-      "url": "[First source URL where this signal was found]"
-    }},
-    {{
-      "citation": "[Publication name - Article title - Date if available, e.g., 'Industry Research Report - Market Trends Analysis - January 2026']",
-      "url": "[Second source URL (if available from different source)]"
-    }}
-  ],
-  "nextBestMoves": [
-    "[Actionable question/suggestion #1 related to the signal]",
-    "[Actionable question/suggestion #2 related to the signal]"
-  ],
-  "NBAs": [
-    {{
-      "nba": "[First suggested question the user should ask based on this signal]",
-      "prompt": "[Detailed prompt that includes the signal context, company profile information, and specific question to ask an LLM for a comprehensive answer. The prompt should be self-contained and provide all necessary context for the LLM to answer the question in detail.]"
-    }},
-    {{
-      "nba": "[Second suggested question the user should ask based on this signal]",
-      "prompt": "[Detailed prompt that includes the signal context, company profile information, and specific question to ask an LLM for a comprehensive answer. The prompt should be self-contained and provide all necessary context for the LLM to answer the question in detail.]"
-    }},
-    {{
-      "nba": "[Third suggested question the user should ask based on this signal]",
-      "prompt": "[Detailed prompt that includes the signal context, company profile information, and specific question to ask an LLM for a comprehensive answer. The prompt should be self-contained and provide all necessary context for the LLM to answer the question in detail.]"
-    }}
-  ],
-  "contextualSuggestions": [
-    {{"icon": "[icon name]", "text": "[Suggestion text related to signal]"}},
-    {{"icon": "[icon name]", "text": "[Suggestion text related to signal]"}}
-  ]
-}}
-
-⚠️ OUTPUT NOTES:
-- headline must be REAL and SPECIFIC - include actual numbers, dates, or company names when available
-- snippet should be concise (1-2 sentences)
-- description must be ONE FULL PARAGRAPH (4-6 sentences) with detailed context
-- sourceUrl must be a REAL, accessible URL
-- sourceLabel should accurately describe the source type
-- source must be an array with 1-2 objects, each containing "citation" and "url" fields
-- citation should include publication name, article title, and date if available (e.g., "TechCrunch - AI Market Growth Report - January 15, 2026")
-- IMPORTANT: Use actual dates from 2026 or recent past. Do NOT use future dates like 2027. Current year is 2026.
-- url must be a REAL, accessible URL
-- If only one source found, include one object in the array; if two sources found, include both
-- nextBestMoves should be actionable questions related to the specific signal
-- NBAs must contain exactly 3 suggested questions with detailed prompts for LLM queries
-- Each NBA prompt should include: signal headline, signal description, company profile context, and the specific question to answer
-- contextualSuggestions should be relevant to the signal content
-- Return ONLY valid JSON, nothing else
-
-When you have reached the final answer, respond only with:
-Final Answer: <your JSON answer here>
-Do not include any additional reasoning, thoughts, or steps after that.
-"""
-
-_PROFILER_PROMPT_TEMPLATE = """Task: Research and identify a high-quality, actionable ICP/customer signal for a profiler agent. This signal should help the sales team understand customer buying behavior, ICP trends, or customer acquisition opportunities.
-
-STEP 1 - COMPANY PROFILE AND ICP DATA:
-Review the complete company profile and ICP data below. Extract all relevant information about the company's industry, target markets, regions, ICP segments, company sizes, buyer personas, and any other relevant attributes.
-
-Company Profile and ICP Data:
-{context_json}
-{leads_section}
-{existing_headlines_section}
-
-STEP 2 - RESEARCH REQUIREMENTS (CRITICAL):
-You MUST use the WebSearch tool to find a REAL, RECENT, and ACTIONABLE ICP/customer signal. Based on the company profile and ICP data above, perform comprehensive research to identify:
-
-1. ICP Buying Behavior Signals:
-   - Search for buying trends, purchase patterns, or buying signals in the company's ICP segments
-   - Find customer acquisition trends or buying committee changes
-   - Example searches: "[industry] [ICP segment] buying trends 2026"
-   - Example searches: "[industry] customer acquisition [ICP segment] 2026"
-
-2. Customer Spending Signals:
-   - Search for tech spending, budget allocation, or investment trends in target ICP segments
-   - Find customer spending patterns or budget increases
-   - Example searches: "[industry] tech spending [company size] 2026"
-   - Example searches: "[industry] budget allocation [ICP segment] 2026"
-
-3. ICP Market Dynamics Signals:
-   - Search for ICP segment growth, market expansion, or customer behavior changes
-   - Find signals about target customer needs or pain points
-   - Example searches: "[industry] [ICP segment] market trends 2026"
-   - Example searches: "[industry] customer needs [ICP segment] 2026"
-
-4. Customer Success Signals:
-   - Search for customer success metrics, retention trends, or customer satisfaction in ICP segments
-   - Find signals about customer lifecycle or engagement patterns
-   - Example searches: "[industry] customer success [ICP segment] 2026"
-   - Example searches: "[industry] customer retention [company size] 2026"
-
-5. Buyer Persona Signals:
-   - Search for decision maker trends, buying committee changes, or buyer behavior in target segments
-   - Find signals about how target customers make purchasing decisions
-   - Example searches: "[industry] buying committee [ICP segment] 2026"
-   - Example searches: "[industry] decision maker trends 2026"
-
-IMPORTANT RESEARCH GUIDELINES:
-- Perform at least 5-7 WebSearch queries to find the BEST signal
-- Focus on RECENT signals from 2026 and recent past (within last 1-3 months when possible)
-- CURRENT YEAR IS 2026 - Do NOT use future dates like 2027 in signals. Use actual current dates from 2026 or recent past dates.
-- The signal must be REAL and ACTIONABLE - not generic
-- Extract industry, ICP segments, and target markets from the provided data
-- Cross-reference multiple sources to verify signal accuracy
-- Find 1-2 different source URLs for the signal (preferably from different publications/sources)
-- Prioritize signals that are relevant to the company's specific ICP segments and target customers
-- If ICP data is available, use it to make the signal more specific and relevant
-- Generate 3 thoughtful NBA questions that help users dive deeper into the signal's implications for their ICP and sales strategy
-
-STEP 3 - OUTPUT FORMAT:
-Return your findings in the following exact JSON format (use exact keys as shown):
-
-{{
-  "headline": "[Compelling, specific headline about the ICP/customer signal - must be real and recent]",
-  "snippet": "[Brief 1-2 sentence summary of the signal]",
-  "description": "[One full paragraph (4-6 sentences) providing detailed context about the signal. Explain what the signal means for the company's ICP and target customers, why it matters for customer acquisition and sales strategy, what opportunities or challenges it presents for reaching the target ICP, and how the sales/profiling team should respond. Make it descriptive and actionable.]",
-  "sourceUrl": "[Real source URL where this signal was found]",
-  "sourceLabel": "[Source type: Market research, Customer research, Sales report, ICP analysis, etc.]",
-  "source": [
-    {{
-      "citation": "[Publication name - Article title - Date if available, e.g., 'Market Research Report - Customer Buying Trends - January 15, 2026']. Use actual dates from 2026 or recent past, NOT future dates.",
-      "url": "[First source URL where this signal was found]"
-    }},
-    {{
-      "citation": "[Publication name - Article title - Date if available, e.g., 'Sales Report - ICP Analysis - January 2026']",
-      "url": "[Second source URL (if available from different source)]"
-    }}
-  ],
-  "nextBestMoves": [
-    "[Actionable question/suggestion #1 related to the ICP signal]",
-    "[Actionable question/suggestion #2 related to the ICP signal]"
-  ],
-  "NBAs": [
-    {{
-      "nba": "[First suggested question the user should ask based on this ICP signal]",
-      "prompt": "[Detailed prompt that includes the signal context, company profile information, ICP data, and specific question to ask an LLM for a comprehensive answer. The prompt should be self-contained and provide all necessary context for the LLM to answer the question in detail.]"
-    }},
-    {{
-      "nba": "[Second suggested question the user should ask based on this ICP signal]",
-      "prompt": "[Detailed prompt that includes the signal context, company profile information, ICP data, and specific question to ask an LLM for a comprehensive answer. The prompt should be self-contained and provide all necessary context for the LLM to answer the question in detail.]"
-    }},
-    {{
-      "nba": "[Third suggested question the user should ask based on this ICP signal]",
-      "prompt": "[Detailed prompt that includes the signal context, company profile information, ICP data, and specific question to ask an LLM for a comprehensive answer. The prompt should be self-contained and provide all necessary context for the LLM to answer the question in detail.]"
-    }}
-  ],
-  "contextualSuggestions": [
-    {{"icon": "[icon name]", "text": "[Suggestion text related to ICP signal]"}},
-    {{"icon": "[icon name]", "text": "[Suggestion text related to ICP signal]"}}
-  ]
-}}
-
-⚠️ OUTPUT NOTES:
-- headline must be REAL and SPECIFIC - include actual numbers, dates, or ICP segment details when available
-- snippet should be concise (1-2 sentences)
-- description must be ONE FULL PARAGRAPH (4-6 sentences) with detailed context about ICP/customer implications
-- sourceUrl must be a REAL, accessible URL
-- sourceLabel should accurately describe the source type
-- source must be an array with 1-2 objects, each containing "citation" and "url" fields
-- citation should include publication name, article title, and date if available (e.g., "Market Research Report - Customer Buying Trends - January 15, 2026")
-- IMPORTANT: Use actual dates from 2026 or recent past. Do NOT use future dates like 2027. Current year is 2026.
-- url must be a REAL, accessible URL
-- If only one source found, include one object in the array; if two sources found, include both
-- nextBestMoves should be actionable questions related to the specific ICP signal
-- NBAs must contain exactly 3 suggested questions with detailed prompts for LLM queries
-- Each NBA prompt should include: signal headline, signal description, company profile context, ICP data, and the specific question to answer
-- contextualSuggestions should be relevant to the ICP signal content
-- Return ONLY valid JSON, nothing else
-
-When you have reached the final answer, respond only with:
-Final Answer: <your JSON answer here>
-Do not include any additional reasoning, thoughts, or steps after that.
-"""
 
 
 # ---------------------------------------------------------------------------
@@ -445,72 +178,11 @@ IMPORTANT: Your new signal headline must be about a DIFFERENT news story, market
     response, tavily_urls = _signals_agent_output(agent_chain, prompt, context_json, llm_backend)
 
     # ------------------------------------------------------------------
-    # 5. Parse response (identical across personas)
+    # 5. Parse response + validate URLs + assemble result
+    #    (extracted to signals.parsing during Phase H commit 19/20)
     # ------------------------------------------------------------------
-    if "Final Answer:" in response:
-        response = response.split("Final Answer:")[-1].strip()
-
-    cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    if "{" in cleaned_str:
-        cleaned_str = cleaned_str[cleaned_str.index("{"):]
-    if "}" in cleaned_str:
-        cleaned_str = cleaned_str[:cleaned_str.rindex("}") + 1]
-
-    cleaned_str = re.sub(r'\"description\": \"(.*?)\"', lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r').replace('"', '\\"') + '"', cleaned_str, flags=re.DOTALL)
-    cleaned_str = re.sub(r'\"snippet\": \"(.*?)\"', lambda m: '"snippet": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r').replace('"', '\\"') + '"', cleaned_str, flags=re.DOTALL)
-    cleaned_str = re.sub(r'\"headline\": \"(.*?)\"', lambda m: '"headline": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r').replace('"', '\\"') + '"', cleaned_str, flags=re.DOTALL)
-
-    parsed_json = json.loads(cleaned_str)
-
-    # ------------------------------------------------------------------
-    # 6. Validate URLs (identical across personas)
-    # ------------------------------------------------------------------
-    def validate_url(url, tavily_urls_list):
-        """Validate URL and replace with Tavily URL if invalid."""
-        if not url or not isinstance(url, str):
-            return tavily_urls_list[0] if tavily_urls_list else ""
-        if not url.startswith(('http://', 'https://')):
-            return tavily_urls_list[0] if tavily_urls_list else ""
-        if tavily_urls_list:
-            url_domain = url.split('/')[2] if len(url.split('/')) > 2 else ""
-            for tavily_url in tavily_urls_list:
-                tavily_domain = tavily_url.split('/')[2] if len(tavily_url.split('/')) > 2 else ""
-                if url_domain and url_domain == tavily_domain:
-                    return tavily_url
-            return tavily_urls_list[0]
-        return url
-
-    source_url = validate_url(parsed_json.get("sourceUrl", ""), tavily_urls)
-
-    validated_sources = []
-    for i, src in enumerate(parsed_json.get("source", [])[:2]):
-        if isinstance(src, dict) and "url" in src:
-            validated_url = validate_url(src["url"], tavily_urls[i:] if i < len(tavily_urls) else tavily_urls)
-            validated_sources.append({"citation": src.get("citation", ""), "url": validated_url})
-
-    if not validated_sources and tavily_urls:
-        for i, tavily_url in enumerate(tavily_urls[:2]):
-            validated_sources.append({"citation": f"Source {i+1}", "url": tavily_url})
-
-    # ------------------------------------------------------------------
-    # 7. Assemble result
-    # ------------------------------------------------------------------
-    hours_ago = 1
-    timestamp = f"{hours_ago}h ago"
-
-    return {
-        "agent": persona,
-        "timestamp": timestamp,
-        "headline": parsed_json.get("headline", ""),
-        "snippet": parsed_json.get("snippet", ""),
-        "description": parsed_json.get("description", ""),
-        "sourceUrl": source_url if source_url else (validated_sources[0]["url"] if validated_sources else ""),
-        "sourceLabel": parsed_json.get("sourceLabel", ""),
-        "source": validated_sources if validated_sources else parsed_json.get("source", []),
-        "nextBestMoves": parsed_json.get("nextBestMoves", []),
-        "NBAs": parsed_json.get("NBAs", []),
-        "contextualSuggestions": parsed_json.get("contextualSuggestions", []),
-    }
+    parsed_json = _parse_search_signals_response(response)
+    return _normalize_search_signals_result(parsed_json, tavily_urls, persona)
 
 
 # ---------------------------------------------------------------------------
@@ -917,88 +589,7 @@ async def fetch_signals(
     offset: int = 0,
 ) -> tuple[List[Dict[str, Any]], int]:
     """Fetch signals for a user. Returns (items, total). User-scoped, not org-scoped."""
-    db = mongo["Signals"]
-    collection = db["signals"]
-    flt = {"user_id": user_id}
-
-    signals_cursor = collection.find(flt).sort("timestamp", -1).skip(offset).limit(limit)
-
-    signals_list = []
-    for signal in signals_cursor:
-        signal.pop("_id", None)
-        if "signal_id" not in signal and "id" in signal:
-            signal["signal_id"] = signal["id"]
-        elif "id" not in signal and "signal_id" in signal:
-            signal["id"] = signal["signal_id"]
-        signals_list.append(signal)
-
-    total = collection.count_documents(flt)
-    return signals_list, total
-
-
-async def record_signal_action(mongo, request: SignalActionRequest) -> dict:
-    """Accept or reject a signal."""
-    db = mongo["Signals"]
-    collection = db["signals"]
-
-    # Find the signal by signal_id (check both "id" and "signal_id" fields)
-    signal = collection.find_one({
-        "$or": [
-            {"id": request.signal_id},
-            {"signal_id": request.signal_id}
-        ]
-    })
-
-    if not signal:
-        raise SignalNotFoundError(f"Signal with signal_id {request.signal_id} not found")
-
-    if request.action == "accept":
-        # Update the signal to ensure it has the org_id
-        update_result = collection.update_one(
-            {"_id": signal["_id"]},
-            {
-                "$set": {
-                    "org_id": request.org_id,
-                    "status": "accepted",
-                    "actioned_at": datetime.now(timezone.utc)
-                }
-            }
-        )
-
-        if update_result.modified_count > 0:
-            return {
-                "status": "success",
-                "message": f"Signal {request.signal_id} accepted and assigned to org {request.org_id}",
-                "signal_id": request.signal_id,
-                "org_id": request.org_id,
-                "action": "accept"
-            }
-        else:
-            return {
-                "status": "success",
-                "message": f"Signal {request.signal_id} already has org_id {request.org_id}",
-                "signal_id": request.signal_id,
-                "org_id": request.org_id,
-                "action": "accept"
-            }
-
-    elif request.action == "reject":
-        # Delete the signal
-        delete_result = collection.delete_one({"_id": signal["_id"]})
-
-        if delete_result.deleted_count > 0:
-            return {
-                "status": "success",
-                "message": f"Signal {request.signal_id} rejected and deleted",
-                "signal_id": request.signal_id,
-                "action": "reject"
-            }
-        else:
-            raise ServiceError("Failed to delete signal")
-    else:
-        raise SignalActionValidationError(
-            f"Invalid action: {request.action}. Must be 'accept' or 'reject'"
-        )
+    return _load_signals_for_user(mongo, user_id, limit, offset)
 
 
 async def signal_ask(driver, mongo, agent_chain, request: SignalAskRequest) -> dict:
