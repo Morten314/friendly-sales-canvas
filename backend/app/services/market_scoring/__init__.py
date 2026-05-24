@@ -11,12 +11,14 @@ from app.services.market_scoring.orchestrator import (
     get_lead_market_score_descriptions,
     get_market_reports_for_org,
     score_single_lead_against_market,
-    _run_market_scoring_for_org,
 )
 from app.services.market_scoring.persistence import (
     get_company_profile_for_org,
     _ensure_market_scoring_indexes,
     _get_latest_market_score_rows,
+)
+from app.services.market_scoring.scoring import (
+    _run_market_scoring_for_org,
 )
 
 __all__ = [

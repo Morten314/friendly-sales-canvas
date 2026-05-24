@@ -3,16 +3,20 @@
 Public re-exports (§3.7): _ensure_market_scoring_indexes (lifespan),
 _get_latest_market_score_rows (unit test), get_company_profile_for_org.
 
-The four normalization helpers (_extract_company_name, _extract_lead_name,
-_lead_to_score_row, _normalize_non_empty_string) are still in orchestrator.py
-at this commit; they move to normalization.py in commit 3. They are imported
-lazily inside the function bodies that need them to break the circular import
-(orchestrator imports persistence at module level for the namespace prefix).
+Normalization helpers (_extract_company_name, _extract_lead_name,
+_normalize_non_empty_string) come from normalization.py at top level.
+_lead_to_score_row lives in scoring.py and is imported lazily inside
+_get_latest_market_score_rows because scoring -> persistence is a back-edge.
 """
 import json
 from typing import Any, Dict, List, Optional
 
 from app.models.market_scoring import LeadMarketScoreRow
+from app.services.market_scoring.normalization import (
+    _extract_company_name,
+    _extract_lead_name,
+    _normalize_non_empty_string,
+)
 
 
 def _ensure_market_scoring_indexes(mongo) -> None:
@@ -36,8 +40,6 @@ def _get_market_score_collections(mongo):
 
 
 def _get_lead_identity_from_neo4j(driver, org_id: str, lead_id: str) -> Dict[str, Optional[str]]:
-    from app.services.market_scoring.orchestrator import _extract_company_name, _extract_lead_name
-
     query_string = """
     MATCH (l:Lead {org_id: $org_id, lead_id: $lead_id})
     RETURN l
@@ -62,7 +64,7 @@ def _get_latest_market_score_rows(
     limit: int = 500,
     offset: int = 0,
 ) -> tuple[List[LeadMarketScoreRow], int]:
-    from app.services.market_scoring.orchestrator import _lead_to_score_row, _normalize_non_empty_string
+    from app.services.market_scoring.scoring import _lead_to_score_row
 
     score_coll, _ = _get_market_score_collections(mongo)
     flt = {"org_id": org_id}
