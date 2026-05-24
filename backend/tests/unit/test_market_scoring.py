@@ -19,10 +19,12 @@ from app.services.market_scoring import (
     _run_market_scoring_for_org,
     get_company_profile_for_org,
     get_lead_market_score_descriptions,
-    get_market_reports_for_org,
     get_market_scores_status,
-    score_single_lead_against_market,
     trigger_or_get_market_scores,
+)
+from app.services.market_scoring.orchestrator import (
+    get_market_reports_for_org,
+    score_single_lead_against_market,
 )
 from tests.identities import TEST_LEAD_ID_1, TEST_ORG_ID, TEST_USER_ID
 
@@ -44,12 +46,12 @@ def test_get_market_scores_status_returns_status(mocker, mock_mongo_client):
     score_coll.count_documents.return_value = 2
     score_coll.find.return_value.sort.return_value.limit.return_value = []
     mocker.patch(
-        "app.services.market_scoring._get_market_score_collections",
+        "app.services.market_scoring.persistence._get_market_score_collections",
         return_value=(score_coll, run_coll),
     )
     mocker.patch(
-        "app.services.market_scoring.get_leads_for_org",
-        return_value=[{"lead_id": "L1"}, {"lead_id": "L2"}],
+        "app.services.market_scoring.orchestrator.get_leads_for_org",
+        return_value=([{"lead_id": "L1"}, {"lead_id": "L2"}], 2),
     )
 
     result = get_market_scores_status(MagicMock(), mock_mongo_client, TEST_USER_ID, TEST_ORG_ID, None, 10)
@@ -72,11 +74,11 @@ def test_get_market_scores_status_degrades_when_leads_fetch_fails(
     score_coll.count_documents.return_value = 0
     score_coll.find.return_value.sort.return_value.limit.return_value = []
     mocker.patch(
-        "app.services.market_scoring._get_market_score_collections",
+        "app.services.market_scoring.persistence._get_market_score_collections",
         return_value=(score_coll, run_coll),
     )
     mocker.patch(
-        "app.services.market_scoring.get_leads_for_org",
+        "app.services.market_scoring.orchestrator.get_leads_for_org",
         side_effect=RuntimeError("Neo4j down"),
     )
 
@@ -93,7 +95,7 @@ def test_get_market_scores_status_raises_when_no_run_found(
     run_coll = MagicMock()
     run_coll.find_one.return_value = None
     mocker.patch(
-        "app.services.market_scoring._get_market_score_collections",
+        "app.services.market_scoring.persistence._get_market_score_collections",
         return_value=(score_coll, run_coll),
     )
 
@@ -127,7 +129,7 @@ def test_trigger_or_get_market_scores_returns_existing_when_present(
     score_coll.find.return_value.sort.return_value.skip.return_value.limit.return_value = iter([score_doc])
     score_coll.count_documents.return_value = 1
     mocker.patch(
-        "app.services.market_scoring._get_market_score_collections",
+        "app.services.market_scoring.persistence._get_market_score_collections",
         return_value=(score_coll, run_coll),
     )
     bg_tasks = MagicMock()
@@ -152,7 +154,7 @@ def test_get_lead_market_score_descriptions_raises_when_missing(
     run_coll = MagicMock()
     score_coll.find_one.return_value = None
     mocker.patch(
-        "app.services.market_scoring._get_market_score_collections",
+        "app.services.market_scoring.persistence._get_market_score_collections",
         return_value=(score_coll, run_coll),
     )
 
@@ -177,7 +179,7 @@ def test_get_lead_market_score_descriptions_happy_path(
         },
     }
     mocker.patch(
-        "app.services.market_scoring._get_market_score_collections",
+        "app.services.market_scoring.persistence._get_market_score_collections",
         return_value=(score_coll, run_coll),
     )
 
@@ -286,11 +288,11 @@ def test_run_market_scoring_for_org_marks_failed_on_brewra_error(
     score_coll = MagicMock()
     run_coll = MagicMock()
     mocker.patch(
-        "app.services.market_scoring._get_market_score_collections",
+        "app.services.market_scoring.persistence._get_market_score_collections",
         return_value=(score_coll, run_coll),
     )
     mocker.patch(
-        "app.services.market_scoring.get_leads_for_org",
+        "app.services.market_scoring.orchestrator.get_leads_for_org",
         side_effect=BrewraError("storage hiccup"),
     )
 
@@ -315,15 +317,15 @@ def test_run_market_scoring_for_org_marks_completed_on_success(
     score_coll = MagicMock()
     run_coll = MagicMock()
     mocker.patch(
-        "app.services.market_scoring._get_market_score_collections",
+        "app.services.market_scoring.persistence._get_market_score_collections",
         return_value=(score_coll, run_coll),
     )
     mocker.patch(
-        "app.services.market_scoring.get_leads_for_org",
+        "app.services.market_scoring.scoring.get_leads_for_org",
         return_value=([{"lead_id": "L1"}], 1),
     )
     mocker.patch(
-        "app.services.market_scoring.get_company_profile_for_org",
+        "app.services.market_scoring.persistence.get_company_profile_for_org",
         return_value={"industry": "SaaS"},
     )
     # Must return all 5 components or the function returns early with "failed".
@@ -335,11 +337,11 @@ def test_run_market_scoring_for_org_marks_completed_on_success(
         "market entry & growth strategy": {"strategy": "Direct"},
     }
     mocker.patch(
-        "app.services.market_scoring.get_market_reports_for_org",
+        "app.services.market_scoring.orchestrator.get_market_reports_for_org",
         return_value=all_five_reports,
     )
     mocker.patch(
-        "app.services.market_scoring.score_single_lead_against_market",
+        "app.services.market_scoring.orchestrator.score_single_lead_against_market",
         return_value={
             "component_scores": {},
             "component_descriptions": {},
@@ -347,7 +349,7 @@ def test_run_market_scoring_for_org_marks_completed_on_success(
         },
     )
     mocker.patch(
-        "app.services.market_scoring._persist_market_score_for_lead",
+        "app.services.market_scoring.orchestrator._persist_market_score_for_lead",
     )
 
     _run_market_scoring_for_org(
@@ -387,7 +389,7 @@ def test_get_latest_market_score_rows_returns_items_and_total(monkeypatch):
     score_coll.count_documents.return_value = 42
 
     with patch(
-        "app.services.market_scoring._get_market_score_collections",
+        "app.services.market_scoring.persistence._get_market_score_collections",
         return_value=(score_coll, MagicMock()),
     ):
         rows, total = _get_latest_market_score_rows(
@@ -405,7 +407,7 @@ def test_get_latest_market_score_rows_default_limit_is_500():
     score_coll.count_documents.return_value = 0
 
     with patch(
-        "app.services.market_scoring._get_market_score_collections",
+        "app.services.market_scoring.persistence._get_market_score_collections",
         return_value=(score_coll, MagicMock()),
     ):
         _get_latest_market_score_rows(driver=MagicMock(), mongo=MagicMock(), org_id="org_1")

@@ -138,13 +138,13 @@ from app.routers import customer_profile
 
 app.include_router(customer_profile.router)
 
-from app.routers import documents
+from app.routers import data_sources
 
-app.include_router(documents.router)
+app.include_router(data_sources.router)
 
-from app.routers.v2 import documents as documents_v2
+from app.routers.v2 import data_sources as data_sources_v2
 
-app.include_router(documents_v2.router, prefix="/v2")
+app.include_router(data_sources_v2.router, prefix="/v2")
 
 from app.routers import leads
 

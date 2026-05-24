@@ -75,14 +75,14 @@ def test_run_market_research_groq_per_component(
     captured = load_captured(f"market_research_{slug}_groq")
     fake_fn = MagicMock(return_value=captured)
     mocker.patch.dict(
-        "app.services.market_research.COMPONENT_FUNCTIONS",
+        "app.services.market_research.orchestrator.COMPONENT_FUNCTIONS",
         {component_name: fake_fn},
     )
     mock_session.run.return_value.single.return_value = _make_neo4j_company_record()
     _mock_market_collection(mock_mongo_client, find_one_return=None)
     # Stub Pinecone helper
     mocker.patch(
-        "app.services.market_research._fetch_pinecone_supporting_context",
+        "app.services.market_research.orchestrator._fetch_pinecone_supporting_context",
         return_value=[],
     )
 
@@ -112,7 +112,7 @@ def test_run_market_research_returns_cached_when_not_refreshing(
     # never reaches it.
     fake_fn = MagicMock()
     mocker.patch.dict(
-        "app.services.market_research.COMPONENT_FUNCTIONS",
+        "app.services.market_research.orchestrator.COMPONENT_FUNCTIONS",
         {"market size & opportunity": fake_fn},
     )
 
@@ -141,13 +141,13 @@ def test_run_market_research_claude_uses_captured(
     """
     captured = load_captured("market_research_market_size_claude")
     mocker.patch(
-        "app.services.market_research.Research_Market_1",
+        "app.services.market_research.orchestrator.Research_Market_1",
         return_value=captured,
     )
     mock_session.run.return_value.single.return_value = _make_neo4j_company_record()
     _mock_market_collection(mock_mongo_client, find_one_return=None)
     mocker.patch(
-        "app.services.market_research._fetch_pinecone_supporting_context",
+        "app.services.market_research.orchestrator._fetch_pinecone_supporting_context",
         return_value=[],
     )
 
@@ -200,13 +200,13 @@ def test_run_market_research_propagates_budget_exhausted_error(
     from app.core.exceptions import BudgetExhaustedError
     fake_fn = MagicMock(side_effect=BudgetExhaustedError("Claude budget exhausted"))
     mocker.patch.dict(
-        "app.services.market_research.COMPONENT_FUNCTIONS_CLAUDE",
+        "app.services.market_research.orchestrator.COMPONENT_FUNCTIONS_CLAUDE",
         {"market size & opportunity": fake_fn},
     )
     mock_session.run.return_value.single.return_value = _make_neo4j_company_record()
     _mock_market_collection(mock_mongo_client, find_one_return=None)
     mocker.patch(
-        "app.services.market_research._fetch_pinecone_supporting_context",
+        "app.services.market_research.orchestrator._fetch_pinecone_supporting_context",
         return_value=[],
     )
 

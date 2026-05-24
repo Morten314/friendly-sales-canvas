@@ -2,7 +2,7 @@
 
 Running list of debt items the team has consciously accepted. Each entry: what was done, what should be done, why we deferred, and the trigger that should pull it forward.
 
-Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases E and F) were removed on 2026-05-23; their IDs are not reused so commit/spec references stay traceable.
+Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases E and F) were removed on 2026-05-23; their IDs are not reused so commit/spec references stay traceable. TD-006 (market_scoring callers recomputing len(leads)) was resolved 2026-05-24 by Phase H Task 4.
 
 ---
 
@@ -75,47 +75,6 @@ Option 1 is one character of code; option 2 is two lines of prose. v1 is being d
 
 ---
 
-## TD-006 — `market_scoring.py` callers recompute `len(leads)` instead of using the returned `total`
-
-**Date logged:** 2026-05-23
-**Origin:** Phase G code review on Task 7 (`feat(be): add /v2/leads + /v2/leads/by-file paginated endpoints + drop order_by_recent [phase G, commit 7/8]`).
-
-**Current state:**
-Both callers of `get_leads_for_org` in `backend/app/services/market_scoring.py` (lines ~404 and ~690) discard `total` and recompute it from the page:
-
-```python
-leads, _ = get_leads_for_org(driver, org_id=org_id, limit=5000, offset=0)
-total_leads = len(leads)
-```
-
-`get_leads_for_org` already runs a second Cypher query (`MATCH (l:Lead {org_id: $org_id}) RETURN count(l) AS total`) and returns the true count in the tuple. Recomputing via `len(leads)` is identical at ≤5000 leads, but for orgs with >5000 leads it under-reports the total — and even at smaller sizes it forces deserializing every record server-side just to length-check it.
-
-**What it should be:**
-```python
-leads, total_leads = get_leads_for_org(driver, org_id=org_id, limit=5000, offset=0)
-```
-
-Two-character change at each callsite. Eliminates the wasted deserialization at small sizes and the under-reporting at large sizes.
-
-**Why we deferred:**
-- The plan (`plans/modularization-plan-7.md` Task 7 Step 5) specifies the `_; total_leads = len(leads)` form verbatim. Following it preserved review-trace consistency with the plan's text.
-- The semantic difference only matters at orgs >5000 leads, which doesn't exist in MVP-stage data (0 live users).
-- The `len(leads)` form is correct for the immediate use — progress-display denominator in a background scoring task that processes those exact leads. The "real total" wouldn't change the loop's behavior.
-
-**What we lose by staying as-is:**
-- Slight efficiency loss: count is computed twice (once via Cypher inside the service, once via `len()` in the caller).
-- If org-size grows past 5000, `total_leads` becomes misleading — it caps at 5000 while the org has more.
-- Future readers who see the discarded `_` may copy-paste the pattern elsewhere without realizing the total was free.
-
-**Pull-forward triggers:**
-- First org reaching >5000 leads (will require lifting the `limit=5000` cap regardless — fix the tuple-unpack at the same time).
-- Any market-scoring progress-bar UX work that needs a denominator larger than the current page.
-- Routine cleanup pass on `market_scoring.py`.
-
-**Owner:** TBD.
-
----
-
 ## TD-007 — Cosmetic cruft from Phase G plan-verbatim test code
 
 **Date logged:** 2026-05-23
@@ -145,5 +104,136 @@ Delete the dead lines. ~13 lines across 4 files.
 - Next routine cleanup pass on `backend/tests/`.
 - First future agent that gets confused by one of the dead patches and asks "is `_ensure_icp_indexes` still called from `customer_profile`?"
 - Bundled with Phase H's v1-route deletion (which will remove related tests anyway).
+
+**Owner:** TBD.
+
+---
+
+## TD-008 — Reduce-LOC refactoring pass across residual large files
+
+**Date logged:** 2026-05-24
+**Origin:** Proactive observation during Phase I brainstorming. Phase H impl review round 2 highlighted `signals/orchestrator.py` at 744 LOC (2× spec estimate); Phase I addresses that one file but several others remain.
+
+**Current state:**
+Files >350 LOC in `backend/app/services/` (post-Phase-I projection):
+
+| File | LOC | Notes |
+|---|---:|---|
+| `market_research/prompts.py` | 718 | Single-file prompt constants for 5 components |
+| `leads.py` | 465 | Flat service, not yet decomposed |
+| `data_sources/pipeline.py` | 446 | Coordinated S3 + Pinecone + Mongo upload |
+| `market_scoring/orchestrator.py` | 428 | Trigger/status/persistence orchestration |
+| `customer_profile.py` | 388 | Flat service, not yet decomposed |
+| `icp/orchestrator.py` | 385 | ICP_generator + 4 research workers + dispatch |
+| `icp/prompts.py` | 383 | Prompt constants |
+
+These weren't the structural targets of any single phase — past phases optimized for clean module boundaries (decomposition) rather than LOC per file. Several contain inline data-munging blocks, long string literals, or dead-branch handling that could compress without losing clarity.
+
+**What it should be:**
+A focused review pass per file — not a refactor, an audit — answering for each: which functions are doing more than one thing, which inline patterns could be extracted to helpers, which dead branches can be removed, which long string literals could be hoisted. Output: a per-file punch list of high-confidence LOC reductions. Execute only the high-confidence items.
+
+**Why we deferred:**
+- Structural decomposition (Phases B-I) was higher-leverage; LOC reduction was a side effect of that work, not the goal.
+- LOC count is a weak proxy for complexity. The audit needs human judgment per file, not a mechanical pass — premature without that.
+- Phase I addresses the largest offender (`signals/orchestrator.py`); the remaining files are smaller and the marginal value drops off.
+
+**What we lose by staying as-is:**
+- Each file >400 LOC takes longer to read end-to-end; AI agents working in these files burn more context per task.
+- Long-tail readability cost compounds — future contributors hit the same "this file is doing a lot" friction repeatedly.
+
+**Pull-forward triggers:**
+- After Phase J (decomposing remaining flat services) completes — natural moment to do a width-then-depth pass.
+- When a feature task is gated by needing to understand one of these files end-to-end and the cost of that understanding becomes visible.
+- When AI-agent context-budget complaints surface during work on one of the listed files.
+
+**Owner:** TBD.
+
+---
+
+## TD-009 — Docstring/code drift audit
+
+**Date logged:** 2026-05-24
+**Origin:** Phase H round-2 implementation review caught stale `signals/__init__.py` docstring (claimed "commit 16/20 final form" while actually at 20/20). Pattern repeated across all 5 Phase H package `__init__.py` docstrings, which had been rewritten for "final form" but drifted across the execution sequence. Phase I Risk R3 explicitly calls out the recurrence risk.
+
+**Current state:**
+Docstrings across the codebase make claims that were true when written but may have drifted since. Highest-risk classes:
+
+1. **Package `__init__.py` docstrings** that enumerate submodules and re-exported symbols — drift when submodules are added/removed or symbols change visibility.
+2. **Module-top docstrings** that describe origin ("extracted from <file> in commit N/M") — drift as commit/plan numbering shifts.
+3. **Function docstrings** that describe call patterns ("called by X, Y") — drift when callers move or disappear.
+4. **Spec/plan references** inside docstrings — drift when specs are revised across review rounds.
+
+No systematic check enforces docstring accuracy. Linters catch syntax, not truth.
+
+**What it should be:**
+A one-pass audit: for each module under `backend/app/`, read the top-level docstring and verify each factual claim against current code. Output: a list of corrections, applied in a single commit. Not a permanent enforcement mechanism — a periodic sweep.
+
+**Why we deferred:**
+- Structural refactors (Phases B-I) ship intermediate docstrings under time pressure; final cleanup is naturally retrospective.
+- A "docstring linter" that enforces accuracy would require either parsing prose (fragile) or restricting docstrings to a structured format (overengineering for current scale).
+
+**What we lose by staying as-is:**
+- Stale docstrings actively mislead readers (including AI agents), worse than no docstring at all.
+- The Phase H impl review found 4-5 cases where the docstring's claimed final state didn't match reality. Patterns of drift accumulate — each drift makes future readers trust the docstrings less.
+- AI agents that use docstrings as context-window summaries inherit stale claims.
+
+**Pull-forward triggers:**
+- At the end of any multi-phase sequence (e.g., post-Phase-J) — natural cleanup moment.
+- When a reader (human or agent) explicitly raises a docstring-vs-reality mismatch.
+- Bundled into the same pass as TD-008 (LOC reduction) — both are "look at every file once" audits.
+
+**Owner:** TBD.
+
+---
+
+## TD-010 — Modularize prompts libraries
+
+**Date logged:** 2026-05-24
+**Origin:** Phase H decomposition extracted prompts to per-service `prompts.py` modules but kept them as Python string constants. Phase H spec §6 noted "Option D — prompt externalization" as a future direction not in scope.
+
+**Current state:**
+Prompts live as triple-quoted Python string constants in `prompts.py` modules:
+
+| File | LOC | Prompts inside |
+|---|---:|---|
+| `market_research/prompts.py` | 718 | 5 component prompts |
+| `icp/prompts.py` | 383 | ICP generator + 4 research-worker prompts |
+| `signals/prompts.py` | 328 | Scout + Profiler prompts, leads section, signal-ask (Groq + Claude) |
+
+Consequences of the current shape:
+- Editing prompts requires touching Python and shipping a code release.
+- No prompt versioning — can't trace which prompt revision produced a given LLM output stored in Mongo.
+- No way for non-engineers (PMs, marketing, prompt engineers) to iterate prompts independent of the engineering team.
+- Shared prompt fragments (response-format instructions, persona headers, JSON-schema hints) get copy-pasted across files instead of composed.
+- Prompt unit-testing means string-equality assertions on large literals — brittle and noisy.
+
+**What it should be:**
+Externalize prompts to a structured format. Three plausible designs (pick during a future design session):
+
+1. **Jinja templates in `backend/prompts/<service>/<name>.j2`** — Python loads at startup, render with variables. Enables shared partials, conditional sections, versioning via git.
+2. **YAML or JSON prompt registry** with versioned entries — Python looks up by name + version. Enables runtime A/B testing and audit trails.
+3. **Per-prompt `.md` files** — simplest; one file per prompt, no template engine, no version metadata.
+
+Each requires:
+- A prompt loader/registry module (`app/services/_prompts.py` or similar).
+- Migration of existing constants to the chosen format.
+- A versioning convention (file hash, semantic version, or both).
+- Possibly: a per-prompt fixture in `tests/fixtures/prompts/` so prompt changes are reviewable in PRs.
+
+**Why we deferred:**
+- Structural decomposition (Phases B-I) was the higher-leverage move; prompts had to be isolated into their own modules first before externalization was viable.
+- Externalization introduces new abstractions (template engine, prompt registry, versioning) that warrant their own spec and design discussion.
+- Pre-launch (0 live users), prompt iteration velocity is not currently a bottleneck — eng owns the prompts and can edit them in code.
+
+**What we lose by staying as-is:**
+- Marketing/PM/prompt-engineer hires can't iterate prompts without engineering bandwidth.
+- Production debugging of an LLM output can't trace back to "which prompt version generated this" — observability gap that compounds at scale.
+- Shared prompt fragments stay duplicated; changes to e.g. response-format instructions require touching every prompt file.
+
+**Pull-forward triggers:**
+- First non-engineer (PM, prompt engineer, marketing) needs to iterate a prompt and bottlenecks on engineering.
+- First production incident where "which prompt was active when this LLM output was generated?" is the unanswerable question.
+- Regulatory or compliance requirement for prompt-versioning audit trails.
+- When prompt iteration cadence exceeds code-release cadence.
 
 **Owner:** TBD.
