@@ -19,6 +19,10 @@ from app.services._retrieval import (
     _build_market_context_queries,
     _fetch_pinecone_supporting_context,
 )
+from app.services.market_research.persistence import (
+    _find_latest_market_research_report,
+    _insert_market_research_report,
+)
 
 # Re-exported for backward compat (any callsite within this module or
 # external callers that import from market_research directly).
@@ -937,20 +941,14 @@ async def run_market_research(driver, mongo, pc, agent_chain, request: MarketReq
             f"Unsupported component_name: {request.component_name}"
         )
 
-    db = mongo["Scout_Agent"]
-    collection = db["Market_Intelligence"]
-
-    query = {
-        "user_id": request.user_id,
-        "component_name": component_name,
-    }
-
     if not request.refresh:
         latest_report = await asyncio.to_thread(
-            collection.find_one, query, sort=[("timestamp", -1)]
+            _find_latest_market_research_report,
+            mongo,
+            request.user_id,
+            component_name,
         )
         if latest_report:
-            latest_report.pop("_id", None)
             return {"status": "success", "data": latest_report}
 
     def fetch_company_profile():
@@ -1010,7 +1008,7 @@ async def run_market_research(driver, mongo, pc, agent_chain, request: MarketReq
     research_result["component_name"] = component_name
     research_result["timestamp"] = datetime.now(timezone.utc)
 
-    await asyncio.to_thread(collection.insert_one, research_result)
+    await asyncio.to_thread(_insert_market_research_report, mongo, research_result)
     research_result.pop("_id", None)
     return {"status": "success", "data": research_result}
 
