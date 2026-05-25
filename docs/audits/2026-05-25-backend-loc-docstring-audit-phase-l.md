@@ -18,15 +18,16 @@ Discovery grep counts (Step 2):
 |---|---:|---:|
 | Audited, clean | 53 | — |
 | Execute (Stage 3) | 38 | ~ -227 |
-| Investigated → promoted to execute | TBD (Stage 2) | TBD |
-| Investigated → deferred | TBD (Stage 2) | — |
+| Investigated → promoted to execute | 2 | ~ -22 |
+| Investigated → deferred | 3 | — |
 | Design-discussion (future work) | 6 | — |
 
-**Spec target gap:** spec §2 estimates -370 to -460 LOC. The audit-grounded, per-K-summed `execute` total is ~ -227 LOC. Gap: ~ -143 to -233 LOC. The shortfall reflects that the spec's K-known-win LOC estimates were aspirational and assumed deeper per-site removal than per-site verification supported (e.g., K2 budgeted ~70 LOC compression across two near-identical prompt pairs, but the actual diff is ~6 lines of schema-rule overlay across each pair; K3 collapse of 5 near-duplicates yields ~50 LOC instead of the spec's higher hope; K1 dropped from a hoped ~ -16 to a confirmed-safe ~ -10 once the 7-name normalization block was split to investigate). Stage 2 investigation may close part of the gap if `investigate` findings promote to execute (the `services/market_scoring/orchestrator.py` 7-name normalization block alone could add ~ -7 LOC if it promotes, and the Cat 5 expansion across 7 additional service files could add ~ -15 LOC if it promotes).
+**Spec target gap:** spec §2 estimates -370 to -460 LOC. After Stage 2 investigation, two findings promoted (7-name normalization block ~ -7 LOC; signals/batch.py scout/profiler loop unification ~ -15 LOC). Updated execute total: ~ -249 LOC. Gap: ~ -121 to -211 LOC. The remaining shortfall reflects that the spec's K-known-win LOC estimates were aspirational and assumed deeper per-site removal than per-site verification supported (e.g., K2 budgeted ~70 LOC compression across two near-identical prompt pairs, but the actual diff is ~6 lines of schema-rule overlay across each pair; K3 collapse of 5 near-duplicates yields ~50 LOC instead of the spec's higher hope). Three investigations deferred to design-discussion (`_llm_helpers.py` Cat 8 — multiple consumers; `icp/persistence.py` ICP normalization branches — non-trivial behavior diversity across keys; Cat 5 expansion to non-File_Processing `mongo[X]` sites — mixed collection-pattern shapes preclude a single helper).
 
 Notes:
 - "Execute LOC" est. ~ -227 includes the 7 known wins (K1–K7) only. Audit-surfaced minor findings (additional unused imports outside K1's named set, additional docstring drift) are counted as individual file entries but not double-counted into K-cluster numbers.
 - K-cluster aggregate estimates: K1 ~ -10 LOC (confirmed-safe set), K2 ~ -70 LOC, K3 ~ -50 LOC (after helper), K4 ~ -39 LOC (after helper), K5 ~ -25 LOC (after helper), K6 ~ -8 LOC (after helper), K7 ~ -25 LOC (wording compression across 25 sites) — sum ~ -227 LOC. The Summary table row's "~165" in the previous draft was an earlier conservative figure that omitted K2/K3/K4 after-helper math; the corrected per-K-grounded estimate is ~ -227 LOC.
+- Stage 2 promoted wins: +K1-extension ~ -7 LOC (7-name normalization block removal) and +K8-new ~ -15 LOC (signals/batch.py persona-loop unification). Updated execute total post-Stage 2: ~ -249 LOC. The two promotions are tracked as Stage 3 follow-on tasks under task #13 (audit-surfaced additions + promoted investigations).
 
 ## Per-file findings
 
@@ -233,8 +234,8 @@ Clean. Budget/reservation primitives with thread lock; cohesive.
   Line 202 docstring: "historical quote-escaping was dropped during Phase I to unify all three ..." — the wording "Phase I to unify" is stale context; rewrite to describe current behavior (no quote-escaping; \n/\r escape only).
   Est. -1 LOC.
 
-- **Cat 8 (single-use trivial wrapper) — investigate.**
-  Verify that `_research_agent_output` is the only consumer of internal primitives (`_tavily_context_and_urls`, `_claude_messages_text`); if so, no action — the primitives are reused. Stage 2 will confirm.
+- **Cat 8 (single-use trivial wrapper) — design-discussion (deferred from investigate).**
+  Stage 2 verification: `_tavily_context_and_urls` is called from `_llm_helpers.py:170` inside `_research_agent_output` **and** imported into `app/services/market_research/orchestrator.py:37`. `_claude_messages_text` is called from `_llm_helpers.py:174` **and** imported into `app/services/market_research/orchestrator.py:38` **and** used directly in `tests/capture_fixtures.py:145`. Both primitives also have explicit unit tests that patch them via `app.services._llm_helpers.<name>` (verified in `tests/unit/test_llm_helpers.py` and `tests/unit/test_signals.py`). Multiple consumers — not single-use. No inline action; punt.
 
 ### backend/app/services/_neo4j_helpers.py (71 LOC)
 
@@ -338,8 +339,13 @@ Clean. 1-line alias module.
   Strategy: see Cross-cutting Cat 7.
   Est. -3 LOC.
 
-- **Cat 3 (near-identical string literals — investigate).**
-  Multiple ICP-normalization branches (`isinstance(icp.get("..."), list) else []` etc.) repeat ~10 lines of dict-key normalization. Tag investigate; behavior surface (which keys get a list default vs str default) needs per-site review.
+- **Cat 3 (near-identical string literals) — design-discussion (deferred from investigate).**
+  Stage 2 per-site read of lines 80-170 identified 28 `isinstance(..., list|dict|str)` occurrences with non-trivial behavior diversity:
+  - Some keys cascade new-schema → old-schema via a `None` sentinel (lines 99-101 `why_suggested`; lines 105-107 `key_decision_makers` + post "unknown" fallback at L109).
+  - Some have post-condition default values (`derived_regions` → `["global"]` at L139; `derived_confidence` → `"medium"` at L143).
+  - Some have direct `[]` fallback without cascade (lines 103, 111, 137, 161, 163, 168).
+  - Output keys mix new-schema (L150-154) and legacy-schema (L156-169) within the same dict literal.
+  A shared helper that collapses "type-check-or-default" would need to express: list-default-with-cascade, list-default-without-cascade, list-default-with-post-fallback-constant, str-coerce-or-empty, dict-default-empty. The variation is observable to callers (default sentinels are passed downstream). Defer to design-discussion — no clean helper that preserves all behavior surfaces.
 
 ### backend/app/services/icp/prompts.py (383 LOC)
 
@@ -430,9 +436,11 @@ Clean. Pure data-shape helpers.
   Strategy: remove both imports.
   Est. -2 LOC.
 
-- **Cat 1 (7-name normalization block) — investigate.**
-  Per pyflakes line 29, 7 names from `app.services.market_scoring.normalization` are imported but unreferenced in this file: `_safe_json_to_obj`, `_normalize_non_empty_string`, `_canonicalize_key`, `_build_lookup_maps`, `_first_non_empty_value_from_keys`, `_parse_iso_datetime`, `_lead_to_score_row`.
-  Verification question (Stage 2): does the test suite patch these 7 symbols on `app.services.market_scoring.orchestrator` such that removing them would break patch targets? Verify by grepping `mocker.patch` and `patch(` in `backend/tests/` for the 7 symbol names paired with the `app.services.market_scoring.orchestrator.<name>` module path. Resolution: if no test patches them via this module path, promote to K1 execute (~ -7 LOC). If patches exist via this module path, defer until the patch-where-used migration of TD-006 is complete.
+- **Cat 1 (7-name normalization block) — execute (promoted from investigate). (K1-extension)**
+  Stage 2 verification: grep `_safe_json_to_obj|_normalize_non_empty_string|_canonicalize_key|_build_lookup_maps|_first_non_empty_value_from_keys|_parse_iso_datetime|_lead_to_score_row` against `app/services/market_scoring/orchestrator.py` returns matches only on lines 30-39 (the import block itself). Grep `app.services.market_scoring.orchestrator.(_safe_json_to_obj|...)` against `backend/tests/` returns **zero** hits — no test patches any of the 7 names through this module path. Grep of bare names across `backend/tests/` returns zero hits. The 7 names are fully unreferenced; removing the import lines preserves behavior (no patch targets break; no module-attribute lookup is performed at runtime).
+  Behavior-preservation strategy: deleting lines 30-39 removes 7 unbound module attributes that nothing reads. Surface S1 (test-patch lookup `app.services.market_scoring.orchestrator.<name>`): preserved — no such patch exists. Surface S2 (module attribute access `orchestrator.<name>`): preserved — no caller does this. Surface S3 (runtime call): preserved — the 4 names actually used (`_extract_company_name`, `_extract_lead_name`, `_extract_description_preview`, plus the implicit `persistence` and other named symbols on lines 36-37) remain imported.
+  Strategy: remove the 7 unused names from the multi-line `from app.services.market_scoring.normalization import (...)` block, retaining only the 4 still-referenced names.
+  Est. **-7 LOC**.
 
 ### backend/app/services/market_scoring/persistence.py (121 LOC)
 
@@ -506,8 +514,14 @@ Clean. Multiple `MATCH (p:CompanyProfile)` queries but each is semantically dist
   Rewrite.
   Est. -1 LOC.
 
-- **Cat 3 (near-duplicate scout/profiler signal-generation loops) — investigate.**
-  Two nearly identical `for i in range(2):` loops at lines ~165 and ~205, one generating scout signals and one profiler signals. The variation lies in: `pre_data` vs `profiler_pre_data`, agent string ("scout" vs "profiler"), and the headline-mirror branch. Stage 2: assess whether a small unify helper is byte-equivalent.
+- **Cat 3 (near-duplicate scout/profiler signal-generation loops) — execute (promoted from investigate). (K8-new)**
+  Stage 2 per-line diff of the two `for i in range(2):` loops (lines 127-157 scout, 160-190 profiler) confirms structural identity with only three controlled variations:
+  - `pre_data` vs `profiler_pre_data` (the pre-data dict passed to `search.search_signals` and to the headline-mirror branch)
+  - persona string `"scout"` vs `"profiler"` (passed to `search.search_signals` and stored at `signals_result["agent"]`)
+  - log-message prefix `"scout signal"` vs `"profiler signal"`
+  All other code is byte-identical: signal_id generation, `signals_result.update(...)`, `request.org_id` branch, `persistence._save_signal_and_track_headline` call, headline-mirror branch, `signals_result.pop("_id", None)`, `generated_signals.append(signals_result)`, `logger.info` + try/except shape.
+  Behavior-preservation strategy: extract `async def _run_persona_signal_batch(persona: str, current_pre_data: dict, *, agent_chain, llm_backend, mongo, track_key, batch_id, request, generated_signals: list)` that wraps the inner body. The two existing loops become two calls to this helper. Surface S1 (return shape): preserved — `generated_signals` is mutated in-place identically. Surface S2 (exception types): preserved — try/except re-raises any exception with the persona-tagged log line. Surface S3 (DB writes): preserved — same `_save_signal_and_track_headline` call. Surface S4 (log lines): preserved — log message uses `f"Generating {persona} signal {i+1}..."` etc.
+  Est. **-15 LOC** (28 LOC scout + 28 LOC profiler raw = 56 LOC → helper ~25 LOC + 2 invocation lines × ~6 LOC each = ~37 LOC, net delta -19; conservative -15 LOC to account for additional `persona` parameter routing).
 
 ### backend/app/services/signals/llm.py (16 LOC)
 
@@ -718,12 +732,12 @@ Pyflakes-verified unused imports outside the package-re-export false positives. 
 | services/market_scoring/orchestrator.py | 17 | `app.core.exceptions.BrewraError` | yes |
 | services/market_scoring/orchestrator.py | 22 | `app.models.market_scoring.LeadMarketScoreRow` | yes |
 
-NOT in this K1 execute table (deferred to Stage 2 investigate):
-- `services/market_scoring/orchestrator.py` line 29 (7-name normalization-block import) — see Stage 2 promoted/deferred table.
+Stage 2 promoted (was investigate, now in K1 scope):
+- `services/market_scoring/orchestrator.py` lines 30-39 (7-name normalization-block import) — Stage 2 verified zero test patches against `app.services.market_scoring.orchestrator.<name>` for any of the 7 names; zero in-module references; safe to remove.
 
-Hard count of confirmed-safe removable symbols: **10** (= 1+1+1+1+1+1+2+1+1 from the K1 table rows). Spec's "~16 symbols" anticipated the 7-name normalization block; with that block split to investigate, the confirmed-safe count is 10. If Stage 2 promotes the 7-name block, K1 final count becomes 17 (= 10 + 7).
+Hard count of confirmed-safe removable symbols (post-Stage 2): **17** (= 10 base + 7 promoted). Spec's "~16 symbols" matched within 1.
 
-K1 net LOC: each unused name removal trims either 1 LOC (single-name line) or 0 LOC (multi-name import, drops only the comma). Estimated **~ -7 to -10 LOC** (confirmed-safe set). Conservative target: **-10 LOC**. If the 7-name block promotes in Stage 2, add ~ -7 LOC.
+K1 net LOC: each unused name removal trims either 1 LOC (single-name line) or 0 LOC (multi-name import, drops only the comma). Stage 1 confirmed-safe set ~ -10 LOC; Stage 2 promotion adds ~ -7 LOC. **K1 total post-Stage 2: ~ -17 LOC.**
 
 NOT addressed by K1 (kept intentionally):
 - `app/models/__init__.py:1` `PaginatedResponse` — has `# noqa: F401`, is a deliberate package-API re-export.
@@ -741,14 +755,20 @@ NOT addressed by K1 (kept intentionally):
 | D5 | Cat 12 — externalize prompt literals (`icp/prompts.py`, `signals/prompts.py`, `market_research/prompts.py`, `core/llm_config.py`) to YAML/JSON | Touches the public consumption surface of all 3 research services + Cypher chain. Overlaps with TD-010. Punt. |
 | D6 | `signals/search.py` scout-vs-profiler persona unification | Further unification regresses persona-specific readability. Punt. |
 
-## Promoted / deferred (Stage 2)
+## Stage 2 outcomes
 
-| Item | Reason for investigation |
-|---|---|
-| `services/_llm_helpers.py` line ~30 — verify single-consumer status of `_tavily_context_and_urls`, `_claude_messages_text` | Cat 8 check. |
-| `services/icp/persistence.py` ICP-normalization branches (multi-key list/str defaults) | Cat 3 check — behavior surface depends on whether each key's list-default vs str-default is observable to callers. |
-| `services/market_scoring/orchestrator.py` line 29 — 7-name normalization-block import (`_safe_json_to_obj`, `_normalize_non_empty_string`, `_canonicalize_key`, `_build_lookup_maps`, `_first_non_empty_value_from_keys`, `_parse_iso_datetime`, `_lead_to_score_row`) | Does the test suite patch any of these symbols on `app.services.market_scoring.orchestrator` such that removing the import would break patch targets? Verify by grepping `mocker.patch` and `patch(` in `backend/tests/` for each name paired with the `app.services.market_scoring.orchestrator.<name>` module path. Resolution: if no test patches via this module path, promote to K1 execute (est. ~ -7 LOC). If patches exist via this module path, defer until the patch-where-used migration of TD-006 is complete. |
-| `services/signals/batch.py` scout/profiler `for i in range(2):` loops | Cat 3 — assess whether a small helper byte-preserves behavior. |
-| Cat 5 expansion — non-File_Processing `mongo[X]` sites | Are the 21 non-File_Processing `mongo[X]` sites (`org_auth/orgs.py`, `org_auth/registrations.py`, `customer_profile/orchestrator.py`, `icp/persistence.py`, `leads/persistence.py`, `market_scoring/persistence.py`, `profiles/persistence.py`, `signals/persistence.py`) candidates for a generic `_get_collection(mongo, db, coll)` helper? Verify behavior shapes per-site and decide promote (would extend K6 scope by ~21 sites, est. ~ -15 LOC additional after helper) or defer (preserve readable per-service collection pinning). Defaulting to defer pending Stage 2 evidence. |
+Stage 2 applied the spec §4 investigation methodology (enumerate call sites → read each in full → identify observable surfaces → write behavior-preservation strategy → decide promote/defer) to all 5 `investigate`-tagged findings. Soft cap (spec §2, §4): defer if investigation requires reading more than 5 files beyond direct callers, or 3 full read-analyze cycles without a behavior-preservation strategy.
 
-These will be resolved in Stage 2 (Task 2 / commit 2). The Summary table above shows `TBD (Stage 2)` for the "Investigated → promoted" and "Investigated → deferred" rows; Stage 2 will populate concrete counts.
+| # | Investigation | Verdict | Rationale | LOC est. |
+|---|---|---|---|---:|
+| I1 | `services/market_scoring/orchestrator.py` lines 30-39 — 7-name normalization-block import (`_safe_json_to_obj`, `_normalize_non_empty_string`, `_canonicalize_key`, `_build_lookup_maps`, `_first_non_empty_value_from_keys`, `_parse_iso_datetime`, `_lead_to_score_row`) | **PROMOTE** to execute (K1-extension) | Grep `app.services.market_scoring.orchestrator.<name>` against `backend/tests/` returns zero hits for all 7 names; bare-name grep against `backend/tests/` returns zero hits; in-module grep returns matches only on the import lines themselves. No patch target, no module-attribute consumer, no runtime caller — safe to delete. | ~ -7 |
+| I2 | `services/signals/batch.py` scout/profiler `for i in range(2):` loops (lines 127-157 vs 160-190) | **PROMOTE** to execute (K8-new) | Per-line diff confirms byte-identical structure with only 3 controlled variations: `pre_data`/`profiler_pre_data`, `"scout"`/`"profiler"` persona string, log-message prefix. Helper `_run_persona_signal_batch(persona, current_pre_data, ...)` preserves all 4 observable surfaces (return shape via in-place list mutation, exception re-raise with persona-tagged log, DB writes via unchanged `_save_signal_and_track_headline`, log lines via f-string persona interpolation). | ~ -15 |
+| I3 | `services/_llm_helpers.py` Cat 8 — `_tavily_context_and_urls`, `_claude_messages_text` single-consumer check | **DEFER** to design-discussion | Both primitives have multiple consumers: `_tavily_context_and_urls` is called from `_llm_helpers.py:170` AND imported into `market_research/orchestrator.py:37`; `_claude_messages_text` is called from `_llm_helpers.py:174`, imported into `market_research/orchestrator.py:38`, and used in `tests/capture_fixtures.py:145`. Both are also patched as `app.services._llm_helpers.<name>` in `tests/unit/test_llm_helpers.py` and `tests/unit/test_signals.py`. Cat 8 (single-use trivial wrapper) does not apply — these are reused primitives, not wrappers. | — |
+| I4 | `services/icp/persistence.py` ICP-normalization branches (Cat 3) | **DEFER** to design-discussion | Per-site read of lines 80-170 (28 `isinstance(...)` occurrences) showed non-trivial behavior diversity: some keys cascade new-schema → old-schema with `None` sentinel (L99-101, L105-107), some have post-condition default constants (L139 `["global"]`, L143 `"medium"`), some use bare `[]` fallback (L103, L111, L137, etc.), some build dict-default `{}` (L83-84), and output literal mixes new-schema + legacy-schema dict keys. A single helper cannot express all 5 behavior shapes (list-default-with-cascade, list-default-without-cascade, list-default-with-post-fallback-constant, str-coerce-or-empty, dict-default-empty) without altering observable defaults downstream. Soft cap triggered: 3 read-analyze cycles converged on "no clean helper preserves all surfaces." | — |
+| I5 | Cat 5 expansion — non-File_Processing `mongo[X]` sites | **DEFER** to design-discussion | Per-grep there are 29 non-File_Processing `mongo[X]` sites (scorecard's "21" was a drift estimate; actual count is 29 across 12 service files). Per-site read found mixed shapes: some are `db = mongo[X]; coll = db[Y]` 2-line patterns (eligible), some are 1-line `mongo[X][Y]` (already compressed; no win), some pull two collections from one db lookup (`org_auth/orgs.py:14-16` does `db = mongo["Org_Management"]; users_collection = db["users"]; orgs_collection = db["orgs"]` — keeping `db` precludes single-call collapse), some return collections directly (`market_research/persistence.py:17 return mongo["Scout_Agent"]["Market_Intelligence"]`). The 5 distinct DB names (`Profiler`, `Scout_Agent`, `Org_Management`, `Registration_DB`, `Signals`) span persona-pinned services where readable per-service collection pinning has been an intentional convention. A generic `_get_collection(mongo, db, coll)` helper covers only a subset (~10-12 sites of clean shape) and risks losing the readable per-service db-name pinning. Soft cap triggered: 3 read-analyze cycles converged on "subset that's clean is small and mixed across services — net win is marginal versus K6's focused File_Processing helper." | — |
+
+Stage 2 net additions to Stage 3 execute scope: 2 promotions, ~ -22 LOC combined.
+- I1 rolls into K1 (already a Stage 3 task; commit 3 will extend its scope to include lines 30-39 of `market_scoring/orchestrator.py`).
+- I2 becomes a new K8 task (commit 10 or 11 under task #13 "Audit-surfaced additions + promoted investigations").
+
+3 deferrals tagged design-discussion: I3 (Cat 8 reuse), I4 (Cat 3 behavior-diversity), I5 (Cat 5 mixed-shape). All carry rationale above; none requires re-litigation in Stage 3.
