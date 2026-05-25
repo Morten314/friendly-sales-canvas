@@ -1,23 +1,28 @@
-"""signals service — public API (Phase H Sequence E final form).
+"""signals service — public API (Phase I final form).
 
 Service for researching and persisting Scout/Profiler market signals
 (single-shot, batch, and Claude-backed variants) + signal Q&A endpoints.
+
 Submodules:
   - search.py: search_signals (persona-shared core), run_signals_research
   - batch.py: generate_signals_batch (+ _claude variant,
     + _generate_signals_batch_impl shared body)
-  - orchestrator.py: signal_ask (+ _claude variant)
+  - ask.py: signal_ask (+ _claude variant)
   - persistence.py: fetch_signals, record_signal_action (public) + Mongo
     helpers — _get_latest_signal_for_user_agent, _get_existing_headlines,
-    _get_user_icp_config, _save_signal_and_track_headline (consolidates 3
-    copy-pasted save+track blocks), _get_signal_ask_customer_profile
+    _get_user_icp_config, _save_signal_and_track_headline,
+    _get_signal_ask_customer_profile
   - prompts.py: _SCOUT_PROMPT_TEMPLATE, _PROFILER_PROMPT_TEMPLATE,
     _LEADS_SECTION_TEMPLATE (+ fallback), _EXISTING_HEADLINES_SECTION_TEMPLATE,
     _SIGNAL_ASK_PROMPT_TEMPLATE (+ Claude variant)
-  - llm.py: _signals_agent_output (dispatches Groq agent chain or
-    Claude messages API)
-  - parsing.py: _parse_search_signals_response,
-    _normalize_search_signals_result, _validate_url
+  - llm.py: _signals_agent_output (thin adapter over
+    _llm_helpers._research_agent_output)
+  - parsing.py: _parse_search_signals_response, _normalize_search_signals_result,
+    _validate_url
+
+orchestrator.py was deleted in Phase I commit 8/11 — there is no multi-step
+cross-submodule composition that needs an orchestrator tier. Each public
+function lives in its defining submodule. Same structure as data_sources/.
 """
 
 from app.services.signals.search import (
