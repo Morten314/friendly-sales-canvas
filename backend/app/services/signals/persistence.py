@@ -16,14 +16,14 @@ from app.core.exceptions import (
 from app.models.signals import SignalActionRequest
 
 
-def _load_signals_for_user(
+async def fetch_signals(
     mongo,
     user_id: str,
-    limit: int,
-    offset: int,
+    limit: int = 10,
+    offset: int = 0,
 ) -> Tuple[List[Dict[str, Any]], int]:
-    """Mongo read for the signals collection: returns (items, total) for a
-    user, newest first. Extracted from fetch_signals body during Phase H."""
+    """Public read API for signals. Returns (items, total) for a user,
+    newest first. User-scoped, not org-scoped."""
     db = mongo["Signals"]
     collection = db["signals"]
     flt = {"user_id": user_id}

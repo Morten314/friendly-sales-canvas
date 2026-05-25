@@ -2,7 +2,7 @@
 
 Running list of debt items the team has consciously accepted. Each entry: what was done, what should be done, why we deferred, and the trigger that should pull it forward.
 
-Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases E and F) were removed on 2026-05-23; their IDs are not reused so commit/spec references stay traceable. TD-006 (market_scoring callers recomputing len(leads)) was resolved 2026-05-24 by Phase H Task 4.
+Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases E and F) were removed on 2026-05-23; their IDs are not reused so commit/spec references stay traceable. TD-006 (market_scoring callers recomputing len(leads)) was resolved 2026-05-24 by Phase H Task 4. TD-007 (Phase G plan-verbatim cosmetic cruft) was resolved 2026-05-25 by Phase I commit 11/11.
 
 ---
 
@@ -72,40 +72,6 @@ Option 1 is one character of code; option 2 is two lines of prose. v1 is being d
 - Any FE bug ticket mentioning "we have N documents in S3 but the dashboard says 500."
 
 **Owner:** TBD (likely whoever wires the FE to v2 first).
-
----
-
-## TD-007 — Cosmetic cruft from Phase G plan-verbatim test code
-
-**Date logged:** 2026-05-23
-**Origin:** Phase G code reviews on Tasks 2, 4, 6, 8 (multiple commits).
-
-**Current state:**
-Several Phase G tests and routers contain unused symbols that were transcribed verbatim from `plans/modularization-plan-7.md`'s code blocks. None affect behavior; all are 1-line fixes.
-
-- `backend/tests/test_icp_v2.py:7` — `fake_result = {"suggestedICPs": [...]}` assigned and never referenced (data is inlined into the `patch(...)` call on the next line).
-- `backend/tests/unit/test_market_scoring.py` — `test_get_latest_market_score_rows_returns_items_and_total` declares `monkeypatch` as a parameter but the test body uses `patch(...)` as a context manager; the fixture is never used.
-- `backend/app/routers/v2/org_auth.py:1` — `from typing import List` imported but unused (the generic annotation lives on `PaginatedResponse[RegistrationResponse]`).
-- `backend/tests/unit/test_customer_profile.py` — nine `mocker.patch("app.services.icp._ensure_icp_indexes")` calls remain in tests whose code paths no longer reach `_ensure_icp_indexes` (the calls were deleted from `customer_profile.py` in Phase G Task 2). The patches still bind a real symbol so they don't error, but they're dead setup — guarding against a call that never happens.
-
-**What it should be:**
-Delete the dead lines. ~13 lines across 4 files.
-
-**Why we deferred:**
-- All four items were flagged during Task code-quality review as **Minor** (non-blocking per the subagent-driven-development skill).
-- The dead var, unused import, and unused `monkeypatch` parameter were copied verbatim from the plan's code blocks; the implementer correctly followed the plan rather than deviating mid-task.
-- The dead `mocker.patch` calls in `test_customer_profile.py` predate the cleanup intent — they were updated in place (renamed) by `sed` per the plan's Step 9, rather than re-evaluated for relevance.
-
-**What we lose by staying as-is:**
-- Future readers will hit a "why is this here?" moment on each occurrence. The patches in `test_customer_profile.py` are the worst offender — they imply `_ensure_icp_indexes` is still reachable from `customer_profile.py` code paths when it isn't.
-- Marginal pytest collection cost (negligible).
-
-**Pull-forward triggers:**
-- Next routine cleanup pass on `backend/tests/`.
-- First future agent that gets confused by one of the dead patches and asks "is `_ensure_icp_indexes` still called from `customer_profile`?"
-- Bundled with Phase H's v1-route deletion (which will remove related tests anyway).
-
-**Owner:** TBD.
 
 ---
 

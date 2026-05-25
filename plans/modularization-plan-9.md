@@ -14,13 +14,13 @@
 
 **Baseline:** 236 behavior tests passing, 19 syrupy snapshots passing. Verified by `cd backend && BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q` post-merge.
 
-**Target:** 242-246 tests passing at branch HEAD (236 existing + 6-10 new helper tests added in commit 1). 19 syrupy snapshots unchanged (Phase I doesn't change function output, only module homes and dispatch indirection).
+**Target:** 247 tests passing at branch HEAD (236 existing + 11 new helper tests added in commit 1). 19 syrupy snapshots unchanged (Phase I doesn't change function output, only module homes and dispatch indirection).
 
 **Commit numbering convention:** `<type>(be): <description> [phase I, commit N/11]`. 11 total commits.
 
 **Greenness invariant:** every commit ends with `cd backend && BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q` clean. No "fix in next commit" exceptions. Any test failure during a task: do not commit. Either fix forward or `git checkout -- .` and re-read the step. Never commit a red state.
 
-**Abort criterion:** if any commit drops the test count below the expected post-commit baseline (242-246 after commit 1; same after each subsequent commit), halt and surface to operator. Structural moves shouldn't change test count.
+**Abort criterion:** if any commit drops the test count below the expected post-commit baseline (247 after commit 1; same after each subsequent commit), halt and surface to operator. Structural moves shouldn't change test count.
 
 **No spec deviations.** Plan implements spec §2.1-§3.2 as-written, including the 7-parameter `_research_agent_output` signature with `claude_prompt_suffix_template` and the per-service `_ICP_CLAUDE_SUFFIX` / `_MARKET_RESEARCH_CLAUDE_SUFFIX` constants in their wrappers.
 
@@ -518,14 +518,14 @@ def _extract_research_json(
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/backend
 BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest tests/unit/test_llm_helpers.py -v 2>&1 | tail -20
-# expected: 10 passed
+# expected: 11 passed
 ```
 
 - [ ] **Step 6: Run the full test suite to verify no regressions**
 
 ```bash
 BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q 2>&1 | tail -3
-# expected: 246 passed (236 prior + 10 new), 19 snapshots passed
+# expected: 247 passed (236 prior + 11 new), 19 snapshots passed
 ```
 
 - [ ] **Step 7: Commit**
@@ -547,7 +547,7 @@ LLM input).
 New test module backend/tests/unit/test_llm_helpers.py covers both
 helpers parameterized across the per-service configurations.
 
-Test count: 236 → 246 (10 new tests)."
+Test count: 236 → 247 (11 new tests)."
 ```
 
 ---
@@ -566,7 +566,15 @@ cd /projects/Brewra/brewra-gtm-intelligence
 grep -rn "_signals_agent_output\|_icp_research_agent_output\|_market_research_agent_output" backend/tests/ --include="*.py"
 ```
 
-Expected: all hits are `mocker.patch("app.services.<svc>.llm._<svc>_agent_output", ...)` strings. Wrappers stay; patch paths unchanged.
+Expected: all hits are `mocker.patch("app.services.<svc>.llm._<svc>_agent_output", ...)` strings (or test comments). Wrappers stay; these patch paths unchanged.
+
+**Additionally**, grep for patches that target the *inner helpers* through the wrapper's local namespace — pre-Phase-I, each wrapper did `from app.services._llm_helpers import _tavily_context_and_urls, _claude_messages_text`, so a patch on `app.services.signals.llm._claude_messages_text` (or `..._tavily_context_and_urls`) would intercept the wrapper's lookup. After this commit, the wrappers no longer import those helpers — execution moves to `_llm_helpers._research_agent_output`, so the lookup happens in `_llm_helpers`'s namespace. Any such patch must retarget:
+
+```bash
+grep -rn "app\.services\.\(signals\|icp\|market_research\)\.llm\._\(claude_messages_text\|tavily_context_and_urls\)" backend/tests/ --include="*.py"
+```
+
+Expected (verified at plan time): exactly one hit in `backend/tests/unit/test_signals.py` (`test_search_signals_profiler_claude_uses_captured`, two `mocker.patch` calls). Retarget both from `app.services.signals.llm.*` → `app.services._llm_helpers.*` in this commit.
 
 - [ ] **Step 2: Rewrite `signals/llm.py`**
 
@@ -666,7 +674,7 @@ def _market_research_agent_output(
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/backend
 BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q 2>&1 | tail -3
-# expected: 246 passed, 19 snapshots passed
+# expected: 247 passed, 19 snapshots passed
 ```
 
 - [ ] **Step 6: Verify LOC numbers and commit**
@@ -682,7 +690,7 @@ Substitute the actual post-edit numbers into the commit message below (replacing
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
-git add backend/app/services/signals/llm.py backend/app/services/icp/llm.py backend/app/services/market_research/llm.py
+git add backend/app/services/signals/llm.py backend/app/services/icp/llm.py backend/app/services/market_research/llm.py backend/tests/unit/test_signals.py
 git commit -m "refactor(be): consolidate 3 _*_agent_output bodies to shared dispatch [phase I, 2/11]
 
 Each service's llm.py is now a thin wrapper over _research_agent_output
@@ -690,11 +698,17 @@ that hardcodes service-specific config (search query template, Claude
 prompt suffix framing, URL extraction flag).
 
 signals/llm.py: 51 → 17 LOC. icp/llm.py: 30 → 16 LOC. market_research/llm.py:
-29 → 16 LOC. Net ~60 LOC deletion.
+29 → 16 LOC. Net ~60 LOC deletion (actual deltas may be smaller — the icp
+and market_research wrappers add a triple-quoted suffix constant that's
+longer than the original f-string form).
 
 signals/llm.py::_URL_PATTERN is now unused; cleaned in commit 10.
 
-Test count: 246 passed."
+test_search_signals_profiler_claude_uses_captured: patch paths retargeted
+from signals.llm to _llm_helpers (symbol lookups now happen in
+_llm_helpers' namespace after the wrapper delegates to _research_agent_output).
+
+Test count: 247 passed."
 ```
 
 ---
@@ -834,7 +848,7 @@ wc -l backend/app/services/signals/parsing.py
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/backend
 BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q 2>&1 | tail -3
-# expected: 246 passed, 19 snapshots passed
+# expected: 247 passed, 19 snapshots passed
 ```
 
 If any test fails because of the quote-escaping removal, the test was implicitly depending on signals' divergent behavior. Investigate the failing test before commit — it may be a legitimate find requiring spec consultation.
@@ -868,7 +882,7 @@ change per spec §1). _parse_search_signals_response shrinks from ~50 to
 All 3 services now use the same JSON-escape rule (\\n/\\r only). Net
 ~100 LOC deletion.
 
-Test count: 246 passed."
+Test count: 247 passed."
 ```
 
 ---
@@ -904,18 +918,22 @@ sed -n '15,40p' backend/app/services/signals/persistence.py
 
 Note the exact signature, args, and docstring of `_load_signals_for_user`. The rename keeps everything except the name and the leading `_`.
 
-- [ ] **Step 3: Rename in `signals/persistence.py`**
+- [ ] **Step 3: Rename in `signals/persistence.py` (and make `async def`)**
 
-Use `sed -i` to rename in-place, then verify by reading:
+The current `_load_signals_for_user` is a sync `def` that the orchestrator's `fetch_signals` wraps as `async def` (callable returns a tuple; the wrapper's `await` resolves the coroutine to that tuple). Router callers do `await fetch_signals(...)` — so when we drop the wrapper, the promoted persistence function **must** be `async def` (else `await <tuple>` raises `TypeError: object tuple can't be used in 'await' expression`). Its body stays sync (pymongo is sync); only the def keyword changes.
+
+Don't use a blind `sed` for the rename — use an explicit Edit that:
+  1. Renames `_load_signals_for_user` → `fetch_signals`.
+  2. Changes `def` → `async def`.
+  3. Rewrites the docstring to public-API style (remove the `_`-prefix convention note; replace with e.g. "Public read API for signals. Returns (items, total) for a user, newest first. User-scoped, not org-scoped.").
+  4. Adds the default values `limit: int = 10, offset: int = 0` to match the wrapper's signature (so router callers that don't supply them continue to work).
+
+Then verify:
 
 ```bash
-cd /projects/Brewra/brewra-gtm-intelligence
-sed -i 's/_load_signals_for_user/fetch_signals/g' backend/app/services/signals/persistence.py
-grep -n "fetch_signals\|_load_signals_for_user" backend/app/services/signals/persistence.py
-# expected: only "fetch_signals" hits; no "_load_signals_for_user" remaining
+grep -n "fetch_signals\|_load_signals_for_user\|async def" backend/app/services/signals/persistence.py
+# expected: `async def fetch_signals(`; no `_load_signals_for_user` remaining
 ```
-
-Update the docstring of the now-public `fetch_signals` to remove the `_`-prefix convention note (open the file and rewrite the function's docstring to public-API style, e.g., "Public read API for signals. Returns (items, total) tuple." Keep all other content unchanged.)
 
 - [ ] **Step 4: Drop the wrapper from `signals/orchestrator.py`**
 
@@ -970,7 +988,7 @@ For each hit, retarget:
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/backend
 BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q 2>&1 | tail -3
-# expected: 246 passed, 19 snapshots passed
+# expected: 247 passed, 19 snapshots passed
 
 cd /projects/Brewra/brewra-gtm-intelligence
 grep -rn "_load_signals_for_user" backend/ --include="*.py"
@@ -985,9 +1003,11 @@ git commit -m "refactor(be): rename _load_signals_for_user → fetch_signals (pu
 
 The orchestrator's fetch_signals was already a one-line wrapper around
 persistence._load_signals_for_user. Promote the persistence function to
-public, drop the wrapper, point __init__.py re-export at persistence.
+public (renamed + async def so router callers can still await it; body
+remains sync pymongo). Drop the orchestrator wrapper. Point __init__.py
+re-export at persistence.
 
-Test count: 246 passed."
+Test count: 247 passed."
 ```
 
 ---
@@ -1160,7 +1180,7 @@ Repeat for every test file containing hits from Step 1's grep.
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/backend
 BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q 2>&1 | tail -3
-# expected: 246 passed, 19 snapshots passed
+# expected: 247 passed, 19 snapshots passed
 
 cd /projects/Brewra/brewra-gtm-intelligence
 grep -rn "app\.services\.signals\.orchestrator\.\(search_signals\|run_signals_research\|_fetch_pinecone_supporting_context\)" backend/
@@ -1180,7 +1200,7 @@ namespace-prefix (search.search_signals) to keep mocker.patch effective.
 
 ~10 test patch paths retargeted from orchestrator to search.
 
-Test count: 246 passed."
+Test count: 247 passed."
 ```
 
 ---
@@ -1324,7 +1344,7 @@ Replace test file paths with the actual files that have hits per Step 1's grep.
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/backend
 BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q 2>&1 | tail -3
-# expected: 246 passed, 19 snapshots passed
+# expected: 247 passed, 19 snapshots passed
 
 cd /projects/Brewra/brewra-gtm-intelligence
 grep -rn "app\.services\.signals\.orchestrator\." backend/
@@ -1343,7 +1363,7 @@ mocker.patch effective.
 
 Test patch paths retargeted from orchestrator to batch.
 
-Test count: 246 passed."
+Test count: 247 passed."
 ```
 
 ---
@@ -1481,7 +1501,7 @@ find backend/tests/ -name '*.py' -exec sed -i "s|app\.services\.signals\.orchest
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/backend
 BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q 2>&1 | tail -3
-# expected: 246 passed, 19 snapshots passed
+# expected: 247 passed, 19 snapshots passed
 
 cd /projects/Brewra/brewra-gtm-intelligence
 grep -rn "app\.services\.signals\.orchestrator\." backend/
@@ -1503,7 +1523,7 @@ Moves the 2 Q&A functions out of orchestrator. Cross-package imports
 
 orchestrator.py now empty (docstring only) — Task 8 deletes it.
 
-Test count: 246 passed."
+Test count: 247 passed."
 ```
 
 ---
@@ -1574,7 +1594,7 @@ grep -rn "app\.services\.signals\.orchestrator" backend/
 
 cd /projects/Brewra/brewra-gtm-intelligence/backend
 BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q 2>&1 | tail -3
-# expected: 246 passed, 19 snapshots passed
+# expected: 247 passed, 19 snapshots passed
 
 # Public-surface smoke test
 .venv/bin/python -c "from app.services.signals import search_signals, run_signals_research, generate_signals_batch, generate_signals_batch_claude, signal_ask, signal_ask_claude, fetch_signals, record_signal_action"
@@ -1595,7 +1615,7 @@ Delete it; rewrite signals/__init__.py docstring for final form
 signals/ structure now mirrors data_sources/ — submodules carry public
 functions directly, no orchestrator tier.
 
-Test count: 246 passed."
+Test count: 247 passed."
 ```
 
 ---
@@ -1638,7 +1658,7 @@ grep -n "app\.models" backend/app/routers/data_sources.py backend/app/routers/v2
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/backend
 BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q 2>&1 | tail -3
-# expected: 246 passed, 19 snapshots passed
+# expected: 247 passed, 19 snapshots passed
 ```
 
 - [ ] **Step 5: Commit**
@@ -1656,7 +1676,7 @@ internal-only).
 
 Two external import sites updated atomically.
 
-Test count: 246 passed."
+Test count: 247 passed."
 ```
 
 ---
@@ -1703,7 +1723,7 @@ grep -rn "_URL_PATTERN = " backend/app/ --include="*.py"
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/backend
 BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q 2>&1 | tail -3
-# expected: 246 passed, 19 snapshots passed
+# expected: 247 passed, 19 snapshots passed
 ```
 
 - [ ] **Step 5: Commit**
@@ -1717,7 +1737,7 @@ The constant has been canonical in _llm_helpers since Task 1; the
 orphaned definition in signals/llm.py (left over after Task 2 moved
 its consumers into _research_agent_output) is removed here.
 
-Test count: 246 passed."
+Test count: 247 passed."
 ```
 
 ---
@@ -1769,7 +1789,7 @@ Expected: 9 hits. All are `mocker.patch("app.services.icp._ensure_icp_indexes")`
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/backend
 BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q 2>&1 | tail -3
-# expected: 246 passed, 19 snapshots passed
+# expected: 247 passed, 19 snapshots passed
 ```
 
 If `test_customer_profile.py` tests fail, the deleted patches were not actually dead — the underlying `_ensure_icp_indexes` is still being called. Investigate before committing.
@@ -1790,7 +1810,7 @@ Match the existing convention used for TD-001/002/003/006 (resolved entries remo
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/backend
 BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q 2>&1 | tail -3
-# expected: 246 passed, 19 snapshots passed
+# expected: 247 passed, 19 snapshots passed
 
 cd /projects/Brewra/brewra-gtm-intelligence
 grep -rn "app\.services\.signals\.orchestrator" backend/
@@ -1816,7 +1836,7 @@ Four one-line cleanups documented in TD-007:
 
 TECH_DEBT.md updated to mark TD-007 resolved.
 
-Test count: 246 passed. Phase I complete."
+Test count: 247 passed. Phase I complete."
 ```
 
 ---
@@ -1831,14 +1851,18 @@ git log --oneline master..refactor-backend-modularization-phase-i
 # expected: 11 commits, labeled [phase I, 1/11] through [phase I, 11/11]
 
 cd backend && BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q 2>&1 | tail -3
-# expected: 246 passed, 19 snapshots passed
+# expected: 247 passed, 19 snapshots passed
 ```
 
 - [ ] **Compute LOC summary for the merge commit message**
 
 ```bash
 git diff --shortstat master..refactor-backend-modularization-phase-i
-# Expected order-of-magnitude: ~250 LOC net deletion, 11 files moved/renamed
+# Actual: 24 files changed, +1269/-1073 (~196 LOC net deletion). Net is
+# smaller than the headline ~530 LOC of production-code deletion because
+# commit 1 adds ~340 LOC of new helper tests (test_llm_helpers.py + the
+# expanded _llm_helpers.py docstring + the new helpers themselves) and
+# commits 5-7 add per-submodule docstrings/imports.
 ```
 
 - [ ] **Operator action items after merge**

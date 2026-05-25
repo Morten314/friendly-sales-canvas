@@ -55,17 +55,17 @@ def test_search_signals_scout_groq_uses_captured(mocker):
 
 
 def test_search_signals_profiler_claude_uses_captured(mocker):
-    """Patch where the names are looked up: signals.py does
-        `from app.services._llm_helpers import _claude_messages_text, _tavily_context_and_urls`
-    which creates local bindings in signals' namespace. Patching the
-    _llm_helpers source module would NOT affect those local bindings."""
+    """After Phase I commit 2/11, signals/llm.py is a thin wrapper that delegates
+    to _research_agent_output in _llm_helpers. Both _claude_messages_text and
+    _tavily_context_and_urls are resolved from _llm_helpers' module __dict__ at
+    call time, so the patches target _llm_helpers (where lookups now happen)."""
     captured = load_captured("search_signals_profiler_claude")
     mocker.patch(
-        "app.services.signals.llm._claude_messages_text",
+        "app.services._llm_helpers._claude_messages_text",
         return_value=json.dumps(captured),
     )
     mocker.patch(
-        "app.services.signals.llm._tavily_context_and_urls",
+        "app.services._llm_helpers._tavily_context_and_urls",
         return_value=("web context", []),
     )
 
@@ -101,7 +101,7 @@ def test_generate_signals_batch_happy_path(
     with llm_backend='default'."""
     captured = load_captured("search_signals_scout_groq")
     mocker.patch(
-        "app.services.signals.orchestrator._generate_signals_batch_impl",
+        "app.services.signals.batch._generate_signals_batch_impl",
         return_value={"status": "success", "data": captured},
     )
 
@@ -120,7 +120,7 @@ def test_generate_signals_batch_claude_happy_path(
     """generate_signals_batch_claude dispatches with llm_backend='claude'."""
     captured = load_captured("search_signals_scout_claude")
     mocker.patch(
-        "app.services.signals.orchestrator._generate_signals_batch_impl",
+        "app.services.signals.batch._generate_signals_batch_impl",
         return_value={"status": "success", "data": captured},
     )
 
@@ -251,7 +251,7 @@ def test_signal_ask_groq_uses_captured(mocker, mock_session, mock_mongo_client):
     # signal_ask uses raw_response.get("output", "") from the chain result
     chain_mock.invoke.return_value = {"output": str(captured)}
     mocker.patch(
-        "app.services.signals.orchestrator._fetch_pinecone_supporting_context",
+        "app.services.signals.search._fetch_pinecone_supporting_context",
         return_value=[],
     )
 
@@ -274,7 +274,7 @@ def test_signal_ask_claude_raises_service_error_when_api_key_missing(
     mocker, mock_mongo_client,
 ):
     """ServiceError site: ANTHROPIC_API_KEY guard."""
-    mocker.patch("app.services.signals.orchestrator.CLAUDE_API_KEY", "")
+    mocker.patch("app.services.signals.ask.CLAUDE_API_KEY", "")
 
     request = SignalAskRequest(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID, question="Q",
@@ -287,23 +287,23 @@ def test_signal_ask_claude_raises_service_error_when_claude_call_fails(
     mocker, mock_session, mock_mongo_client,
 ):
     """ServiceError site: Claude API HTTP error (status >= 400) → ServiceError."""
-    mocker.patch("app.services.signals.orchestrator.CLAUDE_API_KEY", "valid-key")
+    mocker.patch("app.services.signals.ask.CLAUDE_API_KEY", "valid-key")
     mocker.patch(
-        "app.services.signals.orchestrator._fetch_pinecone_supporting_context",
+        "app.services.signals.search._fetch_pinecone_supporting_context",
         return_value=[],
     )
     mocker.patch(
-        "app.services.signals.orchestrator._reserve_claude_signal_budget",
+        "app.services.signals.ask._reserve_claude_signal_budget",
         return_value={"run_id": "test-run-id"},
     )
-    mocker.patch("app.services.signals.orchestrator._estimate_token_count", return_value=100)
-    mocker.patch("app.services.signals.orchestrator._finalize_claude_signal_budget", return_value={})
+    mocker.patch("app.services.signals.ask._estimate_token_count", return_value=100)
+    mocker.patch("app.services.signals.ask._finalize_claude_signal_budget", return_value={})
 
     # requests.post is called via asyncio.to_thread — patch the module-level binding
     mock_response = MagicMock()
     mock_response.status_code = 500
     mock_response.text = "Internal Server Error"
-    mocker.patch("app.services.signals.orchestrator.requests.post", return_value=mock_response)
+    mocker.patch("app.services.signals.ask.requests.post", return_value=mock_response)
 
     # No Neo4j company profile; no MongoDB customer profile (avoid MagicMock json.dumps)
     mock_session.run.return_value.single.return_value = None
@@ -327,18 +327,18 @@ def test_signal_ask_claude_happy_path_uses_captured(
     mock_mongo_client.__getitem__.return_value.__getitem__.return_value.find_one.return_value = None
 
 
-    mocker.patch("app.services.signals.orchestrator.CLAUDE_API_KEY", "valid-key")
+    mocker.patch("app.services.signals.ask.CLAUDE_API_KEY", "valid-key")
     mocker.patch(
-        "app.services.signals.orchestrator._fetch_pinecone_supporting_context",
+        "app.services.signals.search._fetch_pinecone_supporting_context",
         return_value=[],
     )
     mocker.patch(
-        "app.services.signals.orchestrator._reserve_claude_signal_budget",
+        "app.services.signals.ask._reserve_claude_signal_budget",
         return_value={"run_id": "test-run-id"},
     )
-    mocker.patch("app.services.signals.orchestrator._estimate_token_count", return_value=100)
+    mocker.patch("app.services.signals.ask._estimate_token_count", return_value=100)
     mocker.patch(
-        "app.services.signals.orchestrator._finalize_claude_signal_budget",
+        "app.services.signals.ask._finalize_claude_signal_budget",
         return_value={
             "window_tokens_5m": 100,
             "run_count_5m": 1,
@@ -351,7 +351,7 @@ def test_signal_ask_claude_happy_path_uses_captured(
     mock_response.json.return_value = {
         "content": [{"type": "text", "text": answer_text}]
     }
-    mocker.patch("app.services.signals.orchestrator.requests.post", return_value=mock_response)
+    mocker.patch("app.services.signals.ask.requests.post", return_value=mock_response)
 
     request = SignalAskRequest(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID, question="Q",

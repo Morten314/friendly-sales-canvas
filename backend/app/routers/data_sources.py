@@ -13,7 +13,7 @@ from app.core.dependencies import (
     get_s3,
 )
 from app.core.logging import logger
-from app.models.documents import (
+from app.models.data_sources import (
     DataSourceDeleteResponse,
     DataSourceUpdateResponse,
     DocumentStatusResponse,

@@ -1,8 +1,31 @@
-"""Cross-domain LLM helpers — any service helper used by 2+ services lives here."""
+"""Cross-domain LLM helpers — primitives and shared patterns used by 2+ services.
+
+Primitives:
+  - _tavily_context_and_urls(search_query, k=10) — Tavily search + URL extraction
+  - _claude_messages_text(user_prompt, max_tokens) — Anthropic /v1/messages call
+
+Shared patterns:
+  - _research_agent_output — Groq agent_chain OR Claude+Tavily dispatch for the 3
+    research services (signals, icp, market_research). Each service's llm.py module
+    is a thin wrapper that hardcodes its search_query_template, claude_prompt_suffix,
+    and extract_intermediate_urls flag.
+  - _extract_research_json — JSON extraction from LLM markdown-wrapped output.
+    Per-service kwargs conventions:
+      signals: escape_keys=("description","snippet","headline"), trim_braces=True,
+               strip_final_answer=True
+      icp:     per-worker variations of escape_keys ranging from ("description",)
+               to ("description","blurb","headline"); ICP_generator/research_1 use
+               defaults; research_2/4 use trim_braces=True, strip_final_answer=True
+      market_research: all defaults (escape_keys=("description",) only)
+
+Constants:
+  - _URL_PATTERN — regex matching http(s) URLs in free-form text. Used by
+    _tavily_context_and_urls fallback path and _research_agent_output URL extraction.
+"""
 import os
 import json
 import re
-from typing import List
+from typing import Iterable, List
 
 import requests
 
@@ -10,9 +33,19 @@ from app.core.config import claude_sonnet_model, tavily_api_key
 from app.core.exceptions import ServiceError
 
 
-# --- Claude-backed research (Tavily + Anthropic), same prompts as agent_chain path ---
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
 CLAUDE_RESEARCH_MAX_TOKENS = int(os.getenv("CLAUDE_RESEARCH_MAX_TOKENS") or "8192")
 
+# Matches http(s) URLs in free-form text. Used in 2 places below.
+_URL_PATTERN = r'https?://[^\s<>"{}|\\^`\[\]]+'
+
+
+# ---------------------------------------------------------------------------
+# Primitives — Tavily search + Claude messages API
+# ---------------------------------------------------------------------------
 
 def _tavily_context_and_urls(search_query: str, k: int = 10) -> tuple:
     """Returns (context_text, url_list) for injection into Claude prompts."""
@@ -25,7 +58,7 @@ def _tavily_context_and_urls(search_query: str, k: int = 10) -> tuple:
         raw = search_tool.run(search_query[:2000])
         if isinstance(raw, str):
             context = raw
-            urls = list(dict.fromkeys(re.findall(r'https?://[^\s<>"{}|\\^`\[\]]+', raw)))[:12]
+            urls = list(dict.fromkeys(re.findall(_URL_PATTERN, raw)))[:12]
         elif isinstance(raw, list):
             parts = []
             for item in raw:
@@ -69,3 +102,132 @@ def _claude_messages_text(user_prompt: str, max_tokens: int = CLAUDE_RESEARCH_MA
         if isinstance(block, dict) and block.get("type") == "text":
             out.append(block.get("text", ""))
     return "\n".join(out).strip()
+
+
+# ---------------------------------------------------------------------------
+# Shared pattern — research dispatch (Groq agent_chain vs Claude+Tavily)
+# ---------------------------------------------------------------------------
+
+_DEFAULT_CLAUDE_PROMPT_SUFFIX = "\n\nWEB SEARCH RESULTS:\n{web_ctx}\n"
+
+
+def _research_agent_output(
+    agent_chain,
+    prompt: str,
+    seed_text: str,
+    llm_backend: str,
+    search_query_template: str,
+    claude_prompt_suffix_template: str = _DEFAULT_CLAUDE_PROMPT_SUFFIX,
+    extract_intermediate_urls: bool = False,
+) -> tuple:
+    """Dispatch a research call to the Groq agent_chain (default) or to
+    Anthropic+Tavily (when llm_backend == "claude"). Returns (text, urls).
+
+    Args:
+      agent_chain: a LangChain initialize_agent result (Groq path).
+      prompt: the research prompt to send.
+      seed_text: free-form text used to seed the Tavily search query (Claude path).
+        Whitespace-normalized via " ".join(str(seed_text).split()) then truncated
+        to 1200 chars before substitution.
+      llm_backend: "claude" routes to Anthropic+Tavily; anything else routes to
+        agent_chain.invoke({"input": prompt}).
+      search_query_template: must contain literal "{seed}" placeholder, filled via
+        str.format(seed=...). Only used in Claude path.
+      claude_prompt_suffix_template: must contain literal "{web_ctx}" placeholder.
+        Appended to prompt before sending to Claude. Default matches the signals
+        framing; icp + market_research pass custom triple-quoted templates.
+      extract_intermediate_urls: when True (signals path), walks
+        agent_chain response's intermediate_steps to collect tavily URLs from
+        the Groq path; falls back to regex over the text if empty. When False
+        (icp/market_research paths), the returned url list is empty for Groq.
+
+    Returns:
+      (response_text, tavily_urls) tuple. Callers that don't need URLs unpack
+      only the first element (e.g., `text, _ = _research_agent_output(...)`).
+    """
+    tavily_urls: List[str] = []
+
+    if llm_backend != "claude":
+        raw_response = agent_chain.invoke({"input": prompt})
+        response = raw_response["output"]
+        if extract_intermediate_urls:
+            try:
+                if hasattr(raw_response, "intermediate_steps"):
+                    for step in raw_response.intermediate_steps:
+                        if len(step) > 1 and isinstance(step[1], list):
+                            for result in step[1]:
+                                if isinstance(result, dict) and "url" in result:
+                                    tavily_urls.append(result["url"])
+                if not tavily_urls:
+                    found_urls = re.findall(_URL_PATTERN, response)
+                    tavily_urls = list(set(found_urls))[:5]
+            except Exception:
+                pass
+        return response, tavily_urls
+
+    # Claude path
+    seed = " ".join(str(seed_text).split())[:1200]
+    web_ctx, tavily_urls = _tavily_context_and_urls(
+        search_query_template.format(seed=seed)
+    )
+    augmented = prompt + claude_prompt_suffix_template.format(web_ctx=web_ctx)
+    response = _claude_messages_text(augmented, max_tokens=CLAUDE_RESEARCH_MAX_TOKENS)
+    if not tavily_urls:
+        found_urls = re.findall(_URL_PATTERN, response)
+        tavily_urls = list(set(found_urls))[:5]
+    return response, tavily_urls
+
+
+# ---------------------------------------------------------------------------
+# Shared pattern — JSON extraction from LLM markdown-wrapped output
+# ---------------------------------------------------------------------------
+
+def _extract_research_json(
+    response: str,
+    escape_keys: Iterable[str] = ("description",),
+    trim_braces: bool = False,
+    strip_final_answer: bool = False,
+) -> dict:
+    """Strip markdown code fences and parse JSON from an LLM response.
+
+    Steps applied in order:
+      1. (Optional) Split on 'Final Answer:' marker and keep the tail.
+      2. Strip ``` and ```json code fences.
+      3. (Optional) Trim text before the first '{' and after the last '}'.
+      4. For each key in `escape_keys`, replace literal newlines/CRs inside
+         that key's string value with the escaped \\n / \\r sequences.
+      5. json.loads the result.
+
+    Note: this helper does NOT escape quotes inside matched values. Signals'
+    historical quote-escaping was dropped during Phase I to unify all three
+    research services on the simpler escape rule (see spec §1).
+    """
+    if strip_final_answer and "Final Answer:" in response:
+        response = response.split("Final Answer:")[-1].strip()
+
+    cleaned_str = (
+        response.strip()
+        .removeprefix("```json")
+        .removeprefix("```")
+        .removesuffix("```")
+        .strip()
+    )
+
+    if trim_braces:
+        if "{" in cleaned_str:
+            cleaned_str = cleaned_str[cleaned_str.index("{"):]
+        if "}" in cleaned_str:
+            cleaned_str = cleaned_str[:cleaned_str.rindex("}") + 1]
+
+    for key in escape_keys:
+        pattern = r'\"' + re.escape(key) + r'\": \"(.*?)\"'
+
+        def _make_replacer(k):
+            def _repl(m):
+                inner = m.group(1).replace("\n", "\\n").replace("\r", "\\r")
+                return '"' + k + '": "' + inner + '"'
+            return _repl
+
+        cleaned_str = re.sub(pattern, _make_replacer(key), cleaned_str, flags=re.DOTALL)
+
+    return json.loads(cleaned_str)

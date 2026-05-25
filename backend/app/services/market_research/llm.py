@@ -1,29 +1,25 @@
 """LLM invocation wrapper for market_research/.
 
-``_market_research_agent_output`` dispatches between the LangChain agent-chain
-(default / Groq path) and the Claude messages API (when ``llm_backend ==
-"claude"``). Body unchanged from its original orchestrator.py home.
+Thin adapter over _research_agent_output: hardcodes the market-research
+search query template and the market_research-specific Claude-prompt
+suffix framing. Discards tavily_urls (market_research doesn't consume them).
 """
-from app.services._llm_helpers import (
-    CLAUDE_RESEARCH_MAX_TOKENS,
-    _claude_messages_text,
-    _tavily_context_and_urls,
-)
+from app.services._llm_helpers import _research_agent_output
+
+
+_MARKET_RESEARCH_CLAUDE_SUFFIX = """
+
+WEB SEARCH RESULTS (primary external evidence — synthesize with company profile):
+{web_ctx}
+"""
 
 
 def _market_research_agent_output(
     agent_chain, prompt: str, company_profile_json: str, llm_backend: str
 ) -> str:
-    if llm_backend != "claude":
-        raw_response = agent_chain.invoke({"input": prompt})
-        return raw_response["output"]
-    seed = " ".join(str(company_profile_json).split())[:1200]
-    web_ctx, _ = _tavily_context_and_urls(
-        f"market research industry trends data 2026 {seed}"
+    text, _ = _research_agent_output(
+        agent_chain, prompt, company_profile_json, llm_backend,
+        search_query_template="market research industry trends data 2026 {seed}",
+        claude_prompt_suffix_template=_MARKET_RESEARCH_CLAUDE_SUFFIX,
     )
-    augmented = f"""{prompt}
-
-WEB SEARCH RESULTS (primary external evidence — synthesize with company profile):
-{web_ctx}
-"""
-    return _claude_messages_text(augmented, max_tokens=CLAUDE_RESEARCH_MAX_TOKENS)
+    return text
