@@ -65,8 +65,8 @@ The audit method itself is not preserved as part of the deliverable — it's rep
 
 1. `app/services/market_scoring/__init__.py` loads on package import; it first executes `from app.services.market_scoring.orchestrator import ...` (its first non-docstring statement).
 2. `orchestrator.py` module body contains `from app.services.market_scoring.scoring import _lead_to_score_row, _is_stale_queued_run, _run_market_scoring_for_org` near the top (named imports, line ~40).
-3. `scoring.py` module body contains `from app.services.market_scoring import persistence` at line 19 (its top imports block).
-4. `persistence.py` begins loading. If line 67's lazy import is hoisted to its top as `from app.services.market_scoring.scoring import _lead_to_score_row`, Python attempts to read `_lead_to_score_row` from the **partial** `scoring` module. At that moment `scoring` is mid-load at its line 19 (the `from . import persistence` line that triggered persistence's load); `_lead_to_score_row` is defined at line 30 of `scoring.py`, **not yet bound**. `ImportError: cannot import name '_lead_to_score_row' from partially initialized module 'app.services.market_scoring.scoring'`.
+3. `scoring.py` module body contains `from app.services.market_scoring import persistence` at line 20 (its top imports block).
+4. `persistence.py` begins loading. If line 67's lazy import is hoisted to its top as `from app.services.market_scoring.scoring import _lead_to_score_row`, Python attempts to read `_lead_to_score_row` from the **partial** `scoring` module. At that moment `scoring` is mid-load at its line 20 (the `from . import persistence` line that triggered persistence's load); `_lead_to_score_row` is defined at line 27 of `scoring.py`, **not yet bound**. `ImportError: cannot import name '_lead_to_score_row' from partially initialized module 'app.services.market_scoring.scoring'`.
 
 **Fix:** move `_lead_to_score_row` from `scoring.py` to `normalization.py`.
 
@@ -154,6 +154,17 @@ The following are not honored at all (different comment text — linter only mat
 - `# lazy: ...`
 - `# circular: ...`
 
+**Multi-line import constraint:** the `# defensive:` comment must appear on the **same line as the `from` keyword** (the first physical line of the import statement). This is what `ast.ImportFrom.lineno` resolves to. A multi-line import with the comment on the closing-paren line, e.g.:
+
+```python
+from app.services.foo import (
+    bar,
+    baz,
+)  # defensive: <reason>   ← NOT detected by the linter
+```
+
+would be flagged as a violation. Authors writing defensive imports must either collapse to a single-line `from app.services.foo import bar  # defensive: <reason>`, or place the comment on the `from` line directly (using a `#` before the opening paren is not syntactically valid in Python; in practice this means defensive imports should be single-line, importing one symbol at a time).
+
 Phase J introduces no annotated lazy imports; all eight sites are resolved structurally or by hoisting. Future agents may add annotated lazy imports when a cycle is genuinely unfixable, but the burden of justification rests on them.
 
 ## 4. Implementation order
@@ -165,7 +176,7 @@ Phase J introduces no annotated lazy imports; all eight sites are resolved struc
 | 1 | `refactor(be): hoist ICP_generator import in icp/persistence` | Move `from app.services.icp.orchestrator import ICP_generator` from inside `list_icps` to module top imports. Delete the `# Lazy imports to avoid circular dependency: persistence -> orchestrator -> persistence` comment. |
 | 2 | `refactor(be): hoist _retrieval imports in icp/persistence` | Move the two `_retrieval` named imports from inside `list_icps` to module top. Delete the `# lazy to avoid circular imports` comment. |
 | 3 | `refactor(be): hoist _retrieval imports in icp/orchestrator` | Move the two `_retrieval` named imports from inside `_run_icp_research_impl` to module top. |
-| 4 | `refactor(be): hoist orchestrator import in market_scoring/scoring` | Move `from app.services.market_scoring import orchestrator` from inside `_run_market_scoring_for_org` to module top. Update the module docstring comment block at the top of `scoring.py` (lines 7-11) that explains the lazy import — replace with a one-liner noting the import is module-level. |
+| 4 | `refactor(be): hoist orchestrator import in market_scoring/scoring` | Move `from app.services.market_scoring import orchestrator` from inside `_run_market_scoring_for_org` to module top. Update the module docstring comment block at the top of `scoring.py` (lines 7-11) that explains the lazy import — replace with a one-liner noting the import is module-level. Also update `market_scoring/__init__.py` lines 21-23 (the architectural-description paragraph ending in *"scoring.py accesses them via a lazy `from app.services.market_scoring import orchestrator` import; tests import them from the submodule directly"*) to reflect the new top-level import. |
 | 5 | `refactor(be): move _lead_to_score_row from scoring to normalization` | Delete the function (and its imports of `Dict`, `Any`, `LeadMarketScoreRow` if no longer used in `scoring.py`) from `scoring.py`; add it (with its imports) to `normalization.py`. Update `orchestrator.py:41` named-import block to pull `_lead_to_score_row` from `normalization` instead of `scoring`. Update `persistence.py:8` and `__init__.py:14` docstring lines that reference the old location. No test patches exist for this symbol (verified at spec-write time). |
 | 6 | `refactor(be): hoist _lead_to_score_row import in market_scoring/persistence` | Move `from app.services.market_scoring.scoring import _lead_to_score_row` (now `.normalization`) from inside `_get_latest_market_score_rows` to module top. |
 | 7 | `refactor(be): hoist icp imports in customer_profile` | Replace four in-function `from app.services.icp import _reserve_unique_icp_id` (and one `_release_icp_id`) with a single top-level `from app.services.icp import _reserve_unique_icp_id, _release_icp_id`. Delete the four lazy lines. |
