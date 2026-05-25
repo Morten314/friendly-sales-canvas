@@ -19,11 +19,22 @@ Phases B–J decomposed five large service files into packages (`icp/`, `signals
 | `graph_chat.py` | 209 |
 | `pipeline.py` | 74 |
 
-These were deferred through Phases H–J because structural decomposition of the larger services was higher-leverage. With Phase J complete and the codebase's import conventions stabilised, the TD-008 pull-forward trigger has fired: converting these six files to packages is the natural next step.
+These were deferred through Phases H–J because structural decomposition of the larger services was higher-leverage. With Phase J complete and the codebase's import conventions stabilized, the TD-008 pull-forward trigger has fired: converting these six files to packages is the natural next step.
 
 **Scope:** Convert all six flat services to packages. No TD-008 LOC reduction, no TD-009 docstring audit — those remain a follow-on phase.
 
-**Uniform structure decision:** All six services are package-converted regardless of LOC. The smallest target (`pipeline.py`, 74 LOC) does not justify the package overhead on its own merits, but heterogeneous service layouts — some packages, some flat files — create persistent cognitive overhead during navigation and grep. The uniformity benefit outweighs the per-file overhead.
+**Scope exclusion — underscore-prefixed helpers.** Four flat files with leading underscores remain under `backend/app/services/` and are intentionally out of scope for Phase K:
+
+| File | LOC |
+|---|---:|
+| `_llm_helpers.py` | 233 |
+| `_retrieval.py` | 113 |
+| `_claude_budget.py` | 101 |
+| `_neo4j_helpers.py` | 71 |
+
+These are private cross-cutting utilities consumed by multiple service packages (e.g., `icp/`, `signals/`, `market_research/` all import from `_llm_helpers`). Package-converting them would either (a) create cyclic-style dependencies across service packages, or (b) require lifting them out of `services/` into a separate utility module — both of which are larger refactors than the mechanical decomposition Phase K is scoped to. They keep their underscore convention and flat structure; a future phase can address them if and when their LOC or coupling becomes a problem.
+
+**Uniform structure decision:** All six *public* (non-underscore) flat services are package-converted regardless of LOC. The smallest target (`pipeline.py`, 74 LOC) does not justify the package overhead on its own merits, but heterogeneous service layouts — some packages, some flat files — create persistent cognitive overhead during navigation and grep. The uniformity benefit outweighs the per-file overhead.
 
 ---
 
@@ -55,6 +66,17 @@ These were deferred through Phases H–J because structural decomposition of the
 
 ## §3 Submodule model
 
+**Circular-import check (all sequences):** Each split was checked for cross-submodule call chains that would create import cycles. Findings:
+
+- **Sequence A (leads):** `persistence.py` → `normalization.py` (one-way: `_process_neo4j_lead_records`). `orchestrator.py` is independent. No cycle.
+- **Sequence B (customer_profile):** Single submodule (`orchestrator.py`); no internal cross-imports possible.
+- **Sequence C (profiles):** Single submodule (`persistence.py`); no internal cross-imports.
+- **Sequence D (org_auth):** `orgs.py` and `registrations.py` contain disjoint function sets; no cross-calls in the current code. No cycle.
+- **Sequence E (graph_chat):** `prospect_pipeline.py` → `prospect_pipeline.py` only (`score_prospect` calls `extract_number`, both in the same submodule). `neo4j.py` is independent. No cycle.
+- **Sequence F (pipeline):** Single submodule (`neo4j.py`); no internal cross-imports.
+
+No sequence requires inter-submodule cycle resolution.
+
 ### Sequence A — leads
 
 ```
@@ -69,7 +91,7 @@ leads/
 **§3.1 `__init__.py` re-exports:**
 `_ensure_leads_indexes`, `get_leads_for_org`, `create_lead`, `update_lead`, `delete_lead`, `batch_upload_leads`, `list_leads_by_file`, `get_stream_status`, `delete_leads_by_file`
 
-**Internal import rule:** `orchestrator.py` imports `_process_neo4j_lead_records` via `from .normalization import _process_neo4j_lead_records`. This symbol is not patched in any test — from-import is safe.
+**Internal import rule:** `persistence.py` imports `_process_neo4j_lead_records` via `from .normalization import _process_neo4j_lead_records`. The two call sites are inside `get_leads_for_org` (current `leads.py:49`) and `list_leads_by_file` (current `leads.py:379`), both of which are destined for `persistence.py` — `orchestrator.py`'s functions (`batch_upload_leads`, `delete_leads_by_file`) do not call it. The symbol is not patched in any test — from-import is safe.
 
 **Rationale:** `batch_upload_leads` (CSV/XLSX parsing + bulk Neo4j write) and `delete_leads_by_file` (Neo4j + Mongo multi-step delete) are orchestration flows. All other functions are direct DB reads/writes → persistence. `_process_neo4j_lead_records` is a private data-transformation helper.
 
@@ -155,7 +177,13 @@ External caller: `data_sources/loaders.py` imports `score_prospect` via `from ap
 
 `pipeline.py` currently contains two functions: `compute_sales_pipeline` (Neo4j stage-count aggregator) and `probe_llm` (LLM-availability smoke probe that invokes langchain). These two functions share no concerns — they were colocated only because the same router (`backend/app/routers/pipeline.py`) serves both. Lumping an LLM probe into a `pipeline/` package alongside a Neo4j read would propagate the existing categorical confusion rather than resolve it.
 
-Commit 0 extracts `probe_llm` to a new flat service file `backend/app/services/health.py` and updates `backend/app/routers/pipeline.py` to import it from there. The `/test-llm` route stays on the existing pipeline router (its URL doesn't change; no client impact). After commit 0, `pipeline.py` contains only `compute_sales_pipeline`.
+Commit 0 extracts `probe_llm` to a new flat service file `backend/app/services/health.py`. It then edits `backend/app/routers/pipeline.py`:
+
+- Add a new top-of-file import: `from app.services.health import probe_llm`
+- Preserve the existing `from app.services import pipeline as pipeline_service` import (still used by `compute_sales_pipeline`)
+- Update the `/test-llm` handler body (line 24) from `pipeline_service.probe_llm(llm2)` to `probe_llm(llm2)`
+
+The `/test-llm` route URL doesn't change; no client impact. After commit 0, `pipeline.py` contains only `compute_sales_pipeline`.
 
 Commit 0 also updates `pipeline.py`'s module docstring (currently `"""Pipeline service: sales-pipeline aggregator + LLM probe."""`) to remove the "+ LLM probe" suffix — leaving the existing docstring intact after extraction would actively misrepresent the file's contents. This is the only docstring change Phase K requires; broader docstring work remains in TD-009 follow-on scope.
 
@@ -216,9 +244,15 @@ Replace `leads` with the relevant service name (`customer_profile`, `profiles`, 
 
 ## §5 External caller handling
 
-Almost all external `from app.services.<svc> import X` call sites are satisfied by the `__init__.py` re-exports. The single exception is `routers/pipeline.py`, edited in Sequence F commit 0 to import `probe_llm` from its new home in `services/health.py`.
+External callers use two import patterns; both are satisfied by the `__init__.py` re-exports:
 
-**Known external callers:**
+**Pattern A — direct symbol import** (`from app.services.<svc> import X`): the imported name is bound at the caller's module level. The `__init__.py` re-export makes `X` available as an attribute of the package, which is what `from ... import X` resolves against.
+
+**Pattern B — module-level import** (`from app.services import <svc> as svc_alias` or `import app.services.<svc> as svc_alias`): the caller binds the whole package object and dereferences function calls as `svc_alias.X(...)`. For these to work, `X` must be an attribute of the package — which the `__init__.py` re-export accomplishes automatically (a `from .submodule import X` statement in `__init__.py` creates `X` as a module-level attribute of the package). The spec's re-export lists in §3.1–§3.5 are complete; no additional `__all__` declaration is required.
+
+The single caller that requires an *edit* in Phase K is `routers/pipeline.py` (Sequence F commit 0 — see §3 Sequence F). All other callers continue to work unchanged because the import paths are preserved and the re-exports cover every symbol they reference.
+
+**Known external callers (Pattern A — direct symbol imports):**
 
 | Caller | Symbol | Service | Handled by |
 |--------|--------|---------|-----------|
@@ -230,7 +264,17 @@ Almost all external `from app.services.<svc> import X` call sites are satisfied 
 | `signals/search.py:23` | `get_leads_for_org` | leads | `leads/__init__.py` re-export |
 | `signals/batch.py:22` | `get_leads_for_org` | leads | `leads/__init__.py` re-export |
 | `data_sources/loaders.py:15` | `score_prospect` | graph_chat | `graph_chat/__init__.py` re-export |
-| `app/routers/pipeline.py:5,24` | `probe_llm` | pipeline → health | **Edited in Sequence F commit 0** to import from `app.services.health` instead of `app.services.pipeline` |
+
+**Known external callers (Pattern B — module-level imports):**
+
+| Caller | Import statement | Service | Handled by |
+|--------|------------------|---------|-----------|
+| `app/routers/customer_profile.py:5` | `from app.services import customer_profile as cp_service` | customer_profile | `__init__.py` re-exports expose all 4 functions as package attributes |
+| `app/routers/profiles.py:5` | `from app.services import profiles as profiles_service` | profiles | `__init__.py` re-exports expose all 4 functions as package attributes |
+| `app/routers/org_auth.py:8` | `from app.services import org_auth as org_auth_service` | org_auth | `__init__.py` re-exports expose all 5 functions as package attributes |
+| `app/routers/graph_chat.py:14` | `from app.services import graph_chat as graph_chat_service` | graph_chat | `__init__.py` re-exports expose all 11 functions as package attributes |
+| `app/routers/leads.py:15` | `import app.services.leads as leads_service` | leads | `__init__.py` re-exports expose all 9 functions as package attributes |
+| `app/routers/pipeline.py:5,24` | `from app.services import pipeline as pipeline_service` | pipeline → health | **Edited in Sequence F commit 0** — after commit 0, `pipeline_service.probe_llm` no longer exists; router uses `from app.services.health import probe_llm` for that call site, while the `compute_sales_pipeline` call site continues to use `pipeline_service.compute_sales_pipeline(...)`. The existing module-level `from app.services import pipeline as pipeline_service` import is preserved. |
 
 `get_leads_for_org` is patched in test suites for `market_scoring` and `signals` at the *caller-side* binding (e.g. `app.services.market_scoring.scoring.get_leads_for_org`) — not at the leads package path. Re-export does not affect those patches.
 
@@ -241,6 +285,6 @@ Almost all external `from app.services.<svc> import X` call sites are satisfied 
 1. `pytest` baseline recorded before Phase K begins (Task 0 of the plan): capture the passing count with `pytest --tb=no -q | tail -1` and note it in the plan's Task 0 completion note.
 2. After each commit in each sequence: `pytest` passes with the same count.
 3. After all 6 sequences:
-   - `grep -r "from app\.services\.\(leads\|customer_profile\|graph_chat\|org_auth\|profiles\|pipeline\) import" backend/app/` — all call sites resolve through `__init__.py` re-exports.
+   - **Submodule-bypass check** — `grep -rE "from app\.services\.(leads|customer_profile|graph_chat|org_auth|profiles|pipeline)\.[a-z_]+ import" backend/app/` returns no matches. This grep detects external imports of the form `from app.services.leads.persistence import X` that would bypass `leads/__init__.py` and reach into a submodule directly. (Module-level imports like `from app.services import leads as leads_service` and direct-symbol imports like `from app.services.leads import X` are *expected* and inherently use `__init__.py`; they're not what this grep is checking.)
    - Phase J lazy-import linter passes: `pytest backend/tests/unit/test_no_lazy_service_imports.py::test_no_unannotated_lazy_service_imports`. This test scans every `*.py` under `backend/app/services/` and flags any unannotated `from app.services...` import nested inside a function body — including the new submodules and `services/health.py` introduced by Phase K.
 4. No v1 router or integration test regressions. ("v1 routers" are the flat routers under `backend/app/routers/*.py`, which still serve production traffic alongside the newer `backend/app/routers/v2/` set; both must continue to pass their respective tests after Phase K.)
