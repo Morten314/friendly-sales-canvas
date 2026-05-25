@@ -101,7 +101,7 @@ def test_generate_signals_batch_happy_path(
     with llm_backend='default'."""
     captured = load_captured("search_signals_scout_groq")
     mocker.patch(
-        "app.services.signals.orchestrator._generate_signals_batch_impl",
+        "app.services.signals.batch._generate_signals_batch_impl",
         return_value={"status": "success", "data": captured},
     )
 
@@ -120,7 +120,7 @@ def test_generate_signals_batch_claude_happy_path(
     """generate_signals_batch_claude dispatches with llm_backend='claude'."""
     captured = load_captured("search_signals_scout_claude")
     mocker.patch(
-        "app.services.signals.orchestrator._generate_signals_batch_impl",
+        "app.services.signals.batch._generate_signals_batch_impl",
         return_value={"status": "success", "data": captured},
     )
 
