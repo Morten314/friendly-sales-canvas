@@ -2,7 +2,7 @@
 callers pass the injected driver in (no module-level closure).
 """
 import json
-from typing import Any, Optional
+from typing import Optional
 
 
 def query(driver, query_string: str, params: Optional[dict] = None):

@@ -1,5 +1,5 @@
 """Lead market scoring models."""
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 
 

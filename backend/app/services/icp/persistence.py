@@ -20,10 +20,6 @@ from app.core.exceptions import (
 )
 from app.core.logging import logger
 from app.services.icp.orchestrator import ICP_generator
-from app.services._retrieval import (
-    _build_market_context_queries,
-    _fetch_pinecone_supporting_context,
-)
 
 
 def list_icps(

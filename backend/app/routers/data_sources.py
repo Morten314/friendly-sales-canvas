@@ -1,7 +1,7 @@
 """Data-source upload, status, and management endpoints."""
 import shutil
 
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, File, Form, HTTPException, Query, Response, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, File, Form, Query, Response, UploadFile
 
 from app.core.dependencies import (
     get_llm,
@@ -12,7 +12,6 @@ from app.core.dependencies import (
     get_pinecone,
     get_s3,
 )
-from app.core.logging import logger
 from app.models.data_sources import (
     DataSourceDeleteResponse,
     DataSourceUpdateResponse,
