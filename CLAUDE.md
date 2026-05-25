@@ -117,11 +117,13 @@ This repo is structured for AI-native development: cross-cutting tasks (changes 
 
 - **Cross-stack atomicity.** A feature touching both `/frontend/` and `/backend/` ships as one commit (or one PR), reviewable as one diff. Don't split FE/BE changes across separate commits "because the codebases are different" — that's the polyrepo habit, not the monorepo rule.
 - **Commit granularity: prefer small, frequent commits.** Within a multi-step task (a plan with N tasks, a refactor with several discrete pieces, a feature built in stages), ship one commit per logical step rather than batching. A single plan task = a single commit. A single fixture file or test module = its own commit. A bug fix and the test that catches it = one commit (they're one logical step), but if the same bug fix touches three unrelated call sites, those can be three commits. The bias is toward more, smaller commits — easier to review, easier to bisect, easier to revert. This rule sits beside cross-stack atomicity, not against it: a coordinated FE+BE change for one feature is still one commit, because that *is* the logical step.
+- **Commit message style.** Subjects use `type(scope):` format (`refactor(be):`, `feat(fe):`, `docs(plans):`, `chore(be):`) and describe the code change itself — not the plan slot, not the meta-activity. Skip `[N/M]` numbering suffixes. Plan-reference trailers (`Refs: plan-9`) are author's judgment; default off, use only when a commit would otherwise be hard to trace back to its context. Body is optional and author's judgment — include one when the *why* isn't obvious from the diff.
 - **Spec-driven flow.**
-  1. Idea → brainstorm → `/specs/YYYY-MM-DD-feature-X-design.md` (design intent)
+  1. Idea → brainstorm → `/specs/NN-feature-X-design.md` (design intent)
   2. Spec → plan-write → `/plans/NN-feature-X.md` (execution intent, ordered steps)
-  3. Plan → commits referencing the plan in commit messages
-- **Spec and plan persist** — canonical record of *why* and *how*. Don't delete after execution; agents reference them.
+  3. Plan → atomic commits implementing each step
+- **NN numbering.** New specs and plans take the next NN after the highest existing N in `/plans/`, counting both prefix and suffix forms (e.g., `modularization-plan-9.md` counts as N=9, so the next slot is `10-`). The spec and plan for the same feature share the NN — `/specs/10-feature-X-design.md` pairs with `/plans/10-feature-X.md`.
+- **Specs and plans are a frozen record of intent, not current truth.** Once a plan merges, treat its contents as a historical snapshot of what was intended at that moment — not a representation of what the code does now. Don't update specs/plans to reflect post-merge drift; the code is authoritative for current behavior.
 - **Sync workflow** (during temp week only): `bash scripts/sync.sh` pulls Brewra-dev changes from old repos. `git merge develop` on master absorbs FE updates. After cutover (Plan 05 + Plan 06), this section is removed.
 
 ## Testing
