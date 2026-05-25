@@ -17,11 +17,13 @@ Phases B–J decomposed five large service files into packages (`icp/`, `signals
 | `profiles.py` | 236 |
 | `org_auth.py` | 210 |
 | `graph_chat.py` | 209 |
-| `pipeline.py` | ~100 |
+| `pipeline.py` | 74 |
 
 These were deferred through Phases H–J because structural decomposition of the larger services was higher-leverage. With Phase J complete and the codebase's import conventions stabilised, the TD-008 pull-forward trigger has fired: converting these six files to packages is the natural next step.
 
 **Scope:** Convert all six flat services to packages. No TD-008 LOC reduction, no TD-009 docstring audit — those remain a follow-on phase.
+
+**Uniform structure decision:** All six services are package-converted regardless of LOC. The smallest target (`pipeline.py`, 74 LOC) does not justify the package overhead on its own merits, but heterogeneous service layouts — some packages, some flat files — create persistent cognitive overhead during navigation and grep. The uniformity benefit outweighs the per-file overhead.
 
 ---
 
@@ -29,22 +31,25 @@ These were deferred through Phases H–J because structural decomposition of the
 
 **Approach:** Option A — per-service sequences (A–F), Phase H pattern. Each service gets its own commit sequence; sequences execute in order, largest-first.
 
-**Execution order:**
+**Execution order rationale:** Largest sequences first surfaces structural problems early, while there is still room to revise the sequence design; smaller sequences then benefit from patterns established by the larger ones.
 
-| Seq | Service | LOC | Mock concerns |
-|-----|---------|----:|---------------|
-| A | `leads` | 465 | None |
-| B | `customer_profile` | 385 | 6 patch paths to update |
-| C | `profiles` | 236 | None |
-| D | `org_auth` | 210 | None |
-| E | `graph_chat` | 209 | None |
-| F | `pipeline` | ~100 | None |
+| Seq | Service | LOC | Mock concerns | Commits |
+|-----|---------|----:|---------------|--------:|
+| A | `leads` | 465 | None | 2 |
+| B | `customer_profile` | 385 | 6 patch paths (merged into split commit) | 2 |
+| C | `profiles` | 236 | None | 2 |
+| D | `org_auth` | 210 | None | 2 |
+| E | `graph_chat` | 209 | None | 2 |
+| F | `pipeline` | 74 | None (but adds preamble commit, see §3.6) | 3 |
 
 **Per-sequence commit structure:**
 
-1. **Scaffold commit** — `git mv service.py service/__init__.py`, write stub `__init__.py` that re-exports everything. Run `pytest`; must be green before proceeding.
-2. **Split commit** — create submodules, move functions, rewrite internal imports per mock-semantics rules. Run `pytest`; must be green.
-3. **Patch-path commit** (Sequence B only) — update 6 `mocker.patch` strings in `test_customer_profile.py`. Run `pytest`; must be green.
+1. **Scaffold commit** — `mkdir backend/app/services/<svc>`, then `git mv backend/app/services/<svc>.py backend/app/services/<svc>/__init__.py`. (`git mv` does not create intermediate directories; the `mkdir` step is required.) The moved file becomes the package `__init__.py` unchanged. Run `pytest`; must be green before proceeding.
+2. **Split commit** — create submodules, move functions, rewrite internal imports per mock-semantics rules. For Sequence B, this commit *also* updates the 6 `mocker.patch` strings in `test_customer_profile.py` (see §4) — the patch-path update and the structural split are bundled into one commit because performing them separately would leave pytest red between commits. Run `pytest`; must be green.
+
+**Rollback:** If pytest fails after any commit, `git reset --hard HEAD~1` reverts the commit. Diagnose the failure and re-plan before re-attempting — do not edit the working tree to "fix forward" past a failed gate.
+
+**Sequence F note:** Sequence F has an additional preamble commit (commit 0) that extracts `probe_llm` from `pipeline.py` into a new `services/health.py` flat file. See §3.6 for the rationale and the resulting 3-commit structure.
 
 ---
 
@@ -128,17 +133,17 @@ Split by entity: org lifecycle management vs. registration management. Tests inj
 
 ```
 graph_chat/
-├── __init__.py  # public re-exports (see §3.5)
-├── neo4j.py     # create_prospect_node, get_ranked_prospects,
-│                #   run_cypher_query, add_engagement
-└── scoring.py   # convert_audio_to_text, get_linkedin_followers,
-                 #   get_linkedin_recent_activity, extract_linkedin_username,
-                 #   calculate_prospect_score, extract_number, score_prospect
+├── __init__.py          # public re-exports (see §3.5)
+├── neo4j.py             # create_prospect_node, get_ranked_prospects,
+│                        #   run_cypher_query, add_engagement
+└── prospect_pipeline.py # convert_audio_to_text, get_linkedin_followers,
+                         #   get_linkedin_recent_activity, extract_linkedin_username,
+                         #   calculate_prospect_score, extract_number, score_prospect
 ```
 
 **§3.5 `__init__.py` re-exports:** all 11 public functions
 
-`scoring.py` contains the full prospect-scoring pipeline: audio transcription → LinkedIn enrichment → score calculation → LLM scoring. `neo4j.py` contains all graph read/write operations. No unit tests, no `mocker.patch` calls.
+`prospect_pipeline.py` contains the full prospect-scoring pipeline: audio transcription → LinkedIn enrichment → score calculation → LLM scoring. The name reflects the pipeline's scope rather than just its scoring tail — five of the seven functions in this module are enrichment/extraction steps, not scoring per se. `neo4j.py` contains all graph read/write operations. No unit tests, no `mocker.patch` calls.
 
 External caller: `data_sources/loaders.py` imports `score_prospect` via `from app.services.graph_chat import score_prospect` — satisfied by `__init__.py` re-export, no edit needed.
 
@@ -146,13 +151,29 @@ External caller: `data_sources/loaders.py` imports `score_prospect` via `from ap
 
 ### Sequence F — pipeline
 
+**§3.6 Pre-decomposition extraction (commit 0):**
+
+`pipeline.py` currently contains two functions: `compute_sales_pipeline` (Neo4j stage-count aggregator) and `probe_llm` (LLM-availability smoke probe that invokes langchain). These two functions share no concerns — they were colocated only because the same router (`backend/app/routers/pipeline.py`) serves both. Lumping an LLM probe into a `pipeline/` package alongside a Neo4j read would propagate the existing categorical confusion rather than resolve it.
+
+Commit 0 extracts `probe_llm` to a new flat service file `backend/app/services/health.py` and updates `backend/app/routers/pipeline.py` to import it from there. The `/test-llm` route stays on the existing pipeline router (its URL doesn't change; no client impact). After commit 0, `pipeline.py` contains only `compute_sales_pipeline`.
+
+**Package layout (after commits 1–2):**
+
 ```
 pipeline/
-├── __init__.py  # re-exports compute_sales_pipeline, get_timeframe_comparison
-└── neo4j.py     # compute_sales_pipeline, get_timeframe_comparison
+├── __init__.py  # re-exports compute_sales_pipeline
+└── neo4j.py     # compute_sales_pipeline
 ```
 
-Both functions are pure Neo4j reads. No tests, no external service callers (only routers). Smallest sequence.
+Commit 1 scaffolds (`mkdir` + `git mv pipeline.py pipeline/__init__.py`); commit 2 splits `compute_sales_pipeline` out into `pipeline/neo4j.py` and updates `__init__.py` to re-export it.
+
+**`services/health.py` (created in commit 0):**
+
+The file is created by moving `probe_llm` from `pipeline.py` verbatim, preserving the existing lazy `from langchain_core.messages import HumanMessage` inside the function body. The lazy-import linter (see §6) only flags `from app.services.*` imports — `langchain_core` is not subject to it, so no annotation is needed.
+
+`health.py` is intentionally created as a flat file, not a package. It currently contains a single function and has no near-term growth plan — adding a package wrapper for one function would be the kind of premature structure Phase K's uniformity rationale (see §1) does not justify (uniformity applies to the six *existing* flat services being decomposed; new services follow normal sizing rules).
+
+No external callers besides the router; no test suite for `probe_llm`.
 
 ---
 
@@ -164,10 +185,10 @@ Only Sequence B has patched symbols. For all other sequences the tests use injec
 
 | Test file | Line(s) | Symbol | Current patch path |
 |-----------|---------|--------|--------------------|
-| `test_customer_profile.py` | 48, 91, 128, 187 | `_reserve_unique_icp_id` | `app.services.customer_profile._reserve_unique_icp_id` |
+| `test_customer_profile.py` | 49, 92, 129, 188 | `_reserve_unique_icp_id` | `app.services.customer_profile._reserve_unique_icp_id` |
 | `test_customer_profile.py` | 244, 262 | `_release_icp_id` | `app.services.customer_profile._release_icp_id` |
 
-**After Sequence B commit 2**, the binding for both symbols moves from `customer_profile.py`'s module dict to `customer_profile/orchestrator.py`'s module dict. Commit 3 updates all 6 patch strings:
+**During Sequence B commit 2**, the binding for both symbols moves from `customer_profile.py`'s module dict to `customer_profile/orchestrator.py`'s module dict. The same commit updates all 6 patch strings in `test_customer_profile.py` (structural split and patch-path update are bundled; see §2 commit structure for why):
 
 ```python
 # Before
@@ -193,7 +214,7 @@ Replace `leads` with the relevant service name (`customer_profile`, `profiles`, 
 
 ## §5 External caller handling
 
-All external `from app.services.<svc> import X` call sites are satisfied by the `__init__.py` re-exports. No external file requires editing in any sequence.
+Almost all external `from app.services.<svc> import X` call sites are satisfied by the `__init__.py` re-exports. The single exception is `routers/pipeline.py`, edited in Sequence F commit 0 to import `probe_llm` from its new home in `services/health.py`.
 
 **Known external callers:**
 
@@ -207,6 +228,7 @@ All external `from app.services.<svc> import X` call sites are satisfied by the 
 | `signals/search.py:23` | `get_leads_for_org` | leads | `leads/__init__.py` re-export |
 | `signals/batch.py:22` | `get_leads_for_org` | leads | `leads/__init__.py` re-export |
 | `data_sources/loaders.py:15` | `score_prospect` | graph_chat | `graph_chat/__init__.py` re-export |
+| `app/routers/pipeline.py:5,24` | `probe_llm` | pipeline → health | **Edited in Sequence F commit 0** to import from `app.services.health` instead of `app.services.pipeline` |
 
 `get_leads_for_org` is patched in test suites for `market_scoring` and `signals` at the *caller-side* binding (e.g. `app.services.market_scoring.scoring.get_leads_for_org`) — not at the leads package path. Re-export does not affect those patches.
 
@@ -218,5 +240,5 @@ All external `from app.services.<svc> import X` call sites are satisfied by the 
 2. After each commit in each sequence: `pytest` passes with the same count.
 3. After all 6 sequences:
    - `grep -r "from app\.services\.\(leads\|customer_profile\|graph_chat\|org_auth\|profiles\|pipeline\) import" backend/app/` — all call sites resolve through `__init__.py` re-exports.
-   - Phase J lazy-import linter (`test_lazy_service_import`) passes.
-4. No v1 router or integration test regressions.
+   - Phase J lazy-import linter passes: `pytest backend/tests/unit/test_no_lazy_service_imports.py::test_no_unannotated_lazy_service_imports`. This test scans every `*.py` under `backend/app/services/` and flags any unannotated `from app.services...` import nested inside a function body — including the new submodules and `services/health.py` introduced by Phase K.
+4. No v1 router or integration test regressions. ("v1 routers" are the flat routers under `backend/app/routers/*.py`, which still serve production traffic alongside the newer `backend/app/routers/v2/` set; both must continue to pass their respective tests after Phase K.)
