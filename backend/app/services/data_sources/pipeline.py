@@ -29,6 +29,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from app.core.config import pinecone_api_key, s3_bucket, together_api_key
 from app.core.exceptions import BrewraError
 from app.core.logging import logger
+from app.services.data_sources.persistence import _get_file_collection
 
 
 async def process_file_to_embeddings(mongo, s3, pinecone, file_key: str, user_id: str, file_name: str, org_id: str, file_id: str):
@@ -41,8 +42,7 @@ async def process_file_to_embeddings(mongo, s3, pinecone, file_key: str, user_id
             logger.info(f"Skipping Pinecone embedding for unsupported file type: {file_name}")
             # Update status to completed (not embedded)
             try:
-                db = mongo["File_Processing"]
-                collection = db["file_status"]
+                collection = _get_file_collection(mongo)
 
                 collection.update_one(
                     {"file_key": file_key},
@@ -166,8 +166,7 @@ async def process_file_to_embeddings(mongo, s3, pinecone, file_key: str, user_id
         )
 
         # Update status in MongoDB (optional - for tracking)
-        db = mongo["File_Processing"]
-        collection = db["file_status"]
+        collection = _get_file_collection(mongo)
 
         collection.update_one(
             {"file_key": file_key},
@@ -191,8 +190,7 @@ async def process_file_to_embeddings(mongo, s3, pinecone, file_key: str, user_id
             file_id, file_key, e,
         )
         try:
-            db = mongo["File_Processing"]
-            collection = db["file_status"]
+            collection = _get_file_collection(mongo)
             collection.update_one(
                 {"file_key": file_key},
                 {"$set": {
@@ -208,8 +206,7 @@ async def process_file_to_embeddings(mongo, s3, pinecone, file_key: str, user_id
         # Unexpected failure — log at error then mark status failed so
         # the BackgroundTasks runner doesn't swallow it silently.
         try:
-            db = mongo["File_Processing"]
-            collection = db["file_status"]
+            collection = _get_file_collection(mongo)
 
             collection.update_one(
                 {"file_key": file_key},
@@ -285,8 +282,7 @@ async def upload_document_file(
 
             # Save URL data source to MongoDB
             try:
-                db = mongo["File_Processing"]
-                collection = db["file_status"]
+                collection = _get_file_collection(mongo)
 
                 doc = {
                     "file_id": file_id,
@@ -373,8 +369,7 @@ async def upload_document_file(
 
         # Store initial status in MongoDB
         try:
-            db = mongo["File_Processing"]
-            collection = db["file_status"]
+            collection = _get_file_collection(mongo)
 
             doc = {
                 "file_key": file_key,
@@ -404,8 +399,7 @@ async def upload_document_file(
         else:
             # For non-embeddable files, mark as completed immediately
             try:
-                db = mongo["File_Processing"]
-                collection = db["file_status"]
+                collection = _get_file_collection(mongo)
 
                 collection.update_one(
                     {"file_key": file_key},

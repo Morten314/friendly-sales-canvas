@@ -15,13 +15,22 @@ from app.core.exceptions import DocumentNotFoundError, DocumentValidationError
 from app.core.logging import logger
 
 
+def _get_file_collection(mongo):
+    """Return the ``File_Processing.file_status`` collection from the given mongo client.
+
+    Centralizes the two-line lookup used at every file-status read/write site.
+    The returned collection object behaves identically to the prior inline
+    pattern: ``mongo["File_Processing"]["file_status"]``.
+    """
+    return mongo["File_Processing"]["file_status"]
+
+
 async def get_document_status(mongo, file_key: str) -> dict:
     """
     Get the processing status of a document.
     Returns status: processing, completed, or failed
     """
-    db = mongo["File_Processing"]
-    collection = db["file_status"]
+    collection = _get_file_collection(mongo)
 
     status_doc = collection.find_one({"file_key": file_key})
 
@@ -46,8 +55,7 @@ async def list_user_documents(
     Returns (file_list, total) where total is the unfiltered count.
     Filtered by org_id for multi-org support.
     """
-    db = mongo["File_Processing"]
-    collection = db["file_status"]
+    collection = _get_file_collection(mongo)
     flt = {"org_id": org_id}
 
     files = collection.find(flt).sort("uploaded_at", -1).skip(offset).limit(limit)
@@ -95,8 +103,7 @@ async def delete_data_source(mongo, s3, pinecone, file_id: str) -> dict:
         if original_file_id != file_id:
             logger.warning(f"Stripped trailing slash from file_id: '{original_file_id}' -> '{file_id}'")
 
-        db = mongo["File_Processing"]
-        collection = db["file_status"]
+        collection = _get_file_collection(mongo)
 
         # Log what we're searching for
         logger.info(f"Searching MongoDB for file_id: '{file_id}'")
@@ -337,8 +344,7 @@ async def update_data_source(mongo, file_id: str, request: dict) -> dict:
     if tags is None and description is None:
         raise DocumentValidationError("At least one of 'tags' or 'description' must be provided")
 
-    db = mongo["File_Processing"]
-    collection = db["file_status"]
+    collection = _get_file_collection(mongo)
 
     file_doc = collection.find_one({"file_id": file_id})
     if not file_doc:
