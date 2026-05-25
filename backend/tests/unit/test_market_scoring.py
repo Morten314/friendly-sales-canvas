@@ -374,7 +374,7 @@ from unittest.mock import patch  # noqa: E402 (import after guards above)
 from app.services.market_scoring import _get_latest_market_score_rows  # noqa: E402
 
 
-def test_get_latest_market_score_rows_returns_items_and_total(monkeypatch):
+def test_get_latest_market_score_rows_returns_items_and_total():
     """_get_latest_market_score_rows returns (items, total) with paginated query."""
     fake_docs = [
         {"lead_id": "L1", "org_id": "org_1", "updated_at": "2026-01-01",

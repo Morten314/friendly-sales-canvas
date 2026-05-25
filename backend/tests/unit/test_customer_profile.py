@@ -51,7 +51,6 @@ def test_upsert_customer_profile_happy_path(mocker, mock_session, mock_mongo_cli
         "app.services.icp._reserve_unique_icp_id",
         return_value=TEST_ICP_ID_1,
     )
-    mocker.patch("app.services.icp._ensure_icp_indexes")
 
     request = CustomerProfileRequest(
         profile_type="customer",
@@ -77,7 +76,6 @@ def test_upsert_customer_profile_happy_path(mocker, mock_session, mock_mongo_cli
 # ---------------------------------------------------------------------------
 
 def test_get_customer_profile_raises_when_not_found(mock_session, mock_mongo_client, mocker):
-    mocker.patch("app.services.icp._ensure_icp_indexes")
 
     # MongoDB has no document
     coll = MagicMock()
@@ -92,7 +90,6 @@ def test_get_customer_profile_raises_when_not_found(mock_session, mock_mongo_cli
 
 
 def test_get_customer_profile_returns_existing_doc(mock_session, mock_mongo_client, mocker):
-    mocker.patch("app.services.icp._ensure_icp_indexes")
     mocker.patch(
         "app.services.icp._reserve_unique_icp_id",
         side_effect=lambda db, id_type, owner_key, preferred_id=None: preferred_id or TEST_ICP_ID_1,
@@ -130,7 +127,6 @@ def test_create_from_suggested_icp_happy_path(
     its absence is non-fatal. CompanyProfileNotFoundError is raised by
     get_customer_profile (covered in test_get_customer_profile_raises_when_not_found).
     """
-    mocker.patch("app.services.icp._ensure_icp_indexes")
     mocker.patch(
         "app.services.icp._reserve_unique_icp_id",
         return_value=TEST_ICP_ID_1,
@@ -166,7 +162,6 @@ def test_create_from_suggested_icp_happy_path(
 def test_create_from_suggested_icp_raises_when_icp_id_missing(
     mock_session, mock_mongo_client, mocker,
 ):
-    mocker.patch("app.services.icp._ensure_icp_indexes")
 
     # Neo4j has the company profile
     record = MagicMock()
@@ -191,7 +186,6 @@ def test_create_from_suggested_icp_raises_when_icp_id_missing(
 def test_create_from_suggested_icp_raises_icp_already_exists(
     mock_session, mock_mongo_client, mocker,
 ):
-    mocker.patch("app.services.icp._ensure_icp_indexes")
     mocker.patch(
         "app.services.icp._reserve_unique_icp_id",
         return_value=TEST_ICP_ID_1,
@@ -232,7 +226,6 @@ def test_create_from_suggested_icp_raises_icp_already_exists(
 def test_delete_icp_raises_when_customer_profile_missing(
     mock_mongo_client, mocker,
 ):
-    mocker.patch("app.services.icp._ensure_icp_indexes")
     coll = MagicMock()
     coll.find_one.return_value = None
     mock_mongo_client["Profiler"].__getitem__.return_value = coll
@@ -244,7 +237,6 @@ def test_delete_icp_raises_when_customer_profile_missing(
 def test_delete_icp_raises_when_icp_not_in_profile(
     mock_mongo_client, mocker,
 ):
-    mocker.patch("app.services.icp._ensure_icp_indexes")
     coll = MagicMock()
     coll.find_one.return_value = {
         "org_id": TEST_ORG_ID,
@@ -258,7 +250,6 @@ def test_delete_icp_raises_when_icp_not_in_profile(
 
 
 def test_delete_icp_happy_path_releases_id(mock_mongo_client, mocker):
-    mocker.patch("app.services.icp._ensure_icp_indexes")
     coll = MagicMock()
     coll.find_one.return_value = {
         "org_id": TEST_ORG_ID,

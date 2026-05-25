@@ -4,7 +4,6 @@ from unittest.mock import MagicMock, patch
 
 def test_v2_icp_envelope_shape(client):
     """v2 returns {items, total, limit, offset}, not the v1 wrapper."""
-    fake_result = {"suggestedICPs": [{"id": "icp_1", "name": "ICP 1"}]}
     with patch("app.routers.v2.icp.list_icps", return_value=([{"id": "icp_1", "name": "ICP 1"}], 1)):
         response = client.get("/v2/icp?user_id=user_1")
     assert response.status_code == 200
