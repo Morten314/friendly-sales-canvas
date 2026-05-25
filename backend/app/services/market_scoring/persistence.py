@@ -14,6 +14,7 @@ from app.models.market_scoring import LeadMarketScoreRow
 from app.services.market_scoring.normalization import (
     _extract_company_name,
     _extract_lead_name,
+    _lead_to_score_row,
     _normalize_non_empty_string,
 )
 
@@ -63,8 +64,6 @@ def _get_latest_market_score_rows(
     limit: int = 500,
     offset: int = 0,
 ) -> tuple[List[LeadMarketScoreRow], int]:
-    from app.services.market_scoring.normalization import _lead_to_score_row
-
     score_coll, _ = _get_market_score_collections(mongo)
     flt = {"org_id": org_id}
     total = score_coll.count_documents(flt)
