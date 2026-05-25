@@ -75,13 +75,13 @@ Option 1 is one character of code; option 2 is two lines of prose. v1 is being d
 
 ---
 
-## TD-008 — Reduce-LOC refactoring pass across residual large files
+## TD-008 — Reduce-LOC refactoring pass across the entire backend
 
 **Date logged:** 2026-05-24
-**Origin:** Proactive observation during Phase I brainstorming. Phase H impl review round 2 highlighted `signals/orchestrator.py` at 744 LOC (2× spec estimate); Phase I addresses that one file but several others remain.
+**Origin:** Proactive observation during Phase I brainstorming. Phase H impl review round 2 highlighted `signals/orchestrator.py` at 744 LOC (2× spec estimate); Phase I addresses that one file but the broader backend has accumulated LOC across many modules.
 
 **Current state:**
-Files >350 LOC in `backend/app/services/` (post-Phase-I projection):
+The backend codebase (`backend/app/`) has grown through iterative feature development and multi-phase structural decomposition (Phases B–I). While decomposition achieved clean module boundaries, no systematic pass has been made to reduce lines of code across the backend as a whole. The largest files in `backend/app/services/` (post-Phase-I projection) illustrate the pattern:
 
 | File | LOC | Notes |
 |---|---:|---|
@@ -93,24 +93,24 @@ Files >350 LOC in `backend/app/services/` (post-Phase-I projection):
 | `icp/orchestrator.py` | 385 | ICP_generator + 4 research workers + dispatch |
 | `icp/prompts.py` | 383 | Prompt constants |
 
-These weren't the structural targets of any single phase — past phases optimized for clean module boundaries (decomposition) rather than LOC per file. Several contain inline data-munging blocks, long string literals, or dead-branch handling that could compress without losing clarity.
+But the scope of this item is not limited to these large files — it is the entire backend (`backend/app/`, ~10k LOC across ~50 files). The specific patterns that inflate LOC (e.g., inline data-munging blocks, long string literals, duplicated logic across modules) will be identified by the audit itself; asserting them here without a systematic scan would be guessing. The table above simply illustrates where the largest concentrations are today.
 
 **What it should be:**
-A focused review pass per file — not a refactor, an audit — answering for each: which functions are doing more than one thing, which inline patterns could be extracted to helpers, which dead branches can be removed, which long string literals could be hoisted. Output: a per-file punch list of high-confidence LOC reductions. Execute only the high-confidence items.
+A systematic review pass across all of `backend/app/` — not a structural refactor, an audit — answering for each module: which functions are doing more than one thing, which inline patterns could be extracted to helpers, which long string literals could be hoisted, which duplicated patterns across modules could be consolidated. The specific reduction opportunities should be discovered during the pass, not assumed in advance. Output: a per-file punch list of high-confidence LOC reductions. Execute only the high-confidence items. The goal is not to hit a target LOC count but to ensure every file in the backend is as concise as it can be without losing clarity.
 
 **Why we deferred:**
 - Structural decomposition (Phases B-I) was higher-leverage; LOC reduction was a side effect of that work, not the goal.
 - LOC count is a weak proxy for complexity. The audit needs human judgment per file, not a mechanical pass — premature without that.
-- Phase I addresses the largest offender (`signals/orchestrator.py`); the remaining files are smaller and the marginal value drops off.
+- A full-backend pass is a broad commitment; doing it well requires reading every file, which is best done after the structural shape has stabilized (post-Phase J).
 
 **What we lose by staying as-is:**
-- Each file >400 LOC takes longer to read end-to-end; AI agents working in these files burn more context per task.
-- Long-tail readability cost compounds — future contributors hit the same "this file is doing a lot" friction repeatedly.
+- Every file with unnecessary verbosity takes longer to read end-to-end; AI agents working in these files burn more context per task.
+- Long-tail readability cost compounds — future contributors hit the same "this file is doing a lot" friction repeatedly, across more files than just the outliers.
 
 **Pull-forward triggers:**
-- After Phase J (decomposing remaining flat services) completes — natural moment to do a width-then-depth pass.
-- When a feature task is gated by needing to understand one of these files end-to-end and the cost of that understanding becomes visible.
-- When AI-agent context-budget complaints surface during work on one of the listed files.
+- After Phase J (decomposing remaining flat services) completes — natural moment to do a width-then-depth pass across the full backend.
+- When a feature task is gated by needing to understand a file end-to-end and the cost of that understanding becomes visible.
+- When AI-agent context-budget complaints surface during work on any backend file, not just the largest ones.
 
 **Owner:** TBD.
 
