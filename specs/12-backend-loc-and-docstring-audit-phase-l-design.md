@@ -33,7 +33,7 @@ Both TDs share a property — they require *examining every file once* — so TD
 2. **Investigation (Stage 2).** Each `investigate` finding gets a focused per-site analysis. Read every call site fully, write a behavior-preservation strategy, conclude:
    - **Promote to `execute`** — the strategy is byte-equivalence-provable or test-coverable. Strategy captured in the scorecard.
    - **Defer to `design-discussion`** — the strategy involves behavior or interface trade-offs. Rationale captured in the scorecard.
-   - **Soft cap:** an investigation defers if it requires reading more than 5 files beyond the immediate call sites, or 3 full read-analyze cycles without converging on a behavior-preservation strategy. The phase doesn't stall on one stubborn finding.
+   - **Soft cap:** an investigation defers if it requires reading more than 5 files beyond the direct callers of the affected symbol, or 3 full read-analyze cycles without converging on a behavior-preservation strategy. The phase doesn't stall on one stubborn finding.
 
    Commit the updated scorecard.
 
@@ -51,7 +51,7 @@ Both TDs share a property — they require *examining every file once* — so TD
 
 - All 91 Python files under `backend/app/` (10,403 LOC baseline).
 - **TD-008 LOC reductions** across the opportunity categories in §4: dead imports, near-duplicate functions, repeated DB-lookup patterns, repeated CRUD patterns, near-identical prompt strings, redundant fallback branches, single-use trivial wrapper functions, dead code, inline data-munging blocks worth extracting.
-- **TD-009 docstring drift cleanup:** removing stale `Phase X`, `commit N/M`, `extracted from … in Phase`, `final form`, and "Renamed … in Phase Y" references. Replaced with structural-only docstrings or removed entirely.
+- **TD-009 docstring and code-comment drift cleanup:** removing stale `Phase X`, `commit N/M`, `extracted from … in Phase`, `final form`, and "Renamed … in Phase Y" references from both docstrings AND inline `#`-prefixed code comments. Replaced with structural-only content or removed entirely. Code comments are in scope because the same drift pattern appears in `#` comments alongside docstrings (e.g., `signals/search.py:158`'s `# (extracted to signals.parsing during Phase H commit 19/20)`).
 - **The audit scorecard** at `docs/audits/2026-05-25-backend-loc-docstring-audit-phase-l.md` covering all 91 files with a verdict each.
 
 ### Explicit out-of-scope deferrals
@@ -167,10 +167,13 @@ Est. -50 LOC.
 [... additional cross-cutting findings ...]
 ```
 
+> *The structure above is a format illustration using representative findings for `market_research/orchestrator.py`. During Stage 1, every file must be independently audited; the example's specific findings do not exempt that file from re-examination. Actual audit results may differ.*
+
 **Key properties:**
 - Every one of the 91 files appears at least once. That's the evidence that the systematic pass actually happened.
 - Each finding tags its category, confidence label, behavior-preservation strategy (where applicable), and LOC estimate.
 - Cross-cutting findings (touching multiple files) get their own section so the plan can sequence them with awareness of shared call sites.
+- **Clean-file grouping is optional:** files with no findings may be listed in a compact `## Clean files` table (one row per file, with file path and LOC) rather than each getting its own `###` subsection. Either layout is acceptable; the constraint is that every file appears somewhere in the scorecard with a verdict.
 - Each stage commit is a frozen snapshot — same convention as specs/plans (per CLAUDE.md "Specs and plans are a frozen record of intent, not current truth"). Future audits start a new scorecard with a new date rather than updating this one.
 
 ---
@@ -196,12 +199,12 @@ The following wins have been verified against the current codebase. They constit
 ### Behavior-preservation strategy per known win
 
 - **K1**: removed symbols proven unused by per-symbol grep. Zero behavior surface. pyflakes after edit confirms.
-- **K2**: before the refactor, snapshot the current values of the 4 string constants to a baseline file (e.g., `backend/tests/_baselines/llm_config_prompt_strings.py`) containing module-level constants `CYPHER_GEN_PROMPT_BASELINE`, `CYPHER_GEN_PROMPT2_BASELINE`, `QA_PROMPT_TEMPLATE_BASELINE`, `QA_PROMPT_TEMPLATE2_BASELINE`. A pytest in `backend/tests/unit/test_llm_config_prompts.py` then imports both the baseline file and the post-refactor `app.core.llm_config` module and asserts byte-equality for all 4 strings. Baseline file and test are committed alongside the K2 refactor and stay as permanent regression guards. No git operations needed.
+- **K2**: before the refactor, snapshot the current values of the 4 string constants to a baseline file (e.g., `backend/tests/_baselines/llm_config_prompt_strings.py`) containing module-level constants `CYPHER_GEN_PROMPT_BASELINE`, `CYPHER_GEN_PROMPT2_BASELINE`, `QA_PROMPT_TEMPLATE_BASELINE`, `QA_PROMPT_TEMPLATE2_BASELINE`. **Baseline constants must be independent hardcoded string literal copies of the pre-refactor values** — written by reading the current `llm_config.py` contents and copying the literals into the baseline file. They are NOT imports or re-exports from `app.core.llm_config` (which would make the assertion tautological — the baseline would track the refactor instead of guarding against it). A pytest in `backend/tests/unit/test_llm_config_prompts.py` then imports both the baseline file and the post-refactor `app.core.llm_config` module and asserts byte-equality for all 4 strings. Baseline file and test are committed alongside the K2 refactor and stay as permanent regression guards. No git operations needed.
 - **K3**: before the refactor, capture per-component prompt fixtures by running `RESEARCH_MARKET_<N>_TEMPLATE.format(company_profile_json=<fixed_sample>)` against a checked-in sample input. Each fixture is the formatted prompt string (the value that would be sent to the LLM) and lives at `backend/tests/fixtures/market_research_prompts/<component_name>.txt`. The K3 refactor exposes the formatted prompt at a testable seam — either by extracting a `_build_research_prompt(component_name, profile_json)` helper that the new `_run_research_component` calls, or by making `_run_research_component` accept a `return_prompt: bool` switch for testing. A parametrized pytest calls the seam with each component name and the `<fixed_sample>`, asserts byte-equality against the corresponding fixture. Fixtures, sample input, and test are committed alongside K3.
-- **K4**: helper appended to existing `services/_neo4j_helpers.py`. Signature `fetch_company_profile(driver, org_id: str | None) -> dict | None`. Returns either a `dict` (the first record's values) or `None`. The 8 call sites already follow this pattern; the helper centralizes the Cypher + alias-handling. Existing tests for the 5 consuming services continue to pass. During the audit step, each of the 8 sites is inspected line-by-line for subtle deviations (alias differences, additional filtering, return-value handling) before extraction; sites with non-trivial deviations stay inline.
+- **K4**: helper appended to existing `services/_neo4j_helpers.py`. Signature `fetch_company_profile(driver, org_id: str | None) -> dict | None`. Returns either a `dict` (the first record's values) or `None`. The 8 call sites already follow this pattern; the helper centralizes the Cypher + alias-handling. Existing tests for the 5 consuming services are stub-fixtured (per TD-004) and confirm structural preservation — that code paths still reach the same points. **The primary behavior-preservation evidence for K4 is the line-by-line call-site inspection during Stage 1 audit**, confirming each site's pre-extraction return-value shape matches the helper's contract. Sites with non-trivial deviations (alias differences, additional filtering, return-value handling) stay inline.
 - **K5**: helper `_update_run(run_coll, run_id, **fields)` performs `run_coll.update_one({"run_id": run_id}, {"$set": fields})`. Filter and `$set` shape preserved exactly.
 - **K6**: helper `_get_file_collection(mongo)` returns `mongo["File_Processing"]["file_status"]`. The 11 sites use the returned collection in the same way (`find`, `find_one`, `update_one`, `insert_one`) — no behavior change.
-- **K7**: prose-only edits inside docstrings. Each of the 25 grep matches is evaluated per-match: **stale origin claim** (e.g., "extracted from X in Phase Y", "Phase H commit 16/20", "Renamed from documents/ in Phase H") → remove the offending sentence; **current-state structural reference** (e.g., "Phase H scope" used to mean "the scope of Phase H" rather than as origin attribution) → keep or rephrase without the phase reference. Replacement text is structural-only — what the module exports, what its public API is. No version/commit/phase references in the new text. If a structural-only replacement isn't possible, the docstring becomes minimal or is removed.
+- **K7**: prose-only edits inside docstrings AND inline `#` code comments. Each of the 25 grep matches is evaluated per-match: **stale origin claim** (e.g., "extracted from X in Phase Y", "Phase H commit 16/20", "Renamed from documents/ in Phase H", or the inline-comment variant `# (extracted to signals.parsing during Phase H commit 19/20)`) → remove the offending sentence/comment; **current-state structural reference** (e.g., "Phase H scope" used to mean "the scope of Phase H" rather than as origin attribution) → keep or rephrase without the phase reference. Replacement text is structural-only — what the module exports, what its public API is. No version/commit/phase references in the new text. If a structural-only replacement isn't possible, the docstring/comment becomes minimal or is removed.
 
 ---
 
@@ -234,11 +237,11 @@ The last Stage-3 commit captures:
 |---|---|---|
 | R1 | K2 base-prompt assembly produces a different string than the original (changes the LLM prompt that hits the API) | Mandatory byte-equality assertion against pre-refactor constants before commit. Failure rejects the refactor. |
 | R2 | K3 dispatch returns the wrong template for a `component_name` | Parametrized test asserting `template.format(...)` byte-equals a per-component checked-in fixture. |
-| R3 | K4 helper diverges from one of the 7 inline sites (subtle deviation we missed) | Audit step inspects each site line-by-line before extraction. Sites with non-trivial deviations stay inline. |
+| R3 | K4 helper diverges from one of the 8 inline sites (subtle deviation we missed) | Audit step inspects each site line-by-line before extraction. Sites with non-trivial deviations stay inline. |
 | R4 | K7 docstring sweep deletes useful context along with stale refs | Conservative grep targets specific patterns only. Replacement content is structural-only. |
 | R5 | Investigation of a medium finding misses a subtle behavior risk → executed change introduces regression | Investigation produces a written behavior-preservation strategy naming every observable surface (return value, exception types, side effects, evaluation order). Strategy captured in scorecard. If pytest fails on the change, it's reverted; scorecard entry updated to `deferred` with the failure as the rationale. |
 | R6 | Cross-cutting tasks hit unrelated callers we didn't audit | Per-task verification runs full pytest. For K1: pyflakes confirms no usage anywhere in `backend/app/` post-edit. |
-| R7 | Investigation phase extends the round significantly | Accepted, with soft cap: an investigation defers if it requires reading more than 5 files beyond the immediate call sites, or 3 full read-analyze cycles without converging. The phase doesn't stall on one stubborn finding. |
+| R7 | Investigation phase extends the round significantly | Accepted, with soft cap: an investigation defers if it requires reading more than 5 files beyond the direct callers of the affected symbol, or 3 full read-analyze cycles without converging. The phase doesn't stall on one stubborn finding. |
 | R8 | A finding conflicts with TD-010 (prompt externalization) — e.g., dedup-and-then-externalize cycle | K2's base+overlay structure is forward-compatible with future TD-010 work. Out-of-scope deferral keeps prompts as Python constants this round. |
 | R9 | TD-009 cleanup creates new drift in replacement docstrings | Replacement content is structural-only — no version/commit/phase references in new text. If a structural-only replacement isn't possible, docstring becomes minimal or is removed. |
 | R10 | Audit + investigation surface more work than fits the round | Accepted. Phase L scope is "every file examined, every executable finding executed." If an investigated finding is large enough to warrant its own spec (e.g., a structural change to a 400-LOC service), it gets deferred with rationale captured in the scorecard. |
@@ -262,7 +265,7 @@ On branch `refactor-backend-loc-docstring-audit-phase-l`:
    - Additional commits for investigated-and-promoted findings and audit-surfaced additions.
 4. **Final:** `docs(reviews): add Phase L impl review + synthesis (round 1, …)` — matching the Phase J/K pattern.
 
-**Merge strategy:** fast-forward into master after impl review verdict is clean, then push (matching the Phase K cutover we just did).
+**Merge strategy:** fast-forward into master after impl review verdict is clean, then push (matching the Phase K cutover we just did). If the impl review verdict is `findings` (actionable items present), fix-then-re-review until verdict is `clean`, matching the Phase J/K iteration pattern.
 
 **Commit message style:** `type(scope):` per CLAUDE.md. No `[N/M]` numbering (Phase L commits are bounded by the scorecard, not by a fixed task count). No Co-Authored-By footer.
 
