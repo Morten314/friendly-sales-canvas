@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict
 
 from app.core.exceptions import BrewraError
-from app.models.market_scoring import LeadMarketScoreRow, MARKET_SCORE_COMPONENT_KEYS
+from app.models.market_scoring import MARKET_SCORE_COMPONENT_KEYS
 from app.services.leads import get_leads_for_org
 from app.services.market_scoring import persistence
 from app.services.market_scoring.normalization import _parse_iso_datetime
@@ -24,26 +24,6 @@ from app.services.market_scoring import orchestrator
 
 
 logger = logging.getLogger(__name__)
-
-
-def _lead_to_score_row(lead_doc: Dict[str, Any]) -> LeadMarketScoreRow:
-    component_scores = lead_doc.get("component_scores", {}) if isinstance(lead_doc.get("component_scores"), dict) else {}
-    return LeadMarketScoreRow(
-        lead_id=str(lead_doc.get("lead_id")),
-        org_id=str(lead_doc.get("org_id")),
-        file_id=lead_doc.get("file_id"),
-        company_name=lead_doc.get("company_name"),
-        lead_name=lead_doc.get("lead_name"),
-        score_market_size_opportunity=float(component_scores.get("market size & opportunity", 0)),
-        score_industry_trends_report=float(component_scores.get("industry trends report", 0)),
-        score_competitor_landscape=float(component_scores.get("competitor landscape", 0)),
-        score_regulatory_compliance_highlights=float(component_scores.get("regulatory & compliance highlights", 0)),
-        score_market_entry_growth_strategy=float(component_scores.get("market entry & growth strategy", 0)),
-        combined_score=float(lead_doc.get("market_total_score", 0)),
-        scoring_status=str(lead_doc.get("scoring_status", "completed")),
-        scored_at=lead_doc.get("scored_at"),
-        updated_at=lead_doc.get("updated_at"),
-    )
 
 
 def _is_stale_queued_run(run_doc: Dict[str, Any], stale_after_seconds: int = 300) -> bool:

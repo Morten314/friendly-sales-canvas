@@ -36,9 +36,9 @@ from app.services.market_scoring.normalization import (
     _extract_lead_name,
     _extract_description_preview,
     _parse_iso_datetime,
+    _lead_to_score_row,
 )
 from app.services.market_scoring.scoring import (
-    _lead_to_score_row,
     _is_stale_queued_run,
     _run_market_scoring_for_org,
 )

@@ -4,9 +4,8 @@ Public re-exports (§3.7): _ensure_market_scoring_indexes (lifespan),
 _get_latest_market_score_rows (unit test), get_company_profile_for_org.
 
 Normalization helpers (_extract_company_name, _extract_lead_name,
-_normalize_non_empty_string) come from normalization.py at top level.
-_lead_to_score_row lives in scoring.py and is imported lazily inside
-_get_latest_market_score_rows because scoring -> persistence is a back-edge.
+_normalize_non_empty_string, _lead_to_score_row) come from normalization.py
+at module top.
 """
 import json
 from typing import Any, Dict, List, Optional
@@ -64,7 +63,7 @@ def _get_latest_market_score_rows(
     limit: int = 500,
     offset: int = 0,
 ) -> tuple[List[LeadMarketScoreRow], int]:
-    from app.services.market_scoring.scoring import _lead_to_score_row
+    from app.services.market_scoring.normalization import _lead_to_score_row
 
     score_coll, _ = _get_market_score_collections(mongo)
     flt = {"org_id": org_id}
