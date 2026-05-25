@@ -19,7 +19,7 @@ Re-exports the 4 public-surface symbols listed in spec §3.6, plus the
 _run_market_scoring_for_org (unit-test import), _get_latest_market_score_rows
 (unit-test import). Internal orchestrator helpers (get_market_reports_for_org,
 score_single_lead_against_market) live in orchestrator.py — scoring.py
-accesses them via a lazy `from app.services.market_scoring import orchestrator`
+accesses them via a module-top `from app.services.market_scoring import orchestrator`
 import; tests import them from the submodule directly.
 """
 

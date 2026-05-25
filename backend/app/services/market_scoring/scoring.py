@@ -6,9 +6,10 @@ from __init__.py per §3.7 (imported by tests/unit/test_market_scoring.py).
 
 Cross-module dependency: _run_market_scoring_for_org calls three
 orchestrator-resident helpers (score_single_lead_against_market,
-_persist_market_score_for_lead, get_market_reports_for_org) that aren't
-moved out as part of Phase H. They're imported lazily inside the function
-body to break the orchestrator <-> scoring import cycle.
+_persist_market_score_for_lead, get_market_reports_for_org). The
+orchestrator module is imported at module top; the partial-load case
+is handled because scoring only accesses orchestrator.X symbols from
+function bodies (by call-time, orchestrator has finished loading).
 """
 import logging
 from datetime import datetime, timezone
@@ -19,6 +20,7 @@ from app.models.market_scoring import LeadMarketScoreRow, MARKET_SCORE_COMPONENT
 from app.services.leads import get_leads_for_org
 from app.services.market_scoring import persistence
 from app.services.market_scoring.normalization import _parse_iso_datetime
+from app.services.market_scoring import orchestrator
 
 
 logger = logging.getLogger(__name__)
@@ -59,8 +61,6 @@ def _is_stale_queued_run(run_doc: Dict[str, Any], stale_after_seconds: int = 300
 
 
 def _run_market_scoring_for_org(driver, mongo, llm2, user_id: str, org_id: str, run_id: str) -> None:
-    from app.services.market_scoring import orchestrator
-
     run_coll = None
     try:
         score_coll, run_coll = persistence._get_market_score_collections(mongo)
