@@ -23,6 +23,62 @@ from app.services.leads import get_leads_for_org
 from app.services.signals import persistence, search
 
 
+async def _run_persona_signal_batch(
+    persona: str,
+    pre_data,
+    *,
+    agent_chain,
+    llm_backend: str,
+    mongo,
+    track_key: Optional[str],
+    request: MarketRequest,
+    batch_id: str,
+    generated_signals: list,
+) -> None:
+    """Run one persona's signal-batch loop (scout or profiler).
+
+    Replaces the pre-refactor parallel loops at lines 127-157 (scout) and
+    160-190 (profiler) of this module. Stage 2 of Phase L verified the
+    loops were byte-identical except for ``persona`` (used in
+    ``search_signals``, the ``"agent"`` field, and log messages) and the
+    ``pre_data`` source. The helper preserves all 4 observable surfaces:
+    return shape (appends to ``generated_signals``), exception re-raise,
+    DB writes via ``persistence._save_signal_and_track_headline``, and
+    log lines (same wording, persona substituted).
+    """
+    for i in range(2):
+        try:
+            logger.info(f"Generating {persona} signal {i+1}...")
+            signals_result = await asyncio.to_thread(search.search_signals, agent_chain, pre_data, persona, llm_backend)
+            signal_id = str(uuid.uuid4())
+            signals_result.update({
+                "id": signal_id,
+                "signal_id": signal_id,  # Ensure signal_id is also present
+                "user_id": request.user_id,
+                "agent": persona,
+                "timestamp": datetime.now(timezone.utc),
+                "batch_id": batch_id
+            })
+            if request.org_id:
+                signals_result["org_id"] = request.org_id
+
+            # Save signal + (if headline) upsert into signal_track.
+            await asyncio.to_thread(
+                persistence._save_signal_and_track_headline, mongo, signals_result, track_key,
+            )
+
+            # Mirror the headline into pre_data for the next iteration's prompt.
+            if signals_result.get("headline") and track_key and isinstance(pre_data, dict):
+                pre_data["existing_headlines"].append(signals_result.get("headline"))
+            signals_result.pop("_id", None)
+            generated_signals.append(signals_result)
+            logger.info(f"Successfully generated {persona} signal {i+1}")
+
+        except Exception as e:
+            logger.error(f"Error generating {persona} signal {i+1}: {e}")
+            raise
+
+
 async def _generate_signals_batch_impl(driver, mongo, pc, agent_chain, request: MarketRequest, llm_backend: str) -> dict:
     """Shared implementation for batch signal generation (Groq and Claude)."""
     # Prepare data for the signals functions
@@ -124,70 +180,20 @@ async def _generate_signals_batch_impl(driver, mongo, pc, agent_chain, request: 
     batch_id = f"batch_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
 
     # Generate 2 signals for scout
-    for i in range(2):
-        try:
-            logger.info(f"Generating scout signal {i+1}...")
-            signals_result = await asyncio.to_thread(search.search_signals, agent_chain, pre_data, "scout", llm_backend)
-            signal_id = str(uuid.uuid4())
-            signals_result.update({
-                "id": signal_id,
-                "signal_id": signal_id,  # Ensure signal_id is also present
-                "user_id": request.user_id,
-                "agent": "scout",
-                "timestamp": datetime.now(timezone.utc),
-                "batch_id": batch_id
-            })
-            if request.org_id:
-                signals_result["org_id"] = request.org_id
-
-            # Save signal + (if headline) upsert into signal_track.
-            await asyncio.to_thread(
-                persistence._save_signal_and_track_headline, mongo, signals_result, track_key,
-            )
-
-            # Mirror the headline into pre_data for the next iteration's prompt.
-            if signals_result.get("headline") and track_key and isinstance(pre_data, dict):
-                pre_data["existing_headlines"].append(signals_result.get("headline"))
-            signals_result.pop("_id", None)
-            generated_signals.append(signals_result)
-            logger.info(f"Successfully generated scout signal {i+1}")
-
-        except Exception as e:
-            logger.error(f"Error generating scout signal {i+1}: {e}")
-            raise
+    await _run_persona_signal_batch(
+        "scout", pre_data,
+        agent_chain=agent_chain, llm_backend=llm_backend,
+        mongo=mongo, track_key=track_key, request=request,
+        batch_id=batch_id, generated_signals=generated_signals,
+    )
 
     # Generate 2 signals for profiler
-    for i in range(2):
-        try:
-            logger.info(f"Generating profiler signal {i+1}...")
-            signals_result = await asyncio.to_thread(search.search_signals, agent_chain, profiler_pre_data, "profiler", llm_backend)
-            signal_id = str(uuid.uuid4())
-            signals_result.update({
-                "id": signal_id,
-                "signal_id": signal_id,  # Ensure signal_id is also present
-                "user_id": request.user_id,
-                "agent": "profiler",
-                "timestamp": datetime.now(timezone.utc),
-                "batch_id": batch_id
-            })
-            if request.org_id:
-                signals_result["org_id"] = request.org_id
-
-            # Save signal + (if headline) upsert into signal_track.
-            await asyncio.to_thread(
-                persistence._save_signal_and_track_headline, mongo, signals_result, track_key,
-            )
-
-            # Mirror the headline into profiler_pre_data for the next iteration's prompt.
-            if signals_result.get("headline") and track_key and isinstance(profiler_pre_data, dict):
-                profiler_pre_data["existing_headlines"].append(signals_result.get("headline"))
-            signals_result.pop("_id", None)
-            generated_signals.append(signals_result)
-            logger.info(f"Successfully generated profiler signal {i+1}")
-
-        except Exception as e:
-            logger.error(f"Error generating profiler signal {i+1}: {e}")
-            raise
+    await _run_persona_signal_batch(
+        "profiler", profiler_pre_data,
+        agent_chain=agent_chain, llm_backend=llm_backend,
+        mongo=mongo, track_key=track_key, request=request,
+        batch_id=batch_id, generated_signals=generated_signals,
+    )
 
     return {
         "status": "success",
