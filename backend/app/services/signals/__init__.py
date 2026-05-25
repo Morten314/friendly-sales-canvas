@@ -28,7 +28,7 @@ from app.services.signals.batch import (
     generate_signals_batch,
     generate_signals_batch_claude,
 )
-from app.services.signals.orchestrator import (
+from app.services.signals.ask import (
     signal_ask,
     signal_ask_claude,
 )
