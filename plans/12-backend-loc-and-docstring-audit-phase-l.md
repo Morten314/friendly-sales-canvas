@@ -422,14 +422,15 @@ cd /projects/Brewra/brewra-gtm-intelligence/backend
 
 Expected: same as baseline (Task 0b Step 3) — no new warnings introduced. Pyflakes may surface unrelated warnings; if any line now says "X imported but unused" that didn't say so on master, that's a bug in this task's edit (e.g., you removed the symbol from a multi-name import but accidentally left the import line empty or mis-formed).
 
-- [ ] **Step 4: Run the full pytest suite**
+- [ ] **Step 4: Run import smoke test and full pytest suite**
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/backend
+.venv/bin/python -c "from app.main import app; print('imports OK')"
 BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q 2>&1 | tail -3
 ```
 
-Expected: `248 passed, 19 snapshots passed`. K1 adds no tests; the count is unchanged from baseline.
+Expected: smoke test prints `imports OK`; pytest reports `248 passed, 19 snapshots passed`. K1 adds no tests; the count is unchanged from baseline. The smoke test is spec §7 gate 1 — confirms the import graph still resolves after the unused-import removals (defense-in-depth against side-effect imports, decorator registrations, or `getattr`/`__all__`-consumed symbols that pyflakes would miss).
 
 - [ ] **Step 5: Commit**
 
@@ -527,13 +528,15 @@ BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest tests/ -k market_scoring 2>&1 |
 
 Expected: all tests in `tests/test_market_scoring.py` and `tests/unit/test_market_scoring.py` pass.
 
-- [ ] **Step 6: Run the full pytest suite**
+- [ ] **Step 6: Run import smoke test and full pytest suite**
 
 ```bash
+cd /projects/Brewra/brewra-gtm-intelligence/backend
+.venv/bin/python -c "from app.main import app; print('imports OK')"
 BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q 2>&1 | tail -3
 ```
 
-Expected: `248 passed, 19 snapshots passed`. K5 adds no tests.
+Expected: smoke test prints `imports OK`; pytest reports `248 passed, 19 snapshots passed`. K5 adds no tests. The smoke test is spec §7 gate 1.
 
 - [ ] **Step 7: Commit**
 
@@ -634,13 +637,15 @@ BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest tests/ -k data_sources 2>&1 | t
 
 Expected: all data_sources tests pass.
 
-- [ ] **Step 7: Run the full pytest suite**
+- [ ] **Step 7: Run import smoke test and full pytest suite**
 
 ```bash
+cd /projects/Brewra/brewra-gtm-intelligence/backend
+.venv/bin/python -c "from app.main import app; print('imports OK')"
 BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q 2>&1 | tail -3
 ```
 
-Expected: `248 passed, 19 snapshots passed`. K6 adds no tests.
+Expected: smoke test prints `imports OK`; pytest reports `248 passed, 19 snapshots passed`. K6 adds no tests. The smoke test is spec §7 gate 1.
 
 - [ ] **Step 8: Commit**
 
@@ -855,7 +860,9 @@ def _build_research_prompt(component_n: int, company_profile_json: str) -> str:
 
 (Adjust the `.format(...)` keyword if Step 3 used a different variable name.)
 
-2. **Replace the 5 `Research_Market_<N>` functions** with a single `_run_research_component` that takes the component number. The body comes verbatim from `Research_Market_1` (lines 43–69, verified byte-identical to the other 4 after template-name normalization), with the template-name reference replaced by the dispatch:
+2. **Replace the 5 `Research_Market_<N>` functions** with a single `_run_research_component` that takes the component number. The body comes verbatim from `Research_Market_1` (lines 43–69, verified byte-identical to the other 4 after template-name normalization), with the template-name reference replaced by the dispatch.
+
+**Drift caveat:** the code block below was captured from `Research_Market_1` at plan-writing time (commit `a07a086`). If Step 1's AST hash check reveals the 5 functions have drifted since then, re-derive the body from the current `Research_Market_1` directly (copy verbatim, replacing only `template = RESEARCH_MARKET_1_TEMPLATE` and the subsequent `template.format(...)` line with the dispatch). The plan's code is a structural guide, not a substitute for reading the source.
 
 ```python
 # Delete the 5 functions Research_Market_1, Research_Market_2,
@@ -935,18 +942,21 @@ If any case fails with a diff, the dispatch's output does NOT match the captured
 - [ ] **Step 8: Run module-scoped pytest**
 
 ```bash
+cd /projects/Brewra/brewra-gtm-intelligence/backend
 BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest tests/ -k market_research 2>&1 | tail -5
 ```
 
 Expected: all market_research tests pass (existing tests + the 5 new K3 tests).
 
-- [ ] **Step 9: Run the full pytest suite**
+- [ ] **Step 9: Run import smoke test and full pytest suite**
 
 ```bash
+cd /projects/Brewra/brewra-gtm-intelligence/backend
+.venv/bin/python -c "from app.main import app; print('imports OK')"
 BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q 2>&1 | tail -3
 ```
 
-Expected: `253 passed, 19 snapshots passed` (248 baseline + 5 new K3 tests).
+Expected: smoke test prints `imports OK`; pytest reports `253 passed, 19 snapshots passed` (248 baseline + 5 new K3 tests). The smoke test is spec §7 gate 1.
 
 - [ ] **Step 10: Commit**
 
@@ -1055,6 +1065,8 @@ wc -l backend/tests/_baselines/llm_config_prompt_strings.py
 ```
 
 The file should contain 4 baseline assignments. `repr()` encoding ensures the strings are exact copies including all whitespace, escape characters, and trailing newlines.
+
+**Mechanism note:** Spec §6 K2 describes the baseline as written by "reading the current `llm_config.py` contents and copying the literals into the baseline file." The `repr()`-based generation above is a functionally equivalent mechanism — it produces hardcoded string literals in the baseline file with no import dependency on `app.core.llm_config`. The spec's non-tautological requirement (baseline must NOT track the refactor) is satisfied because the resulting file has zero ongoing coupling to `llm_config.py` after the one-time dump.
 
 - [ ] **Step 2: Write the byte-equality test**
 
@@ -1204,18 +1216,21 @@ Use the diff in the assertion error to identify exactly where the mismatch start
 - [ ] **Step 6: Run module-scoped pytest**
 
 ```bash
+cd /projects/Brewra/brewra-gtm-intelligence/backend
 BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest tests/ -k "llm_config or graph_chat" 2>&1 | tail -5
 ```
 
 Expected: existing tests + the 4 new K2 tests all pass.
 
-- [ ] **Step 7: Run the full pytest suite**
+- [ ] **Step 7: Run import smoke test and full pytest suite**
 
 ```bash
+cd /projects/Brewra/brewra-gtm-intelligence/backend
+.venv/bin/python -c "from app.main import app; print('imports OK')"
 BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q 2>&1 | tail -3
 ```
 
-Expected: `257 passed, 19 snapshots passed` (248 baseline + 5 K3 + 4 K2 = 257).
+Expected: smoke test prints `imports OK`; pytest reports `257 passed, 19 snapshots passed` (248 baseline + 5 K3 + 4 K2 = 257). The smoke test is spec §7 gate 1.
 
 - [ ] **Step 8: Verify LOC reduction in `llm_config.py`**
 
@@ -1266,13 +1281,19 @@ Edit `backend/app/services/_neo4j_helpers.py` to append a new function after the
 def fetch_company_profile(driver, org_id: Optional[str] = None) -> Optional[dict]:
     """Fetch the first CompanyProfile node, optionally filtered by org_id.
 
-    If org_id is provided: ``MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1``.
-    If org_id is None: ``MATCH (c:CompanyProfile) RETURN c LIMIT 1`` (fetch any).
+    If org_id is truthy: ``MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1``.
+    If org_id is falsy (None or ""): ``MATCH (c:CompanyProfile) RETURN c LIMIT 1`` (fetch any).
+
+    The truthy check (``if org_id:``) preserves the pre-refactor sites' behavior
+    exactly — the fallback-pattern sites in market_research and icp used
+    ``if request.org_id:``, treating empty string as falsy → fallback-to-any.
+    Using ``if org_id is not None`` would change behavior at the empty-string
+    boundary (routing "" to the filtered query, which returns None).
 
     Returns the c node's properties as a plain dict, or None if no match.
     """
     with driver.session() as session:
-        if org_id is not None:
+        if org_id:
             result = session.run(
                 "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
                 org_id=org_id,
@@ -1413,13 +1434,15 @@ BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest tests/ -k "customer_profile or 
 
 Expected: all tests pass. This is the cross-cutting verification — K4 touches 5 services so the test run must cover them all.
 
-- [ ] **Step 8: Run the full pytest suite**
+- [ ] **Step 8: Run import smoke test and full pytest suite**
 
 ```bash
+cd /projects/Brewra/brewra-gtm-intelligence/backend
+.venv/bin/python -c "from app.main import app; print('imports OK')"
 BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q 2>&1 | tail -3
 ```
 
-Expected: same as the previous task's count (257 if all prior tasks passed). K4 adds no tests — the existing stub-fixtured tests (per TD-004) cover structural preservation, and Stage 1's line-by-line verification is the primary behavior-preservation evidence.
+Expected: smoke test prints `imports OK`; pytest reports the same count as the previous task (257 if all prior tasks passed). K4 adds no tests — the existing stub-fixtured tests (per TD-004) cover structural preservation, and Stage 1's line-by-line verification is the primary behavior-preservation evidence. The smoke test is spec §7 gate 1.
 
 - [ ] **Step 9: Commit**
 
@@ -1561,14 +1584,15 @@ Expected: 0 matches. Per spec §10 criterion 5, this is the TD-009 closure check
 
 If a match remains and is borderline, judgment call: prefer removing the phase reference (cheap) over keeping it (creates a future-drift risk).
 
-- [ ] **Step 4: Run the full pytest suite**
+- [ ] **Step 4: Run import smoke test and full pytest suite**
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/backend
+.venv/bin/python -c "from app.main import app; print('imports OK')"
 BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q 2>&1 | tail -3
 ```
 
-Expected: same count as before K7 (257 if K3 + K2 added 9 tests). K7 is prose-only — no code paths change.
+Expected: smoke test prints `imports OK`; pytest reports the same count as before K7 (257 if K3 + K2 added 9 tests). K7 is prose-only — no code paths change. The smoke test is spec §7 gate 1.
 
 - [ ] **Step 5: Commit**
 
@@ -1682,6 +1706,7 @@ Expected: `<final count> passed, 19 snapshots passed`. Final count = 248 + (test
 - [ ] **Step 7: Criterion 7 — No new pyflakes warnings**
 
 ```bash
+cd /projects/Brewra/brewra-gtm-intelligence/backend
 .venv/bin/python -m pyflakes app/ 2>&1
 ```
 
@@ -1799,4 +1824,4 @@ Phase L is complete.
 | Stage 3 (Execution) | K1, K5, K6, K3, K2, K4, K7 + audit-surfaced | 7 + N |
 | Final | F1, F2, F3 | 1 (review) + 1 (TD-update) |
 
-Total commits: 10 + N (where N is the count of audit-surfaced and investigation-promoted additions).
+Total commits: 11 + N (where N is the count of audit-surfaced and investigation-promoted additions).
