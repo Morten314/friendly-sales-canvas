@@ -492,16 +492,6 @@ async def generate_signals_batch_claude(driver, mongo, pc, agent_chain, request:
     return await _generate_signals_batch_impl(driver, mongo, pc, agent_chain, request, "claude")
 
 
-async def fetch_signals(
-    mongo,
-    user_id: str,
-    limit: int = 10,
-    offset: int = 0,
-) -> tuple[List[Dict[str, Any]], int]:
-    """Fetch signals for a user. Returns (items, total). User-scoped, not org-scoped."""
-    return persistence._load_signals_for_user(mongo, user_id, limit, offset)
-
-
 async def signal_ask(driver, mongo, agent_chain, request: SignalAskRequest) -> dict:
     """Answer a question about signals using company profile, customer profile, history, and WebSearch."""
     try:

@@ -6,12 +6,11 @@ Submodules:
   - orchestrator.py: search_signals (persona-shared core),
     run_signals_research, generate_signals_batch (+ _claude variant,
     + _generate_signals_batch_impl shared body), signal_ask
-    (+ _claude variant), fetch_signals
-  - persistence.py: record_signal_action (public) + Mongo helpers —
-    _load_signals_for_user, _get_latest_signal_for_user_agent,
-    _get_existing_headlines, _get_user_icp_config,
-    _save_signal_and_track_headline (consolidates 3 copy-pasted
-    save+track blocks), _get_signal_ask_customer_profile
+    (+ _claude variant)
+  - persistence.py: fetch_signals, record_signal_action (public) + Mongo
+    helpers — _get_latest_signal_for_user_agent, _get_existing_headlines,
+    _get_user_icp_config, _save_signal_and_track_headline (consolidates 3
+    copy-pasted save+track blocks), _get_signal_ask_customer_profile
   - prompts.py: _SCOUT_PROMPT_TEMPLATE, _PROFILER_PROMPT_TEMPLATE,
     _LEADS_SECTION_TEMPLATE (+ fallback), _EXISTING_HEADLINES_SECTION_TEMPLATE,
     _SIGNAL_ASK_PROMPT_TEMPLATE (+ Claude variant)
@@ -28,10 +27,10 @@ from app.services.signals.orchestrator import (
     generate_signals_batch_claude,
     signal_ask,
     signal_ask_claude,
-    fetch_signals,
 )
 from app.services.signals.persistence import (
     record_signal_action,
+    fetch_signals,
 )
 
 __all__ = [
