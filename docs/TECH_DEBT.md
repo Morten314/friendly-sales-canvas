@@ -2,7 +2,7 @@
 
 Running list of debt items the team has consciously accepted. Each entry: what was done, what should be done, why we deferred, and the trigger that should pull it forward.
 
-Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases E and F) were removed on 2026-05-23; their IDs are not reused so commit/spec references stay traceable. TD-006 (market_scoring callers recomputing len(leads)) was resolved 2026-05-24 by Phase H Task 4. TD-007 (Phase G plan-verbatim cosmetic cruft) was resolved 2026-05-25 by Phase I commit 11/11.
+Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases E and F) were removed on 2026-05-23; their IDs are not reused so commit/spec references stay traceable. TD-006 (market_scoring callers recomputing len(leads)) was resolved 2026-05-24 by Phase H Task 4. TD-007 (Phase G plan-verbatim cosmetic cruft) was resolved 2026-05-25 by Phase I commit 11/11. TD-008 (backend LOC reduction) and TD-009 (docstring/comment drift) were resolved 2026-05-25 by Phase L (audit + 7 K-tasks + I2 promotion, commit `7f169f9`).
 
 ---
 
@@ -72,83 +72,6 @@ Option 1 is one character of code; option 2 is two lines of prose. v1 is being d
 - Any FE bug ticket mentioning "we have N documents in S3 but the dashboard says 500."
 
 **Owner:** TBD (likely whoever wires the FE to v2 first).
-
----
-
-## TD-008 — Reduce-LOC refactoring pass across the entire backend
-
-**Date logged:** 2026-05-24
-**Origin:** Proactive observation during Phase I brainstorming. Phase H impl review round 2 highlighted `signals/orchestrator.py` at 744 LOC (2× spec estimate); Phase I addresses that one file but the broader backend has accumulated LOC across many modules.
-
-**Current state:**
-The backend codebase (`backend/app/`) has grown through iterative feature development and multi-phase structural decomposition (Phases B–I). While decomposition achieved clean module boundaries, no systematic pass has been made to reduce lines of code across the backend as a whole. The largest files in `backend/app/services/` (post-Phase-I projection) illustrate the pattern:
-
-| File | LOC | Notes |
-|---|---:|---|
-| `market_research/prompts.py` | 718 | Single-file prompt constants for 5 components |
-| `leads.py` | 465 | Flat service, not yet decomposed |
-| `data_sources/pipeline.py` | 446 | Coordinated S3 + Pinecone + Mongo upload |
-| `market_scoring/orchestrator.py` | 428 | Trigger/status/persistence orchestration |
-| `customer_profile.py` | 388 | Flat service, not yet decomposed |
-| `icp/orchestrator.py` | 385 | ICP_generator + 4 research workers + dispatch |
-| `icp/prompts.py` | 383 | Prompt constants |
-
-But the scope of this item is not limited to these large files — it is the entire backend (`backend/app/`, ~10k LOC across ~50 files). The specific patterns that inflate LOC (e.g., inline data-munging blocks, long string literals, duplicated logic across modules) will be identified by the audit itself; asserting them here without a systematic scan would be guessing. The table above simply illustrates where the largest concentrations are today.
-
-**What it should be:**
-A systematic review pass across all of `backend/app/` — not a structural refactor, an audit — answering for each module: which functions are doing more than one thing, which inline patterns could be extracted to helpers, which long string literals could be hoisted, which duplicated patterns across modules could be consolidated. The specific reduction opportunities should be discovered during the pass, not assumed in advance. Output: a per-file punch list of high-confidence LOC reductions. Execute only the high-confidence items. The goal is not to hit a target LOC count but to ensure every file in the backend is as concise as it can be without losing clarity.
-
-**Why we deferred:**
-- Structural decomposition (Phases B-I) was higher-leverage; LOC reduction was a side effect of that work, not the goal.
-- LOC count is a weak proxy for complexity. The audit needs human judgment per file, not a mechanical pass — premature without that.
-- A full-backend pass is a broad commitment; doing it well requires reading every file, which is best done after the structural shape has stabilized (post-Phase J).
-
-**What we lose by staying as-is:**
-- Every file with unnecessary verbosity takes longer to read end-to-end; AI agents working in these files burn more context per task.
-- Long-tail readability cost compounds — future contributors hit the same "this file is doing a lot" friction repeatedly, across more files than just the outliers.
-
-**Pull-forward triggers:**
-- After Phase J (decomposing remaining flat services) completes — natural moment to do a width-then-depth pass across the full backend.
-- When a feature task is gated by needing to understand a file end-to-end and the cost of that understanding becomes visible.
-- When AI-agent context-budget complaints surface during work on any backend file, not just the largest ones.
-
-**Owner:** TBD.
-
----
-
-## TD-009 — Docstring/code drift audit
-
-**Date logged:** 2026-05-24
-**Origin:** Phase H round-2 implementation review caught stale `signals/__init__.py` docstring (claimed "commit 16/20 final form" while actually at 20/20). Pattern repeated across all 5 Phase H package `__init__.py` docstrings, which had been rewritten for "final form" but drifted across the execution sequence. Phase I Risk R3 explicitly calls out the recurrence risk.
-
-**Current state:**
-Docstrings across the codebase make claims that were true when written but may have drifted since. Highest-risk classes:
-
-1. **Package `__init__.py` docstrings** that enumerate submodules and re-exported symbols — drift when submodules are added/removed or symbols change visibility.
-2. **Module-top docstrings** that describe origin ("extracted from <file> in commit N/M") — drift as commit/plan numbering shifts.
-3. **Function docstrings** that describe call patterns ("called by X, Y") — drift when callers move or disappear.
-4. **Spec/plan references** inside docstrings — drift when specs are revised across review rounds.
-
-No systematic check enforces docstring accuracy. Linters catch syntax, not truth.
-
-**What it should be:**
-A one-pass audit: for each module under `backend/app/`, read the top-level docstring and verify each factual claim against current code. Output: a list of corrections, applied in a single commit. Not a permanent enforcement mechanism — a periodic sweep.
-
-**Why we deferred:**
-- Structural refactors (Phases B-I) ship intermediate docstrings under time pressure; final cleanup is naturally retrospective.
-- A "docstring linter" that enforces accuracy would require either parsing prose (fragile) or restricting docstrings to a structured format (overengineering for current scale).
-
-**What we lose by staying as-is:**
-- Stale docstrings actively mislead readers (including AI agents), worse than no docstring at all.
-- The Phase H impl review found 4-5 cases where the docstring's claimed final state didn't match reality. Patterns of drift accumulate — each drift makes future readers trust the docstrings less.
-- AI agents that use docstrings as context-window summaries inherit stale claims.
-
-**Pull-forward triggers:**
-- At the end of any multi-phase sequence (e.g., post-Phase-J) — natural cleanup moment.
-- When a reader (human or agent) explicitly raises a docstring-vs-reality mismatch.
-- Bundled into the same pass as TD-008 (LOC reduction) — both are "look at every file once" audits.
-
-**Owner:** TBD.
 
 ---
 
