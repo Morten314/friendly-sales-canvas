@@ -20,7 +20,11 @@
 
 **Greenness invariant:** Every commit ends with `cd backend && BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q` clean. No "fix in next commit" exceptions. Any test failure during a task: do not commit. Either fix forward, or `git reset --hard HEAD` (working-tree changes are uncommitted; safe to discard) and re-read the step. Never commit a red state.
 
+**Post-commit rollback:** If a latent issue surfaces *after* a commit (e.g., Task 14's bypass-grep returns a match, or a subsequent sequence's pytest gate reveals a regression introduced earlier), use `git reset --hard HEAD~N` to revert the last N commits, or `git reset --hard master` to scrap the entire Phase K branch. Diagnose the root cause before re-attempting — do not edit the working tree to "fix forward" past a committed failure.
+
 **Abort criterion:** If any commit drops the test count below the 248-passed / 19-snapshot baseline, halt and surface to operator. Structural moves shouldn't change test count.
+
+**Per-sequence isolation:** Each of Sequences A–F is independent — each operates on a different service file with no cross-sequence dependencies. Failure of one sequence does not automatically abort subsequent sequences. If a sequence fails, halt and surface; the operator decides whether to replan the failed sequence in isolation or replan the entire phase.
 
 **Commit-message footer policy:** No `Co-Authored-By: Claude` footer on commits — user preference recorded in `~/.claude/projects/-projects-Brewra/memory/`.
 
@@ -84,6 +88,8 @@ done
 ```
 
 The grep matches the patch-target string itself (`"app.services.<svc>...`) anchored to the opening quote. This catches both single-line patches (e.g., `mocker.patch("app.services.foo._bar")`) and multi-line patches (where the string sits on its own indented line after `mocker.patch(`). The spec §4's `mocker\.patch.*app\.services\.<svc>` pattern only matches single-line patches; the quoted-string pattern used here covers both forms.
+
+This is a deliberate, strictly-more-thorough revision of spec §4 — it does not contradict the spec's intent, just closes a gap (multi-line patches in `test_customer_profile.py` are invisible to the spec's pattern). When the spec is next opened for editing, its pre-flight grep should be updated to match the plan's pattern.
 
 - [ ] **Step 2: Verify the output matches expectations**
 
@@ -934,103 +940,46 @@ git commit -m "refactor(be): split graph_chat into neo4j and prospect_pipeline [
 
 - [ ] **Step 1: Create `backend/app/services/health.py`**
 
-Create the file with this exact content. The body of `probe_llm` is copied verbatim from `backend/app/services/pipeline.py` lines 64–74 (current file at master `4d5937e`).
+Create the file with this header, then append `probe_llm` (lines 64–74 of the current `backend/app/services/pipeline.py`) verbatim — copy the function definition, its docstring, and its body exactly as written.
 
 ```python
 """Health/diagnostic probes — small smoke functions for /test-* endpoints."""
 from typing import Dict
 
 
-def probe_llm(llm2) -> Dict[str, str]:
-    """LLM-availability smoke probe. Returns a small dict."""
-    try:
-        from langchain_core.messages import HumanMessage
-
-        test_prompt = "Generate a simple JSON: {\"test\": \"hello\"}"
-        messages = [HumanMessage(content=test_prompt)]
-        response = llm2.invoke(messages)
-        return {"status": "success", "response": str(response.content)}
-    except Exception as e:
-        return {"status": "error", "error": str(e)}
+# --- copy probe_llm from backend/app/services/pipeline.py lines 64-74 below ---
 ```
 
-The lazy `from langchain_core.messages import HumanMessage` inside the function body is preserved — the lazy-import linter (see Task 14) only flags `from app.services.*` imports, so this langchain import does not require any annotation.
+(Drop the trailing `# --- ... ---` comment after pasting the function. It's a marker only, not part of the final file.)
+
+The lazy `from langchain_core.messages import HumanMessage` inside `probe_llm`'s body must be preserved unchanged. The lazy-import linter (defined in Phase J, exercised in Task 14) only flags `from app.services.*` imports, so this langchain import does not require any annotation.
 
 `health.py` is intentionally a flat file, not a package. The uniformity decision in spec §1 applies only to the six *existing* flat services; new services like `health.py` follow normal sizing rules, and a 1-function file does not justify package overhead.
 
 - [ ] **Step 2: Edit `backend/app/services/pipeline.py` — remove `probe_llm` and update the docstring**
 
-Replace the entire contents of `backend/app/services/pipeline.py` with:
+Make two in-place edits to `backend/app/services/pipeline.py`. Do **not** rewrite the whole file — `compute_sales_pipeline` (lines 9–61) must remain byte-for-byte unchanged.
 
-```python
-"""Pipeline service: sales-pipeline aggregator."""
-from datetime import datetime, timedelta, timezone
-from typing import Dict
+1. **Line 1 — update the docstring.** Replace:
+   ```python
+   """Pipeline service: sales-pipeline aggregator + LLM probe."""
+   ```
+   with:
+   ```python
+   """Pipeline service: sales-pipeline aggregator."""
+   ```
+   (removes the "+ LLM probe" suffix; the file no longer contains a probe.)
 
-from app.core.config import STAGE_ORDER, STAGE_MAPPING
-from app.models.pipeline import SalesPipelineResponse, TimeframeResponse, StageStats
+2. **Lines 64–74 — delete the entire `probe_llm` function.** Remove the `def probe_llm(llm2) -> Dict[str, str]:` signature, its docstring, its `try` block, and its `except` clause through the closing `return {"status": "error", "error": str(e)}` (the entire function definition). The blank line above the function (line 63) can stay or be removed — it makes no functional difference.
 
+After these edits, `pipeline.py` is ~62 LOC containing the trimmed docstring, the existing import block (unchanged), and the unmodified `compute_sales_pipeline` function.
 
-def compute_sales_pipeline(driver, user_id: str, timeframe: int) -> SalesPipelineResponse:
-    """Aggregate lead stage counts from Neo4j for the given user/timeframe."""
-    end_date = datetime.now(timezone.utc)
-    start_date = end_date - timedelta(days=timeframe)
-
-    query_string = """
-    MATCH (l:Lead)
-    WHERE l.last_stage_update_date >= $start_date AND l.last_stage_update_date <= $end_date
-    RETURN l.stage AS stage, count(*) AS count
-    """
-
-    with driver.session() as session:
-        results = session.run(query_string, {
-            "start_date": start_date.isoformat(),
-            "end_date": end_date.isoformat()
-        })
-
-        # Count occurrences per mapped UI stage
-        ui_stage_counts: Dict[str, int] = {stage: 0 for stage in STAGE_ORDER}
-
-        for record in results:
-            neo4j_stage = record["stage"]
-            count = record["count"]
-            mapped_stage = STAGE_MAPPING.get(neo4j_stage)
-            if mapped_stage in ui_stage_counts:
-                ui_stage_counts[mapped_stage] += count
-
-        # Build ordered stage data and calculate conversion rates
-        ordered_counts = [ui_stage_counts[stage] for stage in STAGE_ORDER]
-
-        stages = []
-        for i, stage in enumerate(STAGE_ORDER):
-            count = ordered_counts[i]
-            if i == 0:
-                conversion = 1.0
-            else:
-                prev = ordered_counts[i - 1]
-                conversion = round(count / prev, 2) if prev > 0 else 0.0
-
-            stages.append(StageStats(
-                name=stage,
-                count=count,
-                conversionRate=conversion,
-            ))
-
-        return SalesPipelineResponse(
-            timeframes=[
-                TimeframeResponse(
-                    days=timeframe,
-                    stages=stages,
-                )
-            ]
-        )
+To verify the edit:
+```bash
+grep -n "probe_llm" backend/app/services/pipeline.py     # expected: no matches
+grep -n "LLM probe" backend/app/services/pipeline.py     # expected: no matches
+wc -l backend/app/services/pipeline.py                   # expected: ~62 lines (down from 74)
 ```
-
-Two changes vs. the current file:
-1. Docstring: `"""Pipeline service: sales-pipeline aggregator + LLM probe."""` → `"""Pipeline service: sales-pipeline aggregator."""` (removes "+ LLM probe").
-2. The entire `probe_llm` function (current lines 64–74) is removed.
-
-The `compute_sales_pipeline` function body is unchanged.
 
 - [ ] **Step 3: Edit `backend/app/routers/pipeline.py` — add health import + update call site**
 
@@ -1138,7 +1087,7 @@ The current `pipeline/__init__.py` contains 1 function: `compute_sales_pipeline`
 
 - [ ] **Step 1: Create `pipeline/neo4j.py`**
 
-Create `backend/app/services/pipeline/neo4j.py` with this exact content (the function body is `compute_sales_pipeline` copied verbatim from the current `pipeline/__init__.py`):
+Create `backend/app/services/pipeline/neo4j.py` with this header, then append `compute_sales_pipeline` from the current `backend/app/services/pipeline/__init__.py` verbatim — copy the function definition, its docstring, and its body exactly as written.
 
 ```python
 """Sales-pipeline aggregation — Neo4j stage-count read."""
@@ -1149,60 +1098,10 @@ from app.core.config import STAGE_ORDER, STAGE_MAPPING
 from app.models.pipeline import SalesPipelineResponse, TimeframeResponse, StageStats
 
 
-def compute_sales_pipeline(driver, user_id: str, timeframe: int) -> SalesPipelineResponse:
-    """Aggregate lead stage counts from Neo4j for the given user/timeframe."""
-    end_date = datetime.now(timezone.utc)
-    start_date = end_date - timedelta(days=timeframe)
-
-    query_string = """
-    MATCH (l:Lead)
-    WHERE l.last_stage_update_date >= $start_date AND l.last_stage_update_date <= $end_date
-    RETURN l.stage AS stage, count(*) AS count
-    """
-
-    with driver.session() as session:
-        results = session.run(query_string, {
-            "start_date": start_date.isoformat(),
-            "end_date": end_date.isoformat()
-        })
-
-        # Count occurrences per mapped UI stage
-        ui_stage_counts: Dict[str, int] = {stage: 0 for stage in STAGE_ORDER}
-
-        for record in results:
-            neo4j_stage = record["stage"]
-            count = record["count"]
-            mapped_stage = STAGE_MAPPING.get(neo4j_stage)
-            if mapped_stage in ui_stage_counts:
-                ui_stage_counts[mapped_stage] += count
-
-        # Build ordered stage data and calculate conversion rates
-        ordered_counts = [ui_stage_counts[stage] for stage in STAGE_ORDER]
-
-        stages = []
-        for i, stage in enumerate(STAGE_ORDER):
-            count = ordered_counts[i]
-            if i == 0:
-                conversion = 1.0
-            else:
-                prev = ordered_counts[i - 1]
-                conversion = round(count / prev, 2) if prev > 0 else 0.0
-
-            stages.append(StageStats(
-                name=stage,
-                count=count,
-                conversionRate=conversion,
-            ))
-
-        return SalesPipelineResponse(
-            timeframes=[
-                TimeframeResponse(
-                    days=timeframe,
-                    stages=stages,
-                )
-            ]
-        )
+# --- copy compute_sales_pipeline from pipeline/__init__.py verbatim below ---
 ```
+
+(Drop the trailing `# --- ... ---` comment after pasting. `compute_sales_pipeline` is the only function in `pipeline/__init__.py` at this point — there are no other functions to disambiguate from.)
 
 - [ ] **Step 2: Rewrite `pipeline/__init__.py` as a pure re-export**
 
