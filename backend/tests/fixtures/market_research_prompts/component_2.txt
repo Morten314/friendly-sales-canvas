@@ -1,0 +1,112 @@
+Task: Research and compile an updated overview of industry trends, including technology adoption, regulatory changes, regional hotspots, and strategic recommendations.
+
+STEP 1 - COMPANY PROFILE DATA:
+Review the complete company profile data below. Extract all relevant information about the company's industry, target markets, regions, and any other relevant attributes. Use this information to guide your research.
+
+Company Profile Data:
+{
+  "company_name": "Sample Company",
+  "industry": "B2B SaaS",
+  "size": "11-50",
+  "region": "EMEA",
+  "products": [
+    "Product A",
+    "Product B"
+  ]
+}
+
+STEP 2 - RESEARCH REQUIREMENTS (CRITICAL):
+You MUST use the WebSearch tool to find real, up-to-date industry trend data. Based on the company profile above, identify the industry and target markets/regions, then perform comprehensive research:
+
+1. Technology Adoption Research:
+   - Search for AI adoption rates, cloud migration percentages, and technology trends in the company's industry
+   - Include recent data (2026-2027) when available
+   - Example searches: "[industry] AI adoption rate 2026 2027"
+   - Example searches: "[industry] cloud migration percentage [regions]"
+
+2. Regulatory Changes Research:
+   - Search for recent regulatory changes and compliance updates in the company's industry and target regions
+   - Find number of regulatory changes and their impact
+   - Example searches: "[industry] regulatory changes [regions] 2026 2027"
+
+3. Regional Hotspots Research:
+   - Search for regional market hotspots and growth areas in the company's target markets/regions
+   - Find percentage values for different regions based on the company profile
+   - Example searches: "[industry] market growth [regions] 2026 2027"
+   - Extract regions from company profile - do NOT use hardcoded regions like APAC, Europe, North America
+
+4. Industry Trends Research:
+   - Search for current industry trends, adoption patterns, and performance metrics
+   - Find technology budget allocation trends
+   - Example searches: "[industry] trends 2026 2027"
+   - Example searches: "[industry] technology budget allocation"
+
+IMPORTANT RESEARCH GUIDELINES:
+- Perform at least 5-7 WebSearch queries to ensure comprehensive coverage
+- Cross-reference data from multiple sources for accuracy
+- Focus on recent data (2026-2027) when available
+- Provide specific metrics with sources where possible
+- Extract target markets/regions from the company profile - do NOT assume or hardcode regions
+- The regionalHotspots object should contain regions from the company profile, not hardcoded APAC/Europe/North America
+- If company profile has 2 regions, include 2 in regionalHotspots; if 5 regions, include 5
+- Do NOT use hardcoded regions - use what's in the company profile
+
+STEP 3 - OUTPUT FORMAT:
+Return your findings in the following exact JSON format (use exact keys as shown):
+
+{
+  "executiveSummary": "[1-2 sentence summary of overall industry trends and opportunities based on company profile]",
+  "aiAdoption": "[AI adoption percentage, e.g., '78%']",
+  "cloudMigration": "[Cloud migration percentage, e.g., '45%']",
+  "regulatory": "[Number of regulatory changes, e.g., '12']",
+  "trendSnapshots": [
+    {
+      "title": "[Trend title based on company profile]",
+      "metric": "[Metric value]",
+      "type": "[adoption|growth|performance]"
+    },
+    {
+      "title": "[Trend title based on company profile]",
+      "metric": "[Metric value]",
+      "type": "[adoption|growth|performance]"
+    },
+    {
+      "title": "[Trend title based on company profile]",
+      "metric": "[Metric value]",
+      "type": "[adoption|growth|performance]"
+    }
+  ],
+  "regionalHotspots": {
+    "[Region 1 from company profile]": "[Percentage value]",
+    "[Region 2 from company profile]": "[Percentage value]",
+    "[Region 3 from company profile if exists]": "[Percentage value]"
+  },
+  "recommendations": {
+    "primaryFocus": "[Primary focus recommendation based on company profile]",
+    "marketEntry": "[Market entry strategy recommendation based on company profile]"
+  },
+  "risks": [
+    "[Risk #1 based on company profile]",
+    "[Risk #2 based on company profile]",
+    "[Risk #3 based on company profile]"
+  ],
+  "visualCharts": {
+    "aiAdoptionTrends": ["[Quarter labels]"],
+    "technologyBudgetAllocation": {
+      "[Category]": "[Percentage]",
+      "[Category]": "[Percentage]",
+      "[Category]": "[Percentage]"
+    }
+  }
+}
+
+⚠️ OUTPUT NOTES:
+- Use USD for monetary values in billions (B) or millions (M)
+- regionalHotspots must use regions from the company profile, not hardcoded APAC/Europe/North America
+- Include 2-5 regions in regionalHotspots based on what's in the company profile
+- Keep bullet point recommendations short and actionable
+- Return ONLY valid JSON, nothing else
+
+When you have reached the final answer, respond only with:
+Final Answer: <your JSON answer here>
+Do not include any additional reasoning, thoughts, or steps after that.

@@ -1,9 +1,9 @@
 # backend/tests/unit/test_market_research.py
 """Unit tests for app/services/market_research.py.
 
-Covers run_market_research (async dispatcher) and the 5 Research_Market_N
-helpers. LLM calls are mocked using captured fixtures from
-tests/fixtures/captured/.
+Covers run_market_research (async dispatcher) and the unified
+_run_research_component dispatch (post-K3 collapse). LLM calls are mocked
+using captured fixtures from tests/fixtures/captured/.
 """
 import asyncio
 from unittest.mock import MagicMock
@@ -133,15 +133,15 @@ def test_run_market_research_returns_cached_when_not_refreshing(
 def test_run_market_research_claude_uses_captured(
     mocker, mock_session, mock_mongo_client,
 ):
-    """Claude path: COMPONENT_FUNCTIONS_CLAUDE wraps each Research_Market_N
-    in a lambda (`lambda d: Research_Market_1(d, "claude")`). The lambda
-    resolves the name at call time, so patching the module-level
-    Research_Market_1 DOES reach the call. (Contrast with the Groq path
-    above, where the dict holds direct refs and patch.dict is required.)
+    """Claude path: COMPONENT_FUNCTIONS_CLAUDE wraps the unified dispatch
+    in a lambda (`lambda agent_chain, d: _run_research_component(N, agent_chain, d, "claude")`).
+    The lambda resolves the name at call time, so patching the module-level
+    _run_research_component DOES reach the call. (Contrast with the Groq path
+    above, where patch.dict is used for parity.)
     """
     captured = load_captured("market_research_market_size_claude")
     mocker.patch(
-        "app.services.market_research.orchestrator.Research_Market_1",
+        "app.services.market_research.orchestrator._run_research_component",
         return_value=captured,
     )
     mock_session.run.return_value.single.return_value = _make_neo4j_company_record()

@@ -39,8 +39,37 @@ from app.services._llm_helpers import (  # noqa: F401
 )
 
 
-# Research Market Functions
-def Research_Market_1(agent_chain, pre_data, llm_backend: str = "default") -> dict:
+COMPONENT_TEMPLATES = {
+    1: RESEARCH_MARKET_1_TEMPLATE,
+    2: RESEARCH_MARKET_2_TEMPLATE,
+    3: RESEARCH_MARKET_3_TEMPLATE,
+    4: RESEARCH_MARKET_4_TEMPLATE,
+    5: RESEARCH_MARKET_5_TEMPLATE,
+}
+
+
+def _build_research_prompt(component_n: int, company_profile_json: str) -> str:
+    """Format the research-market template for ``component_n`` against the given profile JSON.
+
+    Extracted as a testable seam so the K3 dispatch's output can be asserted
+    byte-equal to a pre-refactor fixture. The dispatch (_run_research_component)
+    calls through this helper.
+    """
+    return COMPONENT_TEMPLATES[component_n].format(company_profile_json=company_profile_json)
+
+
+def _run_research_component(
+    component_n: int,
+    agent_chain,
+    pre_data,
+    llm_backend: str = "default",
+) -> dict:
+    """Run one of the 5 market-research components via prompted LLM agent.
+
+    Replaces the pre-refactor Research_Market_1..5 functions, which were
+    byte-identical except for the template constant. The template now comes
+    from COMPONENT_TEMPLATES via _build_research_prompt.
+    """
     # Convert company profile to JSON string (handle both dict and string inputs)
     if isinstance(pre_data, dict):
         company_profile_json = json.dumps(pre_data, indent=2)
@@ -53,11 +82,9 @@ def Research_Market_1(agent_chain, pre_data, llm_backend: str = "default") -> di
             company_profile_json = pre_data
     else:
         company_profile_json = str(pre_data)
-    
-    # Construct prompt with full company profile and WebSearch instructions
-    template = RESEARCH_MARKET_1_TEMPLATE
 
-    prompt = template.format(company_profile_json=company_profile_json)
+    # Construct prompt with full company profile and WebSearch instructions
+    prompt = _build_research_prompt(component_n, company_profile_json)
 
     # Step 3: Get LLM response
     response = _market_research_agent_output(agent_chain, prompt, company_profile_json, llm_backend)
@@ -65,137 +92,24 @@ def Research_Market_1(agent_chain, pre_data, llm_backend: str = "default") -> di
     # Strip code fences, escape embedded newlines in description fields, parse JSON.
     parsed_json = _extract_research_json(response)
 
-    # ✅ Return the Python dict
+    # Return the Python dict
     return parsed_json
-
-def Research_Market_2(agent_chain, pre_data, llm_backend: str = "default") -> dict:
-    # Convert company profile to JSON string (handle both dict and string inputs)
-    if isinstance(pre_data, dict):
-        company_profile_json = json.dumps(pre_data, indent=2)
-    elif isinstance(pre_data, str):
-        # If it's already a string, try to parse and reformat for better readability
-        try:
-            parsed = json.loads(pre_data)
-            company_profile_json = json.dumps(parsed, indent=2)
-        except Exception:
-            company_profile_json = pre_data
-    else:
-        company_profile_json = str(pre_data)
-    
-    # Construct prompt with full company profile and WebSearch instructions
-    template = RESEARCH_MARKET_2_TEMPLATE
-
-    prompt = template.format(company_profile_json=company_profile_json)
-
-    # Step 3: Get LLM response
-    response = _market_research_agent_output(agent_chain, prompt, company_profile_json, llm_backend)
-
-    # Strip code fences, escape embedded newlines in description fields, parse JSON.
-    parsed_json = _extract_research_json(response)
-
-    # ✅ Return the Python dict
-    return parsed_json
-
-def Research_Market_3(agent_chain, pre_data, llm_backend: str = "default") -> dict:
-    # Convert company profile to JSON string (handle both dict and string inputs)
-    if isinstance(pre_data, dict):
-        company_profile_json = json.dumps(pre_data, indent=2)
-    elif isinstance(pre_data, str):
-        # If it's already a string, try to parse and reformat for better readability
-        try:
-            parsed = json.loads(pre_data)
-            company_profile_json = json.dumps(parsed, indent=2)
-        except Exception:
-            company_profile_json = pre_data
-    else:
-        company_profile_json = str(pre_data)
-    
-    # Construct prompt with full company profile and WebSearch instructions
-    template = RESEARCH_MARKET_3_TEMPLATE
-
-    prompt = template.format(company_profile_json=company_profile_json)
-
-    # Step 3: Get LLM response
-    response = _market_research_agent_output(agent_chain, prompt, company_profile_json, llm_backend)
-
-    # Strip code fences, escape embedded newlines in description fields, parse JSON.
-    parsed_json = _extract_research_json(response)
-
-    # ✅ Return the Python dict
-    return parsed_json
-
-def Research_Market_4(agent_chain, pre_data, llm_backend: str = "default") -> dict:
-    # Convert company profile to JSON string (handle both dict and string inputs)
-    if isinstance(pre_data, dict):
-        company_profile_json = json.dumps(pre_data, indent=2)
-    elif isinstance(pre_data, str):
-        # If it's already a string, try to parse and reformat for better readability
-        try:
-            parsed = json.loads(pre_data)
-            company_profile_json = json.dumps(parsed, indent=2)
-        except Exception:
-            company_profile_json = pre_data
-    else:
-        company_profile_json = str(pre_data)
-    
-    # Construct prompt with full company profile and WebSearch instructions
-    template = RESEARCH_MARKET_4_TEMPLATE
-
-    prompt = template.format(company_profile_json=company_profile_json)
-
-    # Step 3: Get LLM response
-    response = _market_research_agent_output(agent_chain, prompt, company_profile_json, llm_backend)
-
-    # Strip code fences, escape embedded newlines in description fields, parse JSON.
-    parsed_json = _extract_research_json(response)
-
-    # ✅ Return the Python dict
-    return parsed_json
-
-def Research_Market_5(agent_chain, pre_data, llm_backend: str = "default") -> dict:
-    # Convert company profile to JSON string (handle both dict and string inputs)
-    if isinstance(pre_data, dict):
-        company_profile_json = json.dumps(pre_data, indent=2)
-    elif isinstance(pre_data, str):
-        # If it's already a string, try to parse and reformat for better readability
-        try:
-            parsed = json.loads(pre_data)
-            company_profile_json = json.dumps(parsed, indent=2)
-        except Exception:
-            company_profile_json = pre_data
-    else:
-        company_profile_json = str(pre_data)
-    
-    # Construct prompt with full company profile and WebSearch instructions
-    template = RESEARCH_MARKET_5_TEMPLATE
-
-    prompt = template.format(company_profile_json=company_profile_json)
-
-    # Step 3: Get LLM response
-    response = _market_research_agent_output(agent_chain, prompt, company_profile_json, llm_backend)
-
-    # Strip code fences, escape embedded newlines in description fields, parse JSON.
-    parsed_json = _extract_research_json(response)
-
-    # ✅ Return the Python dict
-    return parsed_json
-
 
 
 COMPONENT_FUNCTIONS = {
-    "market size & opportunity": Research_Market_1,
-    "industry trends report": Research_Market_2,
-    "competitor landscape": Research_Market_3,
-    "regulatory & compliance highlights" : Research_Market_4,
-    "market entry & growth strategy" : Research_Market_5
+    "market size & opportunity": lambda agent_chain, d: _run_research_component(1, agent_chain, d),
+    "industry trends report": lambda agent_chain, d: _run_research_component(2, agent_chain, d),
+    "competitor landscape": lambda agent_chain, d: _run_research_component(3, agent_chain, d),
+    "regulatory & compliance highlights": lambda agent_chain, d: _run_research_component(4, agent_chain, d),
+    "market entry & growth strategy": lambda agent_chain, d: _run_research_component(5, agent_chain, d),
 }
 
 COMPONENT_FUNCTIONS_CLAUDE = {
-    "market size & opportunity": lambda agent_chain, d: Research_Market_1(agent_chain, d, "claude"),
-    "industry trends report": lambda agent_chain, d: Research_Market_2(agent_chain, d, "claude"),
-    "competitor landscape": lambda agent_chain, d: Research_Market_3(agent_chain, d, "claude"),
-    "regulatory & compliance highlights": lambda agent_chain, d: Research_Market_4(agent_chain, d, "claude"),
-    "market entry & growth strategy": lambda agent_chain, d: Research_Market_5(agent_chain, d, "claude"),
+    "market size & opportunity": lambda agent_chain, d: _run_research_component(1, agent_chain, d, "claude"),
+    "industry trends report": lambda agent_chain, d: _run_research_component(2, agent_chain, d, "claude"),
+    "competitor landscape": lambda agent_chain, d: _run_research_component(3, agent_chain, d, "claude"),
+    "regulatory & compliance highlights": lambda agent_chain, d: _run_research_component(4, agent_chain, d, "claude"),
+    "market entry & growth strategy": lambda agent_chain, d: _run_research_component(5, agent_chain, d, "claude"),
 }
 
 

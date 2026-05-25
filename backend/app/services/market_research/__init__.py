@@ -2,7 +2,7 @@
 
 Service for assembling the 5-component market-intelligence report.
 Submodules:
-  - orchestrator.py: Research_Market_1..5 (per-component workers),
+  - orchestrator.py: _run_research_component (per-component worker dispatch),
     run_market_research (the compose-all-components entry point)
   - persistence.py: Mongo I/O — _find_latest_market_research_report,
     _insert_market_research_report
@@ -12,19 +12,11 @@ Submodules:
 """
 
 from app.services.market_research.orchestrator import (
-    Research_Market_1,
-    Research_Market_2,
-    Research_Market_3,
-    Research_Market_4,
-    Research_Market_5,
+    _run_research_component,
     run_market_research,
 )
 
 __all__ = [
-    "Research_Market_1",
-    "Research_Market_2",
-    "Research_Market_3",
-    "Research_Market_4",
-    "Research_Market_5",
+    "_run_research_component",
     "run_market_research",
 ]

@@ -83,24 +83,24 @@ def _write_capture(stem: str, payload: Any) -> None:
 
 
 def capture_market_research(components: List[str], backends: List[str]) -> None:
-    from app.services.market_research import (
-        Research_Market_1, Research_Market_2, Research_Market_3,
-        Research_Market_4, Research_Market_5,
-    )
-    fn_map = {
-        "market_size": Research_Market_1,
-        "industry_trends": Research_Market_2,
-        "competitor_landscape": Research_Market_3,
-        "regulatory_compliance": Research_Market_4,
-        "market_entry": Research_Market_5,
+    from app.services.market_research import _run_research_component
+    slug_to_n = {
+        "market_size": 1,
+        "industry_trends": 2,
+        "competitor_landscape": 3,
+        "regulatory_compliance": 4,
+        "market_entry": 5,
     }
     company = _load_seed("company_profile")
     pre_data = json.dumps(company)
     for slug in components:
-        fn = fn_map[slug]
+        component_n = slug_to_n[slug]
         for backend in backends:
             print(f"Capturing market_research/{slug} ({backend})...")
-            result = fn(pre_data) if backend == "groq" else fn(pre_data, "claude")
+            if backend == "groq":
+                result = _run_research_component(component_n, pre_data)
+            else:
+                result = _run_research_component(component_n, pre_data, "claude")
             _write_capture(f"market_research_{slug}_{backend}", result)
 
 
