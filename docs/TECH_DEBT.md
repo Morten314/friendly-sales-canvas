@@ -75,10 +75,10 @@ Option 1 is one character of code; option 2 is two lines of prose. v1 is being d
 
 ---
 
-## TD-010 — Modularize prompts libraries
+## TD-010 — Overhaul prompt management system
 
-**Date logged:** 2026-05-24
-**Origin:** Phase H decomposition extracted prompts to per-service `prompts.py` modules but kept them as Python string constants. Phase H spec §6 noted "Option D — prompt externalization" as a future direction not in scope.
+**Date logged:** 2026-05-24 (scope expanded 2026-05-25)
+**Origin:** Phase H decomposition extracted prompts to per-service `prompts.py` modules but kept them as Python string constants. Phase H spec §6 noted "Option D — prompt externalization" as a future direction not in scope. The expanded scope (versioning, observability binding, per-prompt config metadata, composition) was recognised after Phase L's audit confirmed the `prompts.py` modules remain the largest non-decomposable bodies in `backend/app/` and that the surrounding system (call sites, LLM config, persistence layer) treats prompts as inert strings rather than versioned artefacts.
 
 **Current state:**
 Prompts live as triple-quoted Python string constants in `prompts.py` modules:
@@ -89,6 +89,12 @@ Prompts live as triple-quoted Python string constants in `prompts.py` modules:
 | `icp/prompts.py` | 383 | ICP generator + 4 research-worker prompts |
 | `signals/prompts.py` | 328 | Scout + Profiler prompts, leads section, signal-ask (Groq + Claude) |
 
+Adjacent system surfaces today entangled with the prompts:
+- Per-prompt model config (model name, temperature, max_tokens, response_format) is wired into call sites or `app/core/llm_config.py`, not co-located with the prompt text — changing the model behind one prompt touches multiple files.
+- LLM output records persisted to Mongo carry no prompt-version pointer; observability answers "what was the output?" but not "which prompt produced it?".
+- Tests assert on substring fragments inside prompt literals, so prompt edits cascade into noisy test diffs even when LLM behaviour is unchanged.
+- No staging/prod prompt divergence — every environment runs the same in-code constant; a prompt change can't be soaked before promotion.
+
 Consequences of the current shape:
 - Editing prompts requires touching Python and shipping a code release.
 - No prompt versioning — can't trace which prompt revision produced a given LLM output stored in Mongo.
@@ -97,32 +103,47 @@ Consequences of the current shape:
 - Prompt unit-testing means string-equality assertions on large literals — brittle and noisy.
 
 **What it should be:**
-Externalize prompts to a structured format. Three plausible designs (pick during a future design session):
+A purpose-built prompt management subsystem. Scope is intentionally broader than "move strings out of Python":
 
-1. **Jinja templates in `backend/prompts/<service>/<name>.j2`** — Python loads at startup, render with variables. Enables shared partials, conditional sections, versioning via git.
-2. **YAML or JSON prompt registry** with versioned entries — Python looks up by name + version. Enables runtime A/B testing and audit trails.
-3. **Per-prompt `.md` files** — simplest; one file per prompt, no template engine, no version metadata.
+1. **Externalized prompt content** — prompt bodies live as templated files under `backend/prompts/<service>/<name>/...`, rendered at call time with variables. Format (Jinja, Markdown with front-matter, YAML, etc.) picked in spec.
 
-Each requires:
-- A prompt loader/registry module (`app/services/_prompts.py` or similar).
-- Migration of existing constants to the chosen format.
-- A versioning convention (file hash, semantic version, or both).
-- Possibly: a per-prompt fixture in `tests/fixtures/prompts/` so prompt changes are reviewable in PRs.
+2. **Versioning model** — each prompt carries a stable identifier (name) and a version (semver or content hash). Call sites pin to a version; the loader resolves `name + version → body`. New prompt versions ship without disturbing in-flight requests. Versioning convention picked in spec.
+
+3. **Per-prompt config bundle** — model, temperature, max_tokens, response_format, timeout, retry policy travel with the prompt (front-matter or sidecar config), not with the call site. Changing a prompt's model becomes a prompt edit, not a code edit.
+
+4. **Observability binding** — every LLM call records `(prompt_name, prompt_version, render_inputs_hash)` alongside the output in Mongo. "Which prompt produced this output?" becomes a Mongo lookup, not a git archaeology task. Cost/latency per prompt version becomes a queryable metric.
+
+5. **Composition** — partials/includes for duplicated fragments (response-format instructions, persona headers, JSON-schema hints), with clear conventions (no deep transitive includes; shared partials live in `backend/prompts/_shared/`).
+
+6. **Testing scaffold** — golden-rendered fixtures (`tests/fixtures/prompts/<name>@<version>.txt`) so prompt-text changes surface as one focused diff per prompt; renderer unit tests cover variable substitution and partial composition; behaviour tests stay decoupled from prompt body text.
+
+7. **Loader / registry module** — `app/services/_prompts.py` (or similar) is the single API: `prompts.render(name, version=…, **vars) -> (text, config)`. Call sites lose direct access to the string constants.
+
+8. **Non-engineer iteration workflow** — externalized files are reviewable in PRs by non-engineers. A runtime-edit pathway (database-backed override layer or admin UI) is explicitly out of scope for the initial overhaul; if needed it lands later.
+
+9. **Optional (decide in spec): runtime variant routing** — name + version + variant for runtime A/B. Only include if there is a near-term need; otherwise defer.
+
+Design questions to resolve during the spec session: (a) template engine choice — Jinja2 (rich: conditionals, loops, filters, includes), Mustache/Chevron (logic-less, portable across languages), `string.Template` (`$var`, stdlib, no logic), `str.format` / f-string-style `{var}` placeholders (no engine, no includes), or plain text with manual substitution; (b) versioning convention (semver vs content hash vs both), (c) where per-prompt config lives (front-matter vs sidecar `.toml` vs registry entry), (d) loader caching strategy (startup vs lazy vs hot-reload), (e) rollout — big-bang migration vs prompt-by-prompt during the transition.
 
 **Why we deferred:**
-- Structural decomposition (Phases B-I) was the higher-leverage move; prompts had to be isolated into their own modules first before externalization was viable.
-- Externalization introduces new abstractions (template engine, prompt registry, versioning) that warrant their own spec and design discussion.
+- Structural decomposition (Phases B-I, then Phase L cleanup) was the higher-leverage move; prompts had to be isolated into their own modules first before externalization was viable.
+- The expanded scope (versioning, observability binding, per-prompt config, composition) couples several abstractions (template engine, prompt registry, versioning model, observability schema, test scaffold) that warrant their own spec and design discussion. Framing this as "modularize prompts" understated the work.
 - Pre-launch (0 live users), prompt iteration velocity is not currently a bottleneck — eng owns the prompts and can edit them in code.
 
 **What we lose by staying as-is:**
 - Marketing/PM/prompt-engineer hires can't iterate prompts without engineering bandwidth.
 - Production debugging of an LLM output can't trace back to "which prompt version generated this" — observability gap that compounds at scale.
 - Shared prompt fragments stay duplicated; changes to e.g. response-format instructions require touching every prompt file.
+- Per-prompt config (model, temperature) is scattered across call sites instead of travelling with the prompt; "use a different model for just this one prompt" is a multi-file change.
+- No mechanism to soak a prompt change in staging before promoting — every environment shares the in-code constant.
+- Cost/latency analysis "per prompt version" is impossible without the version pointer in observability data.
 
 **Pull-forward triggers:**
 - First non-engineer (PM, prompt engineer, marketing) needs to iterate a prompt and bottlenecks on engineering.
 - First production incident where "which prompt was active when this LLM output was generated?" is the unanswerable question.
 - Regulatory or compliance requirement for prompt-versioning audit trails.
 - When prompt iteration cadence exceeds code-release cadence.
+- First time a prompt-config change (model, temperature, response_format) needs to land independently of a code release.
+- First analysis request requiring "what was the cost/latency of prompt X at version Y?" — currently unanswerable.
 
 **Owner:** TBD.
