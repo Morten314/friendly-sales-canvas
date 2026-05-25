@@ -1,4 +1,4 @@
-"""Pipeline service: sales-pipeline aggregator + LLM probe."""
+"""Pipeline service: sales-pipeline aggregator."""
 from datetime import datetime, timedelta, timezone
 from typing import Dict
 
@@ -59,16 +59,3 @@ def compute_sales_pipeline(driver, user_id: str, timeframe: int) -> SalesPipelin
                 )
             ]
         )
-
-
-def probe_llm(llm2) -> Dict[str, str]:
-    """LLM-availability smoke probe. Returns a small dict."""
-    try:
-        from langchain_core.messages import HumanMessage
-
-        test_prompt = "Generate a simple JSON: {\"test\": \"hello\"}"
-        messages = [HumanMessage(content=test_prompt)]
-        response = llm2.invoke(messages)
-        return {"status": "success", "response": str(response.content)}
-    except Exception as e:
-        return {"status": "error", "error": str(e)}

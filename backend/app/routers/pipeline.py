@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, Query
 
 from app.core.dependencies import get_llm2, get_neo4j_driver
 from app.services import pipeline as pipeline_service
+from app.services.health import probe_llm
 from app.models.pipeline import SalesPipelineResponse
 
 router = APIRouter(tags=["pipeline"])
@@ -21,4 +22,4 @@ def get_sales_pipeline(
 @router.get("/test-llm")
 async def test_llm(llm2=Depends(get_llm2)):
     """LLM-availability diagnostic. Response shape is informal."""
-    return pipeline_service.probe_llm(llm2)
+    return probe_llm(llm2)
