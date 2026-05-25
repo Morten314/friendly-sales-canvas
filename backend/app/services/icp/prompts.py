@@ -1,7 +1,7 @@
 """Prompt templates for icp/ — ICP_generator + icp_research_1..4.
 
-Templates stay as inline Python strings per Phase H scope. Externalization
-to .md/.yaml is Option D scope (out of phase).
+Templates stay as inline Python strings. Externalization to .md/.yaml is
+Option D scope (deferred).
 
 Each template uses {pre_data} as the substitution placeholder; the
 orchestrator wraps them in langchain PromptTemplate and calls .format()

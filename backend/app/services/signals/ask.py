@@ -1,4 +1,4 @@
-"""Signal Q&A — extracted from orchestrator.py in Phase I commit 7/11.
+"""Signal Q&A — interactive query against signal/lead data.
 
 Houses signal_ask (Groq-backed) and signal_ask_claude (Anthropic-backed).
 Both answer questions about signals using company profile, customer profile,

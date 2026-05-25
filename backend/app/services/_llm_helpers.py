@@ -199,8 +199,8 @@ def _extract_research_json(
       5. json.loads the result.
 
     Note: this helper does NOT escape quotes inside matched values. Signals'
-    historical quote-escaping was dropped during Phase I to unify all three
-    research services on the simpler escape rule (see spec §1).
+    historical quote-escaping was dropped to unify all three research services
+    on the simpler escape rule (see spec §1).
     """
     if strip_final_answer and "Final Answer:" in response:
         response = response.split("Final Answer:")[-1].strip()

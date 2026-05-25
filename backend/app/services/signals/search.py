@@ -1,4 +1,4 @@
-"""Signal search core — extracted from orchestrator.py in Phase I commit 5/11.
+"""Signal search core — persona-shared signal discovery and research entry points.
 
 Houses search_signals (persona-shared core) and run_signals_research
 (async wrapper around search_signals for the research pipeline).
@@ -155,7 +155,6 @@ def search_signals(
 
     # ------------------------------------------------------------------
     # 5. Parse response + validate URLs + assemble result
-    #    (extracted to signals.parsing during Phase H commit 19/20)
     # ------------------------------------------------------------------
     parsed_json = _parse_search_signals_response(response)
     return _normalize_search_signals_result(parsed_json, tavily_urls, persona)

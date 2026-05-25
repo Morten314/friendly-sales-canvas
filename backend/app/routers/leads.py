@@ -25,8 +25,8 @@ def get_all_leads(
 ):
     """**Deprecated:** use `GET /api/v2/leads` for the paginated envelope.
 
-    Returns up to 500 leads (silent cap). The cap is new — prior to Phase G
-    this endpoint returned all leads unbounded. Results are now returned in
+    Returns up to 500 leads (silent cap). The 500 cap is a silent recent
+    addition; older clients may not expect it. Results are now returned in
     creation order (newest first) — previously the order was unspecified, as
     Cypher returns rows in arbitrary order without `ORDER BY`.
     """

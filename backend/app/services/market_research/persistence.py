@@ -11,8 +11,7 @@ from typing import Optional
 def _get_market_intelligence_collection(mongo):
     """Return the Scout_Agent.Market_Intelligence Mongo collection handle.
 
-    Extracted from run_market_research body during Phase H to centralize the
-    database/collection name lookup.
+    Centralizes the database/collection name lookup for the persistence helpers.
     """
     return mongo["Scout_Agent"]["Market_Intelligence"]
 

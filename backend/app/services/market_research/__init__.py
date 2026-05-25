@@ -1,4 +1,4 @@
-"""market_research service — public API (Phase H Sequence C final form).
+"""market_research service — public API.
 
 Service for assembling the 5-component market-intelligence report.
 Submodules:

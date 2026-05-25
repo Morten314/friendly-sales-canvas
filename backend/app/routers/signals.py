@@ -70,8 +70,8 @@ async def fetch_signals(
 ):
     """**Deprecated:** use `GET /api/v2/fetch-signals` for the paginated envelope.
 
-    Preserves the existing unvalidated `limit` query parameter — tightening is
-    deferred to Phase H alongside v1 route deletion.
+    Preserves the existing unvalidated `limit` query parameter for backward
+    compatibility with v1 clients.
     """
     response.headers["Deprecation"] = "true"
     response.headers["Link"] = '</api/v2/fetch-signals>; rel="successor-version"'

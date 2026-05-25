@@ -1,4 +1,4 @@
-"""Signal batch generation — extracted from orchestrator.py in Phase I commit 6/11.
+"""Signal batch generation — batched persona-shared signal discovery.
 
 Houses _generate_signals_batch_impl (shared body) and the two public
 backend-variant wrappers (generate_signals_batch for Groq, _claude for

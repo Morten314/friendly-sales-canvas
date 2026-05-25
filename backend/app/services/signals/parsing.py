@@ -2,18 +2,15 @@
 
 _parse_search_signals_response: thin adapter over _llm_helpers._extract_research_json
   with signals-specific kwargs (3 escape_keys, trim_braces, strip_final_answer).
-  IMPORTANT: signals' historical quote-escaping (escaping " inside matched
-  description/snippet/headline values, on top of \\n/\\r) is REMOVED in
-  Phase I. All 3 research services now use the simpler \\n/\\r-only escape
-  rule. See spec §1.
+  IMPORTANT: signals does NOT perform quote-escaping inside matched
+  description/snippet/headline values. All 3 research services use the
+  simpler \\n/\\r-only escape rule. See spec §1.
 
 _validate_url: signals-specific URL validator against the tavily allowlist.
-  Unchanged from previous Phase H implementation.
 
 _normalize_search_signals_result: signals-specific post-processor that
   validates URLs, assembles the final signal record, adds default fields.
   Called by search_signals after _parse_search_signals_response.
-  Unchanged from previous Phase H implementation.
 """
 from typing import Any, Dict, List
 
@@ -25,7 +22,8 @@ def _parse_search_signals_response(response: str) -> Dict[str, Any]:
 
     Handles Final Answer prefix, ```json fences, and escapes newlines
     inside description/snippet/headline string fields before json.loads.
-    Quote-escaping is intentionally NOT performed (Phase I unification).
+    Quote-escaping is intentionally NOT performed (unified with other
+    research services on the simpler \\n/\\r-only escape rule).
     """
     return _extract_research_json(
         response,

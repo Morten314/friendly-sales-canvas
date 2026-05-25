@@ -1,4 +1,4 @@
-"""market_scoring service — public API (Phase H Sequence A final form).
+"""market_scoring service — public API.
 
 Service for triggering, monitoring, and reading per-lead market scores.
 Submodules:

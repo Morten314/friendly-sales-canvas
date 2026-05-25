@@ -1,4 +1,4 @@
-"""signals service — public API (Phase I final form).
+"""signals service — public API.
 
 Service for researching and persisting Scout/Profiler market signals
 (single-shot, batch, and Claude-backed variants) + signal Q&A endpoints.
@@ -20,9 +20,9 @@ Submodules:
   - parsing.py: _parse_search_signals_response, _normalize_search_signals_result,
     _validate_url
 
-orchestrator.py was deleted in Phase I commit 8/11 — there is no multi-step
-cross-submodule composition that needs an orchestrator tier. Each public
-function lives in its defining submodule. Same structure as data_sources/.
+There is no orchestrator submodule — no multi-step cross-submodule composition
+exists that needs an orchestrator tier. Each public function lives in its
+defining submodule. Same structure as data_sources/.
 """
 
 from app.services.signals.search import (

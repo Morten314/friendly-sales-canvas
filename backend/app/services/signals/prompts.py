@@ -1,7 +1,6 @@
 """Prompt templates for signals/ -- persona-specific search prompts.
 
-Templates stay as inline Python strings per Phase H scope. They are
-.format()-friendly:
+Templates stay as inline Python strings. They are .format()-friendly:
 - _SCOUT_PROMPT_TEMPLATE, _PROFILER_PROMPT_TEMPLATE: context_json,
   leads_section, existing_headlines_section (used by search_signals).
 - _LEADS_SECTION_TEMPLATE, _LEADS_SECTION_FALLBACK_TEMPLATE:
@@ -13,8 +12,6 @@ Templates stay as inline Python strings per Phase H scope. They are
   by signal_ask).
 - _SIGNAL_ASK_CLAUDE_PROMPT_TEMPLATE: context, history_text,
   web_search_results, question (used by signal_ask_claude).
-
-Extracted from orchestrator.py during Phase H commits 18/20 and 20/20.
 """
 
 _SCOUT_PROMPT_TEMPLATE = """Task: Research and identify a high-quality, actionable market signal for a sales scout agent. This signal should help the sales team understand market opportunities, competitor movements, or industry trends that could impact their sales strategy.

@@ -5,8 +5,8 @@ placeholder. The orchestrator calls ``.format(company_profile_json=...)`` on
 each template; no other substitutions happen at format time, and the JSON
 schema blocks already use ``{{`` / ``}}`` escaping so ``.format()`` survives.
 
-Templates stay as inline Python strings per Phase H scope. Externalization to
-.md/.yaml is Option D follow-up work.
+Templates stay as inline Python strings. Externalization to .md/.yaml is
+Option D follow-up work.
 """
 
 # Market size & opportunity (Research_Market_1).

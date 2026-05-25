@@ -1,9 +1,8 @@
 """Persistence layer for signals/ -- Mongo writes/reads for signal records.
 
 Public symbol re-exported from __init__.py: record_signal_action.
-Internal helpers (prefix _) extracted from orchestrator bodies during
-Phase H. All sync (use asyncio.to_thread at the call site for async
-contexts; mirrors the original inline code's wrapping).
+Internal helpers (prefix _) are module-private. All sync (use
+asyncio.to_thread at the call site for async contexts).
 """
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple

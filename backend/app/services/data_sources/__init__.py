@@ -1,14 +1,15 @@
-"""data_sources service — public API (Phase H commit 7/20 final form).
+"""data_sources service — public API.
 
-Renamed from documents/ in Phase H to disambiguate from project documentation.
-No LLM in this service; submodules are:
+Service for ingesting and processing user-uploaded data files (PDFs, text).
+The name disambiguates from project documentation. No LLM in this service;
+submodules are:
   - loaders.py: file loading + Neo4j-graph entry points
   - pipeline.py: S3 + Pinecone + Mongo coordinated upload
   - persistence.py: Mongo CRUD (list/get/delete/update)
 
-orchestrator.py was deleted in commit 7/20 — there is no multi-step
-compositional logic to compose across submodules; each public function
-does its own thing in its defining submodule.
+There is no orchestrator submodule — there is no multi-step compositional
+logic to compose across submodules; each public function does its own
+thing in its defining submodule.
 
 Re-exports the 8 public-surface symbols listed in spec §3.5. Internal
 helpers (load_document, grapher, process_prospect_list) live in
