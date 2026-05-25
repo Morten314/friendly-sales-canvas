@@ -52,7 +52,7 @@ Both TDs share a property — they require *examining every file once* — so TD
 - All 91 Python files under `backend/app/` (10,403 LOC baseline).
 - **TD-008 LOC reductions** across the opportunity categories in §4: dead imports, near-duplicate functions, repeated DB-lookup patterns, repeated CRUD patterns, near-identical prompt strings, redundant fallback branches, single-use trivial wrapper functions, dead code, inline data-munging blocks worth extracting.
 - **TD-009 docstring and code-comment drift cleanup:** removing stale `Phase X`, `commit N/M`, `extracted from … in Phase`, `final form`, and "Renamed … in Phase Y" references from both docstrings AND inline `#`-prefixed code comments. Replaced with structural-only content or removed entirely. Code comments are in scope because the same drift pattern appears in `#` comments alongside docstrings (e.g., `signals/search.py:158`'s `# (extracted to signals.parsing during Phase H commit 19/20)`).
-- **The audit scorecard** at `docs/audits/2026-05-25-backend-loc-docstring-audit-phase-l.md` covering all 91 files with a verdict each.
+- **The scorecard** at `docs/audits/2026-05-25-backend-loc-docstring-audit-phase-l.md` covering all 91 files with a verdict each.
 
 ### Explicit out-of-scope deferrals
 
@@ -90,7 +90,7 @@ Each finding falls into one of 12 categories, tagged with a default confidence l
 
 - **`execute`** — Byte-equivalence is mechanically provable or coverable by a test that the commit ships. No investigation gate. The commit's behavior-preservation evidence is in the diff (assertion script, parametrized test, pyflakes output).
 - **`investigate`** — The change appears safe but the behavior surface isn't byte-equivalent. Each finding requires a per-site investigation in Stage 2. The investigation produces a behavior-preservation strategy (which observable surfaces are unchanged: return value, exception types, side effects, evaluation order) and a verdict: promote-to-`execute` or defer-to-`design-discussion`.
-- **`design-discussion`** — The change involves a behavior or interface trade-off. Deferred from this phase. Documented in the scorecard with rationale.
+- **`design-discussion`** — The change involves a behavior or interface trade-off. Deferred from this phase. Findings ARE recorded in the scorecard under a "Future work" section with rationale (so they remain visible for future TD pickup); they are not executed in Stage 3.
 
 ### Investigation methodology (Stage 2)
 
@@ -189,9 +189,9 @@ The following wins have been verified against the current codebase. They constit
 | K1 | Remove 16 verified unused imports | `models/__init__.py`, `routers/data_sources.py`, `services/market_scoring/orchestrator.py`, `services/market_research/orchestrator.py`, `services/icp/persistence.py` | 1 | -16 | ✓ Each symbol confirmed to appear only on its import line in its declaring file. |
 | K2 | Dedup `Cypher_gen_prompt`/`Cypher_gen_prompt2` and `qa_prompt_template`/`qa_prompt_template2` via base + overlay in `core/llm_config.py` | `core/llm_config.py` | 3 | -102 | ✓ Cypher pair: 88 vs 84 lines (4-line diff). QA pair: 34 vs 28 lines (6-line diff). Confirmed via AST. |
 | K3 | Collapse `Research_Market_1..5` into `_run_research_component(template)` + `COMPONENT_TEMPLATES` dispatch | `services/market_research/orchestrator.py` | 4 | -100 | ✓ All 5 function bodies byte-identical after template-name normalization (same hash `ce5d84bd`). |
-| K4 | Append `fetch_company_profile` to existing `services/_neo4j_helpers.py` (71 LOC, currently exports `query`, `results_to_string`, `escape_property_name`, `upsert_node`); replace 8 call sites across 5 files | `services/_neo4j_helpers.py`, `services/customer_profile/orchestrator.py` (3 sites), `services/market_scoring/persistence.py`, `services/market_research/orchestrator.py`, `services/icp/orchestrator.py`, `services/signals/ask.py` (2 sites) | 7 | ~35–50 | ✓ Same Cypher query `MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1` (alias variant in `signals/ask.py` uses `p:`/`RETURN p`, semantically equivalent for the fetch use case). |
+| K4 | Append `fetch_company_profile` to existing `services/_neo4j_helpers.py` (71 LOC, currently exports `query`, `results_to_string`, `escape_property_name`, `upsert_node`); replace 8 call sites across 5 files | `services/_neo4j_helpers.py`, `services/customer_profile/orchestrator.py` (3 sites), `services/market_scoring/persistence.py`, `services/market_research/orchestrator.py`, `services/icp/orchestrator.py`, `services/signals/ask.py` (2 sites) | 7 | ~35–50 | ✓ Same Cypher query `MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1` at 6 sites; alias variant in `signals/ask.py` uses `p:`/`RETURN p` — equivalence to the `c:` pattern verified during Stage 1 line-by-line inspection. Sites with deviations stay inline. |
 | K5 | Extract `_update_run(run_coll, run_id, **fields)` helper; replace 10 call sites | `services/market_scoring/scoring.py` | 6 | ~40–50 | ✓ 10 `run_coll.update_one(...)` calls at lines 48, 55, 69, 83, 97, 112, 162, 173, 192, 208; each is 5–8 lines including the multi-line `$set` dict. |
-| K6 | Extract `_get_file_collection(mongo)` helper; replace the two-line `db = mongo["File_Processing"]; collection = db["file_status"]` pattern across ~10–11 sites | `services/data_sources/persistence.py`, `services/data_sources/pipeline.py` | 5 | ~18–22 | ✓ ~10–11 two-line pattern instances across the two files; exact count and per-site verification confirmed during Stage 1 audit. |
+| K6 | Extract `_get_file_collection(mongo)` helper; replace the two-line `db = mongo["File_Processing"]; collection = db["file_status"]` pattern across 11 sites | `services/data_sources/persistence.py`, `services/data_sources/pipeline.py` | 5 | ~18–22 | ✓ 11 two-line pattern instances (4 in `persistence.py`, 7 in `pipeline.py`); per-site verification confirmed during Stage 1 audit. |
 | K7 | TD-009 docstring drift sweep — per-match evaluation of Phase/commit/extracted-from/final-form/renamed references | ~12 files across `services/`, package `__init__.py` files | 2 | ~60–100 | ✓ 25 grep matches across `backend/app/` for the targeted patterns; per-match LOC impact (entire docstring removed vs. single-line edit) resolved during Stage 1. |
 
 **Known-wins subtotal:** ~370–460 LOC reduction (range reflects the per-task estimate ranges above). Plus any audit-surfaced additions and promoted investigation findings.
@@ -215,7 +215,7 @@ The following wins have been verified against the current codebase. They constit
 Each Stage-3 commit must pass before merging:
 
 1. **Import smoke test:** `cd backend && .venv/bin/python -c "from app.main import app; print('imports OK')"` exits 0.
-2. **Module-scoped pytest:** `cd backend && .venv/bin/python -m pytest tests/services/<affected_module>` for the package the task touches. Cross-cutting tasks (K1, K4, K7) run the full suite.
+2. **Module-scoped pytest:** `cd backend && .venv/bin/python -m pytest tests/ -k <affected_module>` for the package the task touches (catches `test_<module>.py`, `test_<module>_v2.py`, and `tests/unit/test_<module>.py` in one invocation). Cross-cutting tasks (K1, K4, K7) run the full suite via `pytest`.
 3. **Behavior-preservation evidence** specific to the task (baseline-snapshot equality test for K2; parametrized prompt-string test for K3; existing-tests-pass for K4; pyflakes for K1; trivial-helper-equivalence for K5/K6; prose-only for K7).
 
 **TD-004 note:** captured-LLM fixtures (`backend/tests/fixtures/captured/*.json`) are stubs, not real LLM responses, per TD-004. For Phase L this is acceptable: pytest functions as a *structural-preservation* gate — confirming code paths and shapes are unchanged. The primary behavior-preservation evidence is byte-equality assertions (K2 baseline snapshot, K3 prompt fixtures), not LLM-output shape. K1, K4, K5, K6, K7 don't touch LLM call paths, so the stub-fixture limitation doesn't apply to them.
@@ -252,7 +252,7 @@ The last Stage-3 commit captures:
 
 On branch `refactor-backend-loc-docstring-audit-phase-l`:
 
-1. **Stage 1:** `chore(audit): Phase L backend LOC + docstring audit scorecard` — committed scorecard with all 91 files audited, findings tagged.
+1. **Stage 1:** `chore(audit): Phase L scorecard for backend LOC + docstring sweep` — committed scorecard with all 91 files audited, findings tagged.
 2. **Stage 2:** `chore(audit): Phase L investigation outcomes` — scorecard updated with per-investigation verdicts.
 3. **Stage 3, low-risk first:**
    - `refactor(be): remove verified unused imports [phase L]` (K1)
@@ -263,9 +263,9 @@ On branch `refactor-backend-loc-docstring-audit-phase-l`:
    - `refactor(be): extract fetch_company_profile to _neo4j_helpers [phase L]` (K4)
    - `docs(be): close TD-009 stale Phase/commit references [phase L]` (K7)
    - Additional commits for investigated-and-promoted findings and audit-surfaced additions.
-4. **Final:** `docs(reviews): add Phase L impl review + synthesis (round 1, …)` — matching the Phase J/K pattern.
+4. **Final:** `docs(reviews): add Phase L impl review + synthesis (round 1, …)` — matching the Phase J/K pattern (exemplar: `docs/reviews/refactor-backend-flat-service-decomposition-phase-k-impl-review-1.md` + `…-synthesis-1.md`).
 
-**Merge strategy:** fast-forward into master after impl review verdict is clean, then push (matching the Phase K cutover we just did). If the impl review verdict is `findings` (actionable items present), fix-then-re-review until verdict is `clean`, matching the Phase J/K iteration pattern.
+**Merge strategy:** fast-forward into master after impl review verdict is clean, then push (matching the Phase K cutover at commit `6de4afd`). If the impl review verdict is `findings` (actionable items present), fix-then-re-review until verdict is `clean`, matching the Phase J/K iteration pattern.
 
 **Commit message style:** `type(scope):` per CLAUDE.md. No `[N/M]` numbering (Phase L commits are bounded by the scorecard, not by a fixed task count). No Co-Authored-By footer.
 
@@ -273,11 +273,11 @@ On branch `refactor-backend-loc-docstring-audit-phase-l`:
 
 ## §10 Success criteria
 
-1. **Audit scorecard committed** at `docs/audits/2026-05-25-backend-loc-docstring-audit-phase-l.md` with all 91 files of `backend/app/` represented, each with a verdict.
+1. **Scorecard committed** at `docs/audits/2026-05-25-backend-loc-docstring-audit-phase-l.md` with all 91 files of `backend/app/` represented, each with a verdict.
 2. **Investigation outcomes committed** — every `investigate` finding has either a promote-to-execute strategy or a defer-with-rationale entry in the scorecard.
 3. **All `execute` findings executed**, one commit per task, each shipping its behavior-preservation evidence.
 4. **Known wins K1–K7 are accounted for:** each is either (a) executed with a passing verification, (b) attempted-and-deferred with a documented failure rationale in the scorecard, or (c) deferred up-front with a rationale (e.g., audit revealed a subtle behavior risk). No silent skips.
-5. **TD-009 closure:** `grep -rnE 'Phase [A-Z]|commit [0-9]+/[0-9]+|extracted from .* in Phase|final form|Renamed.*in Phase' backend/app/` returns 0 matches.
+5. **TD-009 closure:** `grep -rnE 'Phase [A-Z]|commit [0-9]+/[0-9]+|extracted from .* in Phase|final form|Renamed.*in Phase' backend/app/` returns 0 matches. *Carve-out:* matches that are not stale phase/commit references (e.g., legitimate prose containing "final form" in non-origin context, or future cross-references to Phase L itself) are documented in the impl review as accepted exceptions and the criterion is otherwise satisfied.
 6. **Full pytest suite passes** on the final commit.
 7. **No new pyflakes warnings** introduced by Phase L.
 8. **Impl review verdict: clean** (or, if any actionable findings, fix-then-clean).
