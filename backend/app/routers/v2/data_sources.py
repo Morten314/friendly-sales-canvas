@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 
 from app.core.dependencies import get_mongo
 from app.models import PaginatedResponse
-from app.models.documents import UserDocumentEntry
+from app.models.data_sources import UserDocumentEntry
 from app.services.data_sources import list_user_documents
 
 router = APIRouter(prefix="/user-documents", tags=["v2", "data_sources"])
