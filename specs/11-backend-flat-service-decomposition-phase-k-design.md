@@ -49,7 +49,7 @@ These were deferred through Phases H–J because structural decomposition of the
 
 **Rollback:** If pytest fails after any commit, `git reset --hard HEAD~1` reverts the commit. Diagnose the failure and re-plan before re-attempting — do not edit the working tree to "fix forward" past a failed gate.
 
-**Sequence F note:** Sequence F has an additional preamble commit (commit 0) that extracts `probe_llm` from `pipeline.py` into a new `services/health.py` flat file. See §3.6 for the rationale and the resulting 3-commit structure.
+**Sequence F note:** Sequence F has an additional preamble commit (commit 0) that extracts `probe_llm` from `pipeline.py` into a new `services/health.py` flat file. See §3 Sequence F for the rationale and the resulting 3-commit structure.
 
 ---
 
@@ -151,11 +151,13 @@ External caller: `data_sources/loaders.py` imports `score_prospect` via `from ap
 
 ### Sequence F — pipeline
 
-**§3.6 Pre-decomposition extraction (commit 0):**
+**Pre-decomposition extraction (commit 0):**
 
 `pipeline.py` currently contains two functions: `compute_sales_pipeline` (Neo4j stage-count aggregator) and `probe_llm` (LLM-availability smoke probe that invokes langchain). These two functions share no concerns — they were colocated only because the same router (`backend/app/routers/pipeline.py`) serves both. Lumping an LLM probe into a `pipeline/` package alongside a Neo4j read would propagate the existing categorical confusion rather than resolve it.
 
 Commit 0 extracts `probe_llm` to a new flat service file `backend/app/services/health.py` and updates `backend/app/routers/pipeline.py` to import it from there. The `/test-llm` route stays on the existing pipeline router (its URL doesn't change; no client impact). After commit 0, `pipeline.py` contains only `compute_sales_pipeline`.
+
+Commit 0 also updates `pipeline.py`'s module docstring (currently `"""Pipeline service: sales-pipeline aggregator + LLM probe."""`) to remove the "+ LLM probe" suffix — leaving the existing docstring intact after extraction would actively misrepresent the file's contents. This is the only docstring change Phase K requires; broader docstring work remains in TD-009 follow-on scope.
 
 **Package layout (after commits 1–2):**
 
