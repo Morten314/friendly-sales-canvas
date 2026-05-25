@@ -11,6 +11,7 @@ import json
 from typing import Any, Dict, List, Optional
 
 from app.models.market_scoring import LeadMarketScoreRow
+from app.services._neo4j_helpers import fetch_company_profile
 from app.services.market_scoring.normalization import (
     _extract_company_name,
     _extract_lead_name,
@@ -104,18 +105,12 @@ def _get_latest_scoring_run(mongo, org_id: str) -> Optional[Dict[str, Any]]:
 
 def get_company_profile_for_org(driver, org_id: str) -> Dict[str, Any]:
     """Fetch a single company profile for an org."""
-    with driver.session() as session:
-        result = session.run(
-            "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
-            org_id=org_id,
-        )
-        record = result.single()
-        if not record:
-            return {}
-        company_profile = dict(record.values()[0])
-        if "socialMediaUrls" in company_profile and isinstance(company_profile["socialMediaUrls"], str):
-            try:
-                company_profile["socialMediaUrls"] = json.loads(company_profile["socialMediaUrls"])
-            except json.JSONDecodeError:
-                pass
-        return company_profile
+    company_profile = fetch_company_profile(driver, org_id)
+    if company_profile is None:
+        return {}
+    if "socialMediaUrls" in company_profile and isinstance(company_profile["socialMediaUrls"], str):
+        try:
+            company_profile["socialMediaUrls"] = json.loads(company_profile["socialMediaUrls"])
+        except json.JSONDecodeError:
+            pass
+    return company_profile

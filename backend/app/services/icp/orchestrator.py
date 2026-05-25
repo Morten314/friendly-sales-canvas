@@ -33,6 +33,7 @@ from app.services.icp.prompts import (
     ICP_RESEARCH_3_TEMPLATE,
     ICP_RESEARCH_4_TEMPLATE,
 )
+from app.services._neo4j_helpers import fetch_company_profile as _fetch_company_profile
 from app.services._retrieval import (
     _build_market_context_queries,
     _fetch_pinecone_supporting_context,
@@ -283,28 +284,11 @@ async def _run_icp_research_impl(driver, mongo, pc, agent_chain, request: Any, l
             return {"status": "success", "data": latest_report}
 
     # --- Neo4j query inside a thread - get company profile by org_id ---
-    def fetch_company_profile():
-        with driver.session() as session:
-            # Get the company profile filtered by org_id (if provided)
-            if request.org_id:
-                result = session.run(
-                    "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
-                    org_id=request.org_id
-                )
-            else:
-                # Fallback: get any company profile (backward compatibility)
-                result = session.run(
-                    "MATCH (c:CompanyProfile) RETURN c LIMIT 1"
-                )
-            record = result.single()
-            return record
-
-    record = await asyncio.to_thread(fetch_company_profile)
-    if not record:
+    company_profile = await asyncio.to_thread(_fetch_company_profile, driver, request.org_id)
+    if company_profile is None:
         org_msg = f" for org_id: {request.org_id}" if request.org_id else ""
         raise CompanyProfileNotFoundError(f"No company profile found in Neo4j{org_msg}")
 
-    company_profile = dict(record.values()[0])
     if "socialMediaUrls" in company_profile and isinstance(company_profile["socialMediaUrls"], str):
         try:
             company_profile["socialMediaUrls"] = json.loads(company_profile["socialMediaUrls"])

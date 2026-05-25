@@ -26,6 +26,7 @@ from app.services._claude_budget import (
     _finalize_claude_signal_budget,
     _reserve_claude_signal_budget,
 )
+from app.services._neo4j_helpers import fetch_company_profile
 from app.services.signals import persistence
 from app.services.signals.prompts import (
     _SIGNAL_ASK_CLAUDE_PROMPT_TEMPLATE,
@@ -39,14 +40,7 @@ async def signal_ask(driver, mongo, agent_chain, request: SignalAskRequest) -> d
         # Fetch company profile from Neo4j
         company_profile = None
         try:
-            with driver.session() as session:
-                result = session.run(
-                    "MATCH (p:CompanyProfile {org_id: $org_id}) RETURN p LIMIT 1",
-                    org_id=request.org_id
-                )
-                record = result.single()
-                if record:
-                    company_profile = dict(record["p"].items())
+            company_profile = fetch_company_profile(driver, request.org_id)
         except Exception as e:
             logger.warning(f"Could not fetch company profile: {e}")
 
@@ -128,14 +122,7 @@ async def signal_ask_claude(driver, mongo, request: SignalAskRequest) -> dict:
         # Fetch company profile from Neo4j
         company_profile = None
         try:
-            with driver.session() as session:
-                result = session.run(
-                    "MATCH (p:CompanyProfile {org_id: $org_id}) RETURN p LIMIT 1",
-                    org_id=request.org_id
-                )
-                record = result.single()
-                if record:
-                    company_profile = dict(record["p"].items())
+            company_profile = fetch_company_profile(driver, request.org_id)
         except Exception as e:
             logger.warning(f"Could not fetch company profile (Claude): {e}")
 

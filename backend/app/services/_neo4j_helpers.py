@@ -69,3 +69,31 @@ def upsert_node(tx, label, match_field, match_value, data: dict):
         MERGE (n:{label} {{ {escaped_match_field}: $match_value }})
         """
         tx.run(query_str, match_value=match_value)
+
+
+def fetch_company_profile(driver, org_id: Optional[str] = None) -> Optional[dict]:
+    """Fetch the first CompanyProfile node, optionally filtered by org_id.
+
+    If org_id is truthy: ``MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1``.
+    If org_id is falsy (None or ""): ``MATCH (c:CompanyProfile) RETURN c LIMIT 1`` (fetch any).
+
+    The truthy check (``if org_id:``) preserves the pre-refactor sites' behavior
+    exactly — the fallback-pattern sites in market_research and icp used
+    ``if request.org_id:``, treating empty string as falsy → fallback-to-any.
+    Using ``if org_id is not None`` would change behavior at the empty-string
+    boundary (routing "" to the filtered query, which returns None).
+
+    Returns the c node's properties as a plain dict, or None if no match.
+    """
+    with driver.session() as session:
+        if org_id:
+            result = session.run(
+                "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
+                org_id=org_id,
+            )
+        else:
+            result = session.run("MATCH (c:CompanyProfile) RETURN c LIMIT 1")
+        record = result.single()
+        if record is None:
+            return None
+        return dict(record.values()[0])

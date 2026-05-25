@@ -13,6 +13,7 @@ from app.models.customer_profile import (
     CustomerProfileRequest,
     SuggestedICPToCustomerProfileRequest,
 )
+from app.services._neo4j_helpers import fetch_company_profile
 from app.services.icp import _reserve_unique_icp_id, _release_icp_id
 
 
@@ -25,22 +26,15 @@ def upsert_customer_profile(driver, mongo, request: CustomerProfileRequest) -> d
     collection = db["Company_Profile"]
 
     # Get company profile from Neo4j to include in MongoDB document (filter by org_id)
-    company_profile_data = {}
-    with driver.session() as session:
-        result = session.run(
-            "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
-            org_id=request.org_id
-        )
-        record = result.single()
-        if record:
-            company_profile_data = dict(record.values()[0])
-            # Parse JSON strings back to objects
-            for key, value in company_profile_data.items():
-                if isinstance(value, str) and value.strip().startswith(('{', '[')):
-                    try:
-                        company_profile_data[key] = json.loads(value)
-                    except json.JSONDecodeError:
-                        pass
+    company_profile_data = fetch_company_profile(driver, request.org_id) or {}
+    if company_profile_data:
+        # Parse JSON strings back to objects
+        for key, value in company_profile_data.items():
+            if isinstance(value, str) and value.strip().startswith(('{', '[')):
+                try:
+                    company_profile_data[key] = json.loads(value)
+                except json.JSONDecodeError:
+                    pass
 
     # Prepare ICPs with backend-generated globally unique IDs and timestamps.
     current_time = datetime.now(timezone.utc).isoformat()
@@ -148,14 +142,8 @@ def get_customer_profile(driver, mongo, org_id: str) -> dict:
 
     if not document:
         # If no MongoDB document exists, try to get from Neo4j and return empty customer profiles
-        with driver.session() as session:
-            result = session.run(
-                "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
-                org_id=org_id
-            )
-            record = result.single()
-            if not record:
-                raise CompanyProfileNotFoundError(f"No company profile found for org_id: {org_id}")
+        if fetch_company_profile(driver, org_id) is None:
+            raise CompanyProfileNotFoundError(f"No company profile found for org_id: {org_id}")
 
         return {
             "success": True,
@@ -314,20 +302,14 @@ def create_from_suggested_icp(driver, mongo, request: SuggestedICPToCustomerProf
     # Get company profile from Neo4j to include (reuse existing if present)
     company_profile_data = existing_doc.get("company_profile") or {}
     if not company_profile_data:
-        with driver.session() as session:
-            result = session.run(
-                "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
-                org_id=request.org_id
-            )
-            record = result.single()
-            if record:
-                company_profile_data = dict(record.values()[0])
-                for key, value in company_profile_data.items():
-                    if isinstance(value, str) and value.strip().startswith(('{', '[')):
-                        try:
-                            company_profile_data[key] = json.loads(value)
-                        except json.JSONDecodeError:
-                            pass
+        company_profile_data = fetch_company_profile(driver, request.org_id) or {}
+        if company_profile_data:
+            for key, value in company_profile_data.items():
+                if isinstance(value, str) and value.strip().startswith(('{', '[')):
+                    try:
+                        company_profile_data[key] = json.loads(value)
+                    except json.JSONDecodeError:
+                        pass
 
     current_time = datetime.now(timezone.utc).isoformat()
     update_doc = {

@@ -19,6 +19,7 @@ from app.core.exceptions import (
     RecommendedICPNotFoundError,
 )
 from app.core.logging import logger
+from app.services._neo4j_helpers import fetch_company_profile
 from app.services.icp.orchestrator import ICP_generator
 
 
@@ -202,57 +203,51 @@ def list_icps(
         logger.info(f"[ICP] Generating new ICPs for user_id: {user_id}")
 
         # Generate new ICPs from Neo4j company profile - get shared company profile
-        with driver.session() as session:
-            result = session.run(
-                "MATCH (c:CompanyProfile) RETURN c LIMIT 1"
+        company_profile = fetch_company_profile(driver)
+        if company_profile is None:
+            logger.error(f"[ICP] ERROR: No company profile in Neo4j")
+            raise CompanyProfileNotFoundError("No company profile found in Neo4j")
+
+        logger.info(f"[ICP] Company profile retrieved from Neo4j")
+
+        # Convert JSON string if needed
+        if "socialMediaUrls" in company_profile and isinstance(company_profile["socialMediaUrls"], str):
+            try:
+                company_profile["socialMediaUrls"] = json.loads(company_profile["socialMediaUrls"])
+            except json.JSONDecodeError:
+                pass
+
+        # Generate ICPs
+        logger.info(f"[ICP] Calling ICP_generator() for user_id: {user_id}")
+        try:
+            icp_result = ICP_generator(agent_chain, company_profile)
+            if isinstance(icp_result, dict) and "suggestedICPs" in icp_result:
+                logger.info(f"[ICP] Generated {len(icp_result.get('suggestedICPs', []))} ICPs for user_id: {user_id}")
+            else:
+                logger.debug(f"[ICP] ICP_generator returned: {type(icp_result)}")
+            icp_result = normalize_icp_response(icp_result)
+        except Exception as gen_error:
+            logger.error(f"[ICP] ERROR in ICP_generator: {str(gen_error)}")
+            raise
+
+        # Upsert the result in MongoDB - filter by user_id only
+        logger.info(f"[ICP] Saving to MongoDB for user_id: {user_id}")
+        try:
+            update_result = collection.update_one(
+                {"user_id": user_id},
+                {"$set": {"user_id": user_id, "icps": icp_result}},
+                upsert=True
             )
-            record = result.single()
+            logger.info(f"[ICP] Saved to MongoDB - matched: {update_result.matched_count}, modified: {update_result.modified_count}")
+        except Exception as save_error:
+            logger.error(f"[ICP] ERROR saving to MongoDB: {str(save_error)}")
+            raise
 
-            if not record:
-                logger.error(f"[ICP] ERROR: No company profile in Neo4j")
-                raise CompanyProfileNotFoundError("No company profile found in Neo4j")
-
-            company_profile = dict(record.values()[0])
-            logger.info(f"[ICP] Company profile retrieved from Neo4j")
-
-            # Convert JSON string if needed
-            if "socialMediaUrls" in company_profile and isinstance(company_profile["socialMediaUrls"], str):
-                try:
-                    company_profile["socialMediaUrls"] = json.loads(company_profile["socialMediaUrls"])
-                except json.JSONDecodeError:
-                    pass
-
-            # Generate ICPs
-            logger.info(f"[ICP] Calling ICP_generator() for user_id: {user_id}")
-            try:
-                icp_result = ICP_generator(agent_chain, company_profile)
-                if isinstance(icp_result, dict) and "suggestedICPs" in icp_result:
-                    logger.info(f"[ICP] Generated {len(icp_result.get('suggestedICPs', []))} ICPs for user_id: {user_id}")
-                else:
-                    logger.debug(f"[ICP] ICP_generator returned: {type(icp_result)}")
-                icp_result = normalize_icp_response(icp_result)
-            except Exception as gen_error:
-                logger.error(f"[ICP] ERROR in ICP_generator: {str(gen_error)}")
-                raise
-
-            # Upsert the result in MongoDB - filter by user_id only
-            logger.info(f"[ICP] Saving to MongoDB for user_id: {user_id}")
-            try:
-                update_result = collection.update_one(
-                    {"user_id": user_id},
-                    {"$set": {"user_id": user_id, "icps": icp_result}},
-                    upsert=True
-                )
-                logger.info(f"[ICP] Saved to MongoDB - matched: {update_result.matched_count}, modified: {update_result.modified_count}")
-            except Exception as save_error:
-                logger.error(f"[ICP] ERROR saving to MongoDB: {str(save_error)}")
-                raise
-
-            logger.info(f"[ICP] Successfully returned ICPs for user_id: {user_id}")
-            all_items = icp_result.get("suggestedICPs", [])
-            total = len(all_items)
-            items = all_items[offset : offset + limit]
-            return items, total
+        logger.info(f"[ICP] Successfully returned ICPs for user_id: {user_id}")
+        all_items = icp_result.get("suggestedICPs", [])
+        total = len(all_items)
+        items = all_items[offset : offset + limit]
+        return items, total
 
     except Exception as e:
         logger.error(f"[ICP] ERROR: {str(e)}")
