@@ -20,6 +20,7 @@ from app.services._retrieval import (
     _build_signal_context_queries,
     _fetch_pinecone_supporting_context,
 )
+from app.services.leads import get_leads_for_org
 from app.services.signals import persistence
 from app.services.signals.llm import _signals_agent_output
 from app.services.signals.parsing import (
@@ -222,7 +223,6 @@ async def run_signals_research(driver, mongo, pc, agent_chain, request: MarketRe
     leads_data = []
     if request.org_id:
         try:
-            from app.services.leads import get_leads_for_org
             leads_data, _ = get_leads_for_org(driver, org_id=request.org_id, limit=100, offset=0)
             if isinstance(pre_data, dict):
                 pre_data["leads_data"] = leads_data
