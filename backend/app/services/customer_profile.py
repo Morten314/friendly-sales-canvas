@@ -10,6 +10,7 @@ from app.core.exceptions import (
     SuggestedICPNotFoundError,
 )
 from app.models.customer_profile import CustomerProfileRequest, SuggestedICPToCustomerProfileRequest
+from app.services.icp import _reserve_unique_icp_id, _release_icp_id
 
 
 def upsert_customer_profile(driver, mongo, request: CustomerProfileRequest) -> dict:
@@ -17,7 +18,6 @@ def upsert_customer_profile(driver, mongo, request: CustomerProfileRequest) -> d
     Create or update customer profiles (ICPs) in MongoDB.
     Customer profiles are stored within the company profile document.
     """
-    from app.services.icp import _reserve_unique_icp_id
     db = mongo["Profiler"]
     collection = db["Company_Profile"]
 
@@ -136,7 +136,6 @@ def get_customer_profile(driver, mongo, org_id: str) -> dict:
     Returns both company profile and associated customer profiles from the same document.
     Filtered by org_id for multi-org support.
     """
-    from app.services.icp import _reserve_unique_icp_id
     db = mongo["Profiler"]
     collection = db["Company_Profile"]
 
@@ -214,7 +213,6 @@ def create_from_suggested_icp(driver, mongo, request: SuggestedICPToCustomerProf
     Convert a suggested/recommended ICP (from GET /icp) into a Customer Profile ICP and save it.
     Enforces uniqueness by source suggested ICP id within the org's saved customer profiles.
     """
-    from app.services.icp import _reserve_unique_icp_id
     profiler_db = mongo["Profiler"]
     icp_config_collection = profiler_db["ICP_config"]
     icp_config = icp_config_collection.find_one({"user_id": request.user_id}) or {}
@@ -351,7 +349,6 @@ def delete_icp_from_customer_profile(mongo, icp_id: str, org_id: str) -> dict:
     """
     Delete a single saved customer profile ICP by icp_id for a given org_id.
     """
-    from app.services.icp import _release_icp_id
     db = mongo["Profiler"]
     collection = db["Company_Profile"]
 
