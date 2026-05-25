@@ -37,11 +37,9 @@ async def _run_persona_signal_batch(
 ) -> None:
     """Run one persona's signal-batch loop (scout or profiler).
 
-    Replaces the pre-refactor parallel loops at lines 127-157 (scout) and
-    160-190 (profiler) of this module. Stage 2 of Phase L verified the
-    loops were byte-identical except for ``persona`` (used in
-    ``search_signals``, the ``"agent"`` field, and log messages) and the
-    ``pre_data`` source. The helper preserves all 4 observable surfaces:
+    The loop body is identical for both personas; only ``persona`` (used
+    in ``search_signals``, the ``"agent"`` field, and log messages) and
+    the ``pre_data`` source differ between callers. Observable surfaces:
     return shape (appends to ``generated_signals``), exception re-raise,
     DB writes via ``persistence._save_signal_and_track_headline``, and
     log lines (same wording, persona substituted).
