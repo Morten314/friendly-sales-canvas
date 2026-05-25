@@ -18,6 +18,7 @@ from app.core.exceptions import (
     RecommendedICPNotFoundError,
 )
 from app.core.logging import logger
+from app.services.icp.orchestrator import ICP_generator
 
 
 def list_icps(
@@ -36,8 +37,6 @@ def list_icps(
       - On cache miss or refresh, generates new ICPs via ICP_generator() from
         a Neo4j company profile, normalises the payload, and persists to Mongo.
     """
-    # Lazy imports to avoid circular dependency: persistence -> orchestrator -> persistence
-    from app.services.icp.orchestrator import ICP_generator
     from app.services._retrieval import (  # lazy to avoid circular imports
         _build_market_context_queries,
         _fetch_pinecone_supporting_context,
