@@ -96,8 +96,8 @@ def test_process_prospect_list_returns_dataframe_rows(mocker):
     import pandas as pd
     df = pd.DataFrame([{"company": "Acme", "stage": "Initial"}])
     mock_read_csv = mocker.patch("app.services.data_sources.loaders.pd.read_csv", return_value=df)
-    # score_prospect is imported lazily inside process_prospect_list; stub it out
-    mocker.patch("app.services.graph_chat.score_prospect", return_value={})
+    # score_prospect is now a module-top binding in loaders — patch at the used site
+    mocker.patch("app.services.data_sources.loaders.score_prospect", return_value={})
     # query() calls Neo4j driver.session() — stub the local binding in documents
     mocker.patch("app.services.data_sources.loaders.query", return_value=None)
 

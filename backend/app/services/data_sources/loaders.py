@@ -12,6 +12,7 @@ import pandas as pd
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 
 from app.services._neo4j_helpers import query  # function — local binding ok
+from app.services.graph_chat import score_prospect
 
 
 # Function to load documents
@@ -32,8 +33,6 @@ def grapher(graph, llm_transformer, file_path):
 
 def process_prospect_list(driver, llm, file_path):
     """Process the prospect list and add data to Neo4j."""
-    from app.services.graph_chat import score_prospect  # lazy: avoid load-time dep
-
     # Read file based on extension
     if file_path.endswith('.csv'):
         df = pd.read_csv(file_path)
