@@ -1,12 +1,14 @@
 # backend/tests/unit/test_customer_profile.py
-"""Unit tests for app/services/customer_profile.py.
+"""Unit tests for app/services/customer_profile/.
 
 Covers all four public functions plus the 5 typed-exception sites.
 
-Cross-service mocking note: customer_profile.py now imports icp helpers at the
-module level. Because _reserve_unique_icp_id and _release_icp_id are top-level
-imports, they are bound in customer_profile's namespace. The correct patch target
-is app.services.customer_profile.<helper>, not app.services.icp.<helper>.
+Cross-service mocking note: customer_profile/orchestrator.py imports icp
+helpers at the module level. Because _reserve_unique_icp_id and
+_release_icp_id are top-level imports in orchestrator.py, they are bound
+in customer_profile.orchestrator's namespace. The correct patch target is
+app.services.customer_profile.orchestrator.<helper>, not
+app.services.icp.<helper>.
 """
 from unittest.mock import MagicMock
 
@@ -46,7 +48,7 @@ def test_upsert_customer_profile_happy_path(mocker, mock_session, mock_mongo_cli
     coll.find_one.return_value = None
     mock_mongo_client["Profiler"].__getitem__.return_value = coll
     mocker.patch(
-        "app.services.customer_profile._reserve_unique_icp_id",
+        "app.services.customer_profile.orchestrator._reserve_unique_icp_id",
         return_value=TEST_ICP_ID_1,
     )
 
@@ -89,7 +91,7 @@ def test_get_customer_profile_raises_when_not_found(mock_session, mock_mongo_cli
 
 def test_get_customer_profile_returns_existing_doc(mock_session, mock_mongo_client, mocker):
     mocker.patch(
-        "app.services.customer_profile._reserve_unique_icp_id",
+        "app.services.customer_profile.orchestrator._reserve_unique_icp_id",
         side_effect=lambda db, id_type, owner_key, preferred_id=None: preferred_id or TEST_ICP_ID_1,
     )
 
@@ -126,7 +128,7 @@ def test_create_from_suggested_icp_happy_path(
     get_customer_profile (covered in test_get_customer_profile_raises_when_not_found).
     """
     mocker.patch(
-        "app.services.customer_profile._reserve_unique_icp_id",
+        "app.services.customer_profile.orchestrator._reserve_unique_icp_id",
         return_value=TEST_ICP_ID_1,
     )
 
@@ -185,7 +187,7 @@ def test_create_from_suggested_icp_raises_icp_already_exists(
     mock_session, mock_mongo_client, mocker,
 ):
     mocker.patch(
-        "app.services.customer_profile._reserve_unique_icp_id",
+        "app.services.customer_profile.orchestrator._reserve_unique_icp_id",
         return_value=TEST_ICP_ID_1,
     )
 
@@ -241,7 +243,7 @@ def test_delete_icp_raises_when_icp_not_in_profile(
         "customer_profiles": {"icps": [{"id": TEST_ICP_ID_2, "primary_region": "North America"}]},
     }
     mock_mongo_client["Profiler"].__getitem__.return_value = coll
-    mocker.patch("app.services.customer_profile._release_icp_id")
+    mocker.patch("app.services.customer_profile.orchestrator._release_icp_id")
 
     with pytest.raises(CustomerProfileICPNotFoundError):
         delete_icp_from_customer_profile(mock_mongo_client, TEST_ICP_ID_1, TEST_ORG_ID)
@@ -259,7 +261,7 @@ def test_delete_icp_happy_path_releases_id(mock_mongo_client, mocker):
         },
     }
     mock_mongo_client["Profiler"].__getitem__.return_value = coll
-    release_mock = mocker.patch("app.services.customer_profile._release_icp_id")
+    release_mock = mocker.patch("app.services.customer_profile.orchestrator._release_icp_id")
 
     result = delete_icp_from_customer_profile(mock_mongo_client, TEST_ICP_ID_1, TEST_ORG_ID)
 
