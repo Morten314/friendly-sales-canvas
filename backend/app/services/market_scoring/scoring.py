@@ -26,6 +26,16 @@ from app.services.market_scoring import orchestrator
 logger = logging.getLogger(__name__)
 
 
+def _update_run(run_coll, run_id: str, **fields) -> None:
+    """Set ``fields`` on the run document identified by ``run_id``.
+
+    Trivial wrapper around ``run_coll.update_one({"run_id": run_id}, {"$set": fields})``.
+    Preserved exactly: the filter shape, the $set operator, and the lack of
+    upsert/return-value handling at every call site.
+    """
+    run_coll.update_one({"run_id": run_id}, {"$set": fields})
+
+
 def _is_stale_queued_run(run_doc: Dict[str, Any], stale_after_seconds: int = 300) -> bool:
     if str(run_doc.get("status", "")).lower() != "queued":
         return False
@@ -45,79 +55,61 @@ def _run_market_scoring_for_org(driver, mongo, llm2, user_id: str, org_id: str, 
     try:
         score_coll, run_coll = persistence._get_market_score_collections(mongo)
         now_iso = datetime.now(timezone.utc).isoformat()
-        run_coll.update_one(
-            {"run_id": run_id},
-            {"$set": {"status": "processing", "started_at": now_iso, "updated_at": now_iso}},
-        )
+        _update_run(run_coll, run_id, status="processing", started_at=now_iso, updated_at=now_iso)
 
         leads, total_leads = get_leads_for_org(driver, org_id=org_id, limit=5000, offset=0)
         if not leads:
-            run_coll.update_one(
-                {"run_id": run_id},
-                {
-                    "$set": {
-                        "status": "failed",
-                        "error": "No leads found for org_id",
-                        "completed_at": datetime.now(timezone.utc).isoformat(),
-                    }
-                },
+            _update_run(
+                run_coll,
+                run_id,
+                status="failed",
+                error="No leads found for org_id",
+                completed_at=datetime.now(timezone.utc).isoformat(),
             )
             return
 
         company_profile = persistence.get_company_profile_for_org(driver, org_id)
         if not company_profile:
-            run_coll.update_one(
-                {"run_id": run_id},
-                {
-                    "$set": {
-                        "status": "failed",
-                        "error": "Company profile not found for org_id",
-                        "completed_at": datetime.now(timezone.utc).isoformat(),
-                    }
-                },
+            _update_run(
+                run_coll,
+                run_id,
+                status="failed",
+                error="Company profile not found for org_id",
+                completed_at=datetime.now(timezone.utc).isoformat(),
             )
             return
 
         market_reports = orchestrator.get_market_reports_for_org(mongo, user_id, org_id)
         if len(market_reports) < len(MARKET_SCORE_COMPONENT_KEYS):
-            run_coll.update_one(
-                {"run_id": run_id},
-                {
-                    "$set": {
-                        "status": "failed",
-                        "error": "Missing market research components. Generate all 5 components first.",
-                        "completed_at": datetime.now(timezone.utc).isoformat(),
-                    }
-                },
+            _update_run(
+                run_coll,
+                run_id,
+                status="failed",
+                error="Missing market research components. Generate all 5 components first.",
+                completed_at=datetime.now(timezone.utc).isoformat(),
             )
             return
 
         processed_count = 0
         failed_count = 0
-        run_coll.update_one(
-            {"run_id": run_id},
-            {
-                "$set": {
-                    "total_leads": total_leads,
-                    "processed_count": 0,
-                    "failed_count": 0,
-                    "updated_at": datetime.now(timezone.utc).isoformat(),
-                }
-            },
+        _update_run(
+            run_coll,
+            run_id,
+            total_leads=total_leads,
+            processed_count=0,
+            failed_count=0,
+            updated_at=datetime.now(timezone.utc).isoformat(),
         )
         for lead in leads:
             lead_id = str(lead.get("lead_id") or "")
             if not lead_id:
                 failed_count += 1
-                run_coll.update_one(
-                    {"run_id": run_id},
-                    {
-                        "$set": {
-                            "processed_count": processed_count,
-                            "failed_count": failed_count,
-                            "updated_at": datetime.now(timezone.utc).isoformat(),
-                        }
-                    },
+                _update_run(
+                    run_coll,
+                    run_id,
+                    processed_count=processed_count,
+                    failed_count=failed_count,
+                    updated_at=datetime.now(timezone.utc).isoformat(),
                 )
                 continue
             try:
@@ -159,28 +151,22 @@ def _run_market_scoring_for_org(driver, mongo, llm2, user_id: str, org_id: str, 
                     scoring_status="failed",
                     score_coll=score_coll,
                 )
-            run_coll.update_one(
-                {"run_id": run_id},
-                {
-                    "$set": {
-                        "processed_count": processed_count,
-                        "failed_count": failed_count,
-                        "updated_at": datetime.now(timezone.utc).isoformat(),
-                    }
-                },
+            _update_run(
+                run_coll,
+                run_id,
+                processed_count=processed_count,
+                failed_count=failed_count,
+                updated_at=datetime.now(timezone.utc).isoformat(),
             )
 
-        run_coll.update_one(
-            {"run_id": run_id},
-            {
-                "$set": {
-                    "status": "completed",
-                    "processed_count": processed_count,
-                    "failed_count": failed_count,
-                    "updated_at": datetime.now(timezone.utc).isoformat(),
-                    "completed_at": datetime.now(timezone.utc).isoformat(),
-                }
-            },
+        _update_run(
+            run_coll,
+            run_id,
+            status="completed",
+            processed_count=processed_count,
+            failed_count=failed_count,
+            updated_at=datetime.now(timezone.utc).isoformat(),
+            completed_at=datetime.now(timezone.utc).isoformat(),
         )
     except BrewraError as e:
         # Typed domain failure — expected category, log at warning.
@@ -189,15 +175,12 @@ def _run_market_scoring_for_org(driver, mongo, llm2, user_id: str, org_id: str, 
             org_id, run_id, e,
         )
         if run_coll is not None:
-            run_coll.update_one(
-                {"run_id": run_id},
-                {
-                    "$set": {
-                        "status": "failed",
-                        "error": str(e),
-                        "completed_at": datetime.now(timezone.utc).isoformat(),
-                    }
-                },
+            _update_run(
+                run_coll,
+                run_id,
+                status="failed",
+                error=str(e),
+                completed_at=datetime.now(timezone.utc).isoformat(),
             )
     except Exception as e:
         # Unexpected failure (Neo4j driver, LLM call, etc.) — log at error
@@ -205,13 +188,10 @@ def _run_market_scoring_for_org(driver, mongo, llm2, user_id: str, org_id: str, 
         # swallow the failure silently.
         logger.error(f"Lead market scoring run failed for org {org_id}: {e}")
         if run_coll is not None:
-            run_coll.update_one(
-                {"run_id": run_id},
-                {
-                    "$set": {
-                        "status": "failed",
-                        "error": str(e),
-                        "completed_at": datetime.now(timezone.utc).isoformat(),
-                    }
-                },
+            _update_run(
+                run_coll,
+                run_id,
+                status="failed",
+                error=str(e),
+                completed_at=datetime.now(timezone.utc).isoformat(),
             )
