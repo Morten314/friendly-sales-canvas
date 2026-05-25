@@ -1,50 +1,38 @@
-"""Response parsing for signals/ -- LLM output -> structured signal records.
+"""Response parsing for signals/ — LLM output -> structured signal records.
 
-Internal _-prefix helpers (not re-exported). Extracted from
-search_signals body during Phase H commit 19/20.
+_parse_search_signals_response: thin adapter over _llm_helpers._extract_research_json
+  with signals-specific kwargs (3 escape_keys, trim_braces, strip_final_answer).
+  IMPORTANT: signals' historical quote-escaping (escaping " inside matched
+  description/snippet/headline values, on top of \\n/\\r) is REMOVED in
+  Phase I. All 3 research services now use the simpler \\n/\\r-only escape
+  rule. See spec §1.
+
+_validate_url: signals-specific URL validator against the tavily allowlist.
+  Unchanged from previous Phase H implementation.
+
+_normalize_search_signals_result: signals-specific post-processor that
+  validates URLs, assembles the final signal record, adds default fields.
+  Called by search_signals after _parse_search_signals_response.
+  Unchanged from previous Phase H implementation.
 """
-import json
-import re
 from typing import Any, Dict, List
+
+from app.services._llm_helpers import _extract_research_json
 
 
 def _parse_search_signals_response(response: str) -> Dict[str, Any]:
     """Parse the raw LLM response from a signal search into a dict.
 
-    Handles Final Answer prefix, ```json fences, and escapes newlines /
-    quotes inside the description/snippet/headline string fields before
-    json.loads. Mirrors the pre-extraction inline cleanup from
-    search_signals.
+    Handles Final Answer prefix, ```json fences, and escapes newlines
+    inside description/snippet/headline string fields before json.loads.
+    Quote-escaping is intentionally NOT performed (Phase I unification).
     """
-    if "Final Answer:" in response:
-        response = response.split("Final Answer:")[-1].strip()
-
-    cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    if "{" in cleaned_str:
-        cleaned_str = cleaned_str[cleaned_str.index("{"):]
-    if "}" in cleaned_str:
-        cleaned_str = cleaned_str[:cleaned_str.rindex("}") + 1]
-
-    cleaned_str = re.sub(
-        r'\"description\": \"(.*?)\"',
-        lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r').replace('"', '\\"') + '"',
-        cleaned_str,
-        flags=re.DOTALL,
+    return _extract_research_json(
+        response,
+        escape_keys=("description", "snippet", "headline"),
+        trim_braces=True,
+        strip_final_answer=True,
     )
-    cleaned_str = re.sub(
-        r'\"snippet\": \"(.*?)\"',
-        lambda m: '"snippet": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r').replace('"', '\\"') + '"',
-        cleaned_str,
-        flags=re.DOTALL,
-    )
-    cleaned_str = re.sub(
-        r'\"headline\": \"(.*?)\"',
-        lambda m: '"headline": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r').replace('"', '\\"') + '"',
-        cleaned_str,
-        flags=re.DOTALL,
-    )
-
-    return json.loads(cleaned_str)
 
 
 def _validate_url(url: str, tavily_urls_list: List[str]) -> str:
