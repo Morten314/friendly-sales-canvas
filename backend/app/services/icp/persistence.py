@@ -1,8 +1,9 @@
 """Persistence layer for icp/ — Mongo CRUD for ICP records + ID-registry helpers.
 
-§3.7 exceptions re-exported from __init__.py:
+_-prefix helpers re-exported from __init__.py for external callers that
+import via the package path:
 - _ensure_icp_indexes (called from app/main.py lifespan)
-- _reserve_unique_icp_id, _release_icp_id (lazy-imported by customer_profile.py)
+- _reserve_unique_icp_id, _release_icp_id (used by customer_profile.py)
 """
 import json
 import uuid

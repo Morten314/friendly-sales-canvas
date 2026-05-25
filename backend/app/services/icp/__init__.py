@@ -1,4 +1,4 @@
-"""icp service — public API (Phase H Sequence D final form).
+"""icp service — public API.
 
 Service for generating ICPs from company profiles + persisting them.
 Submodules:
@@ -10,10 +10,11 @@ Submodules:
   - llm.py: _icp_research_agent_output (dispatch wrapper)
   - parsing.py: _extract_icp_json (consolidates per-worker JSON cleanups)
 
-§3.7 _-prefix exceptions re-exported below: _ensure_icp_indexes (lifespan),
-_reserve_unique_icp_id + _release_icp_id (lazy-imported by
-customer_profile.py — patches on those must target the package path, not
-the submodule path; see spec §3.8 lazy-import-through-__init__ exception).
+_-prefix helpers re-exported below for external callers that import via the
+package path: _ensure_icp_indexes (app/main.py lifespan),
+_reserve_unique_icp_id + _release_icp_id (customer_profile.py). Tests
+patching these for those callers target the caller's namespace (e.g.,
+app.services.customer_profile._reserve_unique_icp_id), per patch-where-used.
 """
 
 from app.services.icp.orchestrator import (
