@@ -183,11 +183,11 @@ mocker.patch("app.services.customer_profile.orchestrator._release_icp_id")
 
 ### Pre-flight grep (all sequences)
 
-Before executing each sequence, run:
+Before executing each sequence, run the grep for that service's name — e.g. before Sequence A:
 ```bash
-grep -r "mocker\.patch.*app\.services\.<svc>" backend/tests/
+grep -r "mocker\.patch.*app\.services\.leads" backend/tests/
 ```
-Confirm the result matches the inventory in this spec. If unexpected patch paths appear, update the commit plan before proceeding.
+Replace `leads` with the relevant service name (`customer_profile`, `profiles`, `org_auth`, `graph_chat`, `pipeline`) for each sequence. Confirm the result matches the inventory in this spec. If unexpected patch paths appear, update the commit plan before proceeding.
 
 ---
 
@@ -214,7 +214,7 @@ All external `from app.services.<svc> import X` call sites are satisfied by the 
 
 ## §6 Acceptance criteria
 
-1. `pytest` baseline recorded before Phase K: all tests pass.
+1. `pytest` baseline recorded before Phase K begins (Task 0 of the plan): capture the passing count with `pytest --tb=no -q | tail -1` and note it in the plan's Task 0 completion note.
 2. After each commit in each sequence: `pytest` passes with the same count.
 3. After all 6 sequences:
    - `grep -r "from app\.services\.\(leads\|customer_profile\|graph_chat\|org_auth\|profiles\|pipeline\) import" backend/app/` — all call sites resolve through `__init__.py` re-exports.
