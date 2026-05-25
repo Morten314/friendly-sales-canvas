@@ -4,27 +4,29 @@
 **Scope:** backend/app/ (91 files, 10,403 LOC baseline)
 **Method:** Per-file review using the 12 opportunity categories from spec §4.
 **Branch:** refactor-backend-loc-docstring-audit-phase-l (off master 7bd2797)
-**Baseline:** 248 pytest tests passing, 19 snapshots, 64 pyflakes warnings (`/tmp/phase-l-pyflakes-baseline.txt`).
+**Baseline:** 248 pytest tests passing, 19 snapshots, 64 pyflakes warnings (`docs/audits/2026-05-25-phase-l-pyflakes-baseline.txt`).
 
 Discovery grep counts (Step 2):
 - Cat 2 (stale Phase/commit refs): 25 matches across 12 files (matches spec)
 - Cat 5 (`db = mongo[...]`): 32 matches across 11 files (spec called out 11 sites in `data_sources/{persistence,pipeline}.py` — verified)
 - Cat 6 (`update_one` in `market_scoring/`): 13 matches; 10 in `scoring.py` at lines 48, 55, 69, 83, 97, 112, 162, 173, 192, 208 (matches spec)
-- Cat 7 (`MATCH (c:CompanyProfile` and `MATCH (p:CompanyProfile`): 14 matches; K4 fetch-one-profile read sites resolve to 8 distinct function bodies across 6 files (matches spec)
+- Cat 7 (`MATCH (c:CompanyProfile` and `MATCH (p:CompanyProfile`): 14 matches; K4 fetch-one-profile read sites resolve to 9 distinct sites across 6 files (drift vs spec's "8 sites across 5 files" — see Cross-cutting Cat 7 below for the corrected count).
 
 ## Summary
 
 | Status | Count | LOC est. |
 |---|---:|---:|
 | Audited, clean | 53 | — |
-| Execute (Stage 3) | 38 | ~165 |
+| Execute (Stage 3) | 38 | ~ -227 |
 | Investigated → promoted to execute | TBD (Stage 2) | TBD |
 | Investigated → deferred | TBD (Stage 2) | — |
 | Design-discussion (future work) | 6 | — |
 
+**Spec target gap:** spec §2 estimates -370 to -460 LOC. The audit-grounded, per-K-summed `execute` total is ~ -227 LOC. Gap: ~ -143 to -233 LOC. The shortfall reflects that the spec's K-known-win LOC estimates were aspirational and assumed deeper per-site removal than per-site verification supported (e.g., K2 budgeted ~70 LOC compression across two near-identical prompt pairs, but the actual diff is ~6 lines of schema-rule overlay across each pair; K3 collapse of 5 near-duplicates yields ~50 LOC instead of the spec's higher hope; K1 dropped from a hoped ~ -16 to a confirmed-safe ~ -10 once the 7-name normalization block was split to investigate). Stage 2 investigation may close part of the gap if `investigate` findings promote to execute (the `services/market_scoring/orchestrator.py` 7-name normalization block alone could add ~ -7 LOC if it promotes, and the Cat 5 expansion across 7 additional service files could add ~ -15 LOC if it promotes).
+
 Notes:
-- "Execute LOC" est. ~165 includes the 7 known wins (K1–K7) only. Audit-surfaced minor findings (additional unused imports outside K1's named set, additional docstring drift) are counted as individual file entries but not double-counted into K-cluster numbers.
-- K-cluster aggregate estimates: K1 ~21 LOC, K2 ~70 LOC, K3 ~50 LOC (after helper), K4 ~30 LOC, K5 ~25 LOC, K6 ~14 LOC, K7 ~0 net (rewording, not deletion) — total ~210 LOC raw, ~165 LOC net after helper insertion.
+- "Execute LOC" est. ~ -227 includes the 7 known wins (K1–K7) only. Audit-surfaced minor findings (additional unused imports outside K1's named set, additional docstring drift) are counted as individual file entries but not double-counted into K-cluster numbers.
+- K-cluster aggregate estimates: K1 ~ -10 LOC (confirmed-safe set), K2 ~ -70 LOC, K3 ~ -50 LOC (after helper), K4 ~ -39 LOC (after helper), K5 ~ -25 LOC (after helper), K6 ~ -8 LOC (after helper), K7 ~ -25 LOC (wording compression across 25 sites) — sum ~ -227 LOC. The Summary table row's "~165" in the previous draft was an earlier conservative figure that omitted K2/K3/K4 after-helper math; the corrected per-K-grounded estimate is ~ -227 LOC.
 
 ## Per-file findings
 
@@ -194,8 +196,8 @@ Clean.
 
 ### backend/app/routers/v2/__init__.py (1 LOC)
 
-- **Cat 2 (Phase-G reference in docstring) — investigate.**
-  Single line: `"""v2 paginated API routers — see specs/2026-05-23-backend-pagination-and-index-hygiene-phase-g-design.md"""`. The spec-pointer is informative; matches grep for "Phase" but is a file-name reference, not stale prose. Tag investigate (low priority; leaving as-is is defensible).
+- **Cat 2 (Phase-G spec-pointer in docstring) — design-discussion. (D3)**
+  Single line: `"""v2 paginated API routers — see specs/2026-05-23-backend-pagination-and-index-hygiene-phase-g-design.md"""`. The spec-pointer is a file-name reference (informative), not stale prose. Leaving as-is is defensible; reword decision punted to future work — see Future-work table D3.
 
 ### backend/app/routers/v2/data_sources.py (19 LOC)
 
@@ -274,17 +276,17 @@ Clean. `load_document` + `process_documents_and_update_graph` + `process_prospec
 
 - **Cat 5 (repeated DB-lookup boilerplate `db = mongo["File_Processing"]; collection = db["file_status"]`) — execute. (K6)**
   4 occurrences at lines 23, 49, 98, 340 (within `get_document_status`, `list_user_documents`, `delete_data_source`, `update_data_source`).
-  Strategy: see Cross-cutting Cat 5. Replace with `coll = _get_file_status_collection(mongo)`.
+  Strategy: see Cross-cutting Cat 5. Replace with `coll = _get_file_collection(mongo)`.
   Est. -4 LOC.
 
 ### backend/app/services/data_sources/pipeline.py (446 LOC)
 
 - **Cat 5 (repeated DB-lookup boilerplate) — execute. (K6)**
   7 occurrences at lines 44, 169, 194, 211, 288, 376, 407 (within `process_file_to_embeddings` and `upload_file_with_data`).
-  Strategy: see Cross-cutting Cat 5. Replace with `coll = _get_file_status_collection(mongo)`.
+  Strategy: see Cross-cutting Cat 5. Replace with `coll = _get_file_collection(mongo)`.
   Est. -7 LOC.
 
-  Combined with persistence.py: K6 total = 11 sites (matches spec), -10 net after helper insertion (~14 raw minus 4-LOC helper).
+  Combined with persistence.py: K6 total = 11 sites (matches spec); see Cross-cutting Cat 5 for K6 net (~ -8 LOC after helper insertion).
 
 ### backend/app/services/graph_chat/__init__.py (29 LOC)
 
@@ -324,8 +326,12 @@ Clean. 1-line alias module.
 ### backend/app/services/icp/persistence.py (350 LOC)
 
 - **Cat 1 (unused imports — pyflakes confirmed) — execute. (K1)**
-  Per pyflakes baseline: imports include unused names. Verification in Stage 2 will confirm the specific symbols (pyflakes flags multiple `app.services.icp.persistence._*` names re-exported through `__init__.py` — those are deliberate re-exports; the file's own imports need a focused re-pyflakes after K1 commits). Tag K1.
-  Est. -2 LOC (preliminary; refine in Stage 2).
+  Per `docs/audits/2026-05-25-phase-l-pyflakes-baseline.txt` lines 61–62:
+  - line 23: `app.services._retrieval._build_market_context_queries`
+  - line 23: `app.services._retrieval._fetch_pinecone_supporting_context`
+  Both are confirmed unreferenced in this module's bodies (grep for `_build_market_context_queries` and `_fetch_pinecone_supporting_context` inside `icp/persistence.py` returns only the import line). Neither is patched via `app.services.icp.persistence.<name>` in the test suite.
+  Strategy: remove both names from the `from app.services._retrieval import …` line.
+  Est. -2 LOC.
 
 - **Cat 7 (cross-file duplicate helper — fetch_company_profile) — execute. (K4)**
   1 site at line 211 using `MATCH (c:CompanyProfile) RETURN c LIMIT 1` (fallback variant without org_id filter) inside `delete_recommended_icp`'s helper path.
@@ -416,14 +422,17 @@ Clean. Pure data-shape helpers.
 
 ### backend/app/services/market_scoring/orchestrator.py (428 LOC)
 
-- **Cat 1 (unused imports — verified by pyflakes) — execute. (K1)**
-  Per `/tmp/phase-l-pyflakes-baseline.txt`:
+- **Cat 1 (unused imports — confirmed safe pair) — execute. (K1)**
+  Per `docs/audits/2026-05-25-phase-l-pyflakes-baseline.txt`:
   - line 17: `app.core.exceptions.BrewraError`
   - line 22: `app.models.market_scoring.LeadMarketScoreRow`
-  - line 29 (7 names): `_safe_json_to_obj`, `_normalize_non_empty_string`, `_canonicalize_key`, `_build_lookup_maps`, `_first_non_empty_value_from_keys`, `_parse_iso_datetime`, `_lead_to_score_row` — all from `app.services.market_scoring.normalization`.
-  Verification needed (Stage 2): confirm these 9 imports are not referenced via `globals()`, `getattr`, or string-name dispatch. The block at line 29 looks like a deliberate re-export-shaped import — needs check whether any test patches `app.services.market_scoring.orchestrator._lead_to_score_row` etc. If yes, keep; if no, remove all 9.
-  Tag K1 (execute) for the BrewraError/LeadMarketScoreRow pair; tag K1+investigate for the normalization block.
-  Est. -9 LOC (preliminary; could be -2 if the normalization block must stay for test-patch).
+  Both are confirmed unreferenced in this module and unreferenced via test-patch (grep `mocker.patch` and `patch(` in `backend/tests/` for these two names against `app.services.market_scoring.orchestrator` returns no hits).
+  Strategy: remove both imports.
+  Est. -2 LOC.
+
+- **Cat 1 (7-name normalization block) — investigate.**
+  Per pyflakes line 29, 7 names from `app.services.market_scoring.normalization` are imported but unreferenced in this file: `_safe_json_to_obj`, `_normalize_non_empty_string`, `_canonicalize_key`, `_build_lookup_maps`, `_first_non_empty_value_from_keys`, `_parse_iso_datetime`, `_lead_to_score_row`.
+  Verification question (Stage 2): does the test suite patch these 7 symbols on `app.services.market_scoring.orchestrator` such that removing them would break patch targets? Verify by grepping `mocker.patch` and `patch(` in `backend/tests/` for the 7 symbol names paired with the `app.services.market_scoring.orchestrator.<name>` module path. Resolution: if no test patches them via this module path, promote to K1 execute (~ -7 LOC). If patches exist via this module path, defer until the patch-where-used migration of TD-006 is complete.
 
 ### backend/app/services/market_scoring/persistence.py (121 LOC)
 
@@ -604,7 +613,7 @@ Total clean: 53 files.
 
 ### Cat 7: fetch_company_profile duplication — execute (K4)
 
-8 distinct fetch-one-CompanyProfile-by-org_id read sites across 6 service files. Each is either an inline `with driver.session() as session: ... session.run("MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1", ...)` block, or a thin `def fetch_company_profile():` nested function wrapping the same pattern.
+9 distinct fetch-one-CompanyProfile-by-org_id read sites across 6 service files. Each is either an inline `with driver.session() as session: ... session.run("MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1", ...)` block, or a thin `def fetch_company_profile():` nested function wrapping the same pattern.
 
 Sites (verified by grep):
 | File | Line | Function context | Alias |
@@ -619,7 +628,7 @@ Sites (verified by grep):
 | services/signals/ask.py | 44 | signal_ask | p |
 | services/signals/ask.py | 133 | signal_ask_claude | p |
 
-That is 8 distinct function bodies; raw grep matches total 11 lines (the `def fetch_company_profile()` cases each have 2 MATCH lines for the org_id-or-fallback branch). Including `icp/persistence.py:211` which is a fallback-only no-org_id variant, the spec's "8 sites across 5 files" should read **9 sites across 6 files** — count drift documented here (signals/ask.py at 2 sites was undercounted in spec by 1; icp/persistence.py adds a fallback-only variant).
+That is 9 distinct sites across 6 files; raw grep matches total 11 lines (the `def fetch_company_profile()` cases each have 2 MATCH lines for the org_id-or-fallback branch). Including `icp/persistence.py:211` which is a fallback-only no-org_id variant, the spec's "8 sites across 5 files" should read **9 sites across 6 files** — count drift documented here (signals/ask.py at 2 sites was undercounted in spec by 1; icp/persistence.py adds a fallback-only variant).
 
 Strategy: extract `fetch_company_profile(driver, org_id: Optional[str] = None) -> Optional[dict]` to `services/_neo4j_helpers.py`. Returns the unwrapped profile dict (already JSON-decoded for the `socialMediaUrls` field if present), or None. Both the org_id-filtered and the fallback-no-filter behaviors are preserved by passing `org_id=None`. The `p` vs `c` alias is internal — consumers receive a dict.
 
@@ -647,13 +656,13 @@ Sites:
 - persistence.py: 23, 49, 98, 340 (4 sites)
 - pipeline.py: 44, 169, 194, 211, 288, 376, 407 (7 sites)
 
-Strategy: extract `_get_file_status_collection(mongo)` (private to `data_sources/`) returning the `file_status` Mongo collection. Each callsite collapses from 2 lines to 1.
+Strategy: extract `_get_file_collection(mongo)` (private to `data_sources/`) returning the `file_status` Mongo collection. Each callsite collapses from 2 lines to 1.
 
 ```python
-collection = _get_file_status_collection(mongo)
+collection = _get_file_collection(mongo)
 ```
 
-Placement: define in `services/data_sources/persistence.py` (top of file as a private helper); import-from-module in `pipeline.py` (`from app.services.data_sources.persistence import _get_file_status_collection`). Tests that patch `mongo` continue to work because the helper takes `mongo` as a parameter.
+Placement: define in `services/data_sources/persistence.py` (top of file as a private helper); import-from-module in `pipeline.py` (`from app.services.data_sources.persistence import _get_file_collection`). Tests that patch `mongo` continue to work because the helper takes `mongo` as a parameter.
 
 Estimated saving: 11 sites × 1 line = -11 LOC; helper +3 LOC. K6 net: **~ -8 LOC**.
 
@@ -695,7 +704,7 @@ This satisfies TD-009 (the docstring/comment drift sweep).
 
 ### Cat 1: K1 unused-import sweep — execute
 
-Pyflakes-verified unused imports outside the package-re-export false positives. Each is a single-name removal.
+Pyflakes-verified unused imports outside the package-re-export false positives. Each is a single-name removal, confirmed safe to drop in Stage 1.
 
 | File | Line | Symbol | Verified by pyflakes |
 |---|---:|---|---|
@@ -705,13 +714,16 @@ Pyflakes-verified unused imports outside the package-re-export false positives. 
 | routers/data_sources.py | 4 | `fastapi.HTTPException` | yes |
 | routers/data_sources.py | 15 | `app.core.logging.logger` | yes |
 | services/_neo4j_helpers.py | 5 | `typing.Any` | yes |
+| services/icp/persistence.py | 23 | `_build_market_context_queries`, `_fetch_pinecone_supporting_context` (both from `app.services._retrieval`) | yes |
 | services/market_scoring/orchestrator.py | 17 | `app.core.exceptions.BrewraError` | yes |
 | services/market_scoring/orchestrator.py | 22 | `app.models.market_scoring.LeadMarketScoreRow` | yes |
-| services/market_scoring/orchestrator.py | 29 (7 names) | `_safe_json_to_obj`, `_normalize_non_empty_string`, `_canonicalize_key`, `_build_lookup_maps`, `_first_non_empty_value_from_keys`, `_parse_iso_datetime`, `_lead_to_score_row` | yes (verify no test-patch dependency in Stage 2) |
 
-Spec's K1 estimate of "~16 symbols" includes those listed + any false-positive package re-exports in `__init__.py` files (which we keep). The hard count of removable symbols is **16** (the table above sums to 16: 1+1+1+1+1+1+1+1+7 = 15 + 1 for the line-15 logger). Matches spec.
+NOT in this K1 execute table (deferred to Stage 2 investigate):
+- `services/market_scoring/orchestrator.py` line 29 (7-name normalization-block import) — see Stage 2 promoted/deferred table.
 
-K1 net LOC: each unused name removal trims either 1 LOC (single-name line) or 0 LOC (multi-name import, drops only the comma). Estimated **~ -10 to -16 LOC**. Conservative target: **-12 LOC**.
+Hard count of confirmed-safe removable symbols: **10** (= 1+1+1+1+1+1+2+1+1 from the K1 table rows). Spec's "~16 symbols" anticipated the 7-name normalization block; with that block split to investigate, the confirmed-safe count is 10. If Stage 2 promotes the 7-name block, K1 final count becomes 17 (= 10 + 7).
+
+K1 net LOC: each unused name removal trims either 1 LOC (single-name line) or 0 LOC (multi-name import, drops only the comma). Estimated **~ -7 to -10 LOC** (confirmed-safe set). Conservative target: **-10 LOC**. If the 7-name block promotes in Stage 2, add ~ -7 LOC.
 
 NOT addressed by K1 (kept intentionally):
 - `app/models/__init__.py:1` `PaginatedResponse` — has `# noqa: F401`, is a deliberate package-API re-export.
@@ -724,7 +736,7 @@ NOT addressed by K1 (kept intentionally):
 |---|---|---|
 | D1 | `app/main.py` exception-handler consolidation via STATUS_BY_EXC registry | Loses explicit per-exception handler body that doubles as documentation; the 8 handlers are stable. Punt. |
 | D2 | `app/main.py` `from app.routers import X; include_router(X.router)` block as a loop | Minor visual cleanup; cost: explicit module attribution lost for grep+test-patch use cases. Punt. |
-| D3 | `app/routers/v2/__init__.py` spec-pointer reference (Phase G) | Single-line file-name reference, not stale prose. Leaving as-is is defensible — investigate Stage 2 final call. |
+| D3 | `app/routers/v2/__init__.py` spec-pointer reference (Phase G) | Single-line file-name reference (informative), not stale prose. Punt; reword optional. |
 | D4 | `app/services/customer_profile/__init__.py` + `app/services/leads/__init__.py` `# noqa: F401` cleanup | Cosmetic (silences pyflakes false positives); zero LOC. Pursue as TD-011 follow-up. |
 | D5 | Cat 12 — externalize prompt literals (`icp/prompts.py`, `signals/prompts.py`, `market_research/prompts.py`, `core/llm_config.py`) to YAML/JSON | Touches the public consumption surface of all 3 research services + Cypher chain. Overlaps with TD-010. Punt. |
 | D6 | `signals/search.py` scout-vs-profiler persona unification | Further unification regresses persona-specific readability. Punt. |
@@ -735,7 +747,8 @@ NOT addressed by K1 (kept intentionally):
 |---|---|
 | `services/_llm_helpers.py` line ~30 — verify single-consumer status of `_tavily_context_and_urls`, `_claude_messages_text` | Cat 8 check. |
 | `services/icp/persistence.py` ICP-normalization branches (multi-key list/str defaults) | Cat 3 check — behavior surface depends on whether each key's list-default vs str-default is observable to callers. |
-| `services/market_scoring/orchestrator.py` line 29 normalization-block import | Verify no test patches `app.services.market_scoring.orchestrator.<name>` for the 7 imported names. |
+| `services/market_scoring/orchestrator.py` line 29 — 7-name normalization-block import (`_safe_json_to_obj`, `_normalize_non_empty_string`, `_canonicalize_key`, `_build_lookup_maps`, `_first_non_empty_value_from_keys`, `_parse_iso_datetime`, `_lead_to_score_row`) | Does the test suite patch any of these symbols on `app.services.market_scoring.orchestrator` such that removing the import would break patch targets? Verify by grepping `mocker.patch` and `patch(` in `backend/tests/` for each name paired with the `app.services.market_scoring.orchestrator.<name>` module path. Resolution: if no test patches via this module path, promote to K1 execute (est. ~ -7 LOC). If patches exist via this module path, defer until the patch-where-used migration of TD-006 is complete. |
 | `services/signals/batch.py` scout/profiler `for i in range(2):` loops | Cat 3 — assess whether a small helper byte-preserves behavior. |
+| Cat 5 expansion — non-File_Processing `mongo[X]` sites | Are the 21 non-File_Processing `mongo[X]` sites (`org_auth/orgs.py`, `org_auth/registrations.py`, `customer_profile/orchestrator.py`, `icp/persistence.py`, `leads/persistence.py`, `market_scoring/persistence.py`, `profiles/persistence.py`, `signals/persistence.py`) candidates for a generic `_get_collection(mongo, db, coll)` helper? Verify behavior shapes per-site and decide promote (would extend K6 scope by ~21 sites, est. ~ -15 LOC additional after helper) or defer (preserve readable per-service collection pinning). Defaulting to defer pending Stage 2 evidence. |
 
 These will be resolved in Stage 2 (Task 2 / commit 2). The Summary table above shows `TBD (Stage 2)` for the "Investigated → promoted" and "Investigated → deferred" rows; Stage 2 will populate concrete counts.
