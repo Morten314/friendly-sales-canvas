@@ -15,7 +15,7 @@ Phase I closes three deferred items from Phase H:
 - **Item C** — Decomposes `signals/orchestrator.py` (744 LOC, 8 functions) into focused submodules `search.py`, `batch.py`, `ask.py`, plus `fetch_signals` promoted in `persistence.py`. `signals/orchestrator.py` is deleted — same pattern as `data_sources/` reached at Phase H commit 7/20. Closes Phase H's "orchestrator at 2× spec-estimate LOC" finding.
 - **Item D** — Renames `app.models.documents` → `app.models.data_sources` (catches up the model layer to Phase H's service rename), hoists `_URL_PATTERN` constant into `_llm_helpers.py`, closes TD-007 cosmetic cruft (4 one-line fixes).
 
-This is structurally a no-op move: signatures, response shapes, and route paths are unchanged. **One intentional behavior change**: signals' historical quote-escaping in `_parse_search_signals_response` (escaping `"` inside `description`/`snippet`/`headline` matched values, in addition to `\n`/`\r`) is removed during the I-A consolidation. The other two research services (icp, market_research) have always operated without this defensive code path with no recorded incident; Phase I unifies all three on the simpler escape rule. If a future quote-related parsing failure surfaces, it becomes a scoped fix rather than a diverged-per-service legacy. Existing 236 behavior tests stay green; snapshot count holds at 19. Commit 1 adds a small parameterized test module for the two new shared helpers (~6-10 new tests; total settles around 242-246). Test patch-path strings update in step with each structural move per the Phase H discipline (see `feedback_phase_h_module_import_pattern.md`).
+This is structurally a no-op move: signatures, response shapes, and route paths are unchanged. **One intentional behavior change**: signals' historical quote-escaping in `_parse_search_signals_response` (escaping `"` inside `description`/`snippet`/`headline` matched values, in addition to `\n`/`\r`) is removed during the I-A consolidation. The other two research services (icp, market_research) have always operated without this defensive code path with no recorded incident; Phase I unifies all three on the simpler escape rule. If a future quote-related parsing failure surfaces, it becomes a scoped fix rather than a diverged-per-service legacy. Existing 236 behavior tests stay green; snapshot count holds at 19. Commit 1 adds a parameterized test module for the two new shared helpers (11 new tests; total settles at 247). Test patch-path strings update in step with each structural move per the Phase H discipline (see `feedback_phase_h_module_import_pattern.md`).
 
 **Explicitly out of scope:** Item B (lazy circular imports in icp/persistence + market_scoring/scoring). Tracked for Phase J. Phase I will not surface those cycles naturally — they live in different packages.
 
@@ -30,6 +30,8 @@ This is structurally a no-op move: signatures, response shapes, and route paths 
    - `_extract_research_json(response, escape_keys=("description",), trim_braces=False, strip_final_answer=False) -> dict` — promoted from `icp/parsing.py::_extract_icp_json` (already generic-shaped). Per-key escape rule matches icp's current behavior: escape `\n`/`\r` inside matched values, not `"`. Signals' historical quote-escaping is removed as the unification decision (see §1).
 
 2. **Per-service wrappers preserved** (~6-15 LOC each) for the three services. The wrappers hardcode service-specific configuration (search query template, escape keys, URL extraction). They keep `mocker.patch("app.services.<svc>.llm._<svc>_agent_output")` strings working — the §3.7 Phase H "patch where it's used" discipline applies.
+
+   **Caveat for inner-helper patches.** Pre-Phase-I, each wrapper did `from app.services._llm_helpers import _tavily_context_and_urls, _claude_messages_text`, so tests could patch those names via the wrapper's local namespace (`mocker.patch("app.services.signals.llm._claude_messages_text", ...)`). After the I-A commit-2 consolidation the wrappers no longer import those helpers — execution moves to `_llm_helpers._research_agent_output`, so the lookup happens in `_llm_helpers`' namespace. Such patches must retarget to `app.services._llm_helpers.*` in the same commit. At plan time exactly one test (`test_search_signals_profiler_claude_uses_captured`, two `mocker.patch` calls) fits this pattern — verify with: `grep -rn "app\.services\.\(signals\|icp\|market_research\)\.llm\._\(claude_messages_text\|tavily_context_and_urls\)" backend/tests/`.
 
 3. **`signals/` decomposition.** New submodules:
    - `signals/search.py` — `search_signals` + `run_signals_research` (~255 LOC).
@@ -187,7 +189,7 @@ backend/app/services/signals/
 ├── prompts.py           # (unchanged from Phase H, 328 LOC)
 ├── llm.py               # _signals_agent_output adapter (~15 LOC)
 ├── parsing.py           # _parse_search_signals_response adapter + _validate_url + _normalize_search_signals_result (~80-90 LOC)
-├── persistence.py       # all Mongo helpers + fetch_signals (renamed from _load_signals_for_user) (~181-185 LOC, rename + docstring refresh)
+├── persistence.py       # all Mongo helpers + fetch_signals (renamed from _load_signals_for_user; promoted to `async def` so router callers can still `await` it — body remains sync pymongo) (~181-185 LOC, rename + def→async def + docstring refresh)
 ├── search.py            # search_signals + run_signals_research (~255 LOC)   NEW
 ├── batch.py             # generate_signals_batch + _claude + _impl (~190 LOC) NEW
 └── ask.py               # signal_ask + signal_ask_claude (~240 LOC)           NEW
@@ -273,7 +275,7 @@ Single sequence, 11 commits, branch `refactor-backend-modularization-phase-i`.
 
 | # | Commit | Effect |
 |---|---|---|
-| 4 | `refactor(be): rename _load_signals_for_user → fetch_signals (public) in persistence.py [phase I, 4/11]` | The orchestrator's `fetch_signals` was already a one-line wrapper around `persistence._load_signals_for_user`. Rename `_load_signals_for_user` to public `fetch_signals` in `persistence.py`; drop the orchestrator wrapper; update `__init__.py` re-export to point at `persistence.fetch_signals`. Smallest commit — verifies the pattern. |
+| 4 | `refactor(be): rename _load_signals_for_user → fetch_signals (public) in persistence.py [phase I, 4/11]` | The orchestrator's `fetch_signals` was already an `async def` one-line wrapper around the sync `persistence._load_signals_for_user`. Rename `_load_signals_for_user` to public `fetch_signals` in `persistence.py` **and change `def` → `async def`** (router callers do `await fetch_signals(...)`, so the promoted function must be awaitable; body stays sync pymongo). Drop the orchestrator wrapper; update `__init__.py` re-export to point at `persistence.fetch_signals`. Smallest commit — verifies the pattern. |
 | 5 | `refactor(be): extract signals/search.py [phase I, 5/11]` | Move `search_signals` + `run_signals_research` out of orchestrator. `search.py` imports `_parse_search_signals_response`, `_validate_url`, `_normalize_search_signals_result` from `.parsing` and `_fetch_pinecone_supporting_context` (and related) from `app.services._retrieval`. orchestrator's other functions (still resident) switch to module-import (`from . import search; search.search_signals(...)`). `__init__.py` + test patch-path updates (including `_fetch_pinecone_supporting_context` retargeting from `orchestrator` to `search`). |
 | 6 | `refactor(be): extract signals/batch.py [phase I, 6/11]` | Move `_generate_signals_batch_impl` + 2 wrappers out. `batch.py` uses module-import for search. `__init__.py` + test patch-path updates. |
 | 7 | `refactor(be): extract signals/ask.py [phase I, 7/11]` | Move `signal_ask` + `signal_ask_claude` out. `ask.py` imports `_reserve_claude_signal_budget`, `_finalize_claude_signal_budget`, `_estimate_token_count`, `CLAUDE_API_KEY` from `app.services._claude_budget` and `requests` directly. No new intra-signals cross-submodule deps. `__init__.py` + test patch-path updates including the 4 budget/Claude patches and `requests.post` retargeting from `orchestrator` to `ask`. |
@@ -304,7 +306,7 @@ No "fix in next commit" exceptions. Same rule as Phase H §6.
 
 ### 5.2 New test module
 
-Commit 1 adds `backend/tests/unit/test_llm_helpers.py` covering `_research_agent_output` and `_extract_research_json` parameterized over the per-service configurations (signals tuple-with-URLs, icp/market_research text-only; signals 3-key escape + trim_braces + strip_final_answer, icp's varying escape_keys patterns, market_research's defaults). Net new test count: ~6-10 tests. Total expected: 242-246 passed after commit 1; subsequent commits hold.
+Commit 1 adds `backend/tests/unit/test_llm_helpers.py` covering `_research_agent_output` and `_extract_research_json` parameterized over the per-service configurations (signals tuple-with-URLs, icp/market_research text-only; signals 3-key escape + trim_braces + strip_final_answer, icp's varying escape_keys patterns, market_research's defaults). Net new test count: 11 tests. Total expected: 247 passed after commit 1; subsequent commits hold.
 
 ### 5.3 Snapshot exposure
 
@@ -369,7 +371,7 @@ After every commit (1-11):
 - 3 copies of JSON-cleanup collapsed to 1 + 3 thin wrappers; `signals/parsing.py::_validate_url` stays in signals/.
 - `signals/orchestrator.py` deleted; signals/ structure mirrors data_sources/'s orchestrator-less shape.
 - `app.models.documents` renamed (git-tracked); `_URL_PATTERN` de-duplicated to one constant; TD-007 closed in `docs/TECH_DEBT.md`.
-- 236 (+ ~6-10 new helper tests) tests pass at every commit; 19 syrupy snapshots unchanged.
+- 236 (+ 11 new helper tests = 247) tests pass at every commit; 19 syrupy snapshots unchanged.
 - All `mocker.patch("app.services.signals.orchestrator.*")` strings either retargeted or removed by commit 8.
 
 ---
