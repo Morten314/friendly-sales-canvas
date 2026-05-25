@@ -19,6 +19,7 @@ from app.services._retrieval import (
     _build_signal_context_queries,
     _fetch_pinecone_supporting_context,
 )
+from app.services.leads import get_leads_for_org
 from app.services.signals import persistence, search
 
 
@@ -63,7 +64,6 @@ async def _generate_signals_batch_impl(driver, mongo, pc, agent_chain, request: 
     leads_data = []
     if request.org_id:
         try:
-            from app.services.leads import get_leads_for_org
             leads_data, _ = get_leads_for_org(driver, org_id=request.org_id, limit=100, offset=0)
             logger.info(f"[Batch Signals] Fetched {len(leads_data)} leads for org_id: {request.org_id}")
             if isinstance(pre_data, dict):
