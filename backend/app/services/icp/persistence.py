@@ -19,6 +19,10 @@ from app.core.exceptions import (
 )
 from app.core.logging import logger
 from app.services.icp.orchestrator import ICP_generator
+from app.services._retrieval import (
+    _build_market_context_queries,
+    _fetch_pinecone_supporting_context,
+)
 
 
 def list_icps(
@@ -37,11 +41,6 @@ def list_icps(
       - On cache miss or refresh, generates new ICPs via ICP_generator() from
         a Neo4j company profile, normalises the payload, and persists to Mongo.
     """
-    from app.services._retrieval import (  # lazy to avoid circular imports
-        _build_market_context_queries,
-        _fetch_pinecone_supporting_context,
-    )
-
     logger.info(f"[ICP] Request - user_id: {user_id}, refresh: {refresh}")
 
     def normalize_icp_response(payload: Any) -> Dict[str, Any]:
