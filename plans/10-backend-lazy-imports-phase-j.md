@@ -24,6 +24,11 @@
 
 **Plan-level kill criterion:** if a "vestigial" hoist turns out to be a real cycle after all (Risk R1 / R4 in spec §6), revert that commit, re-add the lazy import with `# defensive: <reason>` annotation on the `from` line, file a `docs/TECH_DEBT.md` entry naming the cycle, and continue with the remaining tasks. The branch does not need to be all-or-nothing.
 
+**Task dependencies:**
+- **Tasks 1, 2, 3, 4, 7, 8, 9, 10** are mutually independent vestigial hoists — each touches a different file (or same file in non-overlapping ways for Tasks 1+2 / Task 7's 4 callsites). Safe to parallelize via `superpowers:subagent-driven-development`.
+- **Task 5 → Task 6** sequential: Task 6 depends on `_lead_to_score_row` being in `normalization.py` (which Task 5 does).
+- **Task 11 must be last** — adding the linter before Tasks 1-10 land would fail per-commit greenness (the linter would flag the still-lazy imports it's trying to eradicate).
+
 **Commit message style (per CLAUDE.md):** `type(scope):` format. No `[N/M]` suffix. Body optional; include one when the *why* isn't obvious from the diff. Plan-reference trailers (`Refs: plan-10`) are author's judgment.
 
 ---
@@ -438,7 +443,7 @@ Verify the existing `normalization` import block above the `scoring` import bloc
 
 - [ ] **Step 4: Update `persistence.py` module docstring.**
 
-In `backend/app/services/market_scoring/persistence.py`, find lines 7-9 of the docstring:
+In `backend/app/services/market_scoring/persistence.py`, find lines 6-9 of the docstring:
 
 ```
 Normalization helpers (_extract_company_name, _extract_lead_name,
@@ -839,21 +844,40 @@ SERVICES_DIR = Path(__file__).resolve().parents[2] / "app" / "services"
 
 
 def _find_violations(source: str, src_lines: list[str]) -> list[tuple[int, str]]:
-    """Return (lineno, source-line) for every unannotated lazy from-app-services import."""
+    """Return (lineno, source-line) for every unannotated lazy from-app-services import.
+
+    Walks each ImportFrom once and checks its ancestor chain for a function-def
+    parent. This avoids the duplicate-flagging issue that arises from a nested
+    `ast.walk(FunctionDef)` loop when functions contain inner functions (the
+    inner function's ImportFroms would otherwise be visited by both the outer
+    walk and the inner walk).
+    """
     tree = ast.parse(source)
+    parents: dict[ast.AST, ast.AST] = {}
+    for parent in ast.walk(tree):
+        for child in ast.iter_child_nodes(parent):
+            parents[child] = parent
+
+    def _inside_function(node: ast.AST) -> bool:
+        current: ast.AST = node
+        while current in parents:
+            current = parents[current]
+            if isinstance(current, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                return True
+        return False
+
     violations: list[tuple[int, str]] = []
     for node in ast.walk(tree):
-        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        if not isinstance(node, ast.ImportFrom):
             continue
-        for child in ast.walk(node):
-            if not isinstance(child, ast.ImportFrom):
-                continue
-            if not (child.module and child.module.startswith("app.services")):
-                continue
-            line = src_lines[child.lineno - 1]
-            if "# defensive:" in line:
-                continue
-            violations.append((child.lineno, line.strip()))
+        if not (node.module and node.module.startswith("app.services")):
+            continue
+        if not _inside_function(node):
+            continue
+        line = src_lines[node.lineno - 1]
+        if "# defensive:" in line:
+            continue
+        violations.append((node.lineno, line.strip()))
     return violations
 
 
