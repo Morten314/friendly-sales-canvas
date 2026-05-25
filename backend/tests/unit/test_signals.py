@@ -55,17 +55,17 @@ def test_search_signals_scout_groq_uses_captured(mocker):
 
 
 def test_search_signals_profiler_claude_uses_captured(mocker):
-    """Patch where the names are looked up: signals.py does
-        `from app.services._llm_helpers import _claude_messages_text, _tavily_context_and_urls`
-    which creates local bindings in signals' namespace. Patching the
-    _llm_helpers source module would NOT affect those local bindings."""
+    """After Phase I commit 2/11, signals/llm.py is a thin wrapper that delegates
+    to _research_agent_output in _llm_helpers. Both _claude_messages_text and
+    _tavily_context_and_urls are resolved from _llm_helpers' module __dict__ at
+    call time, so the patches target _llm_helpers (where lookups now happen)."""
     captured = load_captured("search_signals_profiler_claude")
     mocker.patch(
-        "app.services.signals.llm._claude_messages_text",
+        "app.services._llm_helpers._claude_messages_text",
         return_value=json.dumps(captured),
     )
     mocker.patch(
-        "app.services.signals.llm._tavily_context_and_urls",
+        "app.services._llm_helpers._tavily_context_and_urls",
         return_value=("web context", []),
     )
 
