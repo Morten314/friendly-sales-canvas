@@ -251,7 +251,7 @@ def test_signal_ask_groq_uses_captured(mocker, mock_session, mock_mongo_client):
     # signal_ask uses raw_response.get("output", "") from the chain result
     chain_mock.invoke.return_value = {"output": str(captured)}
     mocker.patch(
-        "app.services.signals.orchestrator._fetch_pinecone_supporting_context",
+        "app.services.signals.search._fetch_pinecone_supporting_context",
         return_value=[],
     )
 
@@ -289,7 +289,7 @@ def test_signal_ask_claude_raises_service_error_when_claude_call_fails(
     """ServiceError site: Claude API HTTP error (status >= 400) → ServiceError."""
     mocker.patch("app.services.signals.orchestrator.CLAUDE_API_KEY", "valid-key")
     mocker.patch(
-        "app.services.signals.orchestrator._fetch_pinecone_supporting_context",
+        "app.services.signals.search._fetch_pinecone_supporting_context",
         return_value=[],
     )
     mocker.patch(
@@ -329,7 +329,7 @@ def test_signal_ask_claude_happy_path_uses_captured(
 
     mocker.patch("app.services.signals.orchestrator.CLAUDE_API_KEY", "valid-key")
     mocker.patch(
-        "app.services.signals.orchestrator._fetch_pinecone_supporting_context",
+        "app.services.signals.search._fetch_pinecone_supporting_context",
         return_value=[],
     )
     mocker.patch(

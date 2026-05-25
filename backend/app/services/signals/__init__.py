@@ -3,8 +3,8 @@
 Service for researching and persisting Scout/Profiler market signals
 (single-shot, batch, and Claude-backed variants) + signal Q&A endpoints.
 Submodules:
-  - orchestrator.py: search_signals (persona-shared core),
-    run_signals_research, generate_signals_batch (+ _claude variant,
+  - search.py: search_signals (persona-shared core), run_signals_research
+  - orchestrator.py: generate_signals_batch (+ _claude variant,
     + _generate_signals_batch_impl shared body), signal_ask
     (+ _claude variant)
   - persistence.py: fetch_signals, record_signal_action (public) + Mongo
@@ -20,9 +20,11 @@ Submodules:
     _normalize_search_signals_result, _validate_url
 """
 
-from app.services.signals.orchestrator import (
+from app.services.signals.search import (
     search_signals,
     run_signals_research,
+)
+from app.services.signals.orchestrator import (
     generate_signals_batch,
     generate_signals_batch_claude,
     signal_ask,
