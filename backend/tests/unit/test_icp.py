@@ -162,10 +162,10 @@ def test_run_icp_research_groq_happy_path(
     coll.find_one.return_value = None
     mock_mongo_client["Profiler"].__getitem__.return_value = coll
     mocker.patch(
-        "app.services._retrieval._fetch_pinecone_supporting_context", return_value=[],
+        "app.services.icp.orchestrator._fetch_pinecone_supporting_context", return_value=[],
     )
     mocker.patch(
-        "app.services._retrieval._build_market_context_queries", return_value=[],
+        "app.services.icp.orchestrator._build_market_context_queries", return_value=[],
     )
 
     request = MarketRequest(
@@ -191,10 +191,10 @@ def test_run_icp_research_claude_happy_path(
     coll.find_one.return_value = None
     mock_mongo_client["Profiler"].__getitem__.return_value = coll
     mocker.patch(
-        "app.services._retrieval._fetch_pinecone_supporting_context", return_value=[],
+        "app.services.icp.orchestrator._fetch_pinecone_supporting_context", return_value=[],
     )
     mocker.patch(
-        "app.services._retrieval._build_market_context_queries", return_value=[],
+        "app.services.icp.orchestrator._build_market_context_queries", return_value=[],
     )
 
     request = MarketRequest(

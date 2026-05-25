@@ -33,6 +33,10 @@ from app.services.icp.prompts import (
     ICP_RESEARCH_3_TEMPLATE,
     ICP_RESEARCH_4_TEMPLATE,
 )
+from app.services._retrieval import (
+    _build_market_context_queries,
+    _fetch_pinecone_supporting_context,
+)
 
 
 def ICP_generator(agent_chain, pre_data: str) -> dict:
@@ -248,11 +252,6 @@ async def _run_icp_research_impl(driver, mongo, pc, agent_chain, request: Any, l
         ``"groq"`` — uses ICP_FUNCTIONS (default Groq/Together pipeline).
         ``"claude"`` — uses ICP_FUNCTIONS_CLAUDE (Tavily + Anthropic).
     """
-    from app.services._retrieval import (
-        _build_market_context_queries,
-        _fetch_pinecone_supporting_context,
-    )
-
     component_name = request.component_name.strip().lower()
 
     if llm_backend == "claude":
