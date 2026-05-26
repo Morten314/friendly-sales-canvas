@@ -231,3 +231,39 @@ def _extract_research_json(
         cleaned_str = re.sub(pattern, _make_replacer(key), cleaned_str, flags=re.DOTALL)
 
     return json.loads(cleaned_str)
+
+
+# ---------------------------------------------------------------------------
+# LLM-client factory + simple-invoke helper
+# ---------------------------------------------------------------------------
+from typing import Callable
+
+from app.core import prompts as _prompts
+from app.core.prompts import UnknownModelError, prompt_meta_from
+
+
+_LLM_FACTORY: dict[str, Callable[[], object]] = {}
+_LLM_CACHE: dict[str, object] = {}
+
+
+def register_llm(model_name: str, builder: Callable[[], object]) -> None:
+    _LLM_FACTORY[model_name] = builder
+
+
+def _get_llm_for_model(model_name: str) -> object:
+    if model_name not in _LLM_FACTORY:
+        raise UnknownModelError(model_name)
+    if model_name not in _LLM_CACHE:
+        _LLM_CACHE[model_name] = _LLM_FACTORY[model_name]()
+    return _LLM_CACHE[model_name]
+
+
+def call_with_prompt(prompt_name: str, **inputs) -> tuple:
+    """Simple-invoke path: render the prompt, resolve LLM from front-matter,
+    invoke with HumanMessage wrapper, return (response, prompt_meta).
+    """
+    from langchain_core.messages import HumanMessage
+    rendered = _prompts.render(prompt_name, **inputs)
+    llm = _get_llm_for_model(rendered.config.model)
+    response = llm.invoke([HumanMessage(content=rendered.body)])
+    return response, prompt_meta_from(rendered)

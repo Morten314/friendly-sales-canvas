@@ -180,3 +180,93 @@ def test_extract_research_json_does_not_escape_quotes():
     raw = '{"k": "no quote here"}'   # plain case, just confirms baseline still works
     result = _extract_research_json(raw)
     assert result == {"k": "no quote here"}
+
+
+# ---------------------------------------------------------------------------
+# LLM-client factory + simple-invoke helper (call_with_prompt)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def isolated_llm_factory():
+    """Snapshot/restore _LLM_FACTORY and _LLM_CACHE for tests that mutate them."""
+    from app.services import _llm_helpers
+    factory_snapshot = dict(_llm_helpers._LLM_FACTORY)
+    cache_snapshot = dict(_llm_helpers._LLM_CACHE)
+    _llm_helpers._LLM_FACTORY.clear()
+    _llm_helpers._LLM_CACHE.clear()
+    yield _llm_helpers
+    _llm_helpers._LLM_FACTORY.clear()
+    _llm_helpers._LLM_FACTORY.update(factory_snapshot)
+    _llm_helpers._LLM_CACHE.clear()
+    _llm_helpers._LLM_CACHE.update(cache_snapshot)
+
+
+def test_register_llm_and_get_llm_for_model(isolated_llm_factory):
+    from app.core.prompts import UnknownModelError
+    _llm_helpers = isolated_llm_factory
+
+    built_count = {"n": 0}
+
+    def builder():
+        built_count["n"] += 1
+        return object()
+
+    _llm_helpers.register_llm("test-model", builder)
+    llm1 = _llm_helpers._get_llm_for_model("test-model")
+    llm2 = _llm_helpers._get_llm_for_model("test-model")
+    assert llm1 is llm2          # cached
+    assert built_count["n"] == 1  # builder called once
+
+    with pytest.raises(UnknownModelError):
+        _llm_helpers._get_llm_for_model("not-registered")
+
+
+def test_call_with_prompt_renders_and_invokes(tmp_path, isolated_llm_factory):
+    """call_with_prompt should: render via prompts.render(), resolve LLM by
+    front-matter model, invoke([HumanMessage(content=body)]), return (response, prompt_meta).
+    """
+    from app.core import prompts as prompts_mod
+    import yaml
+    _llm_helpers = isolated_llm_factory
+
+    # Build a synthetic prompts tree.
+    (tmp_path / "_shared").mkdir()
+    (tmp_path / "_shared" / "defaults.yaml").write_text("temperature: 0.0\nmax_tokens: 100\ntimeout_s: 30\n")
+    prompt_dir = tmp_path / "svc"
+    prompt_dir.mkdir()
+    (prompt_dir / "p.md.j2").write_text(
+        "---\n" +
+        yaml.safe_dump({
+            "name": "p", "version": "1.0.0", "description": "test",
+            "model": "fake-llm", "response_format": "json", "inputs": ["x"],
+        }) +
+        "---\n" +
+        "Body: {{ x }}\n"
+    )
+    prompts_mod.init_registry(root=tmp_path)
+
+    # Register a fake LLM (fixture already cleared the factory).
+    captured = {}
+    class FakeResponse:
+        content = "fake response"
+    class FakeLLM:
+        def invoke(self, messages):
+            captured["messages"] = messages
+            return FakeResponse()
+    _llm_helpers.register_llm("fake-llm", lambda: FakeLLM())
+
+    response, prompt_meta = _llm_helpers.call_with_prompt("p", x="hi")
+    assert response.content == "fake response"
+    assert prompt_meta["name"] == "p"
+    assert prompt_meta["version"] == "1.0.0"
+    assert prompt_meta["model"] == "fake-llm"
+    assert "content_hash" in prompt_meta and prompt_meta["content_hash"]
+    assert "render_inputs_hash" in prompt_meta and prompt_meta["render_inputs_hash"]
+    assert "rendered_at" in prompt_meta
+
+    # Verify HumanMessage shape.
+    from langchain_core.messages import HumanMessage
+    assert len(captured["messages"]) == 1
+    assert isinstance(captured["messages"][0], HumanMessage)
+    assert captured["messages"][0].content == "Body: hi\n"

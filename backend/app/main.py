@@ -23,6 +23,7 @@ from app.core.exceptions import (
     ServiceError,
     ValidationError,
 )
+from app.core import prompts as _prompts
 from app.core.llm_config import build_llm_config
 from app.core.logging import logger  # noqa: F401
 from app.services.market_scoring import _ensure_market_scoring_indexes
@@ -37,6 +38,9 @@ async def lifespan(app: FastAPI):
     Idempotent — `create_index` is a no-op when an equivalent index exists.
     """
     app.state.clients = build_clients()
+    # Prompt registry — populated once per process. Stored at module level
+    # (app.core.prompts._registry) and on app.state.prompts for handler access.
+    app.state.prompts = _prompts.init_registry()
     app.state.llm = build_llm_config(app.state.clients)
 
     if app.state.clients.graph is not None:

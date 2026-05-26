@@ -232,6 +232,10 @@ def build_llm_config(clients_bundle: ClientBundle) -> LLMBundle:
         openai_api_key=together_api_key,
         model="Qwen/Qwen3-235B-A22B-Instruct-2507-tput",
     )
+    # Register simple-invoke models in the LLM factory (spec §3.5).
+    from app.services._llm_helpers import register_llm
+    register_llm("Qwen/Qwen3-235B-A22B-Instruct-2507-tput", lambda: llm2)
+    register_llm("llama-3.3-70b-versatile", lambda: llm)
     llm_transformer = LLMGraphTransformer(llm=llm)
     memory = ConversationBufferMemory(return_messages=True)
 

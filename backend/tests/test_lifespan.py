@@ -48,3 +48,19 @@ def test_lifespan_calls_ensure_icp_indexes(monkeypatch):
 
     assert hasattr(main_module, "_ensure_icp_indexes")
     assert not hasattr(main_module, "_ensure_icp_id_registry_indexes")
+
+
+def test_lifespan_initializes_prompts_registry(monkeypatch):
+    """app.state.prompts is set by lifespan; same singleton as module-level _registry."""
+    fake_bundle = MagicMock()
+    fake_bundle.graph = None
+    fake_bundle.client = MagicMock(name="mongo_client")
+    monkeypatch.setattr("app.main.build_clients", lambda: fake_bundle)
+    monkeypatch.setattr("app.main._ensure_leads_indexes", lambda mongo: None)
+    monkeypatch.setattr("app.main._ensure_icp_indexes", lambda mongo: None)
+    monkeypatch.setattr("app.main._ensure_market_scoring_indexes", lambda mongo: None)
+
+    with TestClient(app):
+        from app.core import prompts as prompts_mod
+        assert app.state.prompts is not None
+        assert app.state.prompts is prompts_mod._registry
