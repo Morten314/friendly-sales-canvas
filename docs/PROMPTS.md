@@ -388,6 +388,12 @@ Tests may call `init_registry()` repeatedly with different roots (e.g. `tmp_path
 
 All loader and render errors subclass `PromptError`. Boot-time errors are aggregated into `BootFailure([FailureDetail, ...])`. Render-time errors are `PromptNotFound`, `MissingInputs`, `UnknownInputs`, `RenderError`.
 
+**Uniformity contract:** every code path inside `render()` — Jinja2 template rendering **and** `_json.dumps(...)` of the declared inputs for the `render_inputs_hash` — is wrapped in a `try/except` that produces `RenderError`. A caller passing an input value whose `__str__` raises (e.g., a class with a buggy magic method) gets a `RenderError`, not a bare exception. Future edits to `render()` must preserve this: any new computation inside the function that can fail on user-supplied input data goes inside the same wrapper.
+
+### 10.6 Pytest test naming (underscore required)
+
+`backend/pytest.ini` sets `python_functions = test_*`, which requires the underscore separator between `test` and the next word. A function named `testfoo_does_x` (without the underscore) is **silently uncollected** — the test never runs, and the test file still appears to pass. When adding tests, ensure every test function starts with `test_` (underscore, not just letter prefix). This applies equally to test files containing only one test (no failure surfaces to alert you).
+
 ---
 
 ## 11. Known limitations (v1)
