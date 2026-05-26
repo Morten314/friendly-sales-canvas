@@ -1,0 +1,189 @@
+---
+name: research_market_4
+version: 1.0.0
+description: Regulatory & compliance highlights research worker (Research_Market_4)
+model: Qwen/Qwen3-235B-A22B-Instruct-2507-tput
+response_format: json
+inputs:
+  - company_profile_json
+---
+Task: Research and compile a comprehensive regulatory and compliance analysis, including key regulatory updates, compliance frameworks, regional requirements, and strategic recommendations.
+
+STEP 1 - COMPANY PROFILE DATA:
+Review the complete company profile data below. Extract all relevant information about the company's industry, target markets, regions, and any other relevant attributes. Use this information to guide your regulatory research.
+
+Company Profile Data:
+{{ company_profile_json }}
+
+STEP 2 - RESEARCH REQUIREMENTS (CRITICAL):
+You MUST use the WebSearch tool extensively to find real, up-to-date regulatory and compliance data. Based on the company profile above, identify the industry and target markets/regions, then perform comprehensive research:
+
+1. Regulatory Framework Research:
+   - Search for region-specific regulatory frameworks for the company's target markets/regions
+   - Find industry-specific compliance requirements
+   - Example searches: "[region] [industry] regulatory framework 2026 2027"
+   - Example searches: "[region] [industry] compliance requirements"
+
+2. Regulatory Updates Research:
+   - Search for recent regulatory changes and updates (2026-2027) in the company's industry and target regions
+   - Find upcoming mandates and deadlines
+   - Example searches: "[industry] regulatory changes [regions] 2026 2027"
+   - Example searches: "[industry] upcoming regulations [regions]"
+
+3. Compliance Deadlines Research:
+   - Search for specific compliance deadlines and timelines
+   - Find mandatory requirements with dates
+   - Example searches: "[region] [industry] compliance deadlines 2026 2027"
+   - Example searches: "[industry] regulatory deadlines [regions]"
+
+4. Regional Compliance Research:
+   - Search for compliance requirements for each target region from the company profile
+   - Find region-specific regulatory bodies and frameworks
+   - Example searches: "[region] [industry] compliance framework"
+   - Extract regions from company profile - do NOT use hardcoded regions
+
+5. Impact Assessment Research:
+   - Search for impact assessments of regulatory changes on the industry
+   - Find risk levels and compliance priorities
+   - Example searches: "[industry] regulatory impact assessment [regions]"
+
+IMPORTANT RESEARCH GUIDELINES:
+- Perform at least 7-10 WebSearch queries to ensure comprehensive coverage
+- Cross-reference data from multiple sources for accuracy
+- Focus on recent data (2026-2027) when available
+- Provide specific framework names, regulatory body names, and deadline dates
+- Extract target markets/regions from the company profile - do NOT assume or hardcode regions
+- The regionalData array should use regions from the company profile
+- Framework names must be official (e.g., "GDPR", "HIPAA", "SOC 2", not generic)
+- Deadlines must be specific dates (YYYY-MM-DD format when possible)
+- Do NOT use hardcoded regions - use what's in the company profile
+
+STEP 3 - OUTPUT FORMAT:
+Return your findings in the following exact JSON format (use exact keys as shown):
+
+{
+  "executiveSummary": "[1-2 sentence summary of regulatory landscape and compliance requirements based on company profile]",
+  "keyUpdates": [
+    {
+      "title": "[Real regulatory update title]",
+      "description": "[Real update description with date/source]",
+      "tag": "[New|Update|Risk|High Priority]",
+      "icon": "[icon name]"
+    },
+    {
+      "title": "[Real regulatory update title]",
+      "description": "[Real update description with date/source]",
+      "tag": "[New|Update|Risk|High Priority]",
+      "icon": "[icon name]"
+    },
+    {
+      "title": "[Real regulatory update title]",
+      "description": "[Real update description with date/source]",
+      "tag": "[New|Update|Risk|High Priority]",
+      "icon": "[icon name]"
+    },
+    {
+      "title": "[Real regulatory update title]",
+      "description": "[Real update description with date/source]",
+      "tag": "[New|Update|Risk|High Priority]",
+      "icon": "[icon name]"
+    }
+  ],
+  "visualDataCards": [
+    {
+      "title": "[Card title]",
+      "type": "[bar-chart|timeline|percentage]",
+      "data": [
+        { "label": "[Label]", "value": [numeric value] },
+        { "label": "[Label]", "value": [numeric value] },
+        { "label": "[Label]", "value": [numeric value] },
+        { "label": "[Label]", "value": [numeric value] }
+      ]
+    },
+    {
+      "title": "[Card title]",
+      "type": "[bar-chart|timeline|percentage]",
+      "data": [
+        { "label": "[Label]", "time": "[Time period]" },
+        { "label": "[Label]", "time": "[Time period]" },
+        { "label": "[Label]", "time": "[Time period]" }
+      ]
+    },
+    {
+      "title": "[Card title]",
+      "type": "[bar-chart|timeline|percentage]",
+      "data": [
+        { "label": "[Label]", "value": [numeric value] },
+        { "label": "[Label]", "value": [numeric value] },
+        { "label": "[Label]", "value": [numeric value] }
+      ]
+    }
+  ],
+  "regionalData": [
+    {
+      "region": "[Region from company profile]",
+      "framework": "[Official regulatory framework name]",
+      "deadline": "[Specific deadline date or status]",
+      "impact": "[High|Medium|Low]",
+      "status": "[Active|Evolving|Mandatory]",
+      "requirements": "[Key requirements]"
+    },
+    {
+      "region": "[Region from company profile]",
+      "framework": "[Official regulatory framework name]",
+      "deadline": "[Specific deadline date or status]",
+      "impact": "[High|Medium|Low]",
+      "status": "[Active|Evolving|Mandatory]",
+      "requirements": "[Key requirements]"
+    },
+    {
+      "region": "[Region from company profile]",
+      "framework": "[Official regulatory framework name]",
+      "deadline": "[Specific deadline date or status]",
+      "impact": "[High|Medium|Low]",
+      "status": "[Active|Evolving|Mandatory]",
+      "requirements": "[Key requirements]"
+    },
+    {
+      "region": "[Region from company profile]",
+      "framework": "[Official regulatory framework name]",
+      "deadline": "[Specific deadline date or status]",
+      "impact": "[High|Medium|Low]",
+      "status": "[Active|Evolving|Mandatory]",
+      "requirements": "[Key requirements]"
+    }
+  ],
+  "strategicRecommendations": {
+    "mitigateRegulatoryRisks": [
+      "[Recommendation #1 based on company profile]",
+      "[Recommendation #2 based on company profile]",
+      "[Recommendation #3 based on company profile]",
+      "[Recommendation #4 based on company profile]"
+    ],
+    "competitivePositioning": [
+      "[Recommendation #1 based on company profile]",
+      "[Recommendation #2 based on company profile]",
+      "[Recommendation #3 based on company profile]",
+      "[Recommendation #4 based on company profile]"
+    ],
+    "goToMarketStrategy": [
+      "[Recommendation #1 based on company profile]",
+      "[Recommendation #2 based on company profile]",
+      "[Recommendation #3 based on company profile]",
+      "[Recommendation #4 based on company profile]"
+    ]
+  }
+}
+
+⚠️ OUTPUT NOTES:
+- Use USD for monetary values in billions (B) or millions (M)
+- Framework names must be official (e.g., "GDPR", "HIPAA", "SOC 2", "ISO 27001", not generic)
+- Deadlines must be specific dates (YYYY-MM-DD format when possible) or clear status
+- regionalData must use regions from the company profile, not hardcoded regions
+- Include 2-5 regions in regionalData based on what's in the company profile
+- Key updates must be REAL regulatory updates with dates/sources, not generic examples
+- Keep bullet point recommendations short and actionable
+- Return ONLY valid JSON, nothing else
+
+{% include '_shared/final_answer_json_directive.md.j2' %}
+

@@ -6,6 +6,7 @@ import asyncio
 import json
 from datetime import datetime, timezone
 
+from app.core import prompts
 from app.core.exceptions import (
     BudgetExhaustedError,
     CompanyProfileNotFoundError,
@@ -21,13 +22,6 @@ from app.services.market_research.persistence import (
     _find_latest_market_research_report,
     _insert_market_research_report,
 )
-from app.services.market_research.prompts import (
-    RESEARCH_MARKET_1_TEMPLATE,
-    RESEARCH_MARKET_2_TEMPLATE,
-    RESEARCH_MARKET_3_TEMPLATE,
-    RESEARCH_MARKET_4_TEMPLATE,
-    RESEARCH_MARKET_5_TEMPLATE,
-)
 from app.services.market_research.llm import _market_research_agent_output
 from app.services.market_research.parsing import _extract_research_json
 
@@ -40,23 +34,16 @@ from app.services._llm_helpers import (  # noqa: F401
 )
 
 
-COMPONENT_TEMPLATES = {
-    1: RESEARCH_MARKET_1_TEMPLATE,
-    2: RESEARCH_MARKET_2_TEMPLATE,
-    3: RESEARCH_MARKET_3_TEMPLATE,
-    4: RESEARCH_MARKET_4_TEMPLATE,
-    5: RESEARCH_MARKET_5_TEMPLATE,
+# Map component_n → registry prompt name. Replaces the pre-migration
+# COMPONENT_TEMPLATES dict that held inline Python strings (deleted with
+# market_research/prompts.py in plan-13 Task 10).
+COMPONENT_PROMPT_NAMES = {
+    1: "research_market_1",
+    2: "research_market_2",
+    3: "research_market_3",
+    4: "research_market_4",
+    5: "research_market_5",
 }
-
-
-def _build_research_prompt(component_n: int, company_profile_json: str) -> str:
-    """Format the research-market template for ``component_n`` against the given profile JSON.
-
-    Extracted as a testable seam so the K3 dispatch's output can be asserted
-    byte-equal to a pre-refactor fixture. The dispatch (_run_research_component)
-    calls through this helper.
-    """
-    return COMPONENT_TEMPLATES[component_n].format(company_profile_json=company_profile_json)
 
 
 def _run_research_component(
@@ -64,12 +51,14 @@ def _run_research_component(
     agent_chain,
     pre_data,
     llm_backend: str = "default",
-) -> dict:
+) -> tuple[dict, dict]:
     """Run one of the 5 market-research components via prompted LLM agent.
 
-    Replaces the pre-refactor Research_Market_1..5 functions, which were
-    byte-identical except for the template constant. The template now comes
-    from COMPONENT_TEMPLATES via _build_research_prompt.
+    Returns ``(parsed_json, prompt_meta)``. The orchestrator unpacks the
+    tuple and merges prompt_meta into the Mongo doc. Replaces the pre-refactor
+    Research_Market_1..5 functions, which were byte-identical except for the
+    template constant. The prompt now comes from the registry via
+    COMPONENT_PROMPT_NAMES.
     """
     # Convert company profile to JSON string (handle both dict and string inputs)
     if isinstance(pre_data, dict):
@@ -84,17 +73,20 @@ def _run_research_component(
     else:
         company_profile_json = str(pre_data)
 
-    # Construct prompt with full company profile and WebSearch instructions
-    prompt = _build_research_prompt(component_n, company_profile_json)
+    # Render prompt from registry and capture observability metadata.
+    rendered = prompts.render(
+        COMPONENT_PROMPT_NAMES[component_n],
+        company_profile_json=company_profile_json,
+    )
+    prompt_meta = prompts.prompt_meta_from(rendered)
 
-    # Step 3: Get LLM response
-    response = _market_research_agent_output(agent_chain, prompt, company_profile_json, llm_backend)
+    # Step 3: Get LLM response (agent-chain or claude backend)
+    response = _market_research_agent_output(agent_chain, rendered.body, company_profile_json, llm_backend)
 
     # Strip code fences, escape embedded newlines in description fields, parse JSON.
     parsed_json = _extract_research_json(response)
 
-    # Return the Python dict
-    return parsed_json
+    return parsed_json, prompt_meta
 
 
 COMPONENT_FUNCTIONS = {
@@ -164,9 +156,10 @@ async def run_market_research(driver, mongo, pc, agent_chain, request: MarketReq
 
     max_retries = 2
     research_result = None
+    prompt_meta: dict = {}
     for attempt in range(1, max_retries + 1):
         try:
-            research_result = await asyncio.to_thread(research_function, agent_chain, company_profile)
+            research_result, prompt_meta = await asyncio.to_thread(research_function, agent_chain, company_profile)
             break
         except BudgetExhaustedError:
             # Re-raise immediately — caller (router) catches and maps to HTTP 429
@@ -184,8 +177,8 @@ async def run_market_research(driver, mongo, pc, agent_chain, request: MarketReq
         research_result["org_id"] = request.org_id
     research_result["component_name"] = component_name
     research_result["timestamp"] = datetime.now(timezone.utc)
+    research_result["prompt_meta"] = prompt_meta
 
     await asyncio.to_thread(_insert_market_research_report, mongo, research_result)
     research_result.pop("_id", None)
     return {"status": "success", "data": research_result}
-

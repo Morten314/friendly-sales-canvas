@@ -1,0 +1,3 @@
+{
+  "company_profile_json": "{\n  \"company_name\": \"Sample Company\",\n  \"industry\": \"B2B SaaS\",\n  \"size\": \"11-50\",\n  \"region\": \"EMEA\",\n  \"products\": [\n    \"Product A\",\n    \"Product B\"\n  ]\n}"
+}

@@ -77,15 +77,29 @@ def _base_payload(component_name: str, refresh: bool = True) -> dict:
 
 @pytest.mark.parametrize("component_name", VALID_COMPONENTS)
 def test_post_market_research_all_components(client, mock_neo4j, mock_mongo, component_name):
-    """Each valid component_name → 200 with status=success."""
+    """Each valid component_name → 200 with status=success.
+
+    Post-Task-10, COMPONENT_FUNCTIONS entries return ``(parsed_json, prompt_meta)``;
+    the orchestrator unpacks the tuple and merges prompt_meta into the inserted
+    Mongo doc.
+    """
     # Neo4j returns a CompanyProfile record
     mock_neo4j["session"].run.return_value.single.return_value = _make_neo4j_record()
+
+    fake_prompt_meta = {
+        "name": f"research_market_{VALID_COMPONENTS.index(component_name) + 1}",
+        "version": "1.0.0",
+        "content_hash": "fake_hash",
+        "render_inputs_hash": "fake_inputs_hash",
+        "model": "Qwen/Qwen3-235B-A22B-Instruct-2507-tput",
+        "rendered_at": "2026-05-26T00:00:00+00:00",
+    }
 
     # COMPONENT_FUNCTIONS lives in app.services.market_research; the router
     # accesses it via `market_research_service.COMPONENT_FUNCTIONS`, so patch
     # the source module. `_fetch_pinecone_supporting_context` is called inside
     # the service — patch the binding there too.
-    with patch("app.services.market_research.orchestrator.COMPONENT_FUNCTIONS", {component_name: lambda agent_chain, _: _captured_result(component_name)}), \
+    with patch("app.services.market_research.orchestrator.COMPONENT_FUNCTIONS", {component_name: lambda agent_chain, _: (_captured_result(component_name), fake_prompt_meta)}), \
          patch("app.services.market_research.orchestrator._fetch_pinecone_supporting_context", return_value=[]):
         response = client.post("/market-research", json=_base_payload(component_name))
 
@@ -93,6 +107,9 @@ def test_post_market_research_all_components(client, mock_neo4j, mock_mongo, com
     body = response.json()
     assert body["status"] == "success"
     assert "data" in body
+    # Post-Task-10: response carries prompt_meta from the migrated registry-driven prompt.
+    assert body["data"]["prompt_meta"]["name"] == fake_prompt_meta["name"]
+    assert body["data"]["prompt_meta"]["version"] == "1.0.0"
 
 
 # ---------------------------------------------------------------------------

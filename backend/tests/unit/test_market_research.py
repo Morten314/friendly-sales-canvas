@@ -70,16 +70,28 @@ def test_run_market_research_groq_per_component(
     Research_Market_N name does NOT update the dict entry — the dict still
     points at the original function object. Use mocker.patch.dict to
     surgically replace the entry being looked up.
+
+    Post-Task-10, research functions return ``(parsed_json, prompt_meta)``;
+    the orchestrator unpacks the tuple and merges prompt_meta into the
+    inserted Mongo doc.
     """
     slug = _COMPONENT_FIXTURE_SLUG[component_name]
     captured = load_captured(f"market_research_{slug}_groq")
-    fake_fn = MagicMock(return_value=captured)
+    prompt_meta = {
+        "name": f"research_market_{list(_COMPONENT_FIXTURE_SLUG).index(component_name) + 1}",
+        "version": "1.0.0",
+        "content_hash": "fake_hash",
+        "render_inputs_hash": "fake_inputs_hash",
+        "model": "Qwen/Qwen3-235B-A22B-Instruct-2507-tput",
+        "rendered_at": "2026-05-26T00:00:00+00:00",
+    }
+    fake_fn = MagicMock(return_value=(captured, prompt_meta))
     mocker.patch.dict(
         "app.services.market_research.orchestrator.COMPONENT_FUNCTIONS",
         {component_name: fake_fn},
     )
     mock_session.run.return_value.single.return_value = _make_neo4j_company_record()
-    _mock_market_collection(mock_mongo_client, find_one_return=None)
+    coll = _mock_market_collection(mock_mongo_client, find_one_return=None)
     # Stub Pinecone helper
     mocker.patch(
         "app.services.market_research.orchestrator._fetch_pinecone_supporting_context",
@@ -95,6 +107,13 @@ def test_run_market_research_groq_per_component(
     assert result["status"] == "success"
     assert result["data"]["component_name"] == component_name
     assert result["data"]["user_id"] == TEST_USER_ID
+    # prompt_meta threaded into both the response payload and the Mongo insert.
+    assert result["data"]["prompt_meta"]["name"] == prompt_meta["name"]
+    assert result["data"]["prompt_meta"]["version"] == "1.0.0"
+    inserted = coll.insert_one.call_args[0][0]
+    assert inserted["prompt_meta"]["name"] == prompt_meta["name"]
+    assert inserted["prompt_meta"]["version"] == "1.0.0"
+    assert inserted["prompt_meta"]["model"] == "Qwen/Qwen3-235B-A22B-Instruct-2507-tput"
 
 
 def test_run_market_research_returns_cached_when_not_refreshing(
@@ -138,14 +157,24 @@ def test_run_market_research_claude_uses_captured(
     The lambda resolves the name at call time, so patching the module-level
     _run_research_component DOES reach the call. (Contrast with the Groq path
     above, where patch.dict is used for parity.)
+
+    Post-Task-10, _run_research_component returns ``(parsed_json, prompt_meta)``.
     """
     captured = load_captured("market_research_market_size_claude")
+    prompt_meta = {
+        "name": "research_market_1",
+        "version": "1.0.0",
+        "content_hash": "fake_hash",
+        "render_inputs_hash": "fake_inputs_hash",
+        "model": "Qwen/Qwen3-235B-A22B-Instruct-2507-tput",
+        "rendered_at": "2026-05-26T00:00:00+00:00",
+    }
     mocker.patch(
         "app.services.market_research.orchestrator._run_research_component",
-        return_value=captured,
+        return_value=(captured, prompt_meta),
     )
     mock_session.run.return_value.single.return_value = _make_neo4j_company_record()
-    _mock_market_collection(mock_mongo_client, find_one_return=None)
+    coll = _mock_market_collection(mock_mongo_client, find_one_return=None)
     mocker.patch(
         "app.services.market_research.orchestrator._fetch_pinecone_supporting_context",
         return_value=[],
@@ -159,6 +188,9 @@ def test_run_market_research_claude_uses_captured(
 
     assert result["status"] == "success"
     assert result["data"]["user_id"] == TEST_USER_ID
+    inserted = coll.insert_one.call_args[0][0]
+    assert inserted["prompt_meta"]["name"] == "research_market_1"
+    assert inserted["prompt_meta"]["version"] == "1.0.0"
 
 
 # ---------------------------------------------------------------------------
