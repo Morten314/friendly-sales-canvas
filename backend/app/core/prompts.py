@@ -16,9 +16,10 @@ See specs/13-prompt-management-design.md for the design contract.
 from __future__ import annotations
 
 import hashlib
+import json as _json
 import re
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -315,11 +316,14 @@ def init_registry(root: Path = _PROMPTS_ROOT) -> Registry:
     all_files = sorted(root.rglob("*.md.j2"))
 
     # Step 6 — Jinja env
+    # keep_trailing_newline=True: preserve author's final newline in rendered
+    # output (default Jinja2 behavior strips it, surprising for prompt files).
     env = Environment(
         loader=FileSystemLoader(str(root)),
         undefined=StrictUndefined,
         trim_blocks=True,
         lstrip_blocks=True,
+        keep_trailing_newline=True,
     )
 
     entries: dict[str, _RegistryEntry] = {}
@@ -402,29 +406,98 @@ def init_registry(root: Path = _PROMPTS_ROOT) -> Registry:
 
 
 # ---------------------------------------------------------------------------
-# Module-level wrappers — render() / as_langchain() remain stubs until Task 4.
-# get_config() / list_prompts() are needed by Task 3's boot tests, so they
-# delegate now; render() / as_langchain() stay NotImplementedError stubs.
+# Module-level wrappers — pure functions over the _registry singleton.
+# All raise RuntimeError("init_registry not called") if accessed pre-boot.
 # ---------------------------------------------------------------------------
 
 
+def _require_registry() -> Registry:
+    """Return the populated registry or raise RuntimeError.
+
+    Internal helper — unifies the pre-boot None-check across every public
+    wrapper. Called by render / get_config / list_prompts / as_langchain.
+    """
+    if _registry is None:
+        raise RuntimeError("init_registry not called")
+    return _registry
+
+
 def render(name: str, **inputs: Any) -> RenderedPrompt:
-    """Stub — full implementation in Task 4."""
-    raise NotImplementedError("render implementation lands in Task 4")
+    """Render a prompt against the registry's Jinja2 env.
+
+    Pure computation (no I/O). Validates inputs against the boot-time declared
+    set: extras raise UnknownInputs, missing raise MissingInputs. Template
+    render failures are wrapped in RenderError. Records render_inputs_hash
+    (sha256 of canonical JSON dump) and rendered_at (utc now) on the result —
+    NOT at LLM completion (see spec §3.3 lifecycle step 5).
+    """
+    registry = _require_registry()
+    entry = registry.get(name)
+
+    provided = set(inputs.keys())
+    declared = entry.declared_inputs
+    unknown = provided - declared
+    if unknown:
+        raise UnknownInputs(name, unknown)
+    missing = declared - provided
+    if missing:
+        raise MissingInputs(name, missing)
+
+    # Render the source-expanded body (frontmatter stripped, partials inlined
+    # at boot). Going through env.from_string keeps render output identical to
+    # `as_langchain(name).format(...)` — both consume body_source_expanded.
+    #
+    # The _json.dumps hash phase is inside the try/except so a caller passing
+    # an input whose __str__ raises (and that input is declared-but-unused, so
+    # Jinja never touches it) still surfaces as RenderError — preserves the
+    # PromptError-uniformity contract from spec §3.3.
+    try:
+        template = registry.env.from_string(entry.body_source_expanded)
+        body = template.render(**inputs)
+        canonical = _json.dumps(inputs, sort_keys=True, default=str)
+    except Exception as e:
+        raise RenderError(name, e) from e
+
+    render_inputs_hash = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+    return RenderedPrompt(
+        name=name,
+        version=entry.config.version,
+        content_hash=entry.content_hash,
+        render_inputs_hash=render_inputs_hash,
+        body=body,
+        rendered_at=datetime.now(timezone.utc),
+        config=entry.config,
+    )
 
 
 def get_config(name: str) -> PromptConfig:
-    if _registry is None:
-        raise RuntimeError("init_registry not called")
-    return _registry.get(name).config
+    return _require_registry().get(name).config
 
 
 def list_prompts() -> list[dict[str, Any]]:
-    if _registry is None:
-        raise RuntimeError("init_registry not called")
-    return _registry.list()
+    return _require_registry().list()
 
 
 def as_langchain(name: str):
-    """Stub — full implementation in Task 4."""
-    raise NotImplementedError("as_langchain implementation lands in Task 4")
+    """Return a LangChain PromptTemplate over the source-expanded body.
+
+    LangChain consumers (CYPHER_GENERATION_PROMPT, CYPHER_QA_PROMPT) accept a
+    PromptTemplate; this adapter hands them the boot-time partial-expanded
+    body so the chain's runtime substitution sees the full text. The body
+    retains `{% if %}` / `{{ var }}` markers — LangChain's Jinja2 env evaluates
+    them at chain invocation. Boot-time AST validation already proved every
+    `{{ var }}` reference is in the parent's declared inputs.
+
+    Newline note: LangChain instantiates its own Jinja2 env (no override hook)
+    with default `keep_trailing_newline=False`, which strips exactly one
+    trailing newline. Our render() uses `keep_trailing_newline=True` to
+    preserve the author's final newline. To keep the two renderers byte-equal
+    we append a sentinel "\\n" here that LangChain will strip back off.
+    """
+    from langchain_core.prompts import PromptTemplate
+    entry = _require_registry().get(name)
+    return PromptTemplate.from_template(
+        entry.body_source_expanded + "\n",
+        template_format="jinja2",
+    )

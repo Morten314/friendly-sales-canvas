@@ -117,7 +117,7 @@ def test_prompt_meta_from_extracts_six_fields():  # noqa: plan-13 wrote `testpro
 import textwrap
 from pathlib import Path
 
-from app.core.prompts import init_registry, render, get_config, list_prompts
+from app.core.prompts import init_registry, render, get_config, list_prompts, as_langchain
 
 
 def _write_defaults(root: Path) -> None:
@@ -399,3 +399,178 @@ def test_content_hash_changes_when_partial_body_edits(tmp_path):
     h_after = prompts_mod._registry.get("x").content_hash
 
     assert h_before != h_after
+
+
+# ---------------------------------------------------------------------------
+# Render lifecycle
+# ---------------------------------------------------------------------------
+
+import json
+
+
+def test_render_returns_rendered_prompt(tmp_path):
+    _write_defaults(tmp_path)
+    _write_prompt(
+        tmp_path, "icp/greet.md.j2",
+        frontmatter={
+            "name": "greet", "version": "1.0.0", "description": "greet",
+            "model": "m", "response_format": "json", "inputs": ["who"],
+        },
+        body="Hello {{ who }}\n",
+    )
+    init_registry(root=tmp_path)
+    rp = render("greet", who="world")
+    assert isinstance(rp, RenderedPrompt)
+    assert rp.body == "Hello world\n"
+    assert rp.name == "greet"
+    assert rp.version == "1.0.0"
+    assert rp.config.model == "m"
+    assert rp.rendered_at is not None
+
+
+def test_render_missing_input_raises(tmp_path):
+    _write_defaults(tmp_path)
+    _write_prompt(
+        tmp_path, "icp/x.md.j2",
+        frontmatter={
+            "name": "x", "version": "1.0.0", "description": "x",
+            "model": "m", "response_format": "json", "inputs": ["a", "b"],
+        },
+        body="{{ a }} {{ b }}",
+    )
+    init_registry(root=tmp_path)
+    with pytest.raises(MissingInputs) as exc_info:
+        render("x", a="hi")
+    assert "b" in exc_info.value.missing
+
+
+def test_render_unknown_input_raises(tmp_path):
+    _write_defaults(tmp_path)
+    _write_prompt(
+        tmp_path, "icp/x.md.j2",
+        frontmatter={
+            "name": "x", "version": "1.0.0", "description": "x",
+            "model": "m", "response_format": "json", "inputs": ["a"],
+        },
+        body="{{ a }}",
+    )
+    init_registry(root=tmp_path)
+    with pytest.raises(UnknownInputs) as exc_info:
+        render("x", a="hi", b="extra")
+    assert "b" in exc_info.value.unknown
+
+
+def test_render_not_found(tmp_path):
+    _write_defaults(tmp_path)
+    init_registry(root=tmp_path)
+    with pytest.raises(PromptNotFound):
+        render("does_not_exist")
+
+
+def test_render_inputs_hash_canonical(tmp_path):
+    _write_defaults(tmp_path)
+    _write_prompt(
+        tmp_path, "icp/x.md.j2",
+        frontmatter={
+            "name": "x", "version": "1.0.0", "description": "x",
+            "model": "m", "response_format": "json", "inputs": ["a", "b"],
+        },
+        body="{{ a }} {{ b }}",
+    )
+    init_registry(root=tmp_path)
+    rp1 = render("x", a="1", b="2")
+    rp2 = render("x", b="2", a="1")  # different keyword order
+    assert rp1.render_inputs_hash == rp2.render_inputs_hash
+
+
+def test_get_config_resolves_without_rendering(tmp_path):
+    _write_defaults(tmp_path)
+    _write_prompt(
+        tmp_path, "icp/x.md.j2",
+        frontmatter={
+            "name": "x", "version": "2.1.0", "description": "x",
+            "model": "qwen", "response_format": "json", "inputs": ["a"],
+        },
+        body="{{ a }}",
+    )
+    init_registry(root=tmp_path)
+    cfg = get_config("x")
+    assert cfg.version == "2.1.0"
+    assert cfg.model == "qwen"
+
+
+def test_module_wrappers_error_before_init():
+    import app.core.prompts as prompts_mod
+    prompts_mod._registry = None  # reset
+    with pytest.raises(RuntimeError, match="init_registry not called"):
+        render("anything")
+    with pytest.raises(RuntimeError, match="init_registry not called"):
+        get_config("anything")
+    with pytest.raises(RuntimeError, match="init_registry not called"):
+        list_prompts()
+    with pytest.raises(RuntimeError, match="init_registry not called"):
+        as_langchain("anything")
+
+
+# ---------------------------------------------------------------------------
+# as_langchain — source-expanded template body for LangChain consumers
+# ---------------------------------------------------------------------------
+
+def test_as_langchain_returns_prompttemplate(tmp_path):
+    _write_defaults(tmp_path)
+    _write_prompt(
+        tmp_path, "llm_config/cypher.md.j2",
+        frontmatter={
+            "name": "cypher", "version": "1.0.0", "description": "cypher",
+            "model": "m", "response_format": "text", "inputs": ["schema", "question"],
+        },
+        body="Schema: {{ schema }}\nQuestion: {{ question }}\n",
+    )
+    init_registry(root=tmp_path)
+    pt = as_langchain("cypher")
+    from langchain_core.prompts import PromptTemplate
+    assert isinstance(pt, PromptTemplate)
+    rendered = pt.format(schema="S", question="Q")
+    assert "Schema: S" in rendered
+    assert "Question: Q" in rendered
+
+
+def test_as_langchain_parity_with_render(tmp_path):
+    _write_defaults(tmp_path)
+    (tmp_path / "_shared" / "footer.md.j2").write_text(
+        "---\nname: footer\nversion: 1.0.0\ndescription: footer partial\n---\nEND OF PROMPT\n"
+    )
+    _write_prompt(
+        tmp_path, "llm_config/x.md.j2",
+        frontmatter={
+            "name": "x", "version": "1.0.0", "description": "x",
+            "model": "m", "response_format": "text", "inputs": ["q"],
+        },
+        body="Question: {{ q }}\n{% include '_shared/footer.md.j2' %}\n",
+    )
+    init_registry(root=tmp_path)
+    rp = render("x", q="hello")
+    lc = as_langchain("x").format(q="hello")
+    assert rp.body == lc
+
+
+def test_render_wraps_json_serialization_failure_as_render_error(tmp_path):
+    """Regression: ensure _json.dumps failures inside render() surface as RenderError,
+    not bare RuntimeError/TypeError. See plan-13 Task 4 review (high finding)."""
+    _write_defaults(tmp_path)
+    _write_prompt(
+        tmp_path, "icp/x.md.j2",
+        frontmatter={
+            "name": "x", "version": "1.0.0", "description": "x",
+            "model": "m", "response_format": "json", "inputs": ["a"],
+        },
+        body="{{ a }}",
+    )
+    init_registry(root=tmp_path)
+
+    class _Boom:
+        def __str__(self):
+            raise RuntimeError("boom")
+
+    with pytest.raises(RenderError):
+        render("x", a=_Boom())
