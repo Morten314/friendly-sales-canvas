@@ -1,9 +1,11 @@
 # Spec 13 — Prompt management system
 
-**Status:** Design (frozen on approval)
-**Date:** 2026-05-25
+**Status:** Design (reconciled with implementation 2026-05-26)
+**Date:** 2026-05-25 (spec), 2026-05-26 (post-merge reconciliation)
 **Resolves:** TD-010 (`docs/TECH_DEBT.md`)
-**Paired plan:** `plans/13-prompt-management.md` (to be written)
+**Paired plan:** `plans/13-prompt-management.md`
+
+> **Post-merge note (2026-05-26):** Plan 13 implementation completed across 15 commits on `master`. This spec was originally written as "frozen on approval" per CLAUDE.md convention, but the user explicitly chose to reconcile it with the implementation deviations so the spec remains a current source of truth rather than a historical snapshot. Every post-merge edit is tagged inline with `<!-- post-merge -->` or a section-level banner. The full audit trail of deviations lives at `docs/prompt-migration-outcome.md`; current-state authoring docs are at `docs/PROMPTS.md`.
 
 ---
 
@@ -14,6 +16,9 @@ Replace inline Python prompt constants with a purpose-built prompt management su
 The system answers, at runtime, "which prompt produced this LLM output?" via observability binding, and at edit time, "what changed in this prompt?" via golden-rendered fixtures and front-matter version bumps.
 
 This spec resolves TD-010's five explicit design questions (template engine, versioning convention, config location, loader caching, rollout) and the one optional-scope question (#9 runtime variant routing).
+
+<!-- post-merge -->
+> **Post-merge note (2026-05-26) — "no behavioral change" interpretation:** "No behavioral change" is read as "no LLM-behavior-changing prompt drift." Pure-whitespace differences inside Jinja2 conditional blocks are accepted as semantically inert. Concretely: signals scout/profiler renders show a 3-byte whitespace drift relative to legacy `.format()`-based assembly because Jinja2's `trim_blocks=True, lstrip_blocks=True` collapses blank lines at `{% if leads %}…{% endif %}` boundaries (legacy `.format()` preserved them). Accepted in `docs/prompt-migration-outcome.md` "Documented spec deviations" section; no LLM token-level meaning change. The byte-parity check is reserved for non-conditional prompts; conditional prompts are validated via golden fixtures + code review of rendered output.
 
 ## 2. Scope
 
@@ -139,6 +144,9 @@ Boot fails loudly if a required field is missing after the merge with `_shared/d
 #### Partials
 
 Files under `_shared/` follow the same front-matter format with a minimal subset: `name`, `version`, `description`. They are not callable via `prompts.render()` — only includable. The loader enforces this by flagging any file under `_shared/` as "partial" and refusing to register it as a top-level prompt.
+
+<!-- post-merge -->
+> **Post-merge note (2026-05-26) — service-scoped include-only sub-templates:** A third pattern emerged during signals migration that this section did not originally anticipate. Some sub-templates are **service-scoped and include-only**: they live under `signals/` (not `_shared/`), are registered as callable prompts with full front-matter (so they get their own golden-fixture coverage and content_hash for change tracking), but in production code are only invoked via `{% include %}` from parent prompts — never via direct `prompts.render()` calls. Concrete examples: `signals_leads_section`, `signals_leads_section_fallback`, `signals_existing_headlines_section` (all included by `signals_scout_search` / `signals_profiler_search`). Authoring rule: such sub-templates use the `<svc>_<role>_section[ _fallback ]` naming pattern; consumers of `list_prompts()` that want only "top-level prompts" should filter accordingly. See `docs/PROMPTS.md` §service-scoped sub-templates.
 
 **Include placement rule.** `{% include 'PATH' %}` directives must appear on their own line, with no surrounding text on the same line. Inline includes (e.g. `Some text {% include 'partial.md.j2' %} more text`) produce undefined expansion behavior — the source-expansion algorithm (§3.4) replaces the entire line containing the directive, which would drop "Some text" and "more text." All examples in this spec follow the own-line convention; the constraint is not enforced by the loader but is an authoring rule.
 
@@ -268,10 +276,16 @@ rendered = render("research_market_1", company_profile_json=...)
 
 1. Lookup `name` in registry. Missing → `PromptNotFound`.
 2. Compare `inputs.keys()` to the prompt's declared input set. Extras → `UnknownInputs`. Missing → `MissingInputs`.
-3. Render the cached Jinja template with the provided inputs. Any Jinja2 exception (`UndefinedError` from `StrictUndefined`, filter type errors, etc.) is caught and re-raised as `RenderError(name, cause=<jinja2_exception>)` so call sites can catch `PromptError` uniformly.
-4. Compute `render_inputs_hash = sha256(json.dumps(inputs, sort_keys=True, default=str))`. **Limitation:** callers should pass JSON-serializable types (`str`, `int`, `float`, `bool`, `None`, `list`, `dict`) as inputs. Non-serializable types are coerced via `str()` and may produce hash collisions across semantically different values (e.g. a `datetime` and its `str()`-cast string both hash identically). The hash is observability-grade ("were these likely the same inputs as last call?"), not security-grade.
+3. Render the cached **source-expanded body** with the provided inputs (see step 3 detail below). Any Jinja2 exception (`UndefinedError` from `StrictUndefined`, filter type errors, etc.) is caught and re-raised as `RenderError(name, cause=<jinja2_exception>)` so call sites can catch `PromptError` uniformly.
+4. Compute `render_inputs_hash = sha256(json.dumps(inputs, sort_keys=True, default=str))`. **Limitation:** callers should pass JSON-serializable types (`str`, `int`, `float`, `bool`, `None`, `list`, `dict`) as inputs. Non-serializable types are coerced via `str()` and may produce hash collisions across semantically different values (e.g. a `datetime` and its `str()`-cast string both hash identically). The hash is observability-grade ("were these likely the same inputs as last call?"), not security-grade. **The `json.dumps` call sits inside the same `try/except` block as the Jinja2 render** so a callback that fails `default=str` raises `RenderError`, preserving PromptError uniformity (a raw `TypeError`/`RuntimeError` would otherwise leak out).
 5. Capture `rendered_at = datetime.now(timezone.utc)`. The timestamp is taken *here*, immediately after a successful render, so it reflects the actual prompt-render time rather than the LLM-completion time. Downstream observability reads this field from `RenderedPrompt` (see §3.5 `_prompt_meta_from()`).
 6. Return `RenderedPrompt(name, version, content_hash, render_inputs_hash, body, rendered_at, config)`.
+
+<!-- post-merge -->
+> **Post-merge note (2026-05-26) — step 3 implementation detail:** `render()` must render the **source-expanded body** (partials already textually substituted, see §3.4), not the raw file-on-disk template. The implementation uses `env.from_string(entry.body_source_expanded).render(**inputs)`, not `env.get_template(entry.template_name).render(**inputs)`. Using `get_template` would re-read the raw file from disk including its YAML front-matter, which would render verbatim into the output (critical correctness bug). This makes `body_source_expanded` load-bearing for both `render()` and `as_langchain()`, not just the LangChain adapter (clarified in §3.4).
+
+<!-- post-merge -->
+> **Post-merge note (2026-05-26) — Jinja2 env config:** The shared Jinja2 `Environment` set up at boot (see §3.4) must use `keep_trailing_newline=True`. Without it, Jinja2 strips the trailing newline of every rendered body, breaking byte-parity with legacy `.format()`-based assembly (legacy preserved file-trailing newlines verbatim). The full env config is therefore: `loader=FileSystemLoader(root), undefined=StrictUndefined, trim_blocks=True, lstrip_blocks=True, keep_trailing_newline=True`. See §3.4 update.
 
 ### 3.4 Rendering pipeline
 
@@ -285,14 +299,16 @@ env = Environment(
     undefined=StrictUndefined,
     trim_blocks=True,
     lstrip_blocks=True,
+    keep_trailing_newline=True,  # post-merge: required for byte-parity with legacy .format() output
 )
 ```
 
-Three flags, three reasons:
+Four flags, four reasons:
 
 - **`undefined=StrictUndefined`** — without it, `{{ typo }}` silently renders as empty string. We're escaping exactly this class of silent failure. Boot-time AST validation catches most typos; this catches the remainder (dynamic references like `{{ struct[key] }}`).
 - **`trim_blocks=True`** — strips the newline after a block tag (`{% if %}`, `{% endif %}`, `{% include %}`). Without it, every block tag in the body adds a blank line to the rendered output. Material for golden-fixture diff readability.
 - **`lstrip_blocks=True`** — strips leading whitespace before a block tag up to the tag itself. Companion to `trim_blocks`; lets authors indent block tags for readability without injecting indentation into the rendered output.
+- **`keep_trailing_newline=True`** <!-- post-merge --> — by default Jinja2 strips the final trailing newline of a rendered body. Prompt files conventionally end in a trailing newline, and legacy `.format()`-based assembly preserved it verbatim. Without this flag, byte-parity tests against the legacy baseline fail by exactly one byte (the missing `\n`). Required for the migration's "no behavioral change" contract.
 
 Everything else is Jinja2 defaults. Notably `autoescape=False` is also the default and is not set explicitly.
 
@@ -304,7 +320,10 @@ Everything else is Jinja2 defaults. Notably `autoescape=False` is also the defau
 
 #### Source-expansion algorithm
 
-A shared algorithm used by both `content_hash` (§3.3 step 8) and `as_langchain()` (LangChain interop below). Produces a single self-contained template body from a prompt + its transitively-included partials, by **textual substitution** of `{% include %}` directives.
+A shared algorithm used by `content_hash` (§3.3 step 8), `render()` (§3.3 render lifecycle step 3), and `as_langchain()` (LangChain interop below). Produces a single self-contained template body from a prompt + its transitively-included partials, by **textual substitution** of `{% include %}` directives.
+
+<!-- post-merge -->
+> **Post-merge note (2026-05-26) — `body_source_expanded` is load-bearing for `render`, not just LangChain:** The expanded body is cached on the registry entry as `body_source_expanded`. `render()` calls `env.from_string(entry.body_source_expanded)` so the same source-expansion semantics drive `render()`, `content_hash`, and `as_langchain()`. Using `env.get_template(entry.template_name)` instead would re-parse the raw file from disk (front-matter included) and is incorrect. The original spec phrasing implied this field was for LangChain only — clarified here.
 
 Algorithm:
 
@@ -372,6 +391,9 @@ Solution: `prompts.as_langchain(name)` runs the **source-expansion algorithm** (
 **Includes ARE allowed in LangChain-consumed prompts.** The source-expansion is performed at `as_langchain()` call time so LangChain never sees `{% include %}` (which it cannot resolve — no `FileSystemLoader` against our `backend/prompts/` tree). Shared partials (`response_format_json.md.j2`, `final_answer_directive.md.j2`, etc.) flow into Cypher/QA prompts the same way they flow into simple-invoke prompts. The single source of truth is preserved; no drift between Cypher prompts and other prompts when a shared directive changes.
 
 **Caveat — no `StrictUndefined` safety net at runtime.** LangChain's Jinja2 environment is constructed internally by `PromptTemplate.from_template(..., template_format='jinja2')` without `StrictUndefined`. A `{{ typo }}` in a LangChain-consumed prompt's *runtime* execution would render as empty string. The boot-time AST walk (§3.3 step 7) covers this defensively for LangChain-marked prompts by **validating against the source-expanded body** — every `{{ var }}` reference anywhere in the parent body or any included partial body must appear in the parent's `inputs:` declaration, or boot fails. Dynamic references like `{{ struct[key] }}` that could escape the AST walk are not used in the four LangChain-consumed prompts; if a LangChain prompt later needs dynamic refs, this asymmetry must be revisited.
+
+<!-- post-merge -->
+> **Post-merge note (2026-05-26) — `as_langchain` `+\n` sentinel workaround for trailing-newline parity:** LangChain's `PromptTemplate.from_template(..., template_format="jinja2")` builds its own internal Jinja2 environment that does **not** expose `keep_trailing_newline` (and defaults to stripping). Our `render()` env sets `keep_trailing_newline=True` (§3.4) to preserve byte-parity with legacy `.format()` output. To make `as_langchain(name).format(**inputs)` produce byte-equal output to `render(name, **inputs).body`, the implementation appends an extra `\n` to the source-expanded body before handing it to `PromptTemplate.from_template`; LangChain's strip-by-default then removes that trailing `\n`, restoring the file's original trailing newline. This workaround is fragile to LangChain version changes — if a future LangChain release changes its Jinja2 env config, the byte-parity test (`test_as_langchain_byte_equal_to_render`) will fail loudly. Listed in §7 v2 backlog for revisiting (e.g. construct LangChain's Jinja2 env manually with `keep_trailing_newline=True`, or migrate Cypher/QA off LangChain entirely).
 
 ### 3.5 Observability binding
 
@@ -725,6 +747,8 @@ The migration is complete when:
 - TD-010 — `docs/TECH_DEBT.md`
 - TD-004 — `docs/TECH_DEBT.md` (independent; composes naturally with this spec when both resolve)
 - `backend/CLAUDE.md` / `CLAUDE.md` — repo-level conventions including business state (pre-launch, no zero-downtime requirement), AI-native development, and the no-backwards-compat-shims rule
+- `docs/PROMPTS.md` — authoring guide for the migrated system (current truth)
+- `docs/prompt-migration-outcome.md` — frozen audit trail of plan-13 deviations, dispositions, and post-merge spec-vs-implementation deltas
 - Current prompt locations (baseline inventory at spec time; Phase 0 audit produces the authoritative list):
   - `app/services/market_research/prompts.py` (718 LOC)
   - `app/services/icp/prompts.py` (383 LOC)
@@ -732,3 +756,17 @@ The migration is complete when:
   - `app/core/llm_config.py` lines 33-205 (Cypher + QA prompts, ~170 LOC of prompt text)
   - `app/services/market_scoring/orchestrator.py:282-325` (inline `score_single_lead_against_market` f-string, 34 LOC)
   - `app/services/health.py:10` (inline `probe_llm` smoke-test prompt, 1 LOC)
+
+<!-- post-merge -->
+## 8. v2 backlog (post-implementation)
+
+Items deferred during plan-13 execution. Each is non-blocking for v1 and earns a separate spec/plan when pulled forward. Source of truth is `docs/prompt-migration-outcome.md` (frozen) plus this v2 backlog (rolling).
+
+| Item | Trigger to pull forward | Notes |
+|---|---|---|
+| **Retire `_DEFAULT_CLAUDE_PROMPT_SUFFIX`** (`app/services/_llm_helpers.py:111`) | Next prompt-system spec, or first time the suffix needs to differ per Claude consumer beyond what overrides cover | Audit recommended inlining `{% if web_ctx %}…{% endif %}` into Tasks 8–10 prompts; implementation deferred to avoid scope creep. Suffix is still actively consumed by signals (default) + icp + market_research (via overrides). P-025 in outcome doc. |
+| **`as_langchain` `+\n` sentinel fragility** | LangChain version bump that changes `PromptTemplate.from_template` Jinja2-env behavior, or first time `test_as_langchain_byte_equal_to_render` fails after a dependency upgrade | Replace with a manually-constructed LangChain Jinja2 env that exposes `keep_trailing_newline=True`, or migrate Cypher/QA off LangChain entirely. See §3.4 LangChain interop post-merge note. |
+| **Active model routing for custom-dispatch paths** | First production demand to A/B test or change the model behind a Claude/`_claude_messages_text` call without a code edit | Out of v1 (spec §3.5). Requires reworking the custom-dispatch invocation pattern to consult `rendered.config.model` rather than hardcoded HTTP endpoints. |
+| **Retire one-shot equivalence test** (`tests/unit/test_llm_config_migration_equivalence.py` + `tests/_baselines/llm_config_prompt_strings.py`) | After one release cycle from migration merge | The `as_langchain` parity test + golden fixtures cover the same ground going forward. Listed in outcome doc "Test scaffolding scheduled for cleanup." |
+| **Failure-path `prompt_meta` persistence** | First production incident where missing `prompt_meta` on a failed LLM call blocks root-cause analysis | A `prompt_failures` collection or peer log path, written from a `try`/`except` wrapper. Spec §3.5 "What's deliberately not recorded." |
+| **Mongo index on `prompt_meta.*`** | Collection scans exceeding ~100ms p99 on observability queries, or first multi-org analytics demand | Compound index `{org_id: 1, "prompt_meta.name": 1, "prompt_meta.version": 1}`. Spec §3.5 "Indexing." |
