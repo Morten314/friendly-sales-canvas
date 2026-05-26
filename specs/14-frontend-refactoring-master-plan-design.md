@@ -1,7 +1,7 @@
 # Spec 14 — Frontend Refactoring Master Plan
 
-**Status:** Design — round 2 (round 1 review synthesized at `docs/reviews/14-frontend-refactoring-master-plan-design-spec-synthesis-1.md`)
-**Date:** 2026-05-26 (round 1), 2026-05-26 (round 2 revisions)
+**Status:** Design — round 3 (rounds 1 + 2 reviews synthesized at `docs/reviews/14-frontend-refactoring-master-plan-design-spec-synthesis-1.md` and `…-synthesis-2.md`)
+**Date:** 2026-05-26 (round 1), 2026-05-26 (round 2 + round 3 revisions)
 **Type:** Master plan (umbrella spec; each phase will get its own design + plan)
 **Paired plan:** _none yet — each phase ships its own plan as it begins_
 
@@ -106,6 +106,7 @@ These do not change as a result of this refactor (covered by characterization te
 - Auth flow (Firebase email/password → JWT → tenant selection → protected routes)
 - Rate-limit boundary value (4 req/min) — implementation moves, value stays
 - Existing E2E Playwright suite behavior (the suite itself may be expanded but existing tests must remain green)
+- E2E test suite location: stays centralized at `frontend/e2e/` (not co-located inside `src/features/`)
 - Bundle output format (PWA via vite-plugin-pwa with Workbox)
 
 ---
@@ -155,6 +156,8 @@ frontend/src/
 
 The diagram shows one of two possible final states. Phase 9 may split `scout/` and `profiler/` into sibling folders if the extraction reveals sufficient separation; if not, both stay inside `scout/`. The §3.1 diagram is the default — Phase 9's spec decides.
 
+`src/styles/` is **carried forward as-is** from the current layout — no phase between 0 and 11 touches it. Phase 11's spec may decide to restructure it per §8 Q12, but the default disposition is no movement.
+
 ### 3.2 Mapping to backend's converged shape
 
 | Frontend element | Backend analog |
@@ -187,7 +190,7 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 
 | # | Phase | Mission |
 |---|---|---|
-| 0 | Inventory + full safety net | Audit, lock Playwright, visual regression baselines, Vitest+RTL+MSW setup, characterization tests for top 5 monsters |
+| 0 | Inventory + full safety net | Audit, lock Playwright, visual regression baselines, Vitest+RTL+MSW setup, characterization tests for stable utilities + behavioral E2E for monster-file routes (not monster-file internals) |
 | 1 | LOC reduction pass #1 (pre-foundation) | Phase-L-style audit-execute for dead code, dead deps, dead routes, dedup. Backstopped by Phase 0's safety net. |
 | 2a | Foundation: strict TS turn-on | Flip `strict: true`, `noImplicitAny`, `strictNullChecks`, `noUnusedLocals/Parameters`, `noFallthroughCasesInSwitch`. Fix the error storm. |
 | 2b | Foundation: ESLint type-aware + Prettier | Upgrade ESLint config, add type-aware rules, `import/order`, `import/no-restricted-paths` (rules from §3.3), Prettier check |
@@ -213,9 +216,9 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 - Per-feature LOC scorecard (`docs/audits/<date>-frontend-baseline.md`)
 - Dependency graph from `knip` / `ts-prune` / `depcheck` (dead exports, dead files, dead deps)
 - Bundle-size baseline captured from `vite build`
-- **NFR baselines** measured and recorded: `vite build` wall time, `vite` dev-server cold start time, `tsc --noEmit` wall time (against current non-strict config), Playwright full-suite wall time, CI pipeline total duration (against the workflow scaffolded here). These anchor the Phase 2c budget thresholds.
+- **NFR baselines** measured and recorded: `vite build` wall time, `vite` dev-server cold start time, `tsc --noEmit` wall time (against current non-strict config), Playwright full-suite wall time. **CI pipeline duration:** captured at Phase 0 as *informational* only — the workflow at Phase 0 is mostly TODO scaffolding, so its duration is misleadingly short. The actual budget anchor for CI pipeline duration is re-measured in Phase 2c after all gates are wired. Phase 2c's spec sets the CI duration budget against its own measurement, not Phase 0's.
 - Playwright suite locked green; visual regression snapshots captured for the top screens (market-research, mission-control, customers, signals, scout, settings, login, tenant-selection).
-- **Visual regression default:** Playwright's built-in screenshot diff (since the Playwright suite already exists). Heavier tools (Chromatic, Percy, Loki) deferred to post-MVP unless surfaced as needed during Phase 0 spec writing. **Default threshold: 0.5–1.0% pixel delta per screen** with an explicit re-baseline workflow for accepted UI changes; Phase 0's spec sets the exact value within that range.
+- **Visual regression default:** Playwright's built-in screenshot diff (since the Playwright suite already exists). Heavier tools (Chromatic, Percy, Loki) deferred to post-MVP unless surfaced as needed during Phase 0 spec writing. **Threshold range: 0.5–1.0% pixel delta per screen** — Phase 0's spec selects the exact value within this range. An explicit re-baseline workflow handles accepted intentional UI changes.
 - Vitest + React Testing Library + MSW installed and wired.
 - **Characterization tests — refocused target.** Build tests against (a) the stable utility code in `src/lib/`, `src/hooks/`, `src/utils/` (these survive the refactor structurally; tests retain value), and (b) behavioral E2E coverage of the user-visible journeys the monster files participate in (these survive because routes and behavior are frozen interfaces per §2.3). **Do not** build deep characterization tests against the internal structure of the monster files themselves (MarketResearch.tsx, ICPSummaryOpportunity.tsx, MissionControl.tsx, DataSourcesManager.tsx, ICPManager.tsx) — those tests would be tied to internals that Phase 5+ extractions will rearrange anyway. The safety net for monster-file refactors is: behavioral E2E (Playwright) + visual regression + the unit tests built up during each feature extraction phase.
 - CI workflow file scaffolding (the gates added across Phase 2c are pre-shaped here as TODOs).
@@ -263,7 +266,7 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 - Update `frontend/tsconfig.json` similarly (root composite config).
 - Fix every error.
 
-**Error-count gate:** during plan-stage of this phase, run `tsc --noEmit` against the post-Phase-1 codebase. If the error count exceeds **1,500**, the plan author must propose a sub-decomposition by feature folder or by error category (e.g., 2a-i null-handling, 2a-ii implicit-any, 2a-iii unused locals) before proceeding to implementation. Below 1,500, execute as one phase.
+**Error-count gate:** during plan-stage of this phase, run `tsc --noEmit` against the post-Phase-1 codebase. If the error count exceeds **1,500**, the plan author must propose a sub-decomposition by feature folder or by error category (e.g., 2a-i null-handling, 2a-ii implicit-any, 2a-iii unused locals) before proceeding to implementation. Below 1,500, execute as one phase. **Threshold rationale:** 1,500 is a starting heuristic — roughly the error surface where an agent without sub-decomposition can maintain consistent error-category focus across a single plan. Phase 2a's spec author validates against the actual post-Phase-1 error count and adjusts if measurements suggest a different cutoff.
 
 **Escape hatch:** `src/shared/types/escape-hatches.ts` may hold explicit `any` types with documented justification — each entry requires (a) a comment explaining why it exists, and (b) a reference to the call site that needs it. **No hard cap up front:** Phase 2a's own spec sets an initial cap based on the actual error count surfaced during planning; Phase 13's audit re-evaluates every entry and removes the no-longer-needed ones. The number 10 was a placeholder in round 1 — drop the predetermined cap.
 
@@ -289,7 +292,7 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 - Bundle-size budget thresholds set from Phase 0 baseline + agreed headroom (spec author proposes; user approves).
 - **NFR gate thresholds set from Phase 0 baselines + agreed headroom.** Budgets cover: `tsc --noEmit` cold wall time, Vitest full-suite wall time, CI pipeline total duration. Round-2 ballparks (refined by Phase 2c spec against actual numbers): typecheck cold ≤ 30s, Vitest full ≤ 60s, CI total ≤ 8 min. The ballparks are starting anchors, not fixed mandates — Phase 2c's spec sets the actual budget values from Phase 0 measurements. Slow feedback loops defeat the agent-readiness goal, so these NFRs are first-class gates, not nice-to-haves.
 - `knip.json` config locked. Watcher: any new file with no inbound imports fails CI.
-- Visual regression diff threshold codified at the value chosen in Phase 0 (default range 0.5–1.0%). A "re-baseline approved" workflow exists for accepted intentional UI changes (a labeled commit message or PR tag triggers snapshot refresh in CI).
+- Visual regression diff threshold codified at the exact value chosen in Phase 0 (within the 0.5–1.0% range). A "re-baseline approved" workflow exists for accepted intentional UI changes (a labeled commit message or PR tag triggers snapshot refresh in CI).
 
 **Done when:** all gates green on a representative PR; gates required to merge.
 
@@ -299,9 +302,10 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 
 - Wire `QueryClient` and `QueryClientProvider` at app root.
 - Replace `enhancedApi`'s 5-min in-memory map with TanStack Query's cache.
-- Migrate `localStorage` and `sessionStorage` caching usage to TanStack Query persistence (or document why a specific case stays on `localStorage`).
+- Migrate `localStorage` and `sessionStorage` **caching** usage to TanStack Query persistence (or document why a specific case stays on `localStorage`). Features using `sessionStorage` as a primary data store — explicitly Strategist's `sessionStorage.strategistContext` per root `CLAUDE.md` — are **out of scope** for this migration; they hold persistent state, not cache.
 - Centralize rate-limit (4 req/min) into a single fetch-middleware layer used by every `useQuery`/`useMutation`.
 - Define API contract types in `src/shared/api/contracts.ts` (hand-written initially; OpenAPI codegen deferred unless surfaced as needed).
+- **`src/services/` disposition.** Identify every file under `src/services/` and assign each to a destination: API-related services move to `src/shared/api/` as part of this phase; feature-local services move with their feature in Phases 5–10. The disposition list lives in the Phase 3 spec so later phases can claim their items.
 
 **Per-call-site migration:** *not* all in this phase. This phase establishes the infrastructure and migrates the lowest-coupled call sites (auth, tenant, settings). Per-feature TanStack adoption happens inside each feature's extraction phase (5–10), where context is local.
 
@@ -330,6 +334,7 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 
 **Error-boundary deliverable:**
 - Define a feature-scoped `<FeatureErrorBoundary>` component in `src/features/shell/` (or `src/shared/components/` — Phase 4 spec decides). From Phase 5 onward, each feature's top-level routed component is wrapped in this boundary. Prevents one feature's runtime error from crashing the whole app.
+- **Unit tests** for `<FeatureErrorBoundary>` verifying: (a) catches and renders fallback for thrown errors in children, (b) does not intercept errors outside its subtree, (c) logs error information for debugging. The boundary's whole purpose is fault isolation; an untested one defeats the goal.
 
 **Lint deliverables (the features-specific dependency rules deferred from Phase 2b):**
 - Add `import/no-internal-modules` (or `dependency-cruiser` if richer rules are needed — Phase 4 spec decides) configured to allow `features/<Y>/index` but not deeper paths.
@@ -354,7 +359,7 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 **Likely sub-split (decided in Phase 5 spec):**
 - 5a: extract `MarketResearch.tsx` into a tree of page components (header, tab shells, section wrappers) — page-level decomposition only, no logic moves
 - 5b: move section components and lift their data into TanStack Query hooks
-- 5c: cross-feature concerns (lead-stream, scout chat, strategist workspace) routed to their target features
+- 5c: **handoff annotation, not a code move.** Components identified as not belonging in market-research (lead-stream → likely customers or its own feature; scout chat panels → scout; strategist workspace → strategist) **stay in their current pre-extraction location** (under `src/components/<area>/` or wherever they currently live). The Phase 5 spec records each such component with its intended target feature. The owning future-phase (7, 8, 9) claims and moves them when it runs. Phase 5 does *not* create transient staging folders; the only invariant is that the Phase 5 spec is the source of truth for what's leaving market-research and where it lands.
 
 **Per-phase deliverables (apply to Phases 5 through 12 unless noted):**
 - **TanStack Query migration of this feature's fetch sites.** Convert the feature's manual `apiFetch`/`enhancedApi` calls to `useQuery`/`useMutation` per the patterns established in Phase 3. Server state for this feature lives in TanStack Query's cache, not in `enhancedApi`'s 5-min map.
@@ -381,6 +386,8 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 - ICPManager owns ICP CRUD that `customers/` features will consume — defines the public surface `mission-control/index.ts` exposes for Phase 7.
 - DataSourcesManager couples to `_helpers`-style cross-cutting upload utilities — Phase 6 spec decides whether to extract these into `src/shared/` immediately or defer to Phase 11.
 - Profiler functionality currently lives split between mission-control and customers (per root `CLAUDE.md`) — Phase 6 spec decides what stays vs migrates to `scout/profiler` in Phase 9.
+
+**Profiler disposition (coordination artifact):** Phase 6's spec includes a dedicated "Profiler disposition" section listing each profiler-related component with: current location, interim home (mission-control vs stay-put), intended final home (scout/profiler or other). Phase 7's spec amends this section as customers-side profiler decisions land. Phase 9's spec reads the section before planning and resolves any open items. This is the concrete handoff mechanism that replaces the vague "Phase N spec coordinates" wording.
 
 **Per-phase deliverables:** see Phase 5's deliverables block (TanStack migration, route update, error-boundary wrapping, per-feature README).
 
@@ -419,7 +426,7 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 **Key risks / coupling points:**
 - Scout and Profiler share ~80% of backend code per CLAUDE.md, differentiated only by prompt persona. The frontend may or may not share the same structural pattern — Phase 9 spec evaluates whether to keep them as one feature with two persona modes vs split into siblings.
 - `ProfilerChatWithHistory` ↔ `ScoutChatWithHistory` deduplication (coordinated with Phase 8) — Phase 9 owns the shared primitive's final home if not already extracted in Phase 8.
-- Profiler is currently split between `/mission-control` and `/customers` routes (CLAUDE.md) — Phase 9 spec coordinates with Phases 6 and 7 on which surfaces stay and which migrate to scout/profiler.
+- Profiler is currently split between `/mission-control` and `/customers` routes (CLAUDE.md) — Phase 9 resolves the Profiler disposition section started in Phase 6 and amended in Phase 7. **Precondition:** Phase 9's spec author reads Phase 6 and Phase 7 specs' Profiler disposition sections before planning.
 - `lovable-tagger` and related Lovable artifacts may still be present in scout-adjacent files; Phase 1 may have caught them but Phase 9 spec verifies before extraction.
 
 **Per-phase deliverables:** see Phase 5's deliverables block.
@@ -461,11 +468,11 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 - Verify `src/contexts/`/`hooks/`/`lib/`/`services/`/`utils/` are gone or redirected. Any remaining file is justified in the Phase 11 spec or moved.
 - Route imports all resolve to feature folders (no `src/pages/*` references remain in `App.tsx`).
 
-**Done when:** the above verifications pass; `src/shared/` is populated with the genuinely-shared utilities discovered in Phases 5–10 and 12.
+**Done when:** the above verifications pass; `src/shared/` is populated with the genuinely-shared utilities discovered in Phases 5–10. Phase 12 handles any additional shared-utility surface inline as it runs (per the description text above).
 
 ### Phase 12 — Small-pages sweep
 
-**Sources moving in:** `Calendar.tsx`, `Deals.tsx`, `Insights.tsx`, `Reports.tsx`, `Artifacts.tsx` (666), `NotFound.tsx`.
+**Sources moving in:** `src/pages/Calendar.tsx`, `src/pages/Deals.tsx`, `src/pages/Insights.tsx`, `src/pages/Reports.tsx`, `src/pages/Artifacts.tsx` (666 LOC), `src/pages/NotFound.tsx`. (Equivalently: every page under `src/pages/` not claimed by Phases 5–10.)
 
 **Destinations:** each becomes its own small feature folder under `src/features/`, or merges into the nearest related feature (decided per-page in Phase 12 spec).
 
@@ -486,6 +493,8 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 
 **Codemods (selective, not auto-mandated):** the ≥3-occurrence threshold is a *candidacy signal* for codemod treatment, not an automatic mandate. A pattern earns a codemod only when it is (a) **likely to recur** in future feature work or future codebase changes, and (b) **mechanically transformable** (the transformation is structural enough that a script can apply it correctly). Ad-hoc one-off patterns that happen to appear 3+ times are fixed manually — building a codemod for a pattern that may never appear again is wasted tooling. When the audit decides yes, codemods land in `frontend/scripts/codemods/<name>.ts` (using ts-morph or jscodeshift) with a documented invocation and a test case (input → expected output). The codemod runs against the codebase as part of Phase 13, then stays committed for future re-use.
 
+**Codemod test approach:** Vitest + filesystem fixtures under `frontend/scripts/codemods/__tests__/` — each codemod has an `input.ts` and `expected.ts` pair; the test reads input, applies the codemod, compares against expected. AST-based codemods don't fit the DOM-oriented Vitest+RTL pattern; this filesystem-fixture approach is lightweight enough not to need a separate harness. Phase 13's spec finalizes the exact pattern.
+
 **Done when:** scorecard at `docs/audits/<date>-frontend-loc-pass-2.md` covers every file; all `execute` and confirmed-safe `investigate` findings applied; codemods committed.
 
 ### Phase 14 — Agent affordances
@@ -501,7 +510,7 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 - CI watchers added:
   - bundle-size delta watcher (warn on +5%, fail on +10% without override)
   - dead-code watcher (`knip` in --strict mode)
-  - stale-doc grep (any reference to `Phase N` outside specs/, plans/, docs/audits/, docs/reviews/ fails — same pattern backend Phase L used for stale docstrings). **Default regex:** `\b[Pp]hase[- ]?\d+[a-z]?\b` (matches "Phase 5", "phase-5", "Phase 2a", "phase 12"). **Allowlist mechanism:** `.stale-doc-allowlist.txt` at repo root lists path patterns where phase references are legitimate (e.g., this spec, the master spec amendments, ADRs that name the phase that triggered them). Phase 14's spec finalizes the regex and the allowlist policy.
+  - stale-doc grep (any reference to `Phase N` outside specs/, plans/, docs/audits/, docs/reviews/ fails — same pattern backend Phase L used for stale docstrings). **Default regex:** `\b[Pp]hase[- ]?\d+[a-z]?\b` (matches "Phase 5", "phase-5", "Phase 2a", "phase 12"). **Allowlist mechanism:** `.stale-doc-allowlist.txt` at repo root lists path patterns where phase references are legitimate (e.g., this spec, the master spec amendments, ADRs that name the phase that triggered them). The allowlist is expected to be non-trivial in size — Phase 14's spec should evaluate whether an inverted approach (scan only `src/` files, not docs/specs/plans) is more maintainable than maintaining a large allowlist. Phase 14's spec finalizes the regex and the allowlist policy.
 - Amend root `AGENTS.md`/`CLAUDE.md` **only where** the new structure makes existing guidance stale. No duplicate `frontend/AGENTS.md`.
 
 **Done when:** every feature has a `README.md`; ADR set is complete; scripts are working; CI watchers gate merges.
@@ -583,6 +592,7 @@ Not every phase will land cleanly. The protocol for when a phase branch cannot r
 - **Action:** revert the branch (do not merge partial progress). Log findings as `TD-FE-<n>` entries in `docs/TECH_DEBT.md` capturing what was discovered. Open a follow-on revised spec (round 2 of the phase) addressing what the failure revealed.
 - **Human checkpoint:** the human orchestrator (user) confirms the abort decision. Agents propose; humans approve. This is not a unilateral agent decision.
 - **No "fix forward" through a failed phase.** Per §5.3, the rule against fixing forward through hook failures extends to phase-level: a phase that cannot finish does not ship partial. The cost of reverting is much smaller than the cost of merging half-broken structural work into `master`.
+- **Sub-phase granularity.** Within a sub-split phase (e.g., Phase 5's 5a/5b/5c, Phase 6's 6a/6b/6c), each sub-phase is a discrete commit (or commit series) that leaves the codebase in a green state. If a sub-phase fails, revert to the last green sub-phase commit and replan the remainder — the full phase doesn't need to revert. The abort/revert protocol above triggers only when the *phase as a whole* can't reach done.
 
 ---
 
@@ -592,7 +602,7 @@ The master plan is "done" when **all** of these hold on `master`:
 
 1. **Structure.** Every product surface lives under `src/features/<feature>/`. `src/components/` contains only shadcn primitives. `src/shared/` holds documented cross-cutting hooks/lib/types. `src/pages/`, `src/hooks/`, `src/lib/`, `src/services/`, `src/utils/`, `src/contexts/` are gone (their contents redistributed into features or shared).
 2. **Decomposition.** Every monster file is decomposed into smaller, single-purpose files. No hard LOC caps mandated up front — sizes emerge from the refactoring. If specific limits prove useful, they're codified by Phase 14, not Phase 4.
-3. **Type strictness.** `tsconfig.app.json` has `strict: true`, `noImplicitAny`, `strictNullChecks`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`. `any` confined to a documented `src/shared/types/escape-hatches.ts` (max 10 entries).
+3. **Type strictness.** `tsconfig.app.json` has `strict: true`, `noImplicitAny`, `strictNullChecks`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`. `any` confined to a documented `src/shared/types/escape-hatches.ts` — each entry requires documented justification and a call-site reference. Phase 2a's spec sets the initial count cap from actual error measurements; Phase 13's audit re-evaluates every entry. No hard cap mandated by the master plan.
 4. **Tests.** Vitest + RTL + MSW running. Every feature has unit tests. Stable utilities under `src/shared/` have characterization tests carried forward from Phase 0. Behavioral E2E coverage (Playwright) for the user journeys the originally-monster files participate in is green. Visual regression green at the threshold set in Phase 0.
 5. **Lints.** ESLint flat-config with type-aware rules, `import/order`, `import/no-restricted-paths` (per §3.3). Prettier check. `knip` dead-code gate.
 6. **CI.** Typecheck, lint, test, build, Playwright, visual regression, bundle-size budget, `knip` — all required to merge.
