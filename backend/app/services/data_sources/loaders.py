@@ -87,7 +87,7 @@ def process_prospect_list(driver, llm, file_path):
             `Could this project contribute to career growth for the buyer?`: '{data[question_columns[9]]}'
         }})
         """
-        score = score_prospect(llm, temp_cypher)
+        score, _prompt_meta = score_prospect(llm, temp_cypher)
 
         # Final query with score
         cypher_query = f"""

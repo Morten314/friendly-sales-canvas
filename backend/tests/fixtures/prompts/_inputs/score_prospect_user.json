@@ -1,0 +1,3 @@
+{
+  "cypher_query": "CREATE (p:Prospect {Name: 'Jane Doe', Company: 'Acme', `Is there a budget planned for the next four quarters?`: 'Yes, 500K'})"
+}

@@ -6,6 +6,7 @@ import requests
 import speech_recognition as sr
 from langchain_core.messages import SystemMessage, HumanMessage
 
+from app.core import prompts
 from app.core.config import rapidapi_key
 
 
@@ -101,31 +102,22 @@ def extract_number(content) -> Optional[str]:
     return match.group(1) if match else None
 
 def score_prospect(llm, cypher_query):
-    # AI instruction with memory context
-    prompt_instruction = f"""
-    You are an AI agent that goes through a cypher query with a prospect and how he answers 10 questions to a sales agent.
-    YOU HAVE TO evaluate his answers and score the prospect a number between 0-10
-    the questions and some scoring instructions are -
-      "Is there a budget planned for the next four quarters?", : if he answers yes and gives a number , take it as good sign
-      "Would this be categorized as Opex or Capex?",
-      "Do you have a general idea of the expected spend range?", : take a positive answer positively
-      "What factors are considered when determining this spend range?",
-      "What level of access or visibility might be available to us?", : c-suite , higher executives , directors all things like that are plus
-      "Who would typically be involved in making the final decision?",
-      "What's their role or designation?",
-      "Would it be convenient to meet in the office for a one-on-one discussion?",
-      "Would you be open to meeting in a different location if that works better?",
-      "Could this project contribute to career growth for the buyer?" : take positively if yes
+    """Score a prospect on a 0-10 scale via two-message LLM dispatch.
 
-        Rest analyze the answers and score , just and just give a number as respones like "5" or "6"
-
-        """
+    Returns (score_str_or_none, prompt_meta_dict). Uses a manual two-render recipe:
+    the system instruction is a static prompt, the user message embeds the cypher
+    query. prompt_meta is reported from the user-side render (the canonical
+    invocation surface — render_inputs_hash captures cypher_query, the variable
+    half of the call).
+    """
+    system_rendered = prompts.render("score_prospect_system")
+    user_rendered = prompts.render("score_prospect_user", cypher_query=cypher_query)
 
     messages = [
-        SystemMessage(content=prompt_instruction),
-        HumanMessage(content=f"Cypher Query:\n{cypher_query}\n\nOnly give me the number , nothing else at all , not even punctuation marks:")
+        SystemMessage(content=system_rendered.body),
+        HumanMessage(content=user_rendered.body),
     ]
 
-    response = llm(messages)
-    response = extract_number(response)
-    return response
+    response = llm.invoke(messages)
+    score = extract_number(response)
+    return score, prompts.prompt_meta_from(user_rendered)
