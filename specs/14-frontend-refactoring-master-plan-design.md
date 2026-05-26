@@ -1,7 +1,7 @@
 # Spec 14 — Frontend Refactoring Master Plan
 
-**Status:** Design — round 3 (rounds 1 + 2 reviews synthesized at `docs/reviews/14-frontend-refactoring-master-plan-design-spec-synthesis-1.md` and `…-synthesis-2.md`)
-**Date:** 2026-05-26 (round 1), 2026-05-26 (round 2 + round 3 revisions)
+**Status:** Design — round 4 (rounds 1, 2, and 3 reviews synthesized at `docs/reviews/14-frontend-refactoring-master-plan-design-spec-synthesis-1.md`, `…-synthesis-2.md`, and `…-synthesis-3.md`)
+**Date:** 2026-05-26 (round 1), 2026-05-26 (round 2 + round 3 revisions), 2026-05-26 (round 4 revisions)
 **Type:** Master plan (umbrella spec; each phase will get its own design + plan)
 **Paired plan:** _none yet — each phase ships its own plan as it begins_
 
@@ -56,9 +56,9 @@ These were explored before the chosen sequence landed. Each is listed with the r
 - **Big-bang refactor of `src/` in one phase.** Rejected: 75,894 LOC against a non-strict TS config and zero unit tests is too large a single-shot risk. Even with characterization tests + Playwright + visual regression, the diff would be unreviewable. The user-chosen "Foundation-first + LOC-first hybrid" front-loads risk into phases 0–2 instead of one terminal megaphase.
 - **Slice-based (one vertical feature top-to-bottom at a time, no foundation phase).** Rejected: skipping the strict-TS-everywhere foundation phase means each feature extracts under different type rules, defeating the agent-readiness goal of uniform machine-readable contracts.
 - **Strangler fig (new features land in new structure, old features migrate opportunistically).** Rejected: no new features are planned mid-refactor (per §2.2 "No new product features"), so there's no incoming structure to grow into; perpetual two-shape state defeats the modularization goal.
-- **Linear backend-mirror A–L (Approach 1 from brainstorming).** Rejected: strict TS lands in foundation before LOC reduction, so the strict-error storm hits a larger surface. Approach 2 (foundation-first big-bang) was preferred.
-- **Risk-tiered parallel-friendly per-feature tracks (Approach 3 from brainstorming).** Rejected: contradicts the user's strict-everywhere-up-front choice — that variant did strict TS per-feature, not globally.
-- **Foundation-first big-bang (Approach 2 from brainstorming, no LOC pre-pass).** Rejected in favor of the chosen hybrid: starting strict TS / lint storm work on the full 75k LOC was correctly identified as inviting unnecessary surface area into Phase 2's error count. Inserting Phase 1's LOC reduction first shrinks the foundation surface.
+- **Linear backend-mirror A–L (foundation comes before LOC reduction).** Rejected: strict TS lands in foundation before LOC reduction, so the strict-error storm hits a larger surface. Foundation-first big-bang with a LOC pre-pass was preferred.
+- **Risk-tiered parallel-friendly per-feature tracks.** Rejected: contradicts the user's strict-everywhere-up-front choice — that variant did strict TS per-feature, not globally.
+- **Foundation-first big-bang (no LOC pre-pass).** Rejected in favor of the chosen hybrid: starting strict TS / lint storm work on the full 75k LOC was correctly identified as inviting unnecessary surface area into Phase 2's error count. Inserting Phase 1's LOC reduction first shrinks the foundation surface.
 
 The chosen sequence (this spec) is foundation-first with LOC reduction inserted as Phase 1.
 
@@ -142,6 +142,7 @@ frontend/src/
 │   ├── hooks/                 # cross-feature hooks
 │   ├── lib/                   # cross-feature utilities
 │   ├── types/                 # cross-feature types + the documented escape-hatches.ts
+│   ├── ui-patterns/           # OPTIONAL: populated only if Phase 13 surfaces repeated UI patterns (form-row, dialog-shell, etc.) that warrant extraction. Omitted otherwise.
 │   └── README.md
 │
 ├── components/
@@ -174,6 +175,7 @@ The diagram shows one of two possible final states. Phase 9 may split `scout/` a
 - `features/<X>/` may import from `features/<Y>/` **only via** `features/<Y>/index.ts` (the public surface).
 - `shared/` may not import from `features/`.
 - `components/ui/` may not import from `features/` or `shared/` (it's pure primitives).
+- **Circular imports between features are forbidden.** The `index.ts`-only rule prevents *deep* coupling but does not prevent *cyclic* coupling — feature A importing from feature B's index.ts while feature B imports from feature A's index.ts is still a cycle. If two features genuinely need each other's types or utilities, the shared surface moves to `src/shared/types/` (or the appropriate `src/shared/*` subfolder). Enforced by `import/no-cycle` from `eslint-plugin-import`, configured in Phase 4 alongside the other features-specific lint rules.
 - **Enforcement mechanism:** `eslint-plugin-import`'s `import/no-internal-modules` rule (configured to allow `features/<Y>/index` but not deeper paths) is the preferred enforcement for the "index.ts-only" cross-feature constraint. Zone-level restrictions (e.g., `shared/` may not import from `features/`) are enforced by `import/no-restricted-paths`. A heavier alternative is `dependency-cruiser` if the ESLint rules prove insufficient. Exact tool choice is decided in Phase 4's spec (when `src/features/` exists to be enforced against).
 
 ### 3.4 Naming canonicalization
@@ -193,7 +195,7 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 | 0 | Inventory + full safety net | Audit, lock Playwright, visual regression baselines, Vitest+RTL+MSW setup, characterization tests for stable utilities + behavioral E2E for monster-file routes (not monster-file internals) |
 | 1 | LOC reduction pass #1 (pre-foundation) | Phase-L-style audit-execute for dead code, dead deps, dead routes, dedup. Backstopped by Phase 0's safety net. |
 | 2a | Foundation: strict TS turn-on | Flip `strict: true`, `noImplicitAny`, `strictNullChecks`, `noUnusedLocals/Parameters`, `noFallthroughCasesInSwitch`. Fix the error storm. |
-| 2b | Foundation: ESLint type-aware + Prettier | Upgrade ESLint config, add type-aware rules, `import/order`, `import/no-restricted-paths` (rules from §3.3), Prettier check |
+| 2b | Foundation: ESLint type-aware + Prettier | Upgrade ESLint config, add type-aware rules, `import/order`, Prettier check. Features-specific dependency rules deferred to Phase 4 (where `src/features/` exists to enforce against). |
 | 2c | Foundation: CI gates + budget | Wire all gates into CI: typecheck, lint, test, build, Playwright, visual regression, bundle budget, `knip` dead-code |
 | 3 | API/data layer | Adopt TanStack Query. Collapse 3 caching layers into one. Centralize rate-limit. Define contract types in `src/shared/api/`. |
 | 4 | Feature scaffolding + shell extraction | Create `src/features/` skeleton + per-feature template + features-root README. Lock `src/components/ui/` for shadcn only. Establish ADR template. **Extract shell** (Sidebar, Header, AuthContext, route shell) into `src/features/shell/` — features render inside the shell, so it lands before Phase 5. Define `<FeatureErrorBoundary>` component. Wire features-specific lint rules (deferred from Phase 2b). |
@@ -304,7 +306,7 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 - Replace `enhancedApi`'s 5-min in-memory map with TanStack Query's cache.
 - Migrate `localStorage` and `sessionStorage` **caching** usage to TanStack Query persistence (or document why a specific case stays on `localStorage`). Features using `sessionStorage` as a primary data store — explicitly Strategist's `sessionStorage.strategistContext` per root `CLAUDE.md` — are **out of scope** for this migration; they hold persistent state, not cache.
 - Centralize rate-limit (4 req/min) into a single fetch-middleware layer used by every `useQuery`/`useMutation`.
-- Define API contract types in `src/shared/api/contracts.ts` (hand-written initially; OpenAPI codegen deferred unless surfaced as needed).
+- Define API contract types in `src/shared/api/contracts.ts` (hand-written initially; OpenAPI codegen deferred unless surfaced as needed). API infrastructure is unambiguously shared (every feature consumes it); Phase 4's promotion criteria formalize the general rule that this placement already follows.
 - **`src/services/` disposition.** Identify every file under `src/services/` and assign each to a destination: API-related services move to `src/shared/api/` as part of this phase; feature-local services move with their feature in Phases 5–10. The disposition list lives in the Phase 3 spec so later phases can claim their items.
 
 **Per-call-site migration:** *not* all in this phase. This phase establishes the infrastructure and migrates the lowest-coupled call sites (auth, tenant, settings). Per-feature TanStack adoption happens inside each feature's extraction phase (5–10), where context is local.
@@ -328,7 +330,7 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 - Create `frontend/scripts/scaffold-feature.sh` (or equivalent) — a script that generates a new feature folder from the template.
 
 **Shell extraction deliverables (folded in from former Phase 11 — see §4 sequencing note):**
-- Extract `src/components/layout/Sidebar.tsx` (816), `src/components/layout/Header.tsx` (554), `src/contexts/AuthContext.tsx`, and the route shell into `src/features/shell/`.
+- Extract `src/components/layout/Sidebar.tsx` (816), `src/components/layout/Header.tsx` (554), and the route shell into `src/features/shell/`. Extract `src/contexts/AuthContext.tsx` into `src/features/shell/` or `src/features/auth/` — Phase 4 spec decides (see §8 Q1).
 - The shell is the app frame features render inside; pulling it before Phase 5 avoids forcing features to create local layout adapters that get unwound later.
 - `src/contexts/TenantContext.tsx` stays where it is for now — it moves with `src/features/tenant/` in Phase 10. AuthContext's final home (shell vs auth) is a Phase 4 spec decision (see §8 Q1).
 
@@ -359,7 +361,7 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 **Likely sub-split (decided in Phase 5 spec):**
 - 5a: extract `MarketResearch.tsx` into a tree of page components (header, tab shells, section wrappers) — page-level decomposition only, no logic moves
 - 5b: move section components and lift their data into TanStack Query hooks
-- 5c: **handoff annotation, not a code move.** Components identified as not belonging in market-research (lead-stream → likely customers or its own feature; scout chat panels → scout; strategist workspace → strategist) **stay in their current pre-extraction location** (under `src/components/<area>/` or wherever they currently live). The Phase 5 spec records each such component with its intended target feature. The owning future-phase (7, 8, 9) claims and moves them when it runs. Phase 5 does *not* create transient staging folders; the only invariant is that the Phase 5 spec is the source of truth for what's leaving market-research and where it lands.
+- 5c: **handoff annotation, not a code move.** Components identified as not belonging in market-research (lead-stream → likely customers or its own feature; scout chat panels → scout; strategist workspace → strategist) **stay in their current pre-extraction location** (under `src/components/<area>/`). Phase 5 spec enumerates each component's exact current path. The Phase 5 spec records each such component with its intended target feature. The owning future-phase (7, 8, 9) claims and moves them when it runs. Phase 5 does *not* create transient staging folders; the only invariant is that the Phase 5 spec is the source of truth for what's leaving market-research and where it lands.
 
 **Per-phase deliverables (apply to Phases 5 through 12 unless noted):**
 - **TanStack Query migration of this feature's fetch sites.** Convert the feature's manual `apiFetch`/`enhancedApi` calls to `useQuery`/`useMutation` per the patterns established in Phase 3. Server state for this feature lives in TanStack Query's cache, not in `enhancedApi`'s 5-min map.
@@ -411,7 +413,7 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 **Destinations:** `src/features/signals/`, `src/features/strategist/`.
 
 **Key risks / coupling points:**
-- `ScoutChatWithHistory` (signals) and `ProfilerChatWithHistory` (per CLAUDE.md, ~90% the same component) — Phase 8 spec coordinates the deduplication: extract a shared chat-history primitive in `src/features/scout/` or `src/shared/` and reuse from both.
+- `ScoutChatWithHistory` (lives in signals, moves here) and `ProfilerChatWithHistory` (per CLAUDE.md, ~90% the same component) — by Phase 8, `ProfilerChatWithHistory` is already inside `src/features/mission-control/` or `src/features/customers/` from Phases 6/7. Phase 8 lacks authority to modify those feature surfaces (§5.5 scope discipline). **Phase 8 extracts `ScoutChatWithHistory` into `src/features/signals/` and records the dedup opportunity as a handoff annotation** (same pattern as Phase 5's 5c) — listing where `ProfilerChatWithHistory` lives and what surface a shared chat-history primitive should expose. **Phase 9 (scout + profiler) owns the actual deduplication** — it has authority over both scout and profiler surfaces and coordinates with mission-control/customers via their `index.ts` public surfaces. The shared primitive lands in `src/shared/` (which exists from Phase 4 onward), not `src/features/scout/` (which doesn't exist until Phase 9 itself).
 - Strategist has no backend (per CLAUDE.md — it's a sessionStorage-driven sequence builder); Phase 8 spec confirms the data-layer contract doesn't change and tests preserve the `strategistContext` sessionStorage shape.
 - Signals consumes from multiple data sources (market-research, scout) — its public surface defines what `signals/index.ts` exports for cross-feature use.
 
@@ -425,7 +427,7 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 
 **Key risks / coupling points:**
 - Scout and Profiler share ~80% of backend code per CLAUDE.md, differentiated only by prompt persona. The frontend may or may not share the same structural pattern — Phase 9 spec evaluates whether to keep them as one feature with two persona modes vs split into siblings.
-- `ProfilerChatWithHistory` ↔ `ScoutChatWithHistory` deduplication (coordinated with Phase 8) — Phase 9 owns the shared primitive's final home if not already extracted in Phase 8.
+- `ProfilerChatWithHistory` ↔ `ScoutChatWithHistory` deduplication — **Phase 9 owns this dedup work**, reading Phase 8's handoff annotation that records `ScoutChatWithHistory`'s current location and the proposed shared surface. The shared chat-history primitive lands in `src/shared/` (or inside `src/features/scout/` if Phase 9 decides scout should own it). Phase 9 coordinates with mission-control/customers via their `index.ts` public surfaces to refactor `ProfilerChatWithHistory` call sites without reaching into their internals.
 - Profiler is currently split between `/mission-control` and `/customers` routes (CLAUDE.md) — Phase 9 resolves the Profiler disposition section started in Phase 6 and amended in Phase 7. **Precondition:** Phase 9's spec author reads Phase 6 and Phase 7 specs' Profiler disposition sections before planning.
 - `lovable-tagger` and related Lovable artifacts may still be present in scout-adjacent files; Phase 1 may have caught them but Phase 9 spec verifies before extraction.
 
@@ -439,7 +441,7 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 - `src/pages/Settings.tsx` + `src/components/settings/*` (CompanyProfile 601) → `src/features/settings/`
 
 **Key risks / coupling points:**
-- AuthContext currently lives at `src/contexts/AuthContext.tsx` and was extracted in Phase 4 into `src/features/shell/` (or `src/features/auth/` per Phase 4 spec decision — §8 Q1). Phase 10's `auth/` feature reuses whichever location was chosen; it does not re-extract.
+- AuthContext currently lives at `src/contexts/AuthContext.tsx` and was extracted in Phase 4 into `src/features/shell/` (or `src/features/auth/` per Phase 4 spec decision — §8 Q1). Phase 10's `auth/` feature reuses whichever location was chosen; it does not re-extract. **If Phase 4 placed AuthContext in `shell/`**, Phase 10's auth feature spans two folders: Login + Firebase integration in `src/features/auth/`, context in `src/features/shell/`. Login calls AuthContext methods, so the cross-folder coupling must be mediated by `shell/index.ts`'s public surface — Phase 10 spec confirms `shell/index.ts` exports enough auth surface that `auth/` doesn't reach into shell internals.
 - TenantContext + TenantSelection page form a tight pair — Phase 10 spec confirms they ship together rather than splitting context (in `tenant/`) from page (anywhere else).
 - Firebase email/password integration touches multiple files (auth callbacks, JWT manager); Phase 10 spec maps the full Firebase surface area before extraction.
 - Settings consumes the company profile API — Phase 10 spec confirms the API contract types live in `src/shared/api/` (from Phase 3) rather than being defined locally.
@@ -618,7 +620,7 @@ A phase is "done" when its spec, plan, impl, and ≥1 review round of each are m
 ## §7 Risks and sequencing
 
 ### R1 — Strict TS error explosion (Phase 2a)
-**Mitigation:** Phase 1's LOC pass shrinks the surface first. Phase 2a has a hard error-count gate (1,500) — exceeding it triggers sub-decomposition by feature folder or by error category before execution. Behavioral E2E + visual regression (locked in Phase 0) catch behavior regressions even when type signatures change, without requiring deep characterization tests against monster-file internals.
+**Mitigation:** Phase 1's LOC pass shrinks the surface first. Phase 2a has an error-count threshold (1,500) for sub-decomposition trigger — exceeding it requires the plan author to propose a sub-decomposition by feature folder or by error category before execution (the phase still proceeds, just with finer-grained sub-phases). "Gate" terminology is reserved for CI gates that actually block merge. Behavioral E2E + visual regression (locked in Phase 0) catch behavior regressions even when type signatures change, without requiring deep characterization tests against monster-file internals.
 
 ### R2 — Characterization tests miss behavior
 **Mitigation:** layered safety net. Unit tests (Vitest + RTL) catch component behavior. MSW catches data-layer behavior. Visual regression catches rendering. Playwright catches user journeys. Manual smoke-test sign-off before merge of any phase that touches behavior.
