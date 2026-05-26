@@ -17,6 +17,7 @@ from app.services._llm_helpers import call_with_prompt
 from app.core.exceptions import (
     MarketScoreNotFoundError,
     MarketScoringRunNotFoundError,
+    ScoringPostProcessingError,
 )
 from app.models.market_scoring import (
     LeadMarketScoresRequest,
@@ -290,6 +291,12 @@ def score_single_lead_against_market(
     to _persist_market_score_for_lead which adds it to the Mongo doc.
 
     The LLM is resolved from front-matter `model:` via the LLM factory at call time.
+
+    Raises:
+        ScoringPostProcessingError: If the LLM call succeeded but post-processing
+            (JSON parse, score normalization) failed. The exception carries
+            ``prompt_meta`` from the successful render so the caller can preserve
+            observability on the error path.
     """
     response, prompt_meta = call_with_prompt(
         "score_lead",
@@ -298,33 +305,39 @@ def score_single_lead_against_market(
         lead_json=json.dumps(lead, default=str),
         market_reports_json=json.dumps(market_reports, default=str),
     )
-    content = getattr(response, "content", response)
-    parsed = _clean_and_parse_json(content)
-    scores = parsed.get("component_scores", {}) if isinstance(parsed, dict) else {}
-    descriptions = parsed.get("component_descriptions", {}) if isinstance(parsed, dict) else {}
+    try:
+        content = getattr(response, "content", response)
+        parsed = _clean_and_parse_json(content)
+        scores = parsed.get("component_scores", {}) if isinstance(parsed, dict) else {}
+        descriptions = parsed.get("component_descriptions", {}) if isinstance(parsed, dict) else {}
 
-    normalized_scores: Dict[str, float] = {}
-    normalized_descriptions: Dict[str, str] = {}
-    for component in MARKET_SCORE_COMPONENT_KEYS:
-        raw_score = scores.get(component, 0)
-        try:
-            score = float(raw_score)
-        except (TypeError, ValueError):
-            score = 0.0
-        score = max(0.0, min(100.0, score))
-        normalized_scores[component] = round(score, 2)
+        normalized_scores: Dict[str, float] = {}
+        normalized_descriptions: Dict[str, str] = {}
+        for component in MARKET_SCORE_COMPONENT_KEYS:
+            raw_score = scores.get(component, 0)
+            try:
+                score = float(raw_score)
+            except (TypeError, ValueError):
+                score = 0.0
+            score = max(0.0, min(100.0, score))
+            normalized_scores[component] = round(score, 2)
 
-        description = descriptions.get(component)
-        if not isinstance(description, str) or not description.strip():
-            description = "Score generated with limited evidence from available lead/profile context."
-        normalized_descriptions[component] = description.strip()
+            description = descriptions.get(component)
+            if not isinstance(description, str) or not description.strip():
+                description = "Score generated with limited evidence from available lead/profile context."
+            normalized_descriptions[component] = description.strip()
 
-    total_score = round(sum(normalized_scores.values()) / float(len(MARKET_SCORE_COMPONENT_KEYS)), 2)
-    return {
-        "component_scores": normalized_scores,
-        "component_descriptions": normalized_descriptions,
-        "market_total_score": total_score,
-    }, prompt_meta
+        total_score = round(sum(normalized_scores.values()) / float(len(MARKET_SCORE_COMPONENT_KEYS)), 2)
+        return {
+            "component_scores": normalized_scores,
+            "component_descriptions": normalized_descriptions,
+            "market_total_score": total_score,
+        }, prompt_meta
+    except Exception as e:
+        raise ScoringPostProcessingError(
+            f"Post-processing failed for lead {lead.get('lead_id')}: {e}",
+            prompt_meta=prompt_meta,
+        ) from e
 
 
 def _persist_market_score_for_lead(

@@ -15,7 +15,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any, Dict
 
-from app.core.exceptions import BrewraError
+from app.core.exceptions import BrewraError, ScoringPostProcessingError
 from app.models.market_scoring import MARKET_SCORE_COMPONENT_KEYS
 from app.services.leads import get_leads_for_org
 from app.services.market_scoring import persistence
@@ -131,7 +131,32 @@ def _run_market_scoring_for_org(driver, mongo, llm2, user_id: str, org_id: str, 
                     prompt_meta=prompt_meta,
                 )
                 processed_count += 1
+            except ScoringPostProcessingError as post_err:
+                # LLM call succeeded; post-processing (JSON parse / normalization)
+                # failed. Persist the failure WITH prompt_meta from the successful
+                # render so observability isn't lost.
+                failed_count += 1
+                fallback_payload = {
+                    "component_scores": {key: 0.0 for key in MARKET_SCORE_COMPONENT_KEYS},
+                    "component_descriptions": {
+                        key: f"Scoring failed: {str(post_err)[:180]}" for key in MARKET_SCORE_COMPONENT_KEYS
+                    },
+                    "market_total_score": 0.0,
+                }
+                orchestrator._persist_market_score_for_lead(
+                    driver,
+                    mongo,
+                    user_id=user_id,
+                    org_id=org_id,
+                    lead=lead,
+                    scoring_payload=fallback_payload,
+                    run_id=run_id,
+                    scoring_status="failed",
+                    score_coll=score_coll,
+                    prompt_meta=post_err.prompt_meta,
+                )
             except Exception as lead_error:
+                # LLM call or earlier step failed; no prompt_meta to preserve.
                 failed_count += 1
                 fallback_payload = {
                     "component_scores": {key: 0.0 for key in MARKET_SCORE_COMPONENT_KEYS},

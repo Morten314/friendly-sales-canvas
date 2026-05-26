@@ -329,6 +329,103 @@ def test_score_single_lead_against_market_returns_score(mocker):
     assert prompt_meta["model"] == "Qwen/Qwen3-235B-A22B-Instruct-2507-tput"
 
 
+def test_score_single_lead_against_market_post_processing_error_preserves_prompt_meta(mocker):
+    """If post-processing (JSON parse, score normalization) fails after the
+    LLM call succeeded, the function must raise ScoringPostProcessingError
+    carrying the prompt_meta from the successful render so the caller can
+    persist observability even on the error path.
+    """
+    from app.services.market_scoring.orchestrator import ScoringPostProcessingError
+
+    fake_prompt_meta = {
+        "name": "score_lead",
+        "version": "1.0.0",
+        "model": "Qwen/Qwen3-235B-A22B-Instruct-2507-tput",
+    }
+    # Garbage response that will trip _clean_and_parse_json with json.JSONDecodeError.
+    garbage_response = _FakeResponse("this is not json")
+    mocker.patch(
+        "app.services.market_scoring.orchestrator.call_with_prompt",
+        return_value=(garbage_response, fake_prompt_meta),
+    )
+
+    lead = {"lead_id": TEST_LEAD_ID_1, "company_name": "Acme"}
+    with pytest.raises(ScoringPostProcessingError) as exc_info:
+        score_single_lead_against_market(
+            lead=lead,
+            company_profile={"industry": "Logistics"},
+            market_reports={"market size & opportunity": {"tam": "$1B"}},
+        )
+
+    # The exception carries the prompt_meta from the successful render.
+    assert exc_info.value.prompt_meta == fake_prompt_meta
+    # And it's a BrewraError subclass for consistent handling.
+    assert isinstance(exc_info.value, BrewraError)
+
+
+def test_run_market_scoring_for_org_preserves_prompt_meta_on_post_processing_failure(
+    mocker, mock_mongo_client,
+):
+    """When score_single_lead_against_market raises ScoringPostProcessingError,
+    the caller must still persist the lead with prompt_meta from the successful
+    render — discarding it would drop observability on the failure path.
+    """
+    from app.services.market_scoring.orchestrator import ScoringPostProcessingError
+
+    score_coll = MagicMock()
+    run_coll = MagicMock()
+    mocker.patch(
+        "app.services.market_scoring.persistence._get_market_score_collections",
+        return_value=(score_coll, run_coll),
+    )
+    mocker.patch(
+        "app.services.market_scoring.scoring.get_leads_for_org",
+        return_value=([{"lead_id": TEST_LEAD_ID_1}], 1),
+    )
+    mocker.patch(
+        "app.services.market_scoring.persistence.get_company_profile_for_org",
+        return_value={"industry": "SaaS"},
+    )
+    all_five_reports = {
+        "market size & opportunity": {"tam": "$1B"},
+        "industry trends report": {"trend": "AI"},
+        "competitor landscape": {"top_rival": "None"},
+        "regulatory & compliance highlights": {"risk": "Low"},
+        "market entry & growth strategy": {"strategy": "Direct"},
+    }
+    mocker.patch(
+        "app.services.market_scoring.orchestrator.get_market_reports_for_org",
+        return_value=all_five_reports,
+    )
+
+    fake_prompt_meta = {
+        "name": "score_lead",
+        "version": "1.0.0",
+        "model": "Qwen/Qwen3-235B-A22B-Instruct-2507-tput",
+    }
+    mocker.patch(
+        "app.services.market_scoring.orchestrator.score_single_lead_against_market",
+        side_effect=ScoringPostProcessingError(
+            "json parse failed for lead L1: Expecting value",
+            prompt_meta=fake_prompt_meta,
+        ),
+    )
+    persist_mock = mocker.patch(
+        "app.services.market_scoring.orchestrator._persist_market_score_for_lead",
+    )
+
+    _run_market_scoring_for_org(
+        MagicMock(), mock_mongo_client, MagicMock(),
+        user_id=TEST_USER_ID, org_id=TEST_ORG_ID, run_id="r1",
+    )
+
+    # Exactly one persist call, with scoring_status=failed AND prompt_meta carried over.
+    assert persist_mock.call_count == 1
+    kwargs = persist_mock.call_args.kwargs
+    assert kwargs["scoring_status"] == "failed"
+    assert kwargs["prompt_meta"] == fake_prompt_meta
+
+
 # ---------------------------------------------------------------------------
 # _run_market_scoring_for_org — BrewraError catch
 # ---------------------------------------------------------------------------

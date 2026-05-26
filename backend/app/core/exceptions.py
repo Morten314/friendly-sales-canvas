@@ -148,3 +148,14 @@ class ICPIdRegistryError(BrewraError):
 class ServiceError(BrewraError):
     """Operational failure (config missing, upstream API down, race condition).
     Maps to HTTP 500 with the exception message in the detail field."""
+
+
+class ScoringPostProcessingError(ServiceError):
+    """Raised when ``score_single_lead_against_market``'s LLM call succeeded
+    but post-processing (JSON parse, score normalization) failed. Carries the
+    ``prompt_meta`` from the successful render so the caller can persist the
+    observability payload even on the error path."""
+
+    def __init__(self, message: str, prompt_meta: dict):
+        super().__init__(message)
+        self.prompt_meta = prompt_meta
