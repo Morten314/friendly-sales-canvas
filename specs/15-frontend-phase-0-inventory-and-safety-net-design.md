@@ -1,7 +1,7 @@
 # Spec 15 — Frontend Phase 0: Inventory + Full Safety Net
 
-**Status:** Design — round 2 (round 1 review synthesized at `docs/reviews/15-frontend-phase-0-inventory-and-safety-net-design-spec-synthesis-1.md`)
-**Date:** 2026-05-26 (round 1), 2026-05-26 (round 2 revisions)
+**Status:** Design — round 3 (rounds 1 and 2 syntheses at `docs/reviews/15-frontend-phase-0-inventory-and-safety-net-design-spec-synthesis-1.md` and `…-synthesis-2.md`)
+**Date:** 2026-05-26 (round 1), 2026-05-26 (round 2 revisions), 2026-05-26 (round 3 revisions)
 **Type:** Phase spec (sub-split into 0a + 0b)
 **Paired plan:** _none yet — Phase 0a and 0b each ship their own plan_
 **Parent:** `specs/14-frontend-refactoring-master-plan-design.md` (§4 Phase 0)
@@ -24,7 +24,7 @@ Master spec §4 places Phase 0 first because every later phase needs the safety 
 |---|---|
 | Source LOC | 75,894 across `.ts`/`.tsx` under `frontend/src/` |
 | Playwright suite | Self-contained — Firebase auth and backend API both route-stubbed via `e2e/helpers/login.ts` and `e2e/fixtures/api-mocks.ts`. No real network required. |
-| Playwright config | `maxDiffPixels: 100, threshold: 0.2`. Visual snapshots committed for journeys (login-tenant-mission, csv-upload-leads, signals-feed-action, market-research-5-components, icp-create) and stubs (insights, reports, calendar, agent-hub, artifacts). |
+| Playwright config | `maxDiffPixels: 100, threshold: 0.2`. Visual snapshots committed for journeys (login-tenant-mission, signals-feed-action, icp-create) and stubs (insights, reports, calendar, agent-hub, artifacts). Journey 02 (csv-upload-leads) has no snapshots; journey 04 (market-research-5-components) intentionally omits visual assertions per the file's own comment ("The page is 14k LOC; this spec is a smoke check"). Total committed PNGs: 20. |
 | Unit test framework | None. No Vitest, no RTL, no MSW, no Jest. |
 | Lint | ESLint flat-config v9 extending `js.configs.recommended` and `tseslint.configs.recommended` (with `@typescript-eslint/no-unused-vars` off — most TS rules effectively inert under the non-strict config), plus `react-hooks` and `react-refresh`. No `import/order`, no Prettier config. |
 | TS config | `strict: false`, `noImplicitAny: false`, `strictNullChecks: false`, `noUnusedLocals: false`, `noUnusedParameters: false`. |
@@ -64,6 +64,8 @@ Phase 0 ships as **Phase 0a** then **Phase 0b**, each running the master-spec §
 
 **Tier 1 — feature-area summary table.** One row per current top-level grouping under `src/`. Columns: area name, file count, total LOC, monster-file count (>1,500 LOC), dead-export candidate count (from `knip`), dead-file candidate count (from `knip`), Lovable-artifact flag (Y/N), notes column. Source: `knip` only — see §2.2 for rationale. Areas: `pages/`, `components/customers/`, `components/layout/`, `components/market-research/`, `components/mission-control/`, `components/settings/`, `components/signals/`, `components/strategist/`, `components/common/`, `components/ui/`, `components/` (loose), `contexts/`, `hooks/`, `lib/`, `services/`, `styles/`, `utils/`, root files (`App.tsx`, `main.tsx`, `App.css`, `index.css`, `vite-env.d.ts`).
 
+**Loose `components/` files.** Any `.tsx` file sitting directly under `src/components/` (not in a named subfolder) is, by definition, organizationally unattributed. Tier-2 annex rows for those files get a notes-column flag: "loose under components/ — relocate in Phase 1 or with the owning feature's extraction phase." Today this includes `MiniLineChart.tsx`, `MiniPieChart.tsx`, `PWAInstallPrompt.tsx`, `ProtectedRoute.tsx`.
+
 **Tier 2 — per-file annex.** One row per `.ts`/`.tsx` file under `src/`. Columns: relative path, LOC, static inbound-ref count (rg) (count of static `import … from "<path>"` references matched via ripgrep — a **lower bound**, see note below), dead-export flag (Y/N from `knip`), dead-file flag (Y/N from `knip` when zero static refs and knip confirms no dynamic-import or entry-point use), Lovable-artifact flag, notes column for free-text observations (e.g., "duplicate of `LeadStream` in market-research/", "commented-out block ~150 LOC", "Safe* wrapper, only `SafeMarketIntelligenceTab` is imported").
 
 **Note on the static-ref column.** The ripgrep count misses dynamic `import()` calls, barrel re-exports, lazy route configs, and any string-interpolated paths. It's useful as a fast sort key (high-ref files are obviously load-bearing; zero-ref files are *candidates* for closer review), but it is **not** authoritative. The `knip` dead-file flag is the authoritative dead-file signal — knip resolves dynamic imports and route configs in ways ripgrep can't.
@@ -99,13 +101,13 @@ Run `npm run build`. Per-chunk uncompressed sizes come from the `dist/` filesyst
   "total_size_bytes": 1234567,
   "total_size_gzip_bytes": 234567,
   "chunks": [
-    { "file": "assets/index-abcd1234.js", "size_bytes": …, "gzip_bytes": … },
-    …
+    { "file": "assets/index-abcd1234.js", "size_bytes": 250000, "gzip_bytes": 75000 },
+    { "file": "assets/vendor-9876ef.js", "size_bytes": 180000, "gzip_bytes": 60000 }
   ]
 }
 ```
 
-Top-10 chunks by uncompressed size are explicitly enumerated; the long tail is collapsed to a `"others": [...]` array. Phase 2c reads this file when setting bundle-budget thresholds.
+The `chunks` array contains **every** built chunk under `dist/`, sorted by `size_bytes` descending. No top-10/others split — Phase 2c computes its own ordering and slicing when setting bundle-budget thresholds.
 
 ### 2.4 NFR baselines
 
@@ -118,6 +120,8 @@ Top-10 chunks by uncompressed size are explicitly enumerated; the long tail is c
 - Before each `playwright test` run: snapshots and node_modules left intact; `npm run build` is *not* a prerequisite (the test config uses `npx vite --port 5173` as the webServer).
 
 **Expected runtime:** ~10–20 minutes on typical dev hardware (3× cold builds + 3× cold tsc + 3× dev-server starts + 3× Playwright runs, with `rm -rf dist node_modules/.vite` between builds). The script runs **locally**, not in CI.
+
+**Phase 0b extension.** Phase 0b extends the script with a `vitest run` measurement using the same 3-run median protocol. No cache clear is needed between Vitest runs — Vitest has no persistent build cache. The extended script writes the new `vitest_full_suite_seconds` field shown in §3.6.
 
 **Output:** `docs/audits/2026-05-26-frontend-nfr-baseline.json`:
 
@@ -157,7 +161,7 @@ expect: {
 
 Also add a 2-line comment block above the `expect` config documenting the re-baseline command (see §2.6).
 
-Run `npm run test:e2e`. Any snapshot that fails under the tighter ratio: re-baseline with `--update-snapshots` in the same commit. If more than 5 snapshots fail unexpectedly, investigate *before* re-baselining — the baselines may be hiding latent flakiness (log to TD-FE).
+Run `npm run test:e2e`. Any snapshot that fails under the tighter ratio: re-baseline with `--update-snapshots` in the same commit. If more than 25% of snapshots fail unexpectedly (currently >5 of 20), investigate *before* re-baselining — the baselines may be hiding latent flakiness (log to TD-FE).
 
 End state: all journeys + stubs pass under the new threshold; updated PNGs committed.
 
@@ -198,7 +202,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '<TBD by plan>'
+          node-version: '22'   # current LTS — plan author confirms by checking `node --version` on dev environment; bump to 20 if local uses 20.x
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
@@ -248,6 +252,8 @@ Discrete commit. Deletes `frontend/bun.lock` and `frontend/bun.lockb`. Commit me
 > The Brewra dev (`tech-brewra`) authored 3 commits on `frontend/package-lock.json` (Dec 2025 – Jan 2026) and 1 incidental commit each on `bun.lock` / `bun.lockb`. The recent `a444436 test(fe): add Playwright dev dependency` updated `package-lock.json` only — `bun.lock` has no `@playwright/test` entry. npm is the active workflow; the bun lockfiles are stale artifacts from a pre-fork PWA dual-tracking accident.
 
 ### 2.9 Phase 0a done-when
+
+(Items are a checklist, not an execution sequence — the plan specifies execution order. Note that the bun lockfile delete runs before knip per §2.2, even though it appears later here.)
 
 - Audit scorecard merged at `docs/audits/2026-05-26-frontend-baseline.md`.
 - Knip raw output merged.
@@ -449,7 +455,7 @@ Phase 0 is done when:
 | R0a-2 | Tightening visual threshold to `maxDiffPixelRatio: 0.01` breaks more snapshots than expected. | Re-baseline as part of the same commit. If >5 snapshots fail unexpectedly, investigate before re-baselining — the existing baselines may hide latent flakiness; log findings to TD-FE. |
 | R0a-3 | Playwright in CI is flaky on Linux runners against locally-baselined PNGs. | Use `mcr.microsoft.com/playwright:v1.59.1-jammy` Docker image so Chromium binaries match exactly. Cache `~/.cache/ms-playwright` by Playwright version. The existing local snapshots are already `*-chromium-linux-linux.png` so the convention is consistent. |
 | R0a-4 | `scripts/measure-baselines.sh` numbers vary 2–3× run-to-run on shared hardware. | 0a measures on a local dev machine, recorded as such in the JSON (`captured_on: "local-dev-machine"`, with structured hardware metadata). Phase 2c re-measures on CI hardware and sets budget values with headroom. 0a numbers are anchor sanity checks, not gates. |
-| R0a-5 | Playwright Docker image version (`mcr.microsoft.com/playwright:v1.59.1-jammy`) and `package.json`'s `@playwright/test` version can desynchronize. A caret-range bump in `package.json` would silently change the Chromium binary version in CI from the one used to generate local snapshots. | 0a pins `@playwright/test` to exact `1.59.1` (no caret) in `package.json`. Any version bump is then a deliberate, reviewable change touching both `package.json` and `ci.yml` together. Dependabot/Renovate (if introduced later) must be configured to update both in the same PR. |
+| R0a-5 | Playwright Docker image version (`mcr.microsoft.com/playwright:v1.59.1-jammy`) and `package.json`'s `@playwright/test` version can desynchronize. A caret-range bump in `package.json` would silently change the Chromium binary version in CI from the one used to generate local snapshots. | 0a pins `@playwright/test` to exact `1.59.1` (no caret) in `package.json`. Any version bump is then a deliberate, reviewable change touching both `package.json` and `ci.yml` together. If Dependabot or Renovate is ever introduced, it must be configured to update both in the same PR. |
 | R0-2 | The local-only re-baseline workflow (§2.6) becomes friction once the team grows or visual changes become frequent. | Reintroduce a PR-label-driven automation in Phase 2c (when CI gates land more broadly). The decision is reversible at any later phase; 0a's choice is to skip the ceremony until usage justifies it (CLAUDE.md "Business State"). |
 | R0b-1 | MSW handler shapes drift from the real backend over time. | Handlers mirror the Playwright fixtures' shapes verbatim. Playwright fixtures are the source of truth — they were originally validated against the real backend. If MSW and Playwright disagree, Playwright wins. |
 | R0b-2 | Characterization tests for `rateLimitManager` are flaky due to timing. | Use `vi.useFakeTimers()` exclusively. No `setTimeout`-based real-time waits. The 4 req/min value is a frozen interface; the test is deterministic against fake timers. |
