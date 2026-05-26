@@ -12,6 +12,7 @@ at collection time regardless of which subdirectory the test lives in.
 """
 import os
 import sys
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -28,6 +29,23 @@ os.environ.setdefault("PINECONE_API_KEY", "test-pinecone-key")
 os.environ.setdefault("AWS_ACCESS_KEY", "test-aws-key")
 os.environ.setdefault("AWS_SECRET_KEY", "test-aws-secret")
 os.environ.setdefault("BREWRA_SKIP_DB_INIT", "1")
+
+
+# ---------------------------------------------------------------------------
+# Re-init the production prompt registry between unit tests. test_prompts_loader.py
+# runs init_registry(root=tmp_path) and doesn't restore — without this fixture,
+# unit tests that follow it (e.g., test_signals.py call sites that hit
+# prompts.render) render against the wrong registry. Silent replacement is the
+# v1 contract per spec §3.3 "Double-call behavior".
+# ---------------------------------------------------------------------------
+_PROMPTS_ROOT = Path(_BACKEND_DIR) / "prompts"
+
+
+@pytest.fixture(autouse=True)
+def _reinit_production_prompt_registry():
+    from app.core.prompts import init_registry
+    init_registry(root=_PROMPTS_ROOT)
+    yield
 
 
 @pytest.fixture

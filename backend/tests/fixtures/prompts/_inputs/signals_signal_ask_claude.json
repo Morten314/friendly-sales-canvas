@@ -1,0 +1,6 @@
+{
+  "context": "COMPANY PROFILE:\n{\"industry\": \"SaaS\"}\n\nCUSTOMER PROFILE (ICPs):\n{\"icps\": []}",
+  "history_text": "\n\nCONVERSATION HISTORY:\n\nTurn 1:\nUser: Hello\nAssistant: Hi there\n",
+  "web_search_results": "Result 1: Sample tavily payload\nResult 2: Another result",
+  "question": "What's the latest market signal for fintech in DACH?"
+}

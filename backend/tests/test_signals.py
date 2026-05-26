@@ -264,6 +264,8 @@ def test_post_signal_ask_returns_answer(client, mock_neo4j, mock_llm_chain):
     assert "answer" in body
     assert body["answer"] == "This is the AI answer."
     chain_mock.invoke.assert_called_once()
+    # Post-Task-9: response carries prompt_meta from the migrated registry-driven prompt.
+    assert body["prompt_meta"]["name"] == "signals_signal_ask_groq"
 
 
 # ---------------------------------------------------------------------------

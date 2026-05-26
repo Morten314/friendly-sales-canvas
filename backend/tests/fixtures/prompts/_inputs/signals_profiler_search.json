@@ -1,0 +1,9 @@
+{
+  "context_json": "{\"company_profile\": {\"industry\": \"SaaS\", \"region\": \"DACH\"}, \"icp_data\": {\"segment\": \"Mid-market\"}}",
+  "leads": [{"id": "L-1", "company_name": "TestCo"}],
+  "leads_count": 1,
+  "leads_json": "[{\"id\": \"L-1\", \"company_name\": \"TestCo\"}]",
+  "signal_label": "ICP signal",
+  "existing_headlines": ["ICP headline A", "ICP headline B"],
+  "headlines_list": "- ICP headline A\n- ICP headline B"
+}

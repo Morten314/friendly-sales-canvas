@@ -14,6 +14,7 @@ from typing import Any, Dict, Optional
 
 import requests
 
+from app.core import prompts
 from app.core.config import claude_sonnet_model, tavily_api_key
 from app.core.exceptions import ServiceError
 from app.core.logging import logger
@@ -28,10 +29,6 @@ from app.services._claude_budget import (
 )
 from app.services._neo4j_helpers import fetch_company_profile
 from app.services.signals import persistence
-from app.services.signals.prompts import (
-    _SIGNAL_ASK_CLAUDE_PROMPT_TEMPLATE,
-    _SIGNAL_ASK_PROMPT_TEMPLATE,
-)
 
 
 async def signal_ask(driver, mongo, agent_chain, request: SignalAskRequest) -> dict:
@@ -80,17 +77,19 @@ async def signal_ask(driver, mongo, agent_chain, request: SignalAskRequest) -> d
 
         context = "\n\n".join(context_parts)
 
-        # Build prompt
-        prompt = _SIGNAL_ASK_PROMPT_TEMPLATE.format(
+        # Render the prompt via the registry
+        rendered = prompts.render(
+            "signals_signal_ask_groq",
             context=context,
             history_text=history_text,
             question=request.question,
         )
+        prompt_meta = prompts.prompt_meta_from(rendered)
 
         # Use agent_chain to answer with WebSearch
         raw_response = await asyncio.to_thread(
             agent_chain.invoke,
-            {'input': prompt}
+            {'input': rendered.body}
         )
 
         answer = raw_response.get("output", "")
@@ -100,7 +99,8 @@ async def signal_ask(driver, mongo, agent_chain, request: SignalAskRequest) -> d
             "answer": answer,
             "org_id": request.org_id,
             "user_id": request.user_id,
-            "question": request.question
+            "question": request.question,
+            "prompt_meta": prompt_meta,
         }
 
     except Exception as e:
@@ -169,12 +169,15 @@ async def signal_ask_claude(driver, mongo, request: SignalAskRequest) -> dict:
         except Exception as e:
             logger.warning(f"WebSearch failed in signal_ask_claude: {e}")
 
-        prompt = _SIGNAL_ASK_CLAUDE_PROMPT_TEMPLATE.format(
+        rendered = prompts.render(
+            "signals_signal_ask_claude",
             context=context,
             history_text=history_text,
             web_search_results=web_search_results,
             question=request.question,
         )
+        prompt_meta = prompts.prompt_meta_from(rendered)
+        prompt = rendered.body
 
         input_tokens_estimate = _estimate_token_count(prompt)
         reservation = _reserve_claude_signal_budget(
@@ -239,6 +242,7 @@ async def signal_ask_claude(driver, mongo, request: SignalAskRequest) -> dict:
             "question": request.question,
             "provider": "anthropic",
             "model": claude_sonnet_model,
+            "prompt_meta": prompt_meta,
             "usage": {
                 "estimated_input_tokens": input_tokens_estimate,
                 "estimated_output_tokens": output_tokens_estimate,

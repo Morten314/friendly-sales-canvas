@@ -67,6 +67,20 @@ for _mod in _HEAVY_MODULES:
 # ---------------------------------------------------------------------------
 from app.main import app as _app  # noqa: F401, E402
 
+# ---------------------------------------------------------------------------
+# Initialize the prompt registry at conftest load. Production wires this in
+# `app.main.lifespan`, but lifespan only runs in async contexts; sync unit
+# tests that call `prompts.render()` directly would otherwise hit
+# `RuntimeError("init_registry not called")`. Idempotent (silent replacement
+# is the v1 contract per spec §3.3) — test_prompts_loader.py / test_prompts_golden.py
+# may re-init against their own roots.
+# ---------------------------------------------------------------------------
+from pathlib import Path  # noqa: E402
+
+from app.core.prompts import init_registry as _init_prompt_registry  # noqa: E402
+
+_init_prompt_registry(root=Path(_BACKEND_DIR) / "prompts")
+
 
 def _install_override(app, provider, mock):
     """Install an override and return a cleanup callable. Routes read clients

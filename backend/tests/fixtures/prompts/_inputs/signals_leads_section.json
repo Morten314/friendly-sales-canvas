@@ -1,0 +1,5 @@
+{
+  "signal_label": "signal",
+  "leads_count": 2,
+  "leads_json": "[{\"id\": \"L-1\"}, {\"id\": \"L-2\"}]"
+}

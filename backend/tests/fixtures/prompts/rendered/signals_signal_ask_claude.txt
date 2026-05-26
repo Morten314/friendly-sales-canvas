@@ -1,0 +1,31 @@
+You are an intelligent assistant helping answer questions about market signals, company strategy, and customer insights.
+
+COMPANY PROFILE:
+{"industry": "SaaS"}
+
+CUSTOMER PROFILE (ICPs):
+{"icps": []}
+
+
+CONVERSATION HISTORY:
+
+Turn 1:
+User: Hello
+Assistant: Hi there
+
+
+WEB SEARCH RESULTS:
+Result 1: Sample tavily payload
+Result 2: Another result
+
+CURRENT QUESTION:
+What's the latest market signal for fintech in DACH?
+
+INSTRUCTIONS:
+1. Use the provided web search results as the freshest external context.
+2. Consider the company profile and customer profile (ICPs) when providing context-specific answers.
+3. Reference the conversation history to maintain context and continuity.
+4. Provide a comprehensive, well-structured answer that directly addresses the question.
+5. If the question relates to market signals, trends, or industry insights, prioritize recent data (2026-2027).
+6. Cite sources if they appear in web search results.
+7. Be specific and actionable in your response.

@@ -1,0 +1,133 @@
+Task: Research and identify a high-quality, actionable market signal for a sales scout agent. This signal should help the sales team understand market opportunities, competitor movements, or industry trends that could impact their sales strategy.
+
+STEP 1 - COMPANY PROFILE DATA:
+Review the complete company profile data below. Extract all relevant information about the company's industry, target markets, regions, company size, strategic goals, and any other relevant attributes.
+
+Company Profile Data:
+{"industry": "SaaS", "region": "DACH"}
+
+STEP 1.2 - LEADS DATA (CRITICAL - Use this to prioritize signal relevance):
+Your organization has 1 active leads in your pipeline. Below is the complete lead data with all available fields. You MUST analyze this data and use it when generating signals.
+
+Complete Leads Data (showing up to 50 most recent leads):
+[{"id": "L-1", "company_name": "TestCo"}]
+
+CRITICAL INSTRUCTIONS:
+- Analyze ALL fields in the leads data above - do not assume any specific field names
+- Extract any company names, industries, regions, technologies, or other relevant information from whatever fields exist
+- Prioritize signals that relate to companies, industries, regions, or any other attributes found in your leads pipeline
+- If a signal mentions a company or organization, check if it matches any entity in your leads data
+- Focus on signals that would be relevant to your actual sales pipeline based on the lead data structure
+- Use the lead data to understand your target market, customer segments, and sales priorities
+- This will make the signals more actionable for your sales team
+
+STEP 1.5 - EXISTING SIGNALS (CRITICAL - AVOID DUPLICATES):
+You MUST avoid generating signals similar to these existing signal headlines. Review them carefully and ensure your new signal is completely different and unique:
+
+Existing Signal Headlines:
+- headline A
+- headline B
+
+IMPORTANT: Your new signal headline must be about a DIFFERENT news story, market development, or industry trend. Do NOT generate a signal about the same event, company news, or market development as any of the above headlines, even if worded differently. Search for NEW and UNIQUE signals that haven't been covered yet.
+
+STEP 2 - RESEARCH REQUIREMENTS (CRITICAL):
+You MUST use the WebSearch tool to find a REAL, RECENT, and ACTIONABLE market signal. Based on the company profile above, perform comprehensive research to identify:
+
+1. Market Opportunity Signals:
+   - Search for recent market growth, trends, or opportunities in the company's industry
+   - Find market size changes, adoption rates, or emerging segments
+   - Example searches: "[industry] market trends [regions] 2026"
+   - Example searches: "[industry] growth opportunities 2026"
+
+2. Competitor Activity Signals:
+   - Search for competitor funding rounds, product launches, or strategic moves
+   - Find market share changes or competitive landscape shifts
+   - Example searches: "[industry] competitor funding 2026"
+   - Example searches: "[industry] competitor product launch 2026"
+
+3. Industry Trend Signals:
+   - Search for technology adoption, regulatory changes, or industry shifts
+   - Find emerging trends that could impact sales strategy
+   - Example searches: "[industry] technology adoption 2026"
+   - Example searches: "[industry] regulatory changes 2026"
+
+4. Market Dynamics Signals:
+   - Search for buying behavior changes, market disruptions, or new opportunities
+   - Find signals that indicate market readiness or buying intent
+   - Example searches: "[industry] buying trends [regions] 2026"
+   - Example searches: "[industry] market disruption 2026"
+
+IMPORTANT RESEARCH GUIDELINES:
+- Perform at least 5-7 WebSearch queries to find the BEST signal
+- Focus on RECENT signals from 2026 and recent past (within last 1-3 months when possible)
+- CURRENT YEAR IS 2026 - Do NOT use future dates like 2027 in signals. Use actual current dates from 2026 or recent past dates.
+- The signal must be REAL and ACTIONABLE - not generic
+- Extract industry and target markets from the company profile
+- Cross-reference multiple sources to verify signal accuracy
+- Find 1-2 different source URLs for the signal (preferably from different publications/sources)
+- Prioritize signals that are relevant to the company's specific industry and target markets
+- Generate 3 thoughtful NBA questions that help users dive deeper into the signal's implications
+
+STEP 3 - OUTPUT FORMAT:
+Return your findings in the following exact JSON format (use exact keys as shown):
+
+{
+  "headline": "[Compelling, specific headline about the signal - must be real and recent]",
+  "snippet": "[Brief 1-2 sentence summary of the signal]",
+  "description": "[One full paragraph (4-6 sentences) providing detailed context about the signal. Explain what the signal means, why it matters for the company's sales strategy, what opportunities or challenges it presents, and how the sales team should respond. Make it descriptive and actionable.]",
+  "sourceUrl": "[Real source URL where this signal was found]",
+  "sourceLabel": "[Source type: Industry report, News article, Research report, Funding news, etc.]",
+  "source": [
+    {
+      "citation": "[Publication name - Article title - Date if available, e.g., 'TechCrunch - AI Market Growth Report - January 15, 2026']. Use actual dates from 2026 or recent past, NOT future dates.",
+      "url": "[First source URL where this signal was found]"
+    },
+    {
+      "citation": "[Publication name - Article title - Date if available, e.g., 'Industry Research Report - Market Trends Analysis - January 2026']",
+      "url": "[Second source URL (if available from different source)]"
+    }
+  ],
+  "nextBestMoves": [
+    "[Actionable question/suggestion #1 related to the signal]",
+    "[Actionable question/suggestion #2 related to the signal]"
+  ],
+  "NBAs": [
+    {
+      "nba": "[First suggested question the user should ask based on this signal]",
+      "prompt": "[Detailed prompt that includes the signal context, company profile information, and specific question to ask an LLM for a comprehensive answer. The prompt should be self-contained and provide all necessary context for the LLM to answer the question in detail.]"
+    },
+    {
+      "nba": "[Second suggested question the user should ask based on this signal]",
+      "prompt": "[Detailed prompt that includes the signal context, company profile information, and specific question to ask an LLM for a comprehensive answer. The prompt should be self-contained and provide all necessary context for the LLM to answer the question in detail.]"
+    },
+    {
+      "nba": "[Third suggested question the user should ask based on this signal]",
+      "prompt": "[Detailed prompt that includes the signal context, company profile information, and specific question to ask an LLM for a comprehensive answer. The prompt should be self-contained and provide all necessary context for the LLM to answer the question in detail.]"
+    }
+  ],
+  "contextualSuggestions": [
+    {"icon": "[icon name]", "text": "[Suggestion text related to signal]"},
+    {"icon": "[icon name]", "text": "[Suggestion text related to signal]"}
+  ]
+}
+
+⚠️ OUTPUT NOTES:
+- headline must be REAL and SPECIFIC - include actual numbers, dates, or company names when available
+- snippet should be concise (1-2 sentences)
+- description must be ONE FULL PARAGRAPH (4-6 sentences) with detailed context
+- sourceUrl must be a REAL, accessible URL
+- sourceLabel should accurately describe the source type
+- source must be an array with 1-2 objects, each containing "citation" and "url" fields
+- citation should include publication name, article title, and date if available (e.g., "TechCrunch - AI Market Growth Report - January 15, 2026")
+- IMPORTANT: Use actual dates from 2026 or recent past. Do NOT use future dates like 2027. Current year is 2026.
+- url must be a REAL, accessible URL
+- If only one source found, include one object in the array; if two sources found, include both
+- nextBestMoves should be actionable questions related to the specific signal
+- NBAs must contain exactly 3 suggested questions with detailed prompts for LLM queries
+- Each NBA prompt should include: signal headline, signal description, company profile context, and the specific question to answer
+- contextualSuggestions should be relevant to the signal content
+- Return ONLY valid JSON, nothing else
+
+When you have reached the final answer, respond only with:
+Final Answer: <your JSON answer here>
+Do not include any additional reasoning, thoughts, or steps after that.

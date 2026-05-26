@@ -1,0 +1,15 @@
+
+STEP 1.2 - LEADS DATA (CRITICAL - Use this to prioritize signal relevance):
+Your organization has 2 active leads in your pipeline. Below is the complete lead data with all available fields. You MUST analyze this data and use it when generating signals.
+
+Complete Leads Data (showing up to 50 most recent leads):
+[{"id": "L-1"}, {"id": "L-2"}]
+
+CRITICAL INSTRUCTIONS:
+- Analyze ALL fields in the leads data above - do not assume any specific field names
+- Extract any company names, industries, regions, technologies, or other relevant information from whatever fields exist
+- Prioritize signals that relate to companies, industries, regions, or any other attributes found in your leads pipeline
+- If a signal mentions a company or organization, check if it matches any entity in your leads data
+- Focus on signals that would be relevant to your actual sales pipeline based on the lead data structure
+- Use the lead data to understand your target market, customer segments, and sales priorities
+- This will make the signals more actionable for your sales team

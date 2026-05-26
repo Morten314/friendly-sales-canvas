@@ -52,6 +52,10 @@ def test_search_signals_scout_groq_uses_captured(mocker):
 
     assert result is not None
     chain_mock.invoke.assert_called_once()
+    # Post-Task-9: search_signals attaches prompt_meta to the result for the
+    # caller to persist into Mongo. Assert the migrated prompt drives the call.
+    assert result["prompt_meta"]["name"] == "signals_scout_search"
+    assert result["prompt_meta"]["version"] == "1.0.0"
 
 
 def test_search_signals_profiler_claude_uses_captured(mocker):
@@ -73,6 +77,9 @@ def test_search_signals_profiler_claude_uses_captured(mocker):
     result = search_signals(MagicMock(), pre_data, persona="profiler", llm_backend="claude")
 
     assert result is not None
+    # Post-Task-9: profiler persona uses signals_profiler_search; same prompt_meta contract.
+    assert result["prompt_meta"]["name"] == "signals_profiler_search"
+    assert result["prompt_meta"]["version"] == "1.0.0"
 
 
 # ---------------------------------------------------------------------------
@@ -268,6 +275,9 @@ def test_signal_ask_groq_uses_captured(mocker, mock_session, mock_mongo_client):
 
     assert result is not None
     assert "answer" in result
+    # Post-Task-9: signal_ask threads prompt_meta into the response.
+    assert result["prompt_meta"]["name"] == "signals_signal_ask_groq"
+    assert result["prompt_meta"]["model"] == "llama-3.3-70b-versatile"
 
 
 def test_signal_ask_claude_raises_service_error_when_api_key_missing(
@@ -360,3 +370,7 @@ def test_signal_ask_claude_happy_path_uses_captured(
 
     assert result is not None
     assert result.get("status") == "success"
+    # Post-Task-9: signal_ask_claude also threads prompt_meta; model field is
+    # observability-only ("claude-sonnet") since custom dispatch doesn't use the factory.
+    assert result["prompt_meta"]["name"] == "signals_signal_ask_claude"
+    assert result["prompt_meta"]["model"] == "claude-sonnet"

@@ -74,3 +74,4 @@ class SignalAskResponse(BaseModel):
     org_id: str
     user_id: str
     question: str
+    prompt_meta: Optional[Dict[str, Any]] = None

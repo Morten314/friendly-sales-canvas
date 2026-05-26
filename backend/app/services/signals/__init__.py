@@ -12,11 +12,11 @@ Submodules:
     helpers — _get_latest_signal_for_user_agent, _get_existing_headlines,
     _get_user_icp_config, _save_signal_and_track_headline,
     _get_signal_ask_customer_profile
-  - prompts.py: _SCOUT_PROMPT_TEMPLATE, _PROFILER_PROMPT_TEMPLATE,
-    _LEADS_SECTION_TEMPLATE (+ fallback), _EXISTING_HEADLINES_SECTION_TEMPLATE,
-    _SIGNAL_ASK_PROMPT_TEMPLATE (+ Claude variant)
   - llm.py: _signals_agent_output (thin adapter over
     _llm_helpers._research_agent_output)
+
+  Prompts moved to backend/prompts/signals/*.md.j2 in plan-13 Task 9 —
+  rendered via app.core.prompts.render(name, **inputs).
   - parsing.py: _parse_search_signals_response, _normalize_search_signals_result,
     _validate_url
 

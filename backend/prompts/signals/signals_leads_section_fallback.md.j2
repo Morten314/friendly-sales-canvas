@@ -1,0 +1,13 @@
+---
+name: signals_leads_section_fallback
+version: 1.0.0
+description: Fallback leads-section used when no detailed lead data is available
+model: Qwen/Qwen3-235B-A22B-Instruct-2507-tput
+response_format: text
+inputs:
+  - signal_label
+  - leads_count
+---
+
+STEP 1.2 - LEADS DATA:
+Your organization has {{ leads_count }} active leads in your pipeline. Use this information to prioritize {{ signal_label }}s relevant to your actual sales pipeline.

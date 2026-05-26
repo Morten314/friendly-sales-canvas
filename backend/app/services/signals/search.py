@@ -3,9 +3,9 @@
 Houses search_signals (persona-shared core) and run_signals_research
 (async wrapper around search_signals for the research pipeline).
 
-Submodule dependencies (intra-signals): .llm, .parsing, .persistence, .prompts.
+Submodule dependencies (intra-signals): .llm, .parsing, .persistence.
 Cross-package: app.services._retrieval (_fetch_pinecone_supporting_context,
-_build_signal_context_queries).
+_build_signal_context_queries), app.core.prompts (render + prompt_meta_from).
 """
 import asyncio
 import json
@@ -13,6 +13,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Literal, Optional
 
+from app.core import prompts
 from app.core.exceptions import UnsupportedComponentError
 from app.core.logging import logger
 from app.models.market_research import MarketRequest
@@ -26,13 +27,6 @@ from app.services.signals.llm import _signals_agent_output
 from app.services.signals.parsing import (
     _parse_search_signals_response,
     _normalize_search_signals_result,
-)
-from app.services.signals.prompts import (
-    _SCOUT_PROMPT_TEMPLATE,
-    _PROFILER_PROMPT_TEMPLATE,
-    _LEADS_SECTION_TEMPLATE,
-    _LEADS_SECTION_FALLBACK_TEMPLATE,
-    _EXISTING_HEADLINES_SECTION_TEMPLATE,
 )
 
 
@@ -52,8 +46,12 @@ def search_signals(
     Persona switches:
       - data extraction strategy (scout: flat dict; profiler: nested company_profile/icp_data)
       - leads text label (scout: "signal"; profiler: "ICP signal")
-      - prompt template (_SCOUT_PROMPT_TEMPLATE vs _PROFILER_PROMPT_TEMPLATE)
+      - prompt name (signals_scout_search vs signals_profiler_search)
       - result "agent" field
+
+    Returns a dict with the parsed signal payload plus a ``prompt_meta`` key
+    (shape: ``app.core.prompts.prompt_meta_from``) that the caller persists
+    into Mongo for observability.
     """
     if persona not in ("scout", "profiler"):
         raise ValueError(f"unknown persona: {persona!r}")
@@ -111,53 +109,45 @@ def search_signals(
         context_json = json.dumps({"company_profile": company_profile, "icp_data": icp_data}, indent=2)
 
     # ------------------------------------------------------------------
-    # 2. Format leads text (label differs by persona)
+    # 2. Prepare leads + existing-headlines inputs (label differs by persona).
+    #    The Jinja2 template's {% if leads %} / {% if existing_headlines %}
+    #    blocks decide whether to inline the sub-templates.
     # ------------------------------------------------------------------
     signal_label = "ICP signal" if persona == "profiler" else "signal"
-    leads_text = ""
-    if leads_data:
-        logger.debug(f"[DEBUG {persona.capitalize()}] Processing {len(leads_data)} leads for signal generation")
-        try:
-            leads_json = json.dumps(leads_data[:50], indent=2, default=str)
-            leads_text = _LEADS_SECTION_TEMPLATE.format(
-                signal_label=signal_label,
-                leads_count=len(leads_data),
-                leads_json=leads_json,
-            )
-        except Exception as e:
-            logger.error(f"[ERROR] Failed to format leads data: {e}")
-            leads_text = _LEADS_SECTION_FALLBACK_TEMPLATE.format(
-                signal_label=signal_label,
-                leads_count=len(leads_data),
-            )
+    leads_count = len(leads_data) if leads_data else 0
+    try:
+        leads_json_str = json.dumps(leads_data[:50], indent=2, default=str) if leads_data else ""
+    except Exception as e:
+        logger.error(f"[ERROR] Failed to serialize leads data: {e}")
+        leads_json_str = ""
+
+    headlines_list_str = "\n".join([f"- {h}" for h in existing_headlines[:30]]) if existing_headlines else ""
 
     # ------------------------------------------------------------------
-    # 3. Format existing headlines text (identical across personas)
+    # 3. Render the prompt + capture prompt_meta
     # ------------------------------------------------------------------
-    existing_headlines_text = ""
-    if existing_headlines:
-        headlines_list = "\n".join([f"- {h}" for h in existing_headlines[:30]])
-        existing_headlines_text = _EXISTING_HEADLINES_SECTION_TEMPLATE.format(
-            headlines_list=headlines_list,
-        )
-
-    # ------------------------------------------------------------------
-    # 4. Build and run the prompt
-    # ------------------------------------------------------------------
-    prompt_template = _SCOUT_PROMPT_TEMPLATE if persona == "scout" else _PROFILER_PROMPT_TEMPLATE
-    prompt = prompt_template.format(
+    prompt_name = "signals_scout_search" if persona == "scout" else "signals_profiler_search"
+    rendered = prompts.render(
+        prompt_name,
         context_json=context_json,
-        leads_section=leads_text,
-        existing_headlines_section=existing_headlines_text,
+        leads=leads_data,
+        leads_count=leads_count,
+        leads_json=leads_json_str,
+        signal_label=signal_label,
+        existing_headlines=existing_headlines,
+        headlines_list=headlines_list_str,
     )
+    prompt_meta = prompts.prompt_meta_from(rendered)
 
-    response, tavily_urls = _signals_agent_output(agent_chain, prompt, context_json, llm_backend)
+    response, tavily_urls = _signals_agent_output(agent_chain, rendered.body, context_json, llm_backend)
 
     # ------------------------------------------------------------------
-    # 5. Parse response + validate URLs + assemble result
+    # 4. Parse response + validate URLs + assemble result
     # ------------------------------------------------------------------
     parsed_json = _parse_search_signals_response(response)
-    return _normalize_search_signals_result(parsed_json, tavily_urls, persona)
+    result = _normalize_search_signals_result(parsed_json, tavily_urls, persona)
+    result["prompt_meta"] = prompt_meta
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -270,7 +260,9 @@ async def run_signals_research(driver, mongo, pc, agent_chain, request: MarketRe
     # Generate unique ID for signal
     signal_id = str(uuid.uuid4())
 
-    # Add metadata - filter by user_id only
+    # Add metadata - filter by user_id only. prompt_meta is already on
+    # signals_result (set by search_signals); keep it there so the Mongo
+    # write carries it.
     signals_result.update({
         "id": signal_id,
         "signal_id": signal_id,  # Ensure signal_id is also present

@@ -1,0 +1,17 @@
+---
+name: signals_existing_headlines_section
+version: 1.0.0
+description: Anti-duplicate-signal directive embedded in scout/profiler search prompts
+model: Qwen/Qwen3-235B-A22B-Instruct-2507-tput
+response_format: text
+inputs:
+  - headlines_list
+---
+
+STEP 1.5 - EXISTING SIGNALS (CRITICAL - AVOID DUPLICATES):
+You MUST avoid generating signals similar to these existing signal headlines. Review them carefully and ensure your new signal is completely different and unique:
+
+Existing Signal Headlines:
+{{ headlines_list }}
+
+IMPORTANT: Your new signal headline must be about a DIFFERENT news story, market development, or industry trend. Do NOT generate a signal about the same event, company news, or market development as any of the above headlines, even if worded differently. Search for NEW and UNIQUE signals that haven't been covered yet.

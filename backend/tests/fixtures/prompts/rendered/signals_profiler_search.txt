@@ -1,0 +1,140 @@
+Task: Research and identify a high-quality, actionable ICP/customer signal for a profiler agent. This signal should help the sales team understand customer buying behavior, ICP trends, or customer acquisition opportunities.
+
+STEP 1 - COMPANY PROFILE AND ICP DATA:
+Review the complete company profile and ICP data below. Extract all relevant information about the company's industry, target markets, regions, ICP segments, company sizes, buyer personas, and any other relevant attributes.
+
+Company Profile and ICP Data:
+{"company_profile": {"industry": "SaaS", "region": "DACH"}, "icp_data": {"segment": "Mid-market"}}
+
+STEP 1.2 - LEADS DATA (CRITICAL - Use this to prioritize ICP signal relevance):
+Your organization has 1 active leads in your pipeline. Below is the complete lead data with all available fields. You MUST analyze this data and use it when generating ICP signals.
+
+Complete Leads Data (showing up to 50 most recent leads):
+[{"id": "L-1", "company_name": "TestCo"}]
+
+CRITICAL INSTRUCTIONS:
+- Analyze ALL fields in the leads data above - do not assume any specific field names
+- Extract any company names, industries, regions, technologies, or other relevant information from whatever fields exist
+- Prioritize ICP signals that relate to companies, industries, regions, or any other attributes found in your leads pipeline
+- If a ICP signal mentions a company or organization, check if it matches any entity in your leads data
+- Focus on ICP signals that would be relevant to your actual sales pipeline based on the lead data structure
+- Use the lead data to understand your target market, customer segments, and sales priorities
+- This will make the ICP signals more actionable for your sales team
+
+STEP 1.5 - EXISTING SIGNALS (CRITICAL - AVOID DUPLICATES):
+You MUST avoid generating signals similar to these existing signal headlines. Review them carefully and ensure your new signal is completely different and unique:
+
+Existing Signal Headlines:
+- ICP headline A
+- ICP headline B
+
+IMPORTANT: Your new signal headline must be about a DIFFERENT news story, market development, or industry trend. Do NOT generate a signal about the same event, company news, or market development as any of the above headlines, even if worded differently. Search for NEW and UNIQUE signals that haven't been covered yet.
+
+STEP 2 - RESEARCH REQUIREMENTS (CRITICAL):
+You MUST use the WebSearch tool to find a REAL, RECENT, and ACTIONABLE ICP/customer signal. Based on the company profile and ICP data above, perform comprehensive research to identify:
+
+1. ICP Buying Behavior Signals:
+   - Search for buying trends, purchase patterns, or buying signals in the company's ICP segments
+   - Find customer acquisition trends or buying committee changes
+   - Example searches: "[industry] [ICP segment] buying trends 2026"
+   - Example searches: "[industry] customer acquisition [ICP segment] 2026"
+
+2. Customer Spending Signals:
+   - Search for tech spending, budget allocation, or investment trends in target ICP segments
+   - Find customer spending patterns or budget increases
+   - Example searches: "[industry] tech spending [company size] 2026"
+   - Example searches: "[industry] budget allocation [ICP segment] 2026"
+
+3. ICP Market Dynamics Signals:
+   - Search for ICP segment growth, market expansion, or customer behavior changes
+   - Find signals about target customer needs or pain points
+   - Example searches: "[industry] [ICP segment] market trends 2026"
+   - Example searches: "[industry] customer needs [ICP segment] 2026"
+
+4. Customer Success Signals:
+   - Search for customer success metrics, retention trends, or customer satisfaction in ICP segments
+   - Find signals about customer lifecycle or engagement patterns
+   - Example searches: "[industry] customer success [ICP segment] 2026"
+   - Example searches: "[industry] customer retention [company size] 2026"
+
+5. Buyer Persona Signals:
+   - Search for decision maker trends, buying committee changes, or buyer behavior in target segments
+   - Find signals about how target customers make purchasing decisions
+   - Example searches: "[industry] buying committee [ICP segment] 2026"
+   - Example searches: "[industry] decision maker trends 2026"
+
+IMPORTANT RESEARCH GUIDELINES:
+- Perform at least 5-7 WebSearch queries to find the BEST signal
+- Focus on RECENT signals from 2026 and recent past (within last 1-3 months when possible)
+- CURRENT YEAR IS 2026 - Do NOT use future dates like 2027 in signals. Use actual current dates from 2026 or recent past dates.
+- The signal must be REAL and ACTIONABLE - not generic
+- Extract industry, ICP segments, and target markets from the provided data
+- Cross-reference multiple sources to verify signal accuracy
+- Find 1-2 different source URLs for the signal (preferably from different publications/sources)
+- Prioritize signals that are relevant to the company's specific ICP segments and target customers
+- If ICP data is available, use it to make the signal more specific and relevant
+- Generate 3 thoughtful NBA questions that help users dive deeper into the signal's implications for their ICP and sales strategy
+
+STEP 3 - OUTPUT FORMAT:
+Return your findings in the following exact JSON format (use exact keys as shown):
+
+{
+  "headline": "[Compelling, specific headline about the ICP/customer signal - must be real and recent]",
+  "snippet": "[Brief 1-2 sentence summary of the signal]",
+  "description": "[One full paragraph (4-6 sentences) providing detailed context about the signal. Explain what the signal means for the company's ICP and target customers, why it matters for customer acquisition and sales strategy, what opportunities or challenges it presents for reaching the target ICP, and how the sales/profiling team should respond. Make it descriptive and actionable.]",
+  "sourceUrl": "[Real source URL where this signal was found]",
+  "sourceLabel": "[Source type: Market research, Customer research, Sales report, ICP analysis, etc.]",
+  "source": [
+    {
+      "citation": "[Publication name - Article title - Date if available, e.g., 'Market Research Report - Customer Buying Trends - January 15, 2026']. Use actual dates from 2026 or recent past, NOT future dates.",
+      "url": "[First source URL where this signal was found]"
+    },
+    {
+      "citation": "[Publication name - Article title - Date if available, e.g., 'Sales Report - ICP Analysis - January 2026']",
+      "url": "[Second source URL (if available from different source)]"
+    }
+  ],
+  "nextBestMoves": [
+    "[Actionable question/suggestion #1 related to the ICP signal]",
+    "[Actionable question/suggestion #2 related to the ICP signal]"
+  ],
+  "NBAs": [
+    {
+      "nba": "[First suggested question the user should ask based on this ICP signal]",
+      "prompt": "[Detailed prompt that includes the signal context, company profile information, ICP data, and specific question to ask an LLM for a comprehensive answer. The prompt should be self-contained and provide all necessary context for the LLM to answer the question in detail.]"
+    },
+    {
+      "nba": "[Second suggested question the user should ask based on this ICP signal]",
+      "prompt": "[Detailed prompt that includes the signal context, company profile information, ICP data, and specific question to ask an LLM for a comprehensive answer. The prompt should be self-contained and provide all necessary context for the LLM to answer the question in detail.]"
+    },
+    {
+      "nba": "[Third suggested question the user should ask based on this ICP signal]",
+      "prompt": "[Detailed prompt that includes the signal context, company profile information, ICP data, and specific question to ask an LLM for a comprehensive answer. The prompt should be self-contained and provide all necessary context for the LLM to answer the question in detail.]"
+    }
+  ],
+  "contextualSuggestions": [
+    {"icon": "[icon name]", "text": "[Suggestion text related to ICP signal]"},
+    {"icon": "[icon name]", "text": "[Suggestion text related to ICP signal]"}
+  ]
+}
+
+⚠️ OUTPUT NOTES:
+- headline must be REAL and SPECIFIC - include actual numbers, dates, or ICP segment details when available
+- snippet should be concise (1-2 sentences)
+- description must be ONE FULL PARAGRAPH (4-6 sentences) with detailed context about ICP/customer implications
+- sourceUrl must be a REAL, accessible URL
+- sourceLabel should accurately describe the source type
+- source must be an array with 1-2 objects, each containing "citation" and "url" fields
+- citation should include publication name, article title, and date if available (e.g., "Market Research Report - Customer Buying Trends - January 15, 2026")
+- IMPORTANT: Use actual dates from 2026 or recent past. Do NOT use future dates like 2027. Current year is 2026.
+- url must be a REAL, accessible URL
+- If only one source found, include one object in the array; if two sources found, include both
+- nextBestMoves should be actionable questions related to the specific ICP signal
+- NBAs must contain exactly 3 suggested questions with detailed prompts for LLM queries
+- Each NBA prompt should include: signal headline, signal description, company profile context, ICP data, and the specific question to answer
+- contextualSuggestions should be relevant to the ICP signal content
+- Return ONLY valid JSON, nothing else
+
+When you have reached the final answer, respond only with:
+Final Answer: <your JSON answer here>
+Do not include any additional reasoning, thoughts, or steps after that.
