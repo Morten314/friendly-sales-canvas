@@ -36,12 +36,14 @@ This repo is in a temporary parallel-branch state during the fork transition. Af
 
 | Branch | Role | Policy |
 |---|---|---|
-| `master` | CTO's working branch. AI-native development happens here. | Write freely. Force-push allowed (solo). |
+| `master` | Stable trunk. Feature work merges in from short-lived branches. | No direct feature commits — branch off `master`, get review when warranted, merge back. Direct commits reserved for `sync.sh` merges and trivial doc/typo fixes. |
 | `develop` | Tracker mirror of PWA `master`'s `development/` folder + backend's `main`. | **Only `sync.sh`'s commits land here.** No hand-typed commits. |
 | `production` | Tracker mirror of PWA `master`'s `production/` folder + backend's `main`. | Same: only `sync.sh` writes. |
 | `pwa-master-history` | Read-only archive of PWA's `master` at fork moment (canvas-nested layout preserved). | Never write. |
 
-**Discipline rule:** only `master` gets your hand-typed commits. `sync.sh` updates `develop`/`production` automatically; manual commits there will conflict with the next sync.
+**Discipline rules:**
+- **Feature work happens on a branch off `master`** and merges back after review. Use judgment for when a change warrants review — plan execution, multi-commit refactors, and non-trivial logic generally do; trivial fixes don't. Direct commits to `master` are reserved for `sync.sh`/`git merge develop` and trivial doc/typo fixes. Branch naming is author's judgment; delete after merge.
+- `sync.sh` updates `develop`/`production` automatically; manual commits to tracker branches will conflict with the next sync.
 
 **Brewra-dev workflow during temp week:** the old repos (`/projects/Brewra/PWA-multi-tenancy/`, `/projects/Brewra/backend/`) remain the Brewra devs' workspaces and the deploy sources. They push to `PWA master` and `backend main` as usual. The CTO syncs into the monorepo via `sync.sh`.
 
@@ -55,7 +57,7 @@ git checkout master && git merge develop     # absorb FE updates into master (ma
 
 **Backend changes during temp week:**
 - Originating in old `backend` repo (Brewra dev pushes to `main`): `sync.sh` propagates to all three monorepo branches automatically.
-- Originating on monorepo's `master` (CTO writes): do NOT propagate to tracker branches. They ship via cutover. Per spec, this is intentional.
+- Originating on monorepo's `master` (CTO's branch work merged in): do NOT propagate to tracker branches. They ship via cutover. Per spec, this is intentional.
 
 **Recovery anchors:**
 - Tag `pre-monorepo-fork-2026-05-08` on PWA origin and backend origin (state at fork moment).
@@ -120,7 +122,7 @@ This repo is structured for AI-native development: cross-cutting tasks (changes 
 - **Spec-driven flow.**
   1. Idea → brainstorm → `/specs/YYYY-MM-DD-feature-X-design.md` (design intent)
   2. Spec → plan-write → `/plans/NN-feature-X.md` (execution intent, ordered steps)
-  3. Plan → commits referencing the plan in commit messages
+  3. Plan → commits on a feature branch → review → merge to `master`
 - **Spec and plan persist** — canonical record of *why* and *how*. Don't delete after execution; agents reference them.
 - **Sync workflow** (during temp week only): `bash scripts/sync.sh` pulls Brewra-dev changes from old repos. `git merge develop` on master absorbs FE updates. After cutover (Plan 05 + Plan 06), this section is removed.
 
@@ -135,7 +137,7 @@ This repo is structured for AI-native development: cross-cutting tasks (changes 
 - **Multiple admin tools live in the backend** (`backend/admin_panel.html`, `backend/registration_admin_panel.html`, `backend/cleanup_company_profile.py`). They are served by FastAPI but not part of the API surface.
 - **Frontend has unused/duplicate cruft**: `frontend/src/components/SafeChatWithScout copy.tsx`, `frontend/src/pages/MarketResearch_clean.tsx`, `_restore_test.txt`, ~150 lines of commented-out code in `frontend/src/components/ICPManager.tsx`. Three `Safe*` wrappers exist; only `SafeMarketIntelligenceTab` is imported in active paths.
 - **Frontend duplicates the Scout/Profiler split**: `ScoutChatWithHistory` and `ProfilerChatWithHistory` are 90% the same component.
-- **Tracker branch hygiene.** `develop` and `production` are sync targets, not commit targets. If `git status` ever shows you on one of those with staged changes, you're on the wrong branch — `git stash`, `git checkout master`, then re-apply.
+- **Tracker branch hygiene.** `develop` and `production` are sync targets, not commit targets. If `git status` ever shows you on one of those with staged changes, you're on the wrong branch — `git stash`, switch to your feature branch (creating one off `master` if needed), then re-apply.
 
 ## Pre-existing Analyses
 
