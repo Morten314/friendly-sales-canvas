@@ -2,7 +2,12 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Spec:** `specs/13-prompt-management-design.md` (frozen on approval). Authoritative for design decisions; this plan executes it.
+> **Post-merge note (2026-05-26):** Plan implementation complete across 15 commits on `master`. The user explicitly chose to reconcile this plan with implementation deviations rather than freeze it as a historical snapshot. Every post-merge edit is tagged with `<!-- post-merge -->` or a section-level banner. Full audit trail lives at `docs/prompt-migration-outcome.md`; see also `specs/13-prompt-management-design.md` post-merge banner and §8 v2 backlog.
+
+<!-- post-merge -->
+> **Pytest discovery gotcha (general rule for this plan):** Every test function in this plan MUST be named `test_<something>` with an underscore separating `test` from the rest of the name. `pytest.ini`'s `python_functions = test_*` rule will silently skip a function named `testfoo` (no underscore) — pytest reports "0 tests collected" rather than an error. This bit Task 2's `testprompt_meta_from_extracts_six_fields` (typo) during implementation; the correct form is `test_prompt_meta_from_extracts_six_fields`. Apply uniformly to every new test in Tasks 2–15.
+
+**Spec:** `specs/13-prompt-management-design.md` (reconciled with implementation 2026-05-26). Authoritative for design decisions; this plan executes it.
 
 **Goal:** Externalize every prompt in `backend/` into versioned `.md.j2` files with YAML front-matter, served by a new `app/core/prompts.py` loader/registry, with per-LLM-call `prompt_meta` observability written to Mongo.
 
@@ -306,7 +311,7 @@ def test_bootfailure_aggregates_failures():
     assert "b.md.j2" in str(err)
 
 
-def testprompt_meta_from_extracts_six_fields():
+def test_prompt_meta_from_extracts_six_fields():  # post-merge: fixed typo (was `testprompt_meta_…`, which pytest silently skipped)
     cfg = PromptConfig(
         version="1.2.3",
         model="qwen",
@@ -548,6 +553,9 @@ git commit -m "feat(be): scaffold app/core/prompts.py dataclasses + error types"
 ## Task 3: Implement `init_registry()` + source-expansion algorithm
 
 **Goal:** Replace the boot stub with the real implementation: directory walk, front-matter parse, defaults merge, AST input-validation, source-expansion + content-hash, registry construction. Tests use synthetic prompts written to `tmp_path` — no production prompts exist yet.
+
+<!-- post-merge -->
+> **Post-merge note (2026-05-26) — minimal Task 4 wrapper pass-throughs allowed here:** Task 3's tests call `list_prompts()` and `get_config()` to verify boot output. The original plan deferred those wrappers to Task 4 ("DO NOT touch Task 4 wrappers from Task 3"), which would have made Task 3's tests un-runnable. The implementation added minimal pass-throughs with inline `None` checks in Task 3 (`if _registry is None: raise RuntimeError(...)`), then Task 4 refactored them to share a `_require_registry()` helper. Treat this as an explicit Task 3 carve-out for `list_prompts` + `get_config` only; `render` and `as_langchain` stay stubbed until Task 4.
 
 **Files:**
 - Modify: `backend/app/core/prompts.py`
@@ -954,6 +962,7 @@ def init_registry(root: Path = _PROMPTS_ROOT) -> Registry:
         undefined=StrictUndefined,
         trim_blocks=True,
         lstrip_blocks=True,
+        keep_trailing_newline=True,  # post-merge: required for byte-parity with legacy .format() output (spec §3.4)
     )
 
     entries: dict[str, _RegistryEntry] = {}
@@ -1286,6 +1295,9 @@ def test_module_wrappers_error_before_init():
         get_config("anything")
     with pytest.raises(RuntimeError, match="init_registry not called"):
         list_prompts()
+    # post-merge: as_langchain must also raise pre-init (originally missed; fixed in Task 4 review-amend cycle)
+    with pytest.raises(RuntimeError, match="init_registry not called"):
+        as_langchain("anything")
 
 
 # ---------------------------------------------------------------------------
@@ -1373,14 +1385,23 @@ def render(name: str, **inputs: Any) -> RenderedPrompt:
         raise MissingInputs(name, missing)
 
     try:
-        template = registry.env.get_template(entry.template_name)
+        # post-merge: render the source-expanded body (partials already inlined),
+        # NOT env.get_template(entry.template_name). get_template re-reads the
+        # raw file from disk including its YAML front-matter, which would render
+        # verbatim into the output (critical correctness bug). See spec §3.3
+        # post-merge note + §3.4 source-expansion clarification.
+        template = registry.env.from_string(entry.body_source_expanded)
         body = template.render(**inputs)
+        # post-merge: _json.dumps lives inside the try/except for PromptError
+        # uniformity — a callback that fails `default=str` would otherwise leak
+        # a raw TypeError/RuntimeError instead of a RenderError. Spec §3.3
+        # render lifecycle step 4 makes this explicit.
+        render_inputs_hash = hashlib.sha256(
+            _json.dumps(inputs, sort_keys=True, default=str).encode("utf-8")
+        ).hexdigest()
     except Exception as e:
         raise RenderError(name, e) from e
 
-    render_inputs_hash = hashlib.sha256(
-        _json.dumps(inputs, sort_keys=True, default=str).encode("utf-8")
-    ).hexdigest()
     rendered_at = datetime.now(timezone.utc)
 
     return RenderedPrompt(
@@ -1409,11 +1430,19 @@ def as_langchain(name: str):
     chain execution time. Boot-time AST validation already verified that every
     {{ var }} reference in the parent and every included partial appears in
     the parent's `inputs:` declaration, so runtime substitution is safe.
+
+    Post-merge: appends a trailing `\\n` to the source-expanded body before
+    handing it to PromptTemplate.from_template. LangChain's internal Jinja2
+    env does NOT expose keep_trailing_newline and strips trailing newlines
+    by default; our render() env keeps them (spec §3.4). The +\\n sentinel
+    is consumed by LangChain's strip, restoring byte-parity with render().
+    Fragile to LangChain version changes — see spec §3.4 post-merge note +
+    §8 v2 backlog (`as_langchain +\\n sentinel fragility`).
     """
     from langchain_core.prompts import PromptTemplate
     entry = _require_registry().get(name)
     return PromptTemplate.from_template(
-        entry.body_source_expanded,
+        entry.body_source_expanded + "\n",  # post-merge: trailing-newline sentinel
         template_format="jinja2",
     )
 ```
@@ -1448,11 +1477,15 @@ git commit -m "feat(be): implement prompt render + as_langchain adapter"
 
 **Goal:** Land the production `_shared/` directory with `defaults.yaml` and the three shared partials. The directory now exists at the path `init_registry()` will use at lifespan. Registry contains zero callable prompts but partials are includable.
 
+<!-- post-merge -->
+> **Post-merge note (2026-05-26) — two `final_answer_*` partials emerged, not one:** Spec §3.2 implied a single `_shared/final_answer_directive.md.j2`. During Task 9 implementation it surfaced that legacy signals scout/profiler used `<your JSON answer here>` wording while ICP used `<your answer here>`. To preserve byte-parity (spec §1 "no behavioral change") two partials are needed: `_shared/final_answer_directive.md.j2` (ICP wording) and `_shared/final_answer_json_directive.md.j2` (signals scout/profiler wording). Both have NO trailing newline. The second partial is created lazily during Task 9 (signals) rather than in Task 5; this task lands only the ICP-wording one. See outcome doc "Documented spec deviations" — wording-drift fix.
+
 **Files:**
 - Create: `backend/prompts/_shared/defaults.yaml`
 - Create: `backend/prompts/_shared/response_format_json.md.j2`
 - Create: `backend/prompts/_shared/scout_persona.md.j2`
-- Create: `backend/prompts/_shared/final_answer_directive.md.j2`
+- Create: `backend/prompts/_shared/final_answer_directive.md.j2` (ICP wording: `<your answer here>`)
+- (Task 9 will additionally create: `backend/prompts/_shared/final_answer_json_directive.md.j2` (signals JSON wording: `<your JSON answer here>`))
 
 - [ ] **Step 1: Create `defaults.yaml`**
 
@@ -1782,7 +1815,8 @@ def test_as_langchain_byte_equal_to_render(name):
 cd /projects/Brewra/brewra-gtm-intelligence/backend && pytest tests/unit/test_prompts_golden.py -v
 ```
 
-Expected: zero parametrized cases (no callable prompts registered yet); pytest reports `0 tests collected` or `no tests ran`, exit 0.
+<!-- post-merge -->
+Expected: with `_REGISTERED == []` and pytest 9.0.3, an empty `pytest.mark.parametrize([], ...)` collects **1 case marked as `[NOTSET]` and SKIPPED** (functionally equivalent to "0 cases"). The always-on `test_prompt_registry_boots` passes. The original plan predicted "0 tests collected"; observed behavior is "1 skipped" per parametrized function (= 2 skipped for golden + langchain-parity), plus the boot-check test passing. All other paths green; exit 0.
 
 - [ ] **Step 5: Commit**
 
@@ -2033,9 +2067,10 @@ In `lifespan()`, **insert before** `app.state.llm = build_llm_config(...)`:
 ```python
     # Prompt registry — populated once per process. Stored at module level
     # (app.core.prompts._registry) and on app.state.prompts for handler access.
-    # Must precede build_llm_config: Task 11 will have build_llm_config call
-    # prompts.as_langchain(...) to construct LangChain PromptTemplates for the
-    # Cypher/QA chains.
+    # post-merge: this ordering is a HARD dependency, not just a precaution.
+    # Task 11 makes build_llm_config() call prompts.as_langchain("cypher_gen")
+    # etc., which requires _registry to be populated. Reversing the order
+    # raises RuntimeError("init_registry not called") at lifespan startup.
     app.state.prompts = _prompts.init_registry()
 ```
 
@@ -2511,9 +2546,17 @@ git commit -m "refactor(be): migrate icp/ prompts to backend/prompts/ + prompt_m
 
 **Goal:** Seven prompts (`_SCOUT_PROMPT_TEMPLATE`, `_PROFILER_PROMPT_TEMPLATE`, `_LEADS_SECTION_TEMPLATE`, `_LEADS_SECTION_FALLBACK_TEMPLATE`, `_EXISTING_HEADLINES_SECTION_TEMPLATE`, `_SIGNAL_ASK_PROMPT_TEMPLATE`, `_SIGNAL_ASK_CLAUDE_PROMPT_TEMPLATE`). Two of them (`scout_search`, `profiler_search`) embed conditional sections via `{% if leads %}` / `{% if existing_headlines %}`. Two of them (`signal_ask_groq`, `signal_ask_claude`) are nearly identical — both ask the same question with web-search context.
 
+<!-- post-merge -->
+> **Post-merge note (2026-05-26) — additional `_shared/final_answer_json_directive.md.j2` partial created here:** Signals scout/profiler legacy prompts ended with `<your JSON answer here>` wording, distinct from ICP's `<your answer here>` (which the Task 5 `final_answer_directive.md.j2` partial captures). Create the JSON-wording partial in this task (under `_shared/`, no trailing newline for byte-parity), and `{% include %}` it from `signals_scout_search.md.j2` and `signals_profiler_search.md.j2` instead of `final_answer_directive.md.j2`. See spec §3.2 post-merge note and outcome doc "wording-drift fix."
+
+<!-- post-merge -->
+> **Post-merge note (2026-05-26) — 3-byte whitespace drift on conditional prompts is accepted:** Byte-parity for `signals_scout_search` / `signals_profiler_search` is NOT achievable without rewriting legacy `.format()`-based assembly logic. Jinja2's `trim_blocks=True, lstrip_blocks=True` collapses a blank line at `{% if leads %}…{% endif %}` boundaries; legacy `.format()` preserved it. The implementation accepted a 3-byte whitespace drift (down from 8 bytes after the wording-drift fix above) as semantically inert per spec §1's "no behavioral change" interpretation (LLM-behavior preserving, pure-whitespace inside conditionals OK). Validate via golden fixture + code review of rendered output, not the byte-parity script.
+
 **Files:**
 - Create: `backend/prompts/signals/signals_{scout_search,profiler_search,leads_section,leads_section_fallback,existing_headlines_section,signal_ask_groq,signal_ask_claude}.md.j2`
+- Create: `backend/prompts/_shared/final_answer_json_directive.md.j2` (post-merge: signals JSON-answer wording, distinct from ICP's `final_answer_directive.md.j2`)
 - Create: matching `_inputs/*.json` + `rendered/*.txt`
+- Create (post-merge): `backend/tests/conftest.py` + `backend/tests/unit/conftest.py` — registry-init fixtures. Needed because FastAPI sync TestClient doesn't trigger `lifespan` automatically, and to defend against `tmp_path` state bleed from `test_prompts_loader.py` into other test modules (the `_registry` singleton is mutated by those tests; without a re-init fixture, downstream tests render against the wrong root).
 - Modify: `backend/app/services/signals/{search,ask,batch}.py`
 - Modify: `backend/app/services/signals/persistence.py` — add `prompt_meta` to signal Mongo writes
 - Modify: `backend/tests/unit/test_signals.py`, `backend/tests/test_signals.py`, `backend/tests/test_signals_v2.py`
@@ -2969,6 +3012,9 @@ git commit -m "refactor(be): migrate market_research/ prompts + prompt_meta"
 ## Task 11: Migrate `llm_config/` (LangChain Cypher + QA prompts)
 
 **Goal:** Four LangChain-wrapped prompts (`Cypher_gen_prompt`, `Cypher_gen_prompt2`, `qa_prompt_template`, `qa_prompt_template2`) move to `backend/prompts/llm_config/{cypher_gen,cypher_gen_alt,qa_scout,qa_scout_alt}.md.j2`. The shared `_CYPHER_BASE` and `_QA_BASE` blocks decompose into partials so the base+overlay+tail composition is replaced by Jinja2 includes. `build_llm_config()` constructs `PromptTemplate` objects via `prompts.as_langchain()` and passes them to `GraphCypherQAChain.from_llm(...)`.
+
+<!-- post-merge -->
+> **Post-merge note (2026-05-26) — Task 7 lifespan ordering is now a HARD dependency:** Task 7 Step 8 wired `init_registry()` before `build_llm_config()` "as a precaution for Task 11." This task makes it a hard requirement: `build_llm_config` now calls `prompts.as_langchain("cypher_gen")` etc., which internally calls `_require_registry()` and raises `RuntimeError("init_registry not called")` if invoked first. The Step 9 verification `rg -n "init_registry|build_llm_config" app/main.py` is therefore load-bearing for production boot, not just a sanity check.
 
 **Files:**
 - Create: `backend/prompts/llm_config/{cypher_gen,cypher_gen_alt,qa_scout,qa_scout_alt}.md.j2`
@@ -3568,6 +3614,12 @@ git commit -m "refactor(be): migrate market_scoring inline prompt via call_with_
 **Goal:** Migrate any inline prompts the Phase 0 audit surfaced beyond the §2.1 baseline (e.g. in `customer_profile/`, `leads/`, `pipeline/`, `data_sources/`, `profiles/`, `org_auth/`, `graph_chat/`).
 
 **If Phase 0 surfaced zero additional prompts beyond the §2.1 baseline: skip this task. Record "no audit-discovered prompts" in the migration outcome (Task 15).**
+
+<!-- post-merge -->
+> **Post-merge note (2026-05-26) — P-024 (`graph_chat`) two-prompt recipe is the audit-recommended pattern:** The Phase 0 audit surfaced `graph_chat/prospect_pipeline.py:105-126` (`score_prospect`), which builds a `[SystemMessage, HumanMessage]` LangChain message list — a shape `call_with_prompt` (single-message simple-invoke) cannot cover. Two options were considered: (Option A) split into two registered prompts `score_prospect_system` + `score_prospect_user`, render both, compose the message list at the call site, source `prompt_meta` from the user-message render (canonical observability surface); (Option B) extend `call_with_prompt` to accept a system-message argument. The audit recommended Option A as the "manual two-prompt recipe" for `[SystemMessage, HumanMessage]` shapes; the implementation chose Option A. See `docs/prompt-migration-outcome.md` P-024 row.
+
+<!-- post-merge -->
+> **Post-merge note (2026-05-26) — P-025 (`_DEFAULT_CLAUDE_PROMPT_SUFFIX`) deferred to v2:** Phase 0 audit surfaced `app/services/_llm_helpers.py:111` (`_DEFAULT_CLAUDE_PROMPT_SUFFIX`) and recommended inlining its `{% if web_ctx %}…{% endif %}` block into Tasks 8–10 prompts. The implementation chose to defer this to v2 (rationale: avoids scope creep across three service migrations + retroactive golden-fixture churn on ~15 prompts; the suffix mechanism still works correctly). Result: the suffix remains in `_llm_helpers.py:111` and is actively consumed by signals (default), icp, and market_research (via per-call overrides). Recorded in outcome doc P-025 and spec §8 v2 backlog. Task 13 does **not** retire it.
 
 **Files:** depend on audit output.
 
