@@ -76,6 +76,39 @@ This document is the frozen audit trail of the prompt-management migration. Ever
 - **Two-prompt simple-invoke recipe** (P-024 graph_chat) — for `[SystemMessage, HumanMessage]` shapes, the prompt body splits into a system prompt and a user prompt, both registered as full callable prompts. The user-message prompt_meta is recorded as the canonical observability surface. Per the Phase 0 audit's "`call_with_prompt` scope confirmation," Option 1 was chosen: `call_with_prompt` stays single-message; P-024 uses a manual `prompts.render(...)` + `llm.invoke([SystemMessage(...), HumanMessage(...)])` recipe.
 - **Service-scoped sub-templates as callable prompts** (P-008, P-009, P-010 signals) — the three orchestrator-assembled section partials moved into `prompts/signals/signals_*_section.md.j2` files with full callable front-matter. They are invoked only via `{% include %}` from the parent `signals_scout_search` / `signals_profiler_search` templates, but live in the registry as first-class entries so each has its own golden fixture and content_hash for change tracking.
 
+### Plan-vs-implementation deviations
+
+Items where the implementation diverged from the plan's literal text. Captured here for the migration audit trail; the spec and plan were updated post-merge to reflect the actual implementation (see commits `8cdaca7` for spec, `0141a05` for plan).
+
+The deviations break into three categories: **plan-bug fixes** (where the plan's literal text was wrong and would not have produced working code), **architecture decisions documented after the fact** (where a real choice was made during implementation that the plan had under-specified), and **test/infrastructure additions** (incremental scaffolding not enumerated in the plan's file list).
+
+#### Plan-bug fixes
+
+| Task | Plan said | Implementation did | Why |
+|---|---|---|---|
+| Task 2 Step 3 | Test named `testprompt_meta_from_extracts_six_fields` (no underscore between `test` and `prompt`) | Renamed to `test_prompt_meta_from_extracts_six_fields` | `backend/pytest.ini` sets `python_functions = test_*`, which requires the underscore. The literal name would be silently uncollected and the test would never run. |
+| Task 3 Step 2 | Jinja2 `Environment(...)` construction with no `keep_trailing_newline` flag | Added `keep_trailing_newline=True` | Without it, Jinja2 strips trailing newlines from `.md.j2` files, breaking byte-parity with legacy `.format()`-substituted prompts (which preserved file-final newlines). |
+| Task 4 Step 1 | `render()` body used `env.get_template(entry.template_name)` | Used `env.from_string(entry.body_source_expanded)` instead | `get_template()` loads the raw file **including front-matter**, which would render verbatim into output. `from_string()` over the already-parsed `body_source_expanded` is the only correct entrypoint. |
+| Task 4 Step 1 | `_json.dumps(...)` for `render_inputs_hash` placed outside the try/except wrapping the Jinja2 render | Moved inside the try/except | A caller passing an input whose `__str__` raises (e.g., a class with a buggy magic method) would leak a bare `RuntimeError` instead of the `RenderError` required by spec §3.3 uniformity. |
+
+#### Architecture decisions documented after the fact
+
+| Item | What surfaced | Resolution |
+|---|---|---|
+| `as_langchain` `+ "\n"` sentinel | LangChain's `PromptTemplate.from_template(template_format="jinja2")` builds its own internal Jinja2 env with `keep_trailing_newline=False`, stripping one trailing newline. | `as_langchain()` appends `"\n"` to the template source given to LangChain; LangChain strips it back off, preserving byte-parity with `render()`. Fragile against LangChain version upgrades; golden parity test will catch any regression. Documented in `docs/PROMPTS.md` §11.6. |
+| `body_source_expanded` dual-use | Plan implied this was only for `as_langchain()`'s pre-expansion needs. | In practice used by **both** `render()` (via `env.from_string(...)`) and `as_langchain()`. Single source of truth for the source-expanded body string is the right design; the plan's wording was misleading. |
+| Task 3 `list_prompts()` + `get_config()` minimal pass-throughs | Plan said Task 3 should not touch the Task 4 wrappers; but Task 3's tests called these methods. | Implementer added minimal `None`-check pass-throughs in Task 3 so tests could run; Task 4 then refactored them to use the shared `_require_registry()` helper. Net result identical to the plan's end-state; intermediate state differs. |
+| Task 11 lifespan ordering is a **hard** dependency | Task 7 wired `init_registry()` before `build_llm_config()` as a precaution; the plan framed it as defensive ordering. | Task 11 made it a hard requirement: `build_llm_config()` now calls `as_langchain()` which raises `RuntimeError("init_registry not called")` if the registry isn't populated. The ordering can't be inverted. |
+| `final_answer_directive.md.j2` has no trailing newline | The byte-parity contract with legacy ICP prompts (Python triple-quoted strings ending without `\n`) drove this. | The partial's `description` field documents the no-trailing-newline contract. Authors editing it must preserve the no-final-newline state or `content_hash` shifts on every consumer. |
+
+#### Test / infrastructure additions
+
+| Item | What | Why |
+|---|---|---|
+| `tests/conftest.py` + `tests/unit/conftest.py` registry-init fixtures | Added in Task 9. Top-level conftest does one-time `init_registry` at module import (lifespan-equivalent for FastAPI sync `TestClient`, which doesn't trigger `lifespan`). Unit conftest adds an autouse fixture to defend against `tmp_path` state bleed from `test_prompts_loader.py`. | Not in the plan's file list. Surfaced during Task 9 when service-level tests started failing on `RuntimeError("init_registry not called")` and again when loader tests bled state into golden tests. |
+| Pytest 9.0.3 parametrize-empty behavior | Plan predicted `@parametrize("name", [])` would result in "0 tests collected." Actual pytest behavior: 1 case collected as `[NOTSET]`, marked SKIPPED. | Functionally equivalent (no failing test, no real assertion); cosmetic difference in collection count. Noted so future readers don't chase a phantom missing test. |
+| Task 4 `test_module_wrappers_error_before_init` originally missed `as_langchain` | Caught during the Task 4 review-amend cycle, not the original Task 4 commit. | Added in the amend; the `as_langchain` wrapper has the same pre-init contract as `render`/`get_config`/`list_prompts` and warranted the same test coverage. |
+
 ### Spec §6 Definition of Done verification (run 2026-05-26)
 
 1. **`backend/prompts/` contains every audit-surfaced prompt minus deferred.** PASS — 24 callable prompts registered (23 migrated + P-024 split into 2), matching the migration table above. Deferrals (P-023, P-025) recorded with reasons.
