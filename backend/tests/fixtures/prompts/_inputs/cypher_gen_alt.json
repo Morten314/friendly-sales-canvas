@@ -1,0 +1,4 @@
+{
+  "schema": "Sample Neo4j schema string",
+  "question": "Find all leads with high score in healthcare industry"
+}

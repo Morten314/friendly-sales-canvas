@@ -1,0 +1,26 @@
+---
+name: qa_scout
+version: 1.0.0
+description: GraphCypherQAChain QA prompt (variant 1 — response_json directive)
+model: Qwen/Qwen3-235B-A22B-Instruct-2507-tput
+response_format: json
+inputs:
+  - context
+  - question
+---
+
+{% include '_shared/scout_persona.md.j2' %}
+
+also give your response in a json , clean valid json with response_message key and your tmessage response as its value and also if any changes need be made on the original and modified json , make those and also put that in a key called as response_json
+Give me the response as valid JSON in a single line. Do not use markdown or code blocks. Do not escape characters unnecessarily. Just give plain minified JSON.
+Give me the response as valid JSON in a single line. Do not use markdown or code blocks. Do not escape characters unnecessarily. Just give plain minified JSON.
+Give me the response as valid JSON in a single line. Do not use markdown or code blocks. Do not escape characters unnecessarily. Just give plain minified JSON.
+Give me the response as valid JSON in a single line. Do not use markdown or code blocks. Do not escape characters unnecessarily. Just give plain minified JSON.
+Give me the response as valid JSON in a single line. Do not use markdown or code blocks. Do not escape characters unnecessarily. Just give plain minified JSON.
+Context:
+{{ context }}
+
+Question:
+{{ question }}
+
+Illuminating Answer:

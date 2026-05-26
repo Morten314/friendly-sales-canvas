@@ -1,0 +1,20 @@
+---
+name: qa_scout_alt
+version: 1.0.0
+description: GraphCypherQAChain QA prompt (variant 2 — no response_json overlay)
+model: Qwen/Qwen3-235B-A22B-Instruct-2507-tput
+response_format: text
+inputs:
+  - context
+  - question
+---
+
+{% include '_shared/scout_persona.md.j2' %}
+
+Context:
+{{ context }}
+
+Question:
+{{ question }}
+
+Illuminating Answer:
