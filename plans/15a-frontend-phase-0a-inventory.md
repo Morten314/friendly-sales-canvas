@@ -4,7 +4,16 @@
 
 **Goal:** Land Phase 0a deliverables from `specs/15-frontend-phase-0-inventory-and-safety-net-design.md` §2.9 — audit scorecard, knip output, bundle + NFR baselines, tightened Playwright visual lock, CI workflow scaffolding, bun lockfile delete — on a `phase-0a-inventory` branch, merged to `master` after impl review.
 
-**Architecture:** Nine commits on one branch, ordered by dependency. Pin Playwright exact → tighten visual threshold + refresh snapshots → delete bun lockfiles → install knip → bundle baseline → NFR baseline → audit scorecard (consumes knip JSON) → CI workflow → verify CI green. The bun delete precedes knip per spec §2.2 ("Run against the post-0a-cleanup tree"). Each task is one commit; cross-cutting changes that touch `package.json` + `package-lock.json` together (knip install, bundle-deps install) ship as one commit per CLAUDE.md "Cross-stack atomicity."
+**Architecture:** Eight commits on one branch, ordered by dependency. Pin Playwright exact → tighten visual threshold + refresh snapshots → delete bun lockfiles → install knip → bundle baseline → NFR baseline → audit scorecard (consumes knip JSON) → CI workflow → verify CI green. The bun delete precedes knip per spec §2.2 ("Run against the post-0a-cleanup tree"). Each task is one commit; cross-cutting changes that touch `package.json` + `package-lock.json` together (knip install, bundle-deps install) ship as one commit per CLAUDE.md "Cross-stack atomicity."
+
+**Parallelization opportunities (subagent-driven execution mode):** After Task 2 completes, three independent chains can dispatch in parallel: `[Task 3 → Task 4 → Task 7]` (bun delete → knip → scorecard, sequential because Task 7 consumes Task 4's knip JSON), `[Task 5]` (bundle baseline), and `[Task 6]` (NFR baseline). Caveat: Tasks 4 and 5 both run `npm install`, so they truly parallelize only when subagent worktrees give each its own working tree; in a shared working tree they serialize on the lockfile. Tasks 8 and 9 must run after all three chains complete. Single-agent inline execution runs everything sequentially per the task numbering.
+
+**Abort criteria.** Per-task STOP conditions are documented inline (Tasks 0/2/3/5/6). In addition, two plan-level escalations apply:
+
+1. **Per-task budget.** If any single task fails after two independent debug attempts (i.e., two attempts to fix the root cause, not retries of the same approach), pause and report to the operator for a go/no-go decision rather than continuing the debug loop.
+2. **Task 9 CI budget.** If `playwright` on CI cannot go green within 3 pushes to `phase-0a-inventory`, log the failing-CI findings to `docs/TECH_DEBT.md` (commands tried, error pattern, hypothesis) and report to the operator. CI failures that repeat across pushes often indicate environment-vs-local divergence (spec §6 R0a-3) that warrants explicit handling rather than continued patching.
+
+These thresholds are starting values; the operator can tighten or loosen per execution observation.
 
 **Tech Stack:** Node 22 + npm 10 + TypeScript 5.5 + Vite 5 + Playwright 1.59.1 + knip 5.x + gzip-size 7.x (ESM) + tsx (run TS scripts) + bash (NFR measurement script) + ripgrep (audit data gathering).
 
@@ -461,7 +470,9 @@ async function walk(dir: string): Promise<string[]> {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
       out.push(...(await walk(full)));
-    } else if (entry.isFile() && /\.(js|css|html|svg)$/.test(entry.name)) {
+    } else if (entry.isFile() && /\.(js|css)$/.test(entry.name)) {
+      // Spec §2.3 scopes the bundle baseline to .js and .css. Phase 2c can
+      // extend if it wants full shipped-size accounting (html, svg, png).
       out.push(full);
     }
   }
@@ -520,6 +531,8 @@ npm run build
 
 Expected: Vite emits `dist/` with `assets/*.js`, `assets/*.css`, `index.html`, and some PWA-related files. Build completes in <60s typically.
 
+**If build fails: STOP.** Do not proceed to Step 4 — an empty or incomplete `dist/` would silently produce a misleading bundle baseline. Investigate the build error before continuing. Common causes: a TypeScript error introduced earlier in the branch, a peer-dep warning surfacing as a real conflict, or a Vite config issue. Re-run after fixing the root cause.
+
 - [ ] **Step 4: Run the bundle-baseline script**
 
 ```bash
@@ -568,6 +581,8 @@ EOF
 )"
 ```
 
+**Regression gate for Tasks 4 + 5 devDep additions.** Tasks 4 (knip) and 5 (gzip-size, tsx) added devDependencies that are tooling-only — none are imported into production code or Playwright config, so direct regression risk is near-zero. Empirical regression coverage is provided by Task 6 (next), which runs `npm run test:e2e` three times as part of NFR measurement. If any of those runs fails when previous Playwright runs (Task 2) passed, the failure is attributable to the devDep installs in Tasks 4–5 and must be investigated before proceeding. No additional Playwright re-run is added here because Task 6's 3× runs already serve this purpose at zero extra cost.
+
 ---
 
 ## Task 6: Capture NFR Baselines
@@ -613,13 +628,17 @@ time_cmd() {
   start=$(python3 -c 'import time; print(time.time())')
   "$@" > /dev/null 2>&1
   end=$(python3 -c 'import time; print(time.time())')
-  python3 -c "print(f'{${end} - ${start}:.3f}')"
+  # Pass values via argv (not shell interpolation into Python source) so the
+  # subtraction is robust even if Python ever changed float formatting.
+  python3 -c "import sys; print(f'{float(sys.argv[1]) - float(sys.argv[2]):.3f}')" "$end" "$start"
 }
 
-# wall-clock from start until log file contains "ready in"
+# wall-clock from start until log file contains "ready in", with a 60s timeout
+# so the NFR script can't hang indefinitely if vite hangs without crashing.
 time_dev_start() {
   local logfile="/tmp/phase-0a-vite-dev.$$.log"
-  local start end vite_pid
+  local start end vite_pid elapsed
+  local timeout_seconds=60
   start=$(python3 -c 'import time; print(time.time())')
   npx vite --port 5173 > "$logfile" 2>&1 &
   vite_pid=$!
@@ -631,13 +650,23 @@ time_dev_start() {
       echo "vite exited before ready" >&2
       exit 1
     fi
+    # Bail if the timeout elapsed (vite alive but stuck — e.g., unresolved module).
+    elapsed=$(python3 -c "import sys, time; print(time.time() - float(sys.argv[1]))" "$start")
+    if python3 -c "import sys; sys.exit(0 if float(sys.argv[1]) > float(sys.argv[2]) else 1)" "$elapsed" "$timeout_seconds"; then
+      cat "$logfile" >&2
+      kill "$vite_pid" 2>/dev/null || true
+      wait "$vite_pid" 2>/dev/null || true
+      rm -f "$logfile"
+      echo "vite did not become ready within ${timeout_seconds}s" >&2
+      exit 1
+    fi
     sleep 0.05
   done
   end=$(python3 -c 'import time; print(time.time())')
   kill "$vite_pid" 2>/dev/null || true
   wait "$vite_pid" 2>/dev/null || true
   rm -f "$logfile"
-  python3 -c "print(f'{${end} - ${start}:.3f}')"
+  python3 -c "import sys; print(f'{float(sys.argv[1]) - float(sys.argv[2]):.3f}')" "$end" "$start"
 }
 
 # ---------- measurements ----------
@@ -874,39 +903,49 @@ async function countLoc(absPath: string): Promise<number> {
   return buf.split('\n').length;
 }
 
-async function countStaticRefs(relPathNoExt: string): Promise<number> {
-  // Match `from '<anything>/<relPathNoExt>'` (basename-anchored) across src/ and e2e/.
-  // Lower bound — misses dynamic imports, barrel re-exports, lazy route configs.
-  // Example: src/lib/utils -> matches `from "@/lib/utils"`, `from "./utils"`, `from "../lib/utils"`.
-  const importSuffix = relPathNoExt.replace(/^src\//, '');       // "lib/utils" or "components/customers/Foo"
-  // Quoted regex: from ['"][^'"]*<suffix>['"]
-  // Use ripgrep -c (count matching lines) and sum across files.
-  try {
-    const { stdout } = await execFileP(
-      'rg',
-      [
-        '--count-matches',
-        '--no-heading',
-        '--glob', '*.ts',
-        '--glob', '*.tsx',
-        `from ['\"][^'\"]*${importSuffix}['\"]`,
-        join(FRONTEND_DIR, 'src'),
-        join(FRONTEND_DIR, 'e2e'),
-      ],
-      { maxBuffer: 16 * 1024 * 1024 },
-    );
-    let total = 0;
-    for (const line of stdout.split('\n')) {
-      const match = line.match(/:(\d+)$/);
-      if (match) total += parseInt(match[1], 10);
-    }
-    return total;
-  } catch (err: unknown) {
-    // ripgrep exits 1 when no matches — that's a count of 0.
-    const e = err as { code?: number };
-    if (e.code === 1) return 0;
-    throw err;
+async function collectAllImports(): Promise<Map<string, number>> {
+  // Single ripgrep pass to extract every `from '<path>'` import string across
+  // src/ and e2e/. Returns a Map of import path → occurrence count. The
+  // per-file countRefs lookup then aggregates from this map in O(map size)
+  // rather than spawning ripgrep per source file (which was O(files) process
+  // spawns at hundreds of files).
+  const { stdout } = await execFileP(
+    'rg',
+    [
+      '--no-heading',
+      '--no-filename',
+      '--only-matching',
+      '--glob', '*.ts',
+      '--glob', '*.tsx',
+      `from ['\"][^'\"]+['\"]`,
+      join(FRONTEND_DIR, 'src'),
+      join(FRONTEND_DIR, 'e2e'),
+    ],
+    { maxBuffer: 64 * 1024 * 1024 },
+  );
+  const counts = new Map<string, number>();
+  for (const line of stdout.split('\n')) {
+    const m = line.match(/from ['"]([^'"]+)['"]/);
+    if (!m) continue;
+    const importPath = m[1];
+    counts.set(importPath, (counts.get(importPath) ?? 0) + 1);
   }
+  return counts;
+}
+
+function countRefsFor(allImports: Map<string, number>, relPathNoExt: string): number {
+  // Match imports whose path ends with the file's src-relative path (sans ext).
+  // Preserves the original countStaticRefs semantics: `@/lib/utils`, `../lib/utils`,
+  // `../../lib/utils` all count for `src/lib/utils.ts`; bare `./utils` does not
+  // (matches the documented lower-bound limitation in spec §2.1).
+  const suffix = relPathNoExt.replace(/^src\//, '');             // "lib/utils" or "components/customers/Foo"
+  let total = 0;
+  for (const [importPath, count] of allImports) {
+    if (importPath === suffix || importPath.endsWith('/' + suffix)) {
+      total += count;
+    }
+  }
+  return total;
 }
 
 async function loadKnip(): Promise<{ deadFiles: Set<string>; deadExports: Set<string> }> {
@@ -1011,6 +1050,7 @@ function buildTier2(rows: FileRow[]): string {
 
 async function main() {
   const { deadFiles, deadExports } = await loadKnip();
+  const allImports = await collectAllImports();     // one rg pass, before the file loop
   const absFiles = await walk(SRC_DIR);
 
   const rows: FileRow[] = [];
@@ -1018,7 +1058,7 @@ async function main() {
     const rel = relative(FRONTEND_DIR, abs).split('\\').join('/');
     const relNoExt = rel.replace(/\.(ts|tsx)$/, '');
     const loc = await countLoc(abs);
-    const staticRefs = await countStaticRefs(relNoExt);
+    const staticRefs = countRefsFor(allImports, relNoExt);
     rows.push({
       path: rel,
       area: classifyArea(rel),
@@ -1108,7 +1148,7 @@ cd /projects/Brewra/brewra-gtm-intelligence/frontend
 npx tsx scripts/build-audit-scorecard.ts
 ```
 
-Expected: `Wrote N files into .../docs/audits/2026-05-26-frontend-baseline.md` where N is total `.ts`/`.tsx` count under `src/` (will be in the hundreds for 75,894 LOC).
+Expected: `Wrote N files into .../docs/audits/2026-05-26-frontend-baseline.md` where N is total `.ts`/`.tsx` count under `src/` (will be in the hundreds for 75,894 LOC). Runtime: <30 seconds typically (one ripgrep pass + per-file LOC reads; the previous per-file-ripgrep approach was minutes).
 
 If the script errors on `loadKnip` due to unexpected JSON shape: open `docs/audits/2026-05-26-frontend-deadcode-knip.json`, inspect top-level keys, and adjust the `loadKnip()` function to match. The defensive both-array-and-object handling should cover knip 5.x but versions evolve.
 
