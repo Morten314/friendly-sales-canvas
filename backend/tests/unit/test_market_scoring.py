@@ -30,6 +30,72 @@ from tests.identities import TEST_LEAD_ID_1, TEST_ORG_ID, TEST_USER_ID
 
 
 # ---------------------------------------------------------------------------
+# Fake LLM + factory autouse fixture for score_lead prompt
+#
+# call_with_prompt("score_lead", ...) resolves the LLM via the factory using
+# the front-matter `model:` field (Qwen/Qwen3-235B-A22B-Instruct-2507-tput).
+# We register a fake builder for this model so the prompt-driven path works
+# in tests without hitting a real provider. Snapshot/restore matches the
+# isolated_llm_factory pattern used elsewhere.
+# ---------------------------------------------------------------------------
+
+
+class _FakeResponse:
+    def __init__(self, content: str) -> None:
+        self.content = content
+
+
+class _FakeLLM:
+    """Default fake LLM that returns a valid scoring JSON payload."""
+
+    def __init__(self) -> None:
+        import json as _json
+        self._default_content = _json.dumps({
+            "component_scores": {
+                "market size & opportunity": 70,
+                "industry trends report": 75,
+                "competitor landscape": 65,
+                "regulatory & compliance highlights": 80,
+                "market entry & growth strategy": 72,
+            },
+            "component_descriptions": {
+                "market size & opportunity": "Strong fit",
+                "industry trends report": "Growing",
+                "competitor landscape": "Few rivals",
+                "regulatory & compliance highlights": "Compliant",
+                "market entry & growth strategy": "Direct entry",
+            },
+        })
+        self.invocations = []
+
+    def invoke(self, messages):
+        self.invocations.append(messages)
+        return _FakeResponse(self._default_content)
+
+
+_FAKE_LLM = _FakeLLM()
+
+
+@pytest.fixture(autouse=True)
+def _fake_qwen_in_factory():
+    """Register a fake Qwen LLM in the factory for this test module.
+
+    Snapshots/restores factory + cache state so other test modules' LLM
+    registrations (production Qwen/Groq from build_llm_config) survive.
+    """
+    from app.services import _llm_helpers
+    factory_snapshot = dict(_llm_helpers._LLM_FACTORY)
+    cache_snapshot = dict(_llm_helpers._LLM_CACHE)
+    _llm_helpers._LLM_CACHE.clear()
+    _llm_helpers._LLM_FACTORY["Qwen/Qwen3-235B-A22B-Instruct-2507-tput"] = lambda: _FAKE_LLM
+    yield
+    _llm_helpers._LLM_FACTORY.clear()
+    _llm_helpers._LLM_FACTORY.update(factory_snapshot)
+    _llm_helpers._LLM_CACHE.clear()
+    _llm_helpers._LLM_CACHE.update(cache_snapshot)
+
+
+# ---------------------------------------------------------------------------
 # get_market_scores_status
 # ---------------------------------------------------------------------------
 
@@ -242,38 +308,27 @@ def test_get_market_reports_for_org_returns_dict(mock_mongo_client):
 # ---------------------------------------------------------------------------
 
 def test_score_single_lead_against_market_returns_score(mocker):
-    """score_single_lead_against_market uses llm_config.llm2.invoke; mock the LLM."""
-    import json as _json
-    fake_response_content = _json.dumps({
-        "component_scores": {
-            "market size & opportunity": 75,
-            "industry trends report": 80,
-            "competitor landscape": 70,
-            "regulatory & compliance highlights": 85,
-            "market entry & growth strategy": 72,
-        },
-        "component_descriptions": {
-            "market size & opportunity": "Large TAM",
-            "industry trends report": "Growing",
-            "competitor landscape": "Few rivals",
-            "regulatory & compliance highlights": "Compliant",
-            "market entry & growth strategy": "Good beachhead",
-        },
-    })
-    fake_response = MagicMock()
-    fake_response.content = fake_response_content
-
-    llm2_mock = MagicMock()
-    llm2_mock.invoke.return_value = fake_response
-
+    """score_single_lead_against_market resolves the LLM from the prompt
+    front-matter via the factory (see _fake_qwen_in_factory autouse fixture).
+    Returns (scoring_payload, prompt_meta) tuple. llm2 arg is ignored in v1.
+    """
     lead = {"lead_id": TEST_LEAD_ID_1, "company_name": "Acme"}
     company_profile = {"industry": "Logistics"}
     market_reports = {"market size & opportunity": {"tam": "$1B"}}
 
-    result = score_single_lead_against_market(llm2_mock, lead=lead, company_profile=company_profile, market_reports=market_reports)
+    # llm2 is passed for backward-compat but ignored — the factory's _FAKE_LLM is used.
+    result, prompt_meta = score_single_lead_against_market(
+        MagicMock(),
+        lead=lead,
+        company_profile=company_profile,
+        market_reports=market_reports,
+    )
 
     assert "market_total_score" in result
     assert "component_scores" in result
+    # prompt_meta should carry registry observability fields
+    assert prompt_meta["name"] == "score_lead"
+    assert prompt_meta["model"] == "Qwen/Qwen3-235B-A22B-Instruct-2507-tput"
 
 
 # ---------------------------------------------------------------------------
@@ -342,11 +397,14 @@ def test_run_market_scoring_for_org_marks_completed_on_success(
     )
     mocker.patch(
         "app.services.market_scoring.orchestrator.score_single_lead_against_market",
-        return_value={
-            "component_scores": {},
-            "component_descriptions": {},
-            "market_total_score": 85,
-        },
+        return_value=(
+            {
+                "component_scores": {},
+                "component_descriptions": {},
+                "market_total_score": 85,
+            },
+            {"name": "score_lead", "version": "1.0.0"},
+        ),
     )
     mocker.patch(
         "app.services.market_scoring.orchestrator._persist_market_score_for_lead",

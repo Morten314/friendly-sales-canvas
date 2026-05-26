@@ -113,7 +113,7 @@ def _run_market_scoring_for_org(driver, mongo, llm2, user_id: str, org_id: str, 
                 )
                 continue
             try:
-                scoring_payload = orchestrator.score_single_lead_against_market(
+                scoring_payload, prompt_meta = orchestrator.score_single_lead_against_market(
                     llm2,
                     lead=lead,
                     company_profile=company_profile,
@@ -129,6 +129,7 @@ def _run_market_scoring_for_org(driver, mongo, llm2, user_id: str, org_id: str, 
                     run_id=run_id,
                     scoring_status="completed",
                     score_coll=score_coll,
+                    prompt_meta=prompt_meta,
                 )
                 processed_count += 1
             except Exception as lead_error:

@@ -1,0 +1,33 @@
+
+You are scoring a sales lead fit against five market-research components.
+Return strict JSON only.
+
+Component keys (must match exactly):
+["market size & opportunity", "industry trends report", "competitor landscape", "regulatory & compliance highlights", "market entry & growth strategy"]
+
+Company profile:
+{"name": "Acme", "industry": "SaaS"}
+
+Lead data:
+{"lead_id": "L-1", "company_name": "TestCo"}
+
+Market research component reports:
+{"market size & opportunity": {"score": 85}}
+
+Return JSON schema:
+{
+  "component_scores": {
+    "market size & opportunity": <number 0-100>,
+    "industry trends report": <number 0-100>,
+    "competitor landscape": <number 0-100>,
+    "regulatory & compliance highlights": <number 0-100>,
+    "market entry & growth strategy": <number 0-100>
+  },
+  "component_descriptions": {
+    "market size & opportunity": "<short reason>",
+    "industry trends report": "<short reason>",
+    "competitor landscape": "<short reason>",
+    "regulatory & compliance highlights": "<short reason>",
+    "market entry & growth strategy": "<short reason>"
+  }
+}

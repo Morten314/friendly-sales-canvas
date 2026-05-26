@@ -9,11 +9,11 @@ Owns:
 import json
 import logging
 from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 
 from fastapi import BackgroundTasks
-from langchain_core.messages import HumanMessage
 from app.services._neo4j_helpers import upsert_node
+from app.services._llm_helpers import call_with_prompt
 from app.core.exceptions import (
     MarketScoreNotFoundError,
     MarketScoringRunNotFoundError,
@@ -280,50 +280,26 @@ def _clean_and_parse_json(raw_text: str) -> Dict[str, Any]:
 
 
 def score_single_lead_against_market(
-    llm2,
+    llm2,  # kept in signature for backward compat with callers; ignored in v1
     lead: Dict[str, Any],
     company_profile: Dict[str, Any],
     market_reports: Dict[str, Dict[str, Any]],
-) -> Dict[str, Any]:
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """Score one lead against all five market components with explanations.
+
+    Returns (scoring_payload, prompt_meta) — caller (scoring.py) passes prompt_meta
+    to _persist_market_score_for_lead which adds it to the Mongo doc.
+
+    The `llm2` argument is retained for signature compatibility; the LLM is now
+    resolved from front-matter `model:` via the LLM factory at call time.
     """
-    Score one lead against all five market components with explanations.
-    Returns component_scores, component_descriptions and total score.
-    """
-    prompt = f"""
-You are scoring a sales lead fit against five market-research components.
-Return strict JSON only.
-
-Component keys (must match exactly):
-{json.dumps(MARKET_SCORE_COMPONENT_KEYS)}
-
-Company profile:
-{json.dumps(company_profile, default=str)}
-
-Lead data:
-{json.dumps(lead, default=str)}
-
-Market research component reports:
-{json.dumps(market_reports, default=str)}
-
-Return JSON schema:
-{{
-  "component_scores": {{
-    "market size & opportunity": <number 0-100>,
-    "industry trends report": <number 0-100>,
-    "competitor landscape": <number 0-100>,
-    "regulatory & compliance highlights": <number 0-100>,
-    "market entry & growth strategy": <number 0-100>
-  }},
-  "component_descriptions": {{
-    "market size & opportunity": "<short reason>",
-    "industry trends report": "<short reason>",
-    "competitor landscape": "<short reason>",
-    "regulatory & compliance highlights": "<short reason>",
-    "market entry & growth strategy": "<short reason>"
-  }}
-}}
-"""
-    response = llm2.invoke([HumanMessage(content=prompt)])
+    response, prompt_meta = call_with_prompt(
+        "score_lead",
+        component_keys_json=json.dumps(MARKET_SCORE_COMPONENT_KEYS),
+        company_profile_json=json.dumps(company_profile, default=str),
+        lead_json=json.dumps(lead, default=str),
+        market_reports_json=json.dumps(market_reports, default=str),
+    )
     content = getattr(response, "content", response)
     parsed = _clean_and_parse_json(content)
     scores = parsed.get("component_scores", {}) if isinstance(parsed, dict) else {}
@@ -350,7 +326,7 @@ Return JSON schema:
         "component_scores": normalized_scores,
         "component_descriptions": normalized_descriptions,
         "market_total_score": total_score,
-    }
+    }, prompt_meta
 
 
 def _persist_market_score_for_lead(
@@ -363,6 +339,7 @@ def _persist_market_score_for_lead(
     run_id: str,
     scoring_status: str = "completed",
     score_coll=None,
+    prompt_meta: Optional[Dict[str, Any]] = None,
 ) -> None:
     now_iso = datetime.now(timezone.utc).isoformat()
     lead_id = str(lead.get("lead_id"))
@@ -393,6 +370,7 @@ def _persist_market_score_for_lead(
                 "run_id": run_id,
                 "updated_at": now_iso,
                 "scored_at": now_iso,
+                "prompt_meta": prompt_meta or {},
             },
             "$setOnInsert": {"created_at": now_iso},
         },
