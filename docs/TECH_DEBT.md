@@ -2,7 +2,7 @@
 
 Running list of debt items the team has consciously accepted. Each entry: what was done, what should be done, why we deferred, and the trigger that should pull it forward.
 
-Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases E and F) were removed on 2026-05-23; their IDs are not reused so commit/spec references stay traceable. TD-006 (market_scoring callers recomputing len(leads)) was resolved 2026-05-24 by Phase H Task 4. TD-007 (Phase G plan-verbatim cosmetic cruft) was resolved 2026-05-25 by Phase I commit 11/11. TD-008 (backend LOC reduction) and TD-009 (docstring/comment drift) were resolved 2026-05-25 by Phase L (audit + 7 K-tasks + I2 promotion, commit `7f169f9`).
+Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases E and F) were removed on 2026-05-23; their IDs are not reused so commit/spec references stay traceable. TD-006 (market_scoring callers recomputing len(leads)) was resolved 2026-05-24 by Phase H Task 4. TD-007 (Phase G plan-verbatim cosmetic cruft) was resolved 2026-05-25 by Phase I commit 11/11. TD-008 (backend LOC reduction) and TD-009 (docstring/comment drift) were resolved 2026-05-25 by Phase L (audit + 7 K-tasks + I2 promotion, commit `7f169f9`). TD-010 (prompt management overhaul) was resolved 2026-05-26 by plan-13 (Phase 0 audit + render/registry infrastructure + 6 service migrations, commits `5238fb7..1c94e29`); the resolved entry is retained below with original context preserved.
 
 ---
 
@@ -76,6 +76,29 @@ Option 1 is one character of code; option 2 is two lines of prose. v1 is being d
 ---
 
 ## TD-010 — Overhaul prompt management system
+
+**Status:** RESOLVED 2026-05-26 via plan-13 ([spec](../specs/13-prompt-management-design.md), [plan](../plans/13-prompt-management.md)).
+
+**Resolution summary:** Every prompt in `backend/` now lives under `backend/prompts/<svc>/` with YAML front-matter, served by `app/core/prompts.py`. Per-LLM-call `prompt_meta` (name, version, content_hash, render_inputs_hash, model, rendered_at) is persisted alongside output in Mongo. Shared partials in `_shared/` compose into callable prompts. See [`docs/PROMPTS.md`](PROMPTS.md) for the system as it exists; see [`docs/prompt-migration-outcome.md`](prompt-migration-outcome.md) for the audit trail of what migrated, what was deferred, and why.
+
+**PR references:** delivered as 13 commits on `master`:
+- `5238fb7` — docs(prompts): Phase 0 prompt inventory audit (Task 1)
+- `48445f3` — feat(be): scaffold app/core/prompts.py dataclasses + error types (Task 2)
+- `226a28d` — feat(be): implement init_registry + source-expansion algorithm (Task 3)
+- `2382628` — feat(be): implement prompt render + as_langchain adapter (Task 4)
+- `877d7d3` — feat(be): add prompts/_shared/ defaults and partials (Task 5)
+- `ddd7cb1` — feat(be): add prompt fixture infra + golden-render test (Task 6)
+- `fb722d7` — feat(be): wire call_with_prompt + lifespan init_registry (Task 7)
+- `c28fab0` — refactor(be): migrate icp/ prompts to backend/prompts/ + prompt_meta (Task 8)
+- `d1edb16` — refactor(be): migrate signals/ prompts with conditionals + prompt_meta (Task 9)
+- `51a0dfb` — refactor(be): migrate market_research/ prompts + prompt_meta (Task 10)
+- `fedfcfd` — refactor(be): migrate llm_config Cypher+QA prompts via as_langchain (Task 11)
+- `799c2c6` — refactor(be): migrate market_scoring inline prompt via call_with_prompt (Task 12)
+- `1c94e29` — refactor(be): migrate graph_chat/score_prospect prompts + prompt_meta (Task 13)
+
+**Original entry preserved below as historical context.**
+
+---
 
 **Date logged:** 2026-05-24 (scope expanded 2026-05-25)
 **Origin:** Phase H decomposition extracted prompts to per-service `prompts.py` modules but kept them as Python string constants. Phase H spec §6 noted "Option D — prompt externalization" as a future direction not in scope. The expanded scope (versioning, observability binding, per-prompt config metadata, composition) was recognised after Phase L's audit confirmed the `prompts.py` modules remain the largest non-decomposable bodies in `backend/app/` and that the surrounding system (call sites, LLM config, persistence layer) treats prompts as inert strings rather than versioned artefacts.
