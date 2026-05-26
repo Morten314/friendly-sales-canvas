@@ -8,6 +8,11 @@ Includes:
   - _run_icp_research_impl: shared worker for POST /icp-research[_claude]
   - run_icp_research: router-facing wrapper for POST /icp-research and /icp-research_claude
 
+Each prompt-using function returns a `(parsed_json, prompt_meta)` tuple. The
+`prompt_meta` sub-doc (shape defined by `app.core.prompts.prompt_meta_from`) is
+threaded through `_run_icp_research_impl` and `list_icps` into Mongo writes
+for observability (which prompt version produced the cached result).
+
 Persistence helpers (list_icps, delete_recommended_icp, _ensure_icp_indexes,
 _reserve_unique_icp_id, _release_icp_id) live in persistence.py and are
 re-exported by __init__.py per spec §3.7.
@@ -17,8 +22,7 @@ import json
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
-from langchain_core.prompts import PromptTemplate
-
+from app.core import prompts
 from app.core.exceptions import (
     CompanyProfileNotFoundError,
     UnsupportedComponentError,
@@ -26,13 +30,6 @@ from app.core.exceptions import (
 from app.core.logging import logger
 from app.services.icp.llm import _icp_research_agent_output
 from app.services.icp.parsing import _extract_icp_json
-from app.services.icp.prompts import (
-    ICP_GENERATOR_TEMPLATE,
-    ICP_RESEARCH_1_TEMPLATE,
-    ICP_RESEARCH_2_TEMPLATE,
-    ICP_RESEARCH_3_TEMPLATE,
-    ICP_RESEARCH_4_TEMPLATE,
-)
 from app.services._neo4j_helpers import fetch_company_profile as _fetch_company_profile
 from app.services._retrieval import (
     _build_market_context_queries,
@@ -40,17 +37,13 @@ from app.services._retrieval import (
 )
 
 
-def ICP_generator(agent_chain, pre_data: str) -> dict:
-    # Construct prompt by embedding the entire JSON string
-    template = ICP_GENERATOR_TEMPLATE
+def ICP_generator(agent_chain, pre_data: str) -> tuple[dict, dict]:
+    """Returns (parsed_json, prompt_meta). Caller merges prompt_meta into Mongo write."""
+    rendered = prompts.render("icp_generator", pre_data=pre_data)
+    prompt_meta = prompts.prompt_meta_from(rendered)
 
-    prompt = PromptTemplate(
-    input_variables=["pre_data"],
-    template=template
-    ).format(pre_data=pre_data)
-
-    def _invoke_generator(pmt: str) -> dict:
-        raw_response = agent_chain.invoke({'input': pmt})
+    def _invoke_generator(body: str) -> dict:
+        raw_response = agent_chain.invoke({'input': body})
         response = raw_response["output"]
         try:
             logger.debug("[ICP_generator] Raw LLM output (first 500 chars): %s", str(response)[:500])
@@ -59,16 +52,12 @@ def ICP_generator(agent_chain, pre_data: str) -> dict:
         return _extract_icp_json(response)
 
     # First attempt
-    parsed_json = _invoke_generator(prompt)
+    parsed_json = _invoke_generator(rendered.body)
 
     # If empty, retry with stricter requirement
     if not parsed_json.get("suggestedICPs"):
-        retry_template = template + "\n\nYou must return at least 3 ICP entries in suggestedICPs. Do not return an empty list."
-        retry_prompt = PromptTemplate(
-            input_variables=["pre_data"],
-            template=retry_template
-        ).format(pre_data=pre_data)
-        parsed_json = _invoke_generator(retry_prompt)
+        retry_body = rendered.body + "\n\nYou must return at least 3 ICP entries in suggestedICPs. Do not return an empty list."
+        parsed_json = _invoke_generator(retry_body)
 
     # If still empty, fail fast to surface the issue
     if not parsed_json.get("suggestedICPs"):
@@ -80,42 +69,32 @@ def ICP_generator(agent_chain, pre_data: str) -> dict:
     except Exception:
         pass
 
-    # ✅ Return the Python dict
-    return parsed_json
+    return parsed_json, prompt_meta
 
-def icp_research_1(agent_chain, pre_data: str, llm_backend: str = "default") -> dict:
-    # Construct prompt by embedding the entire JSON string
-    template = ICP_RESEARCH_1_TEMPLATE
 
-    prompt = PromptTemplate(
-    input_variables=["pre_data"],
-    template=template
-    ).format(pre_data=pre_data)
+def icp_research_1(agent_chain, pre_data: str, llm_backend: str = "default") -> tuple[dict, dict]:
+    rendered = prompts.render("icp_research_1", pre_data=pre_data)
+    prompt_meta = prompts.prompt_meta_from(rendered)
 
-    # Step 3: Get LLM response
-    response = _icp_research_agent_output(agent_chain, prompt, pre_data, llm_backend)
+    response = _icp_research_agent_output(agent_chain, rendered.body, pre_data, llm_backend)
 
     # Parse cleaned JSON (strips ``` fences, escapes \\n in 'description' values)
     parsed_json = _extract_icp_json(response)
 
-    # ✅ Return the Python dict
-    return parsed_json
+    return parsed_json, prompt_meta
 
-def icp_research_2(agent_chain, pre_data: str, llm_backend: str = "default") -> dict:
-    # Construct prompt by embedding the entire JSON string
-    # The pre_data contains both company_profile and icp_card (flexible data structure)
-    template = ICP_RESEARCH_2_TEMPLATE
 
-    prompt = PromptTemplate(
-        input_variables=["pre_data"],
-        template=template
-    ).format(pre_data=pre_data)
+def icp_research_2(agent_chain, pre_data: str, llm_backend: str = "default") -> tuple[dict, dict]:
+    rendered = prompts.render("icp_research_2", pre_data=pre_data)
+    prompt_meta = prompts.prompt_meta_from(rendered)
 
-    # Step 3: Get LLM response with retries
+    # Get LLM response with retries
     max_retries = 3
+    last_response = None
     for attempt in range(1, max_retries + 1):
         try:
-            response = _icp_research_agent_output(agent_chain, prompt, pre_data, llm_backend)
+            response = _icp_research_agent_output(agent_chain, rendered.body, pre_data, llm_backend)
+            last_response = response
 
             # Parse cleaned JSON (Final Answer split + brace trim + description/blurb escaping)
             parsed_json = _extract_icp_json(
@@ -129,32 +108,29 @@ def icp_research_2(agent_chain, pre_data: str, llm_backend: str = "default") -> 
             if "currentData" not in parsed_json:
                 raise ValueError("Missing 'currentData' key in response")
 
-            return parsed_json
+            return parsed_json, prompt_meta
 
         except json.JSONDecodeError as e:
             if attempt == max_retries:
-                raise ValueError(f"Failed to parse JSON after {max_retries} attempts: {str(e)}. Response: {response[:500]}")
+                raise ValueError(f"Failed to parse JSON after {max_retries} attempts: {str(e)}. Response: {(last_response or '')[:500]}")
             continue
         except Exception as e:
             if attempt == max_retries:
                 raise ValueError(f"Error in icp_research_2 after {max_retries} attempts: {str(e)}")
             continue
 
-def icp_research_3(agent_chain, pre_data: str, llm_backend: str = "default") -> dict:
-    # Construct prompt by embedding the entire JSON string
-    # The pre_data contains both company_profile and icp_card (flexible data structure)
-    template = ICP_RESEARCH_3_TEMPLATE
 
-    prompt = PromptTemplate(
-        input_variables=["pre_data"],
-        template=template
-    ).format(pre_data=pre_data)
+def icp_research_3(agent_chain, pre_data: str, llm_backend: str = "default") -> tuple[dict, dict]:
+    rendered = prompts.render("icp_research_3", pre_data=pre_data)
+    prompt_meta = prompts.prompt_meta_from(rendered)
 
-    # Step 3: Get LLM response with retries
+    # Get LLM response with retries
     max_retries = 3
+    last_response = None
     for attempt in range(1, max_retries + 1):
         try:
-            response = _icp_research_agent_output(agent_chain, prompt, pre_data, llm_backend)
+            response = _icp_research_agent_output(agent_chain, rendered.body, pre_data, llm_backend)
+            last_response = response
 
             # Parse cleaned JSON (Final Answer split + brace trim + description/blurb/headline escaping)
             parsed_json = _extract_icp_json(
@@ -170,32 +146,29 @@ def icp_research_3(agent_chain, pre_data: str, llm_backend: str = "default") -> 
             if "buyingSignals" not in parsed_json.get("currentData", {}):
                 raise ValueError("Missing 'buyingSignals' key in currentData")
 
-            return parsed_json
+            return parsed_json, prompt_meta
 
         except json.JSONDecodeError as e:
             if attempt == max_retries:
-                raise ValueError(f"Failed to parse JSON after {max_retries} attempts: {str(e)}. Response: {response[:500]}")
+                raise ValueError(f"Failed to parse JSON after {max_retries} attempts: {str(e)}. Response: {(last_response or '')[:500]}")
             continue
         except Exception as e:
             if attempt == max_retries:
                 raise ValueError(f"Error in icp_research_3 after {max_retries} attempts: {str(e)}")
             continue
 
-def icp_research_4(agent_chain, pre_data: str, llm_backend: str = "default") -> dict:
-    # Construct prompt by embedding the entire JSON string
-    # The pre_data contains both company_profile and icp_card (flexible data structure)
-    template = ICP_RESEARCH_4_TEMPLATE
 
-    prompt = PromptTemplate(
-        input_variables=["pre_data"],
-        template=template
-    ).format(pre_data=pre_data)
+def icp_research_4(agent_chain, pre_data: str, llm_backend: str = "default") -> tuple[dict, dict]:
+    rendered = prompts.render("icp_research_4", pre_data=pre_data)
+    prompt_meta = prompts.prompt_meta_from(rendered)
 
-    # Step 3: Get LLM response with retries
+    # Get LLM response with retries
     max_retries = 3
+    last_response = None
     for attempt in range(1, max_retries + 1):
         try:
-            response = _icp_research_agent_output(agent_chain, prompt, pre_data, llm_backend)
+            response = _icp_research_agent_output(agent_chain, rendered.body, pre_data, llm_backend)
+            last_response = response
 
             # Parse cleaned JSON (Final Answer split + brace trim + description/blurb escaping)
             parsed_json = _extract_icp_json(
@@ -211,11 +184,11 @@ def icp_research_4(agent_chain, pre_data: str, llm_backend: str = "default") -> 
             if "icpRefinementRecommendations" not in parsed_json.get("currentData", {}):
                 raise ValueError("Missing 'icpRefinementRecommendations' key in currentData")
 
-            return parsed_json
+            return parsed_json, prompt_meta
 
         except json.JSONDecodeError as e:
             if attempt == max_retries:
-                raise ValueError(f"Failed to parse JSON after {max_retries} attempts: {str(e)}. Response: {response[:500]}")
+                raise ValueError(f"Failed to parse JSON after {max_retries} attempts: {str(e)}. Response: {(last_response or '')[:500]}")
             continue
         except Exception as e:
             if attempt == max_retries:
@@ -323,9 +296,10 @@ async def _run_icp_research_impl(driver, mongo, pc, agent_chain, request: Any, l
     # --- Run research with retries (max 2 attempts) ---
     max_retries = 2
     research_result: Any = None
+    prompt_meta: dict = {}
     for attempt in range(1, max_retries + 1):
         try:
-            research_result = await asyncio.to_thread(research_function, agent_chain, context_json)
+            research_result, prompt_meta = await asyncio.to_thread(research_function, agent_chain, context_json)
             break
         except Exception:
             if attempt == max_retries:
@@ -340,7 +314,8 @@ async def _run_icp_research_impl(driver, mongo, pc, agent_chain, request: Any, l
     research_result.update({
         "user_id": request.user_id,
         "component_name": component_name,
-        "timestamp": datetime.now(timezone.utc)
+        "timestamp": datetime.now(timezone.utc),
+        "prompt_meta": prompt_meta,
     })
     if request.org_id:
         research_result["org_id"] = request.org_id
@@ -365,4 +340,3 @@ async def run_icp_research(driver, mongo, pc, agent_chain, request: Any, llm_bac
         ``"groq"`` (default) or ``"claude"``.
     """
     return await _run_icp_research_impl(driver, mongo, pc, agent_chain, request, llm_backend=llm_backend)
-

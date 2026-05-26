@@ -3,10 +3,12 @@
 Service for generating ICPs from company profiles + persisting them.
 Submodules:
   - orchestrator.py: ICP_generator, icp_research_1..4, run_icp_research,
-    _run_icp_research_impl, ICP_FUNCTIONS dispatch
-  - persistence.py: list_icps (cache-then-generate), delete_recommended_icp,
-    _ensure_icp_indexes, _reserve_unique_icp_id, _release_icp_id
-  - prompts.py: ICP_GENERATOR_TEMPLATE, ICP_RESEARCH_1..4_TEMPLATE
+    _run_icp_research_impl, ICP_FUNCTIONS dispatch. Each prompt-using function
+    returns ``(parsed_json, prompt_meta)`` so callers can persist prompt_meta
+    alongside the LLM result (templates live in backend/prompts/icp/).
+  - persistence.py: list_icps (cache-then-generate, persists prompt_meta),
+    delete_recommended_icp, _ensure_icp_indexes,
+    _reserve_unique_icp_id, _release_icp_id
   - llm.py: _icp_research_agent_output (dispatch wrapper)
   - parsing.py: _extract_icp_json (consolidates per-worker JSON cleanups)
 

@@ -1,0 +1,61 @@
+Task: Research and compile a detailed "Regulatory, Compliance & Recommended ICP" analysis based on the provided company profile and ICP data.
+
+IMPORTANT: This is DIFFERENT from the Buyer Map component. This component focuses on:
+1. Regulatory and compliance frameworks relevant to the industries and regions mentioned in the data
+2. Upcoming mandates and regulatory changes affecting these industries
+3. ICP fit score and confidence assessment
+4. Specific recommendations for refining the ICP based on regulatory and compliance requirements
+
+Company Profile and ICP Data Context:
+{"company_profile": {"name": "Acme Corp", "industry": "SaaS", "region": "DACH", "employees": 120}, "icp_card": {"segment": "Mid-market", "company_size": "50-500", "buyer_role": "CTO"}}
+
+Based on the information provided in the context data above, research regulatory and compliance requirements and provide ICP refinement recommendations.
+
+Return your findings in the following exact JSON format:
+
+{
+  "currentData": {
+    "title": "Regulatory, Compliance & Recommended ICP",
+    "blurb": "[2-3 sentence summary of regulatory landscape and ICP refinement recommendations based on the ICP data provided]",
+    "_metadata": {
+      "dataSource": "api"
+    },
+    "keyComplianceFrameworks": [
+      "[Framework name relevant to the industries mentioned]",
+      "[Another framework]"
+    ],
+    "upcomingMandates": "[Specific upcoming mandate with timeline, e.g., 'Q4 2027 GDPR Updates' or '2027 Industry Standard Changes']",
+    "icpFitScore": "[Percentage match, e.g., '85% match' or '92% match']",
+    "recommendationConfidence": "[High/Medium/Low]",
+    "icpRefinementRecommendations": [
+      {
+        "title": "[Specific recommendation title]",
+        "description": "[Detailed description of how to refine the ICP based on regulatory/compliance insights]"
+      },
+      {
+        "title": "[Another specific recommendation]",
+        "description": "[Detailed description]"
+      },
+      {
+        "title": "[Third recommendation]",
+        "description": "[Detailed description]"
+      },
+      {
+        "title": "[Fourth recommendation]",
+        "description": "[Detailed description]"
+      }
+    ]
+  }
+}
+
+⚠️ Notes:
+- Research ACTUAL compliance frameworks relevant to the industries mentioned in the data (e.g., GDPR for EU, HIPAA for healthcare, etc.)
+- Identify REAL upcoming mandates and regulatory changes for these industries
+- Calculate ICP fit score based on how well the ICP data aligns with regulatory requirements
+- Provide specific, actionable recommendations for refining the ICP
+- Use real research data, not generic examples
+- Give only JSON, nothing else
+
+When you have reached the final answer, respond only with:
+Final Answer: <your answer here>
+Do not include any additional reasoning, thoughts, or steps after that.

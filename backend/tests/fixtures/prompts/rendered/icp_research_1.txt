@@ -1,0 +1,81 @@
+Task: Research and compile an updated overview of icp  in the exact format given at end, based on the data below based on this ( follow this strictly and do research based on what all provided here - {"company_profile": {"name": "Acme Corp", "industry": "SaaS", "region": "DACH", "employees": 120}, "icp_card": {"segment": "Mid-market", "company_size": "50-500", "buyer_role": "CTO"}}.
+
+Return your findings in the following exact JSON format --  use this data to do the research - {"company_profile": {"name": "Acme Corp", "industry": "SaaS", "region": "DACH", "employees": 120}, "icp_card": {"segment": "Mid-market", "company_size": "50-500", "buyer_role": "CTO"}}
+
+
+{
+  "currentData": {
+    "title": "Healthcare Providers - Hospitals/Clinics (201-500 employees)",
+    "blurb": "Hospitals/Clinics companies in Healthcare Providers seeking innovative solutions to scale their operations across Germany, DACH, EU markets. Key focus areas include High cloud adoption and HIPAA/GDPR compliance.",
+    "_metadata": {
+      "dataSource": "api"
+    },
+    "marketSize": "€51.6B",
+    "growth": "+30%",
+    "urgency": "High",
+    "timeToClose": "4-6 months",
+    "marketAnalysis": {
+      "totalMarketSize": "€51.7B",
+      "marketGrowth": "+30%",
+      "servicableMarket": "€17.5B",
+      "targetableMarket": "€4.1B",
+      "segments": [
+        {
+          "name": "Advanced Hospitals/Clinics",
+          "share": "45%",
+          "size": "€22.0B",
+          "growth": "+40%"
+        },
+        {
+          "name": "Traditional Hospitals/Clinics",
+          "share": "35%",
+          "size": "€17.0B",
+          "growth": "+22%"
+        }
+      ],
+      "growthTrajectory": {
+        "units": "index(2023=100)",
+        "points": [
+          { "year": 2023, "index": 100 },
+          { "year": 2026, "index": 103 },
+          { "year": 2027, "index": 107 },
+          { "year": 2026, "index": 112 }
+        ]
+      },
+      "marketShareDistribution": [
+        { "name": "Advanced Hospitals/Clinics", "share": "45%" },
+        { "name": "Traditional Hospitals/Clinics", "share": "35%" },
+        { "name": "Other", "share": "20%" }
+      ],
+      "keyChallenges": [
+        "Healthcare Providers sector complexity requiring specialized high cloud adoption",
+        "Hospitals/Clinics integration challenges for 201-500 employees organizations"
+      ],
+      "strategicRecommendations": [
+        "Target Healthcare Providers companies specifically needing high cloud adoption",
+        "Focus hospitals/clinics messaging on high cloud adoption and HIPAA/GDPR compliance benefits"
+      ],
+      "signalsToMonitor": [
+        "Healthcare Providers sector funding and hospitals/clinics investment announcements",
+        "Germany regulatory changes affecting healthcare providers high cloud adoption"
+      ]
+    },
+  }
+}
+
+
+⚠️ Notes:
+
+Use USD for monetary values in billions (B) or millions (M).
+
+If numeric growth values aren't available for projections, provide a normalized trend (e.g., index from 1.0 to 2.5).
+
+Pie chart data under marketSizeBySegment must sum to ~100%.
+
+Keep bullet point recommendations short and actionable.
+
+give only json , nothing else , nothing at all
+
+When you have reached the final answer, respond only with:
+Final Answer: <your answer here>
+Do not include any additional reasoning, thoughts, or steps after that.

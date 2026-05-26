@@ -272,7 +272,10 @@ def test_get_icp_returns_cached_suggested_icps(client, snapshot):
 
 
 def test_get_icp_refresh_true_calls_neo4j_and_llm(client, mock_neo4j):
-    """refresh=True triggers Neo4j lookup and ICP_generator call."""
+    """refresh=True triggers Neo4j lookup and ICP_generator call.
+
+    Post-Task-8, ICP_generator returns ``(parsed_json, prompt_meta)``.
+    """
     mc = _mc_factory({
         "ICP_config": _make_coll(find_one=None),
         "icp_id_registry": _make_coll(find_one=None),
@@ -282,7 +285,15 @@ def test_get_icp_refresh_true_calls_neo4j_and_llm(client, mock_neo4j):
     mock_record.values.return_value = [{"org_id": TEST_ORG_ID, "name": "Test Org"}]
     mock_neo4j["session"].run.return_value.single.return_value = mock_record
 
-    mock_generator = MagicMock(return_value={"suggestedICPs": []})
+    fake_meta = {
+        "name": "icp_generator",
+        "version": "1.0.0",
+        "content_hash": "ch",
+        "render_inputs_hash": "rih",
+        "model": "Qwen/Qwen3-235B-A22B-Instruct-2507-tput",
+        "rendered_at": "2026-05-26T00:00:00+00:00",
+    }
+    mock_generator = MagicMock(return_value=({"suggestedICPs": []}, fake_meta))
 
     with _override_mongo(mc), \
          patch("app.services.icp.persistence.ICP_generator", mock_generator):

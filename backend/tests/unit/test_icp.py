@@ -150,9 +150,22 @@ def test_run_icp_research_groq_happy_path(
     mocker, mock_session, mock_mongo_client,
 ):
     """ICP_FUNCTIONS holds direct refs to icp_research_N — same dispatch-dict
-    gotcha as market_research. Patch the dict entry, not the module attr."""
+    gotcha as market_research. Patch the dict entry, not the module attr.
+
+    Post-Task-8, research functions return ``(parsed_json, prompt_meta)``; the
+    orchestrator unpacks the tuple and merges prompt_meta into the inserted
+    Mongo doc — assert both pieces propagate.
+    """
     captured = load_captured("icp_research_icp_summary_groq")
-    fake_fn = MagicMock(return_value=captured)
+    prompt_meta = {
+        "name": "icp_research_1",
+        "version": "1.0.0",
+        "content_hash": "fake_hash",
+        "render_inputs_hash": "fake_inputs_hash",
+        "model": "Qwen/Qwen3-235B-A22B-Instruct-2507-tput",
+        "rendered_at": "2026-05-26T00:00:00+00:00",
+    }
+    fake_fn = MagicMock(return_value=(captured, prompt_meta))
     mocker.patch.dict(
         "app.services.icp.orchestrator.ICP_FUNCTIONS",
         {"icp summary & market opportunity": fake_fn},
@@ -176,6 +189,13 @@ def test_run_icp_research_groq_happy_path(
 
     assert result["status"] == "success"
     assert result["data"]["user_id"] == TEST_USER_ID
+    # prompt_meta threaded into both the response payload and the Mongo insert
+    assert result["data"]["prompt_meta"]["name"] == "icp_research_1"
+    assert result["data"]["prompt_meta"]["version"] == "1.0.0"
+    inserted = coll.insert_one.call_args[0][0]
+    assert inserted["prompt_meta"]["name"] == "icp_research_1"
+    assert inserted["prompt_meta"]["version"] == "1.0.0"
+    assert inserted["prompt_meta"]["model"] == "Qwen/Qwen3-235B-A22B-Instruct-2507-tput"
 
 
 def test_run_icp_research_claude_happy_path(
@@ -183,9 +203,23 @@ def test_run_icp_research_claude_happy_path(
 ):
     """Claude path: ICP_FUNCTIONS_CLAUDE entries are lambdas that resolve
     the underlying icp_research_N at call time, so patching the module
-    attr works here (unlike the direct-ref Groq dict above)."""
+    attr works here (unlike the direct-ref Groq dict above).
+
+    Post-Task-8, research functions return ``(parsed_json, prompt_meta)``.
+    """
     captured = load_captured("icp_research_icp_buyer_map_claude")
-    mocker.patch("app.services.icp.orchestrator.icp_research_2", return_value=captured)
+    prompt_meta = {
+        "name": "icp_research_2",
+        "version": "1.0.0",
+        "content_hash": "fake_hash",
+        "render_inputs_hash": "fake_inputs_hash",
+        "model": "Qwen/Qwen3-235B-A22B-Instruct-2507-tput",
+        "rendered_at": "2026-05-26T00:00:00+00:00",
+    }
+    mocker.patch(
+        "app.services.icp.orchestrator.icp_research_2",
+        return_value=(captured, prompt_meta),
+    )
     mock_session.run.return_value.single.return_value = _make_company_record()
     coll = MagicMock()
     coll.find_one.return_value = None
@@ -205,6 +239,9 @@ def test_run_icp_research_claude_happy_path(
     result = asyncio.run(run_icp_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend="claude"))
 
     assert result["status"] == "success"
+    inserted = coll.insert_one.call_args[0][0]
+    assert inserted["prompt_meta"]["name"] == "icp_research_2"
+    assert inserted["prompt_meta"]["version"] == "1.0.0"
 
 
 def test_run_icp_research_raises_when_company_profile_missing(

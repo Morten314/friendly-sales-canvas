@@ -220,7 +220,7 @@ def list_icps(
         # Generate ICPs
         logger.info(f"[ICP] Calling ICP_generator() for user_id: {user_id}")
         try:
-            icp_result = ICP_generator(agent_chain, company_profile)
+            icp_result, prompt_meta = ICP_generator(agent_chain, company_profile)
             if isinstance(icp_result, dict) and "suggestedICPs" in icp_result:
                 logger.info(f"[ICP] Generated {len(icp_result.get('suggestedICPs', []))} ICPs for user_id: {user_id}")
             else:
@@ -235,7 +235,7 @@ def list_icps(
         try:
             update_result = collection.update_one(
                 {"user_id": user_id},
-                {"$set": {"user_id": user_id, "icps": icp_result}},
+                {"$set": {"user_id": user_id, "icps": icp_result, "prompt_meta": prompt_meta}},
                 upsert=True
             )
             logger.info(f"[ICP] Saved to MongoDB - matched: {update_result.matched_count}, modified: {update_result.modified_count}")

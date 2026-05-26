@@ -181,6 +181,7 @@
         'topPainPoint': 'Stub pain point',
       }),
       'org_id': 'test_org_abc',
+      'prompt_meta': '<scrubbed>',
       'timestamp': '<scrubbed>',
       'user_id': 'test_user_123',
     }),
@@ -228,6 +229,7 @@
         'title': 'Competitive Overlap & Buying Signals',
       }),
       'org_id': 'test_org_abc',
+      'prompt_meta': '<scrubbed>',
       'timestamp': '<scrubbed>',
       'user_id': 'test_user_123',
     }),
@@ -241,6 +243,7 @@
       '_stub_note': 'Replace by running tests/capture_fixtures.py with real API keys.',
       'component_name': 'icp summary & market opportunity',
       'org_id': 'test_org_abc',
+      'prompt_meta': '<scrubbed>',
       'suggestedICPs': list([
         dict({
           'firmographics': dict({
@@ -297,6 +300,7 @@
         'upcomingMandates': 'Stub mandate description',
       }),
       'org_id': 'test_org_abc',
+      'prompt_meta': '<scrubbed>',
       'timestamp': '<scrubbed>',
       'user_id': 'test_user_123',
     }),

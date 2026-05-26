@@ -6,6 +6,9 @@ DEFAULT_SCRUB_KEYS = {
     "lead_id", "icp_id", "signal_id", "file_id", "file_key",
     "created_at", "updated_at", "timestamp", "_id", "task_id",
     "session_id", "request_id", "trace_id",
+    # prompt_meta carries non-deterministic fields (rendered_at, hashes that
+    # vary with input shape) — scrub the whole sub-doc for snapshot stability.
+    "prompt_meta",
 }
 
 
