@@ -104,7 +104,7 @@ async def signal_ask(driver, mongo, agent_chain, request: SignalAskRequest) -> d
         }
 
     except Exception as e:
-        logger.error(f"Error in signal_Ask: {str(e)}")
+        logger.error(f"Error in signal_ask: {str(e)}")
         raise
 
 
