@@ -280,7 +280,6 @@ def _clean_and_parse_json(raw_text: str) -> Dict[str, Any]:
 
 
 def score_single_lead_against_market(
-    llm2,  # kept in signature for backward compat with callers; ignored in v1
     lead: Dict[str, Any],
     company_profile: Dict[str, Any],
     market_reports: Dict[str, Dict[str, Any]],
@@ -290,8 +289,7 @@ def score_single_lead_against_market(
     Returns (scoring_payload, prompt_meta) — caller (scoring.py) passes prompt_meta
     to _persist_market_score_for_lead which adds it to the Mongo doc.
 
-    The `llm2` argument is retained for signature compatibility; the LLM is now
-    resolved from front-matter `model:` via the LLM factory at call time.
+    The LLM is resolved from front-matter `model:` via the LLM factory at call time.
     """
     response, prompt_meta = call_with_prompt(
         "score_lead",

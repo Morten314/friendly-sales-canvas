@@ -310,15 +310,13 @@ def test_get_market_reports_for_org_returns_dict(mock_mongo_client):
 def test_score_single_lead_against_market_returns_score(mocker):
     """score_single_lead_against_market resolves the LLM from the prompt
     front-matter via the factory (see _fake_qwen_in_factory autouse fixture).
-    Returns (scoring_payload, prompt_meta) tuple. llm2 arg is ignored in v1.
+    Returns (scoring_payload, prompt_meta) tuple.
     """
     lead = {"lead_id": TEST_LEAD_ID_1, "company_name": "Acme"}
     company_profile = {"industry": "Logistics"}
     market_reports = {"market size & opportunity": {"tam": "$1B"}}
 
-    # llm2 is passed for backward-compat but ignored — the factory's _FAKE_LLM is used.
     result, prompt_meta = score_single_lead_against_market(
-        MagicMock(),
         lead=lead,
         company_profile=company_profile,
         market_reports=market_reports,

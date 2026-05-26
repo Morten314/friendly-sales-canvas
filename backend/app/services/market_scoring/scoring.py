@@ -114,7 +114,6 @@ def _run_market_scoring_for_org(driver, mongo, llm2, user_id: str, org_id: str, 
                 continue
             try:
                 scoring_payload, prompt_meta = orchestrator.score_single_lead_against_market(
-                    llm2,
                     lead=lead,
                     company_profile=company_profile,
                     market_reports=market_reports,
