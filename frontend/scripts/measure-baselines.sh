@@ -1,7 +1,17 @@
 #!/usr/bin/env bash
-# Phase 0a NFR baseline capture. Spec 15 §2.4.
-# 3-run median for: tsc --noEmit, vite build, vite dev cold start, playwright full suite.
-# Runtime: 10-20 minutes on typical dev hardware. Local-only, not CI.
+# Phase 0 NFR baseline capture. Spec 15 §2.4 (0a) + §3.6 (0b).
+# 3-run median for: tsc --noEmit, vite build, vite dev cold start,
+# playwright full suite, vitest full suite (added at 0b).
+# Runtime: 12-25 minutes on typical dev hardware (0a was 10-20; +2-5 for vitest).
+# Local-only, not CI.
+#
+# The output JSON has TWO layers:
+#   - Top-level fields preserved from the 0a anchor (DO NOT overwrite).
+#   - "after_phase_0b" sibling key with re-measured values plus the new
+#     vitest_full_suite_seconds field. Spec §3.6.
+#
+# Re-running this script overwrites only the after_phase_0b key. The original
+# anchor is read from the existing JSON if present.
 
 set -euo pipefail
 
@@ -13,7 +23,6 @@ cd "$FRONTEND_DIR"
 
 # ---------- helpers ----------
 
-# median min max <list-of-floats>
 median_min_max() {
   python3 -c "
 import statistics, sys
@@ -22,7 +31,6 @@ print(f'{statistics.median(vals):.3f} {vals[0]:.3f} {vals[-1]:.3f}')
 " "$@"
 }
 
-# wall-clock seconds for a command
 time_cmd() {
   local start end
   start=$(python3 -c 'import time; print(time.time())')
@@ -31,7 +39,6 @@ time_cmd() {
   python3 -c "import sys; print(f'{float(sys.argv[1]) - float(sys.argv[2]):.3f}')" "$end" "$start"
 }
 
-# wall-clock from start until log file contains "ready in", with a 60s timeout
 time_dev_start() {
   local logfile="/tmp/phase-0a-vite-dev.$$.log"
   local start end vite_pid elapsed
@@ -64,9 +71,26 @@ time_dev_start() {
   python3 -c "import sys; print(f'{float(sys.argv[1]) - float(sys.argv[2]):.3f}')" "$end" "$start"
 }
 
+# ---------- pre-flight integrity check ----------
+# Fail fast if the existing NFR JSON is malformed — otherwise we'd run all 5
+# measurements (12-25 minutes) only to crash at the final json.load(). Missing
+# file is fine (Phase 0a anchor will simply not exist on a fresh tree).
+
+if [[ -f "$OUTPUT_FILE" ]]; then
+  if ! python3 -c "import json; json.load(open('$OUTPUT_FILE'))" 2>/dev/null; then
+    echo "ERROR: $OUTPUT_FILE exists but is not valid JSON." >&2
+    echo "       Fix or remove the file before re-running this script —" >&2
+    echo "       otherwise all $RUNS-run measurements would be discarded at write time." >&2
+    exit 1
+  fi
+  echo "Pre-flight: existing NFR JSON parses cleanly." >&2
+else
+  echo "Pre-flight: no existing NFR JSON (will write fresh)." >&2
+fi
+
 # ---------- measurements ----------
 
-echo "[1/4] tsc --noEmit ($RUNS runs, no cache to clear)" >&2
+echo "[1/5] tsc --noEmit ($RUNS runs, no cache to clear)" >&2
 tsc_times=()
 for i in $(seq 1 "$RUNS"); do
   t=$(time_cmd npx tsc --noEmit)
@@ -74,7 +98,7 @@ for i in $(seq 1 "$RUNS"); do
   tsc_times+=("$t")
 done
 
-echo "[2/4] vite build ($RUNS runs, cold each run)" >&2
+echo "[2/5] vite build ($RUNS runs, cold each run)" >&2
 build_times=()
 for i in $(seq 1 "$RUNS"); do
   rm -rf dist node_modules/.vite
@@ -83,7 +107,7 @@ for i in $(seq 1 "$RUNS"); do
   build_times+=("$t")
 done
 
-echo "[3/4] vite dev cold start ($RUNS runs)" >&2
+echo "[3/5] vite dev cold start ($RUNS runs)" >&2
 dev_times=()
 for i in $(seq 1 "$RUNS"); do
   rm -rf node_modules/.vite
@@ -92,12 +116,20 @@ for i in $(seq 1 "$RUNS"); do
   dev_times+=("$t")
 done
 
-echo "[4/4] playwright full suite ($RUNS runs)" >&2
+echo "[4/5] playwright full suite ($RUNS runs)" >&2
 playwright_times=()
 for i in $(seq 1 "$RUNS"); do
   t=$(time_cmd npm run test:e2e)
   echo "  run $i: ${t}s" >&2
   playwright_times+=("$t")
+done
+
+echo "[5/5] vitest full suite ($RUNS runs, no persistent cache to clear)" >&2
+vitest_times=()
+for i in $(seq 1 "$RUNS"); do
+  t=$(time_cmd npm run test)
+  echo "  run $i: ${t}s" >&2
+  vitest_times+=("$t")
 done
 
 # ---------- compose JSON ----------
@@ -106,6 +138,7 @@ read tsc_med tsc_min tsc_max < <(median_min_max "${tsc_times[@]}")
 read build_med build_min build_max < <(median_min_max "${build_times[@]}")
 read dev_med dev_min dev_max < <(median_min_max "${dev_times[@]}")
 read pw_med pw_min pw_max < <(median_min_max "${playwright_times[@]}")
+read vt_med vt_min vt_max < <(median_min_max "${vitest_times[@]}")
 
 # Hardware metadata
 OS_NAME="$(uname -srm)"
@@ -120,24 +153,51 @@ NODE_VER="$(node --version)"
 NPM_VER="$(npm --version)"
 CAPTURED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
+# Read existing 0a anchor from disk (preserve verbatim) and merge in the
+# after_phase_0b sibling. Python handles the JSON merge atomically.
 mkdir -p "$(dirname "$OUTPUT_FILE")"
-cat > "$OUTPUT_FILE" <<JSON
-{
-  "captured_at": "$CAPTURED_AT",
-  "captured_on": "local-dev-machine",
-  "hardware": {
-    "os": "$OS_NAME",
-    "cpu_model": "$CPU_MODEL",
-    "ram_gb": $RAM_GB,
-    "node_version": "$NODE_VER",
-    "npm_version": "$NPM_VER"
-  },
-  "tsc_noemit_seconds":          { "median": $tsc_med,   "min": $tsc_min,   "max": $tsc_max },
-  "vite_build_seconds":          { "median": $build_med, "min": $build_min, "max": $build_max },
-  "vite_dev_start_seconds":      { "median": $dev_med,   "min": $dev_min,   "max": $dev_max },
-  "playwright_full_suite_seconds": { "median": $pw_med,    "min": $pw_min,    "max": $pw_max }
+python3 - "$OUTPUT_FILE" "$CAPTURED_AT" "$OS_NAME" "$CPU_MODEL" "$RAM_GB" \
+  "$NODE_VER" "$NPM_VER" \
+  "$tsc_med" "$tsc_min" "$tsc_max" \
+  "$build_med" "$build_min" "$build_max" \
+  "$dev_med" "$dev_min" "$dev_max" \
+  "$pw_med" "$pw_min" "$pw_max" \
+  "$vt_med" "$vt_min" "$vt_max" <<'PYEOF'
+import json, sys, os
+(_, path, captured_at, os_name, cpu_model, ram_gb, node_ver, npm_ver,
+ tsc_med, tsc_min, tsc_max,
+ build_med, build_min, build_max,
+ dev_med, dev_min, dev_max,
+ pw_med, pw_min, pw_max,
+ vt_med, vt_min, vt_max) = sys.argv
+
+existing = {}
+if os.path.exists(path):
+    with open(path) as f:
+        existing = json.load(f)
+
+after_phase_0b = {
+    "captured_at": captured_at,
+    "captured_on": "local-dev-machine",
+    "hardware": {
+        "os": os_name,
+        "cpu_model": cpu_model,
+        "ram_gb": int(ram_gb),
+        "node_version": node_ver,
+        "npm_version": npm_ver,
+    },
+    "tsc_noemit_seconds":             {"median": float(tsc_med),   "min": float(tsc_min),   "max": float(tsc_max)},
+    "vite_build_seconds":             {"median": float(build_med), "min": float(build_min), "max": float(build_max)},
+    "vite_dev_start_seconds":         {"median": float(dev_med),   "min": float(dev_min),   "max": float(dev_max)},
+    "playwright_full_suite_seconds":  {"median": float(pw_med),    "min": float(pw_min),    "max": float(pw_max)},
+    "vitest_full_suite_seconds":      {"median": float(vt_med),    "min": float(vt_min),    "max": float(vt_max)},
 }
-JSON
+existing["after_phase_0b"] = after_phase_0b
+
+with open(path, "w") as f:
+    json.dump(existing, f, indent=2)
+    f.write("\n")
+PYEOF
 
 echo "" >&2
-echo "Wrote $OUTPUT_FILE" >&2
+echo "Wrote $OUTPUT_FILE (added after_phase_0b sibling key)" >&2
