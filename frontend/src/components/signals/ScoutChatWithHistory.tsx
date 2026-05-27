@@ -11,11 +11,9 @@ import {
   type LeadStreamChatContext,
 } from '@/utils/leadStreamChatContext';
 
-export type { LeadStreamChatContext };
-
 const STORAGE_KEY_PREFIX = 'scout_chat_sessions';
 
-export interface ChatSession {
+interface ChatSession {
   id: string;
   title: string;
   context: SignalsChatContext | null;
