@@ -335,6 +335,42 @@ Phase 13 (post-modularization LOC pass) with strict TS context.
 
 ---
 
+## TD-FE-8 — knip --strict ignoreDependencies for shadcn ecosystem packages
+
+**Date logged:** 2026-05-27
+**Origin:** Spec 16 Phase 1 Task 7.2 (plans/16-frontend-phase-1-loc-reduction.md), knip --strict wire-in.
+
+**Current state:**
+`frontend/knip.json` contains `ignoreDependencies` for 30 packages: all 17 `@radix-ui/*` primitives,
+`class-variance-authority`, `clsx`, `cmdk`, `vaul`, `tailwind-merge`, `tailwindcss-animate`,
+`lucide-react`, `next-themes`, `sonner`, `firebase`, `react-router-dom`, `recharts`,
+and `@tanstack/react-query`.
+
+In `knip --strict` mode, these packages are flagged as "unused dependencies" because knip's strict
+dependency-tracing scope cannot confirm they are used (the entry array covers test/e2e/script files,
+not the app tree starting from `src/main.tsx`). In non-strict mode, knip finds them through the
+vite-plugin trace and does not flag them. The `ignoreDependencies` suppresses the strict-mode
+false positives.
+
+Note: knip's non-strict mode emits "Remove from ignoreDependencies" hints for all 30 entries (it
+finds them itself in non-strict), but these are display-only hints with exit 0 — they do not block
+the preflight gate. `--strict` is the gate.
+
+**Why deferred:**
+The root cause is that knip's `--strict` and non-strict modes use different dependency-tracing
+strategies. Fixing it properly would require either (a) ensuring the app entry (`src/main.tsx`) is
+explicitly in the entry array WITHOUT triggering the "redundant entry" hint, or (b) upgrading to a
+future knip version that unifies the tracing strategy. The `ignoreDependencies` workaround is
+correct and safe: all 30 packages are genuinely used.
+
+**Pull-forward trigger:**
+When knip is upgraded to a major version that resolves the strict/non-strict tracing discrepancy,
+re-run `knip --strict` without `ignoreDependencies` and verify exit 0. Remove stale entries.
+
+**Owner:** TBD.
+
+---
+
 ## TD-FE-7 — Deferred unused exports: src/components/ui/ (shadcn-locked primitives)
 
 **Date logged:** 2026-05-27
