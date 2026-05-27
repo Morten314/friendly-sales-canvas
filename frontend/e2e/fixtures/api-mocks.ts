@@ -2,7 +2,7 @@ import { Page } from '@playwright/test';
 import { lead, leadList, signal, signalList, icp, orgProfile, orgList } from './seed-data';
 import { TEST_ORG_ID } from './identities';
 
-export const apiMocks: Record<string, unknown> = {
+const apiMocks: Record<string, unknown> = {
   '/api/org': { orgs: orgList },
   '/api/profile/company': orgProfile,
   '/api/profile/org': orgProfile,
