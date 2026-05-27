@@ -550,11 +550,11 @@ brainstorm spec    →  review-spec     →  synthesize-spec-review (round N)
 
 There is no GitHub Actions CI in this repo. The pre-merge quality gate is `npm run preflight` in `frontend/`, run locally by the controller agent immediately before the user-approved merge step (§5.6). Each phase extends the preflight chain by appending its phase's checks; later phases' chains are supersets of earlier phases'.
 
-- Phase 0a: preflight = typecheck + lint + Playwright + visual regression + build (`tsc --noEmit && eslint . && vite build && playwright test`)
+- Phase 0a: preflight = typecheck + Playwright + visual regression + build (`tsc --noEmit && vite build && playwright test`). Lint deferred to Phase 2b (the existing `eslint .` script is red at 0a with 428 errors, mostly `@typescript-eslint/no-explicit-any`; 2b is the phase that tightens/loosens the lint config to be green).
 - Phase 0b: above + Vitest (`npm run test`)
 - Phase 1: above + `knip --strict` (deferred to Phase 1 because Phase 0a's dead-code baseline shows 32 unused files; `--strict` becomes meaningful only after Phase 1's cleanup pass)
 - Phase 2a: above + strict-TS-aware typecheck (the same `tsc --noEmit` command, against the strict-mode config landed by 2a)
-- Phase 2b: above + Prettier check (`prettier --check`)
+- Phase 2b: above + lint (`eslint .`, with `--max-warnings 0`) + Prettier check (`prettier --check`). 2b's spec decides whether to (a) tighten the config and fix the existing 428 errors, (b) relax the rules that triggered them, or (c) some mix. Either way, lint must be green at the end of 2b.
 - Phase 2c onward: above + bundle-budget comparator (`tsx scripts/check-bundle-budget.ts` against the baseline JSON from Phase 0a)
 
 **Preflight failure = no merge.** If preflight goes red, the controller reports which check failed and does not merge. The user decides whether to fix on the branch and re-run, or abort the phase. No "fix forward" through a failed preflight, and no override (the script does not have a `--force` flag, by design).

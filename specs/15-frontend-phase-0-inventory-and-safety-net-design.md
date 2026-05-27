@@ -194,16 +194,17 @@ Master spec §8 Q2 listed PR-label and commit-message triggers as the two option
 ```json
 "scripts": {
   "typecheck": "tsc --noEmit",
-  "preflight": "npm run typecheck && npm run lint && npm run build && npm run test:e2e"
+  "preflight": "npm run typecheck && npm run build && npm run test:e2e"
 }
 ```
 
-Four checks at 0a — typecheck (existing tsc), lint (existing `eslint .`), build (existing `vite build`), and Playwright (existing `playwright test`). Tools are already installed; only the `typecheck` and `preflight` scripts are new.
+Three checks at 0a — typecheck (existing tsc, currently green), build (existing `vite build`, currently green), and Playwright (existing `playwright test`, currently green at the tightened threshold from §2.5). Tools are already installed; only the `typecheck` and `preflight` scripts are new.
 
 **What's deliberately deferred:**
 
 | Check | Phase that adds it to the chain | Why not at 0a |
 |---|---|---|
+| `npm run lint` (`eslint .`) | 2b | The existing eslint script is currently red with 428 errors at 0a (mostly `@typescript-eslint/no-explicit-any`); same logic as knip --strict's deferral. 2b is the phase that lands type-aware ESLint rules + Prettier and tightens/loosens config to make lint green. |
 | `npm run test` (Vitest) | 0b | Vitest isn't installed yet (0b installs it) |
 | `knip --strict` | 1 | knip is installed at 0a (§2.2) and the baseline shows 32 unused files; `--strict` would fail until Phase 1's cleanup pass — so the chain at 0a omits it to keep the preflight signal meaningful (no known-failing checks) |
 | Strict-TS typecheck (same `tsc --noEmit` command, against `strict: true` config) | 2a | The command is wired; 2a flips the config |
@@ -242,7 +243,7 @@ Discrete commit. Deletes `frontend/bun.lock` and `frontend/bun.lockb`. Commit me
 - Bundle baseline JSON merged (with `capture-bundle-baseline.ts` script committed).
 - NFR baseline JSON merged.
 - Playwright suite green on `master` post-merge under the tightened threshold; `@playwright/test` pinned exactly in `package.json`.
-- `npm run preflight` runs locally (typecheck + lint + build + Playwright) and is required to pass before any merge to `master`; the controller agent runs it as part of the user-approved merge step (per master §5.3, §5.6).
+- `npm run preflight` runs locally (typecheck + build + Playwright) and is required to pass before any merge to `master`; the controller agent runs it as part of the user-approved merge step (per master §5.3, §5.6).
 - `bun.lock` and `bun.lockb` deleted; `package-lock.json` is the sole lockfile.
 - `playwright.config.ts` carries a comment block documenting the local re-baseline command (per §2.6).
 
@@ -364,7 +365,7 @@ If either route reveals a wiring bug that breaks the load (e.g., a required API 
 
 ### 3.5 Preflight chain extension
 
-Update `frontend/package.json`: append `&& npm run test` to the `npm run preflight` chain (Vitest joins typecheck + lint + build + Playwright from 0a). The preflight script is the merge gate (per master §5.3); a red `npm run test` blocks the merge.
+Update `frontend/package.json`: append `&& npm run test` to the `npm run preflight` chain (Vitest joins typecheck + build + Playwright from 0a). The preflight script is the merge gate (per master §5.3); a red `npm run test` blocks the merge.
 
 The other checks (knip --strict, strict-TS typecheck, prettier, bundle-budget) each get appended to the chain in their own phase per spec 14 §5.3.
 
@@ -421,7 +422,7 @@ Phase 0 is done when:
 
 1. **0a deliverables** (§2.9) are merged.
 2. **0b deliverables** (§3.7) are merged.
-3. Before any merge to `master`, the controller agent runs `npm run preflight` locally (typecheck + lint + build + Playwright at 0a; + Vitest at 0b). Green required to merge; red blocks the merge (per master §5.3, §5.6).
+3. Before any merge to `master`, the controller agent runs `npm run preflight` locally (typecheck + build + Playwright at 0a; + Vitest at 0b). Green required to merge; red blocks the merge (per master §5.3, §5.6).
 4. Visual snapshots are refreshed locally via `npm run test:e2e:update-snapshots` when an intentional UI change is accepted; the documenting comment block in `playwright.config.ts` explains the workflow.
 5. Audit scorecard, dead-code raw outputs, NFR + bundle baseline JSON files all committed under `docs/audits/`.
 6. `bun.lock` and `bun.lockb` are gone.
@@ -476,7 +477,7 @@ Created during Phase 0a:
 - `frontend/scripts/capture-bundle-baseline.ts` — bundle baseline capture script (uses `gzip-size`)
 - `frontend/knip.json` — knip config
 - `frontend/scripts/preflight.sh` — bash wrapper for `npm run preflight` (section headers + per-check timing)
-- `frontend/package.json` — new `typecheck` + `preflight` npm scripts (preflight chain at 0a: typecheck + lint + build + Playwright; extended in later phases)
+- `frontend/package.json` — new `typecheck` + `preflight` npm scripts (preflight chain at 0a: typecheck + build + Playwright; extended in later phases)
 - `frontend/playwright.config.ts` updated: `maxDiffPixelRatio: 0.01`, exact-pinned `@playwright/test`, comment block documenting local re-baseline command
 
 Created during Phase 0b:
