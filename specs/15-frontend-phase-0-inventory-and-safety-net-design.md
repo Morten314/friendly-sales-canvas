@@ -12,7 +12,7 @@
 
 ### 1.1 Goal
 
-Establish the audit baseline and the safety net that every subsequent phase (1 through 14) relies on. After Phase 0 merges, the frontend has: a per-file inventory with dead-code candidates surfaced, NFR + bundle baselines on disk, the existing Playwright + visual regression suite locked green on every push to `master` under a tightened threshold, a working Vitest + RTL + MSW harness with behavior-only characterization tests against the pure utilities that survive the refactor, and a GitHub Actions CI workflow scaffolded with future-phase gates pre-shaped as TODOs.
+Establish the audit baseline and the safety net that every subsequent phase (1 through 14) relies on. After Phase 0 merges, the frontend has: a per-file inventory with dead-code candidates surfaced, NFR + bundle baselines on disk, the existing Playwright + visual regression suite locked green at a tightened threshold and wired into a local pre-merge preflight chain, a working Vitest + RTL + MSW harness with behavior-only characterization tests against the pure utilities that survive the refactor, and an `npm run preflight` chain (with `frontend/scripts/preflight.sh` wrapper) that the controller agent runs immediately before any merge to `master`. No GitHub Actions, no external CI.
 
 ### 1.2 Why now
 
@@ -28,18 +28,18 @@ Master spec §4 places Phase 0 first because every later phase needs the safety 
 | Unit test framework | None. No Vitest, no RTL, no MSW, no Jest. |
 | Lint | ESLint flat-config v9 extending `js.configs.recommended` and `tseslint.configs.recommended` (with `@typescript-eslint/no-unused-vars` off — most TS rules effectively inert under the non-strict config), plus `react-hooks` and `react-refresh`. No `import/order`, no Prettier config. |
 | TS config | `strict: false`, `noImplicitAny: false`, `strictNullChecks: false`, `noUnusedLocals: false`, `noUnusedParameters: false`. |
-| CI | None. No `.github/workflows/` directory exists. |
+| Preflight | None. No `npm run preflight` script exists. No `.github/workflows/` either — see §2.7 for the no-CI decision. |
 | Package manager | npm. Evidence: `tech-brewra` (the Brewra dev) authored 3 commits touching `frontend/package-lock.json` (Dec 2025 – Jan 2026); `frontend/bun.lock` and `frontend/bun.lockb` each appeared in exactly 1 accidental commit and have no `@playwright/test` entry while `package-lock.json` does. CLAUDE.md uses `npm install`, `npm run lint`. |
 | Dead-code tooling | None installed (no `knip`). |
-| Playwright version | `@playwright/test: "^1.59.1"` in `package.json` (caret range — accepts 1.59.x and 1.60.x). 0a pins it exactly so the Docker image tag in CI stays in lockstep with local snapshots (see §6 R0a-5). |
+| Playwright version | `@playwright/test: "^1.59.1"` in `package.json` (caret range — accepts 1.59.x and 1.60.x). 0a pins it exactly so the Chromium binary stays reproducible across any controller/agent machine running `npm run preflight` (see §6 R0a-5). |
 | Top files (LOC) | `pages/MarketResearch.tsx` 14,956 · `components/customers/ICPSummaryOpportunity.tsx` 6,925 · `pages/MissionControl.tsx` 5,645 · `components/mission-control/DataSourcesManager.tsx` 3,747 · `components/market-research/MarketEntrySection.tsx` 3,719 · `components/mission-control/ICPManager.tsx` 3,269 · `components/market-research/RegulatoryComplianceSection.tsx` 2,395 · `components/market-research/CompetitorLandscapeSection.tsx` 2,375 · `components/customers/SuggestedICPCards.tsx` 2,279. |
 
 ### 1.4 Sub-split
 
 Phase 0 ships as **Phase 0a** then **Phase 0b**, each running the master-spec §5 adversarial cycle (spec → plan → impl → review at each stage). This single design document covers both — each gets its own *plan* document and its own merge.
 
-- **Phase 0a** — inventory, NFR + bundle baselines, Playwright/visual lock under tightened threshold, CI workflow scaffolding (with Phase-2c gates pre-shaped as TODOs), re-baseline workflow, bun lockfile delete.
-- **Phase 0b** — Vitest + RTL + MSW install, characterization tests against pure-function survivors, two missing behavioral E2E journeys (`/customers`, `/settings`), Vitest CI gate enforced.
+- **Phase 0a** — inventory, NFR + bundle baselines, Playwright/visual lock under tightened threshold, preflight script scaffolding (`npm run preflight` chain in `package.json` + `frontend/scripts/preflight.sh` wrapper, with 4 checks wired at 0a — see §2.7), re-baseline workflow, bun lockfile delete.
+- **Phase 0b** — Vitest + RTL + MSW install, characterization tests against pure-function survivors, two missing behavioral E2E journeys (`/customers`, `/settings`), Vitest appended to the `npm run preflight` chain.
 
 0a is mostly read-only / scaffolding; 0b adds executable code. The split is by deliverable kind, not by file count.
 
@@ -119,7 +119,7 @@ The `chunks` array contains **every** built chunk under `dist/`, sorted by `size
 - Before each `vite` dev-server cold start: same cleanup; measurement is wall time from `vite` start to first `ready in NNN ms` log line.
 - Before each `playwright test` run: snapshots and node_modules left intact; `npm run build` is *not* a prerequisite (the test config uses `npx vite --port 5173` as the webServer).
 
-**Expected runtime:** ~10–20 minutes on typical dev hardware (3× cold builds + 3× cold tsc + 3× dev-server starts + 3× Playwright runs, with `rm -rf dist node_modules/.vite` between builds). The script runs **locally**, not in CI.
+**Expected runtime:** ~10–20 minutes on typical dev hardware (3× cold builds + 3× cold tsc + 3× dev-server starts + 3× Playwright runs, with `rm -rf dist node_modules/.vite` between builds). The script runs **locally** (this entire repo's workflow is local — there is no CI per §2.7).
 
 **Phase 0b extension.** Phase 0b extends the script with a `vitest run` measurement using the same 3-run median protocol. No cache clear is needed between Vitest runs — Vitest has no persistent build cache. The extended script writes the new `vitest_full_suite_seconds` field shown in §3.6.
 
@@ -143,7 +143,7 @@ The `chunks` array contains **every** built chunk under `dist/`, sorted by `size
 }
 ```
 
-CI pipeline duration is *not* measured here — per master spec §4 line 221, Phase 2c re-measures against the actually-wired pipeline. Phase 0a numbers are sanity anchors, not budget values. The structured `hardware` block lets Phase 2c programmatically compare anchor environment to CI runner.
+Preflight wall time is *not* measured here — per master spec §4, Phase 2c re-measures `npm run preflight` after all checks are wired into the chain. Phase 0a numbers are sanity anchors, not budget values. The structured `hardware` block lets Phase 2c programmatically detect environment drift between the Phase 0 anchor machine and the eventual Phase 2c measurement machine.
 
 ### 2.5 Playwright + visual snapshot lock
 
@@ -177,74 +177,55 @@ git commit -m "chore(e2e): refresh visual snapshots — <reason>"
 
 The script is already in `frontend/package.json`. Snapshots are Linux-Chromium (`*-chromium-linux-linux.png`); authors on macOS/Windows should run the update inside the Playwright Docker image (`mcr.microsoft.com/playwright:v1.59.1-jammy`) for pixel-stable PNGs — a one-line example in the comment block at `playwright.config.ts` documents this.
 
-**Why not a PR-label CI workflow.** CLAUDE.md "Business State" section is explicit: "MVP, 0 live users — optimize for velocity over deployment ceremony; skip ceremony that exists to protect users you don't have yet." A PR-label-driven automation that commits refreshed snapshots back to a branch is exactly the kind of ceremony CLAUDE.md tells us to skip at this stage. It buys nothing for a single-author repo with zero users that the local script doesn't already give us. If team growth or workflow friction surface later, Phase 2c (which lands CI gates broadly) is the natural place to introduce the automation — see §6 R0-2.
+**Why no re-baseline automation.** CLAUDE.md "Business State" section is explicit: "MVP, 0 live users — optimize for velocity over deployment ceremony; skip ceremony that exists to protect users you don't have yet." Layering automation around snapshot refreshes (whether via PR label, commit-message trigger, or any other mechanism) is exactly the kind of ceremony CLAUDE.md tells us to skip at this stage. And separately, this repo has no CI at all per §2.7 — so there is no runner to do the automation anyway. The local `npm run test:e2e:update-snapshots` script is the entire re-baseline workflow; the author commits the refreshed PNGs as a deliberate change. If team growth or workflow friction surface later, Phase 2c is the natural place to revisit (see §6 R0-2).
 
 Master spec §8 Q2 listed PR-label and commit-message triggers as the two options; this spec picks neither in favor of the local script.
 
-### 2.7 CI workflow scaffolding
+### 2.7 Preflight script scaffolding
 
-**File:** `.github/workflows/ci.yml`. Triggers: pushes to `master` (primary), `pull_request` against `master` (secondary — kept on the workflow for future use, but the default flow per CLAUDE.md "Spec-driven flow" is direct merge to `master` after impl-review convergence, not via PR).
+**No CI in this repo.** Per master spec 14 §5.3 + §8 Q8, there is no GitHub Actions workflow and no external runner. The pre-merge quality gate is `npm run preflight`, run locally by the controller agent immediately before the user-approved merge step. Each later phase appends one more check to the chain in the same commit that installs the tool.
 
-**Single job at 0a.** Only `playwright` is wired. Runs inside `mcr.microsoft.com/playwright:v1.59.1-jammy` (Playwright pinned exactly — see §1.3 and §6 R0a-5). `npm ci` runs inside the same job, so there is no cross-job cache plumbing — a setup-then-job split would not be useful at 0a because the container's filesystem layout differs from the host runner's and `actions/cache` paths don't translate cleanly across the boundary. Phase 2c (when parallel gates land — typecheck, lint, build, etc.) is the right place to introduce a shared setup job, and at that point all jobs can run in the same image or a shared volume strategy can be designed deliberately.
+**Files at 0a:**
+- `frontend/package.json` — new npm scripts: `"typecheck": "tsc --noEmit"` and the `"preflight"` chain.
+- `frontend/scripts/preflight.sh` — thin bash wrapper that calls `npm run preflight` with section headers + per-check timing (same style as `scripts/measure-baselines.sh` from §2.4). The wrapper is for nicer log output; `npm run preflight` is the source-of-truth chain.
 
-**Jobs at 0a:**
+**`npm run preflight` chain at 0a:**
 
-```yaml
-jobs:
-  playwright:
-    runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.59.1-jammy
-    defaults:
-      run:
-        working-directory: frontend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'   # current LTS — plan author confirms by checking `node --version` on dev environment; bump to 20 if local uses 20.x
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
-      - run: npm run test:e2e
-    # required to stay green on master — a red CI run after a merge triggers
-    # immediate revert of the merge commit, not fix-forward (spec 14 §5.3).
-
-  # ────────────── Phase 0b will turn this on ─────────────
-  # vitest:
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: frontend
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-node@v4
-  #       with: { node-version: '<same>', cache: 'npm', cache-dependency-path: frontend/package-lock.json }
-  #     - run: npm ci
-  #     - run: npm run test
-
-  # ────────────── Phase 2a will turn this on ──────────────
-  # typecheck:
-  #   # similar shape to vitest; runs `npm run typecheck` (script added in 2a)
-
-  # ────────────── Phase 2b will turn this on ──────────────
-  # lint:
-  #   # eslint . --max-warnings 0
-  # prettier:
-  #   # prettier --check .
-
-  # ────────────── Phase 2c will turn these on ─────────────
-  # build:
-  #   # npm run build
-  # bundle-budget:
-  #   needs: build
-  #   # script reads docs/audits/<latest>-bundle-baseline.json,
-  #   # compares to dist/, fails if over budget
-  # knip-dead-code:
-  #   # knip --strict
+```json
+"scripts": {
+  "typecheck": "tsc --noEmit",
+  "preflight": "npm run typecheck && npm run lint && npm run build && npm run test:e2e"
+}
 ```
 
-Each TODO block names the phase that turns it on. Phase 0b removes the comment around the `vitest:` block. Phases 2a, 2b, 2c remove their respective blocks. Stale-doc grep (Phase 14) will scan for `Phase N` references in CI YAML — the master-spec allowlist convention covers this file.
+Four checks at 0a — typecheck (existing tsc), lint (existing `eslint .`), build (existing `vite build`), and Playwright (existing `playwright test`). Tools are already installed; only the `typecheck` and `preflight` scripts are new.
+
+**What's deliberately deferred:**
+
+| Check | Phase that adds it to the chain | Why not at 0a |
+|---|---|---|
+| `npm run test` (Vitest) | 0b | Vitest isn't installed yet (0b installs it) |
+| `knip --strict` | 1 | knip is installed at 0a (§2.2) and the baseline shows 32 unused files; `--strict` would fail until Phase 1's cleanup pass — so the chain at 0a omits it to keep the preflight signal meaningful (no known-failing checks) |
+| Strict-TS typecheck (same `tsc --noEmit` command, against `strict: true` config) | 2a | The command is wired; 2a flips the config |
+| `prettier --check .` | 2b | Prettier config doesn't exist yet |
+| Bundle-budget comparator (`tsx scripts/check-bundle-budget.ts`) | 2c | Comparator script + budget values land in 2c |
+
+The 0a chain is intentionally a subset, not a stub-with-TODOs. Each later phase appends its check to the `&&` chain in the same commit that lands its tooling — no YAML to uncomment, no dormant scaffolding to maintain.
+
+**Why preflight, not CI:**
+
+CI in this repo would mean GitHub Actions runs gated on every push to `master` (or PR). The user has explicitly chosen against this for two reasons: (1) the existing flow is impl → `/review-impl` → `/synthesize-impl-review` → user-prompted direct merge, which means there's no PR for CI to gate; (2) per CLAUDE.md "Business State" (0 live users, MVP), CI ceremony is the kind of overhead skip-worthy at this stage. A local preflight that the controller agent runs as part of the merge step is operationally equivalent for a single-author repo and zero external infrastructure to maintain.
+
+**What's in the controller's merge step (called out by master spec §5.6):**
+
+```
+1. User says "merge"
+2. Controller runs `npm run preflight` in `frontend/`
+3. Green → `git checkout master && git merge <branch> && git push origin master`
+   Red → controller reports which check failed, does NOT merge; user decides fix vs abort
+```
+
+If preflight is red, the controller does not have an override. The script is the gate.
 
 ### 2.8 Bun lockfile delete
 
@@ -261,7 +242,7 @@ Discrete commit. Deletes `frontend/bun.lock` and `frontend/bun.lockb`. Commit me
 - Bundle baseline JSON merged (with `capture-bundle-baseline.ts` script committed).
 - NFR baseline JSON merged.
 - Playwright suite green on `master` post-merge under the tightened threshold; `@playwright/test` pinned exactly in `package.json`.
-- `ci.yml` runs on every push to `master` with the Playwright job; a red run triggers immediate revert of the merge commit (no fix-forward — spec 14 §5.3).
+- `npm run preflight` runs locally (typecheck + lint + build + Playwright) and is required to pass before any merge to `master`; the controller agent runs it as part of the user-approved merge step (per master §5.3, §5.6).
 - `bun.lock` and `bun.lockb` deleted; `package-lock.json` is the sole lockfile.
 - `playwright.config.ts` carries a comment block documenting the local re-baseline command (per §2.6).
 
@@ -381,11 +362,11 @@ Two new Playwright spec files under `frontend/e2e/journeys/`:
 
 If either route reveals a wiring bug that breaks the load (e.g., a required API call has no `installApiMocks` entry), the fix lands inside `e2e/fixtures/api-mocks.ts` as part of the 0b commit. If the bug is in product code itself, the 0b spec author judges at execution: small fix → land in 0b; non-trivial → log to TD-FE and the gap-journey is marked `test.fixme` with the TD reference until the fix lands.
 
-### 3.5 CI gate addition
+### 3.5 Preflight chain extension
 
-Update `.github/workflows/ci.yml`: uncomment the `vitest:` job block (the TODO comment from 0a). The job runs `npm run test`. Marked `required` to merge alongside `playwright`.
+Update `frontend/package.json`: append `&& npm run test` to the `npm run preflight` chain (Vitest joins typecheck + lint + build + Playwright from 0a). The preflight script is the merge gate (per master §5.3); a red `npm run test` blocks the merge.
 
-The other TODO blocks (typecheck, lint, prettier, build, bundle-budget, knip-dead-code) remain commented out — each turns on in its named phase.
+The other checks (knip --strict, strict-TS typecheck, prettier, bundle-budget) each get appended to the chain in their own phase per spec 14 §5.3.
 
 ### 3.6 NFR re-measurement (informational)
 
@@ -405,16 +386,16 @@ Re-run `scripts/measure-baselines.sh` after the harness install + gap journeys l
 }
 ```
 
-Informational only. Phase 2c re-measures against the wired pipeline and sets the actual budgets.
+Informational only. Phase 2c re-measures `npm run preflight` (after all checks are wired into the chain) and sets the actual budgets.
 
 ### 3.7 Phase 0b done-when
 
-- Vitest + RTL + MSW installed; `npm run test` works locally and in CI.
+- Vitest + RTL + MSW installed; `npm run test` works locally.
 - `frontend/vitest.config.ts` and `frontend/src/test/setup.ts` exist.
 - MSW handler set covers the proof-of-pipeline + auth handlers documented in §3.2.
 - Characterization tests for the §3.3 target files exist and pass.
 - `frontend/e2e/journeys/06-customers-page-load.spec.ts` and `…/07-settings-page-load.spec.ts` exist, pass, with committed snapshots.
-- Vitest CI gate enforced (`required` to merge).
+- `npm run test` (Vitest) appended to the `npm run preflight` chain in `frontend/package.json`; preflight green required before any merge to `master`.
 - NFR JSON updated with `after_phase_0b` measurements.
 
 ---
@@ -423,7 +404,7 @@ Informational only. Phase 2c re-measures against the wired pipeline and sets the
 
 Both 0a and 0b run the master-spec §5 adversarial cycle: spec → review → synthesize → plan → review → synthesize → impl → review → synthesize → merge. This single design document IS the spec for both sub-phases. Each sub-phase ships its own plan (`plans/15a-frontend-phase-0a-inventory.md`, `plans/15b-frontend-phase-0b-test-harness.md`) and its own impl-review cycle.
 
-**Branch naming:** `phase-0a-inventory`, `phase-0b-test-harness`. Each merges to `master` independently. 0b does not start until 0a is merged (it depends on 0a's CI workflow scaffolding being in place to add the Vitest gate).
+**Branch naming:** `phase-0a-inventory`, `phase-0b-test-harness`. Each merges to `master` independently. 0b does not start until 0a is merged (it depends on 0a's preflight scaffolding being in place to append the Vitest check).
 
 **Review artifacts** (per master §5.4 naming convention):
 - Spec reviews: `docs/reviews/15-frontend-phase-0-inventory-and-safety-net-design-spec-review-<round>.md`
@@ -440,7 +421,7 @@ Phase 0 is done when:
 
 1. **0a deliverables** (§2.9) are merged.
 2. **0b deliverables** (§3.7) are merged.
-3. On every push to `master`, `ci.yml` runs install → playwright → vitest. A red run triggers immediate revert of the merge commit, not fix-forward (spec 14 §5.3).
+3. Before any merge to `master`, the controller agent runs `npm run preflight` locally (typecheck + lint + build + Playwright at 0a; + Vitest at 0b). Green required to merge; red blocks the merge (per master §5.3, §5.6).
 4. Visual snapshots are refreshed locally via `npm run test:e2e:update-snapshots` when an intentional UI change is accepted; the documenting comment block in `playwright.config.ts` explains the workflow.
 5. Audit scorecard, dead-code raw outputs, NFR + bundle baseline JSON files all committed under `docs/audits/`.
 6. `bun.lock` and `bun.lockb` are gone.
@@ -454,14 +435,14 @@ Phase 0 is done when:
 |---|---|---|
 | R0a-1 | Audit scorecard takes longer than expected because file-by-file inbound-ref enumeration at 75,894 LOC is slow if done manually. | Tooling-driven, not narrative. `knip --reporter json` + a ripgrep batch produce the raw data; the scorecard is a *structured view* of those outputs, not a hand-written census. Agent value lives in the notes column (knip false-positive flagging per §2.2 categories, Lovable-artifact identification, duplicate-component spotting). |
 | R0a-2 | Tightening visual threshold to `maxDiffPixelRatio: 0.01` breaks more snapshots than expected. | Re-baseline as part of the same commit. If >5 snapshots fail unexpectedly, investigate before re-baselining — the existing baselines may hide latent flakiness; log findings to TD-FE. |
-| R0a-3 | Playwright in CI is flaky on Linux runners against locally-baselined PNGs. | Use `mcr.microsoft.com/playwright:v1.59.1-jammy` Docker image so Chromium binaries match exactly. Cache `~/.cache/ms-playwright` by Playwright version. The existing local snapshots are already `*-chromium-linux-linux.png` so the convention is consistent. |
-| R0a-4 | `scripts/measure-baselines.sh` numbers vary 2–3× run-to-run on shared hardware. | 0a measures on a local dev machine, recorded as such in the JSON (`captured_on: "local-dev-machine"`, with structured hardware metadata). Phase 2c re-measures on CI hardware and sets budget values with headroom. 0a numbers are anchor sanity checks, not gates. |
-| R0a-5 | Playwright Docker image version (`mcr.microsoft.com/playwright:v1.59.1-jammy`) and `package.json`'s `@playwright/test` version can desynchronize. A caret-range bump in `package.json` would silently change the Chromium binary version in CI from the one used to generate local snapshots. | 0a pins `@playwright/test` to exact `1.59.1` (no caret) in `package.json`. Any version bump is then a deliberate, reviewable change touching both `package.json` and `ci.yml` together. If Dependabot or Renovate is ever introduced, it must be configured to update both in the same PR. |
-| R0-2 | The local-only re-baseline workflow (§2.6) becomes friction once the team grows or visual changes become frequent. | Reintroduce a PR-label-driven automation in Phase 2c (when CI gates land more broadly). The decision is reversible at any later phase; 0a's choice is to skip the ceremony until usage justifies it (CLAUDE.md "Business State"). |
+| R0a-3 | Playwright is flaky across host OSes against locally-baselined PNGs (snapshots taken on Linux, controller might run preflight on macOS/Windows). | The existing local snapshots are `*-chromium-linux-linux.png` and the §2.6 comment block documents running `npm run test:e2e:update-snapshots` inside the `mcr.microsoft.com/playwright:v1.59.1-jammy` Docker image for pixel-stable PNGs when authoring on non-Linux. The Docker image is opt-in for cross-OS authoring, not a CI runtime. |
+| R0a-4 | `scripts/measure-baselines.sh` numbers vary 2–3× run-to-run on shared hardware. | 0a measures on a local dev machine, recorded as such in the JSON (`captured_on: "local-dev-machine"`, with structured hardware metadata). Phase 2c re-measures local preflight wall time and sets budget values with headroom. 0a numbers are anchor sanity checks, not gates. |
+| R0a-5 | The pinned Playwright version in `package.json` can desynchronize from the Chromium that any given controller/agent machine actually runs. A caret-range bump would silently change the Chromium binary version from the one used to generate local snapshots. | 0a pins `@playwright/test` to exact `1.59.1` (no caret) in `package.json`. `npm ci` then installs the same `playwright-core` (and matching Chromium) on every machine that runs preflight. Any version bump is a deliberate, reviewable change. If Dependabot or Renovate is ever introduced, it must update the pinned version intentionally. |
+| R0-2 | The local-only re-baseline workflow (§2.6) becomes friction once the team grows or visual changes become frequent. | Phase 2c can revisit if usage justifies. There's no CI to host a re-baseline automation today (per §2.7), so any future automation would either need a new CI rollout decision or remain local. 0a's choice is to skip the ceremony until usage justifies it (CLAUDE.md "Business State"). |
 | R0b-1 | MSW handler shapes drift from the real backend over time. | Handlers mirror the Playwright fixtures' shapes verbatim. Playwright fixtures are the source of truth — they were originally validated against the real backend. If MSW and Playwright disagree, Playwright wins. |
 | R0b-2 | Characterization tests for `rateLimitManager` are flaky due to timing. | Use `vi.useFakeTimers()` exclusively. No `setTimeout`-based real-time waits. The 4 req/min value is a frozen interface; the test is deterministic against fake timers. |
 | R0b-3 | Gap journey for `/customers` or `/settings` fails because route requires API data not in the existing stub set. | Extend `e2e/fixtures/api-mocks.ts` as part of 0b. If a real product wiring bug is uncovered, 0b spec author judges: small mechanical fix lands in 0b; otherwise the gap-journey is marked `test.fixme` with a `TD-FE-<n>` reference until the underlying bug is fixed. |
-| R0-1 | The 0a / 0b split adds two cycles of ceremony where one would do. | Accepted. 0a's deliverables are mostly read-only inventory + CI scaffolding; 0b's deliverables are executable code. Reviewing them together would obscure both kinds of work in one diff. Per master §1.5 the chosen sequence is foundation-first with LOC reduction inserted as Phase 1 — the same logic that justifies a separate Phase 1 justifies the 0a/0b split. |
+| R0-1 | The 0a / 0b split adds two cycles of ceremony where one would do. | Accepted. 0a's deliverables are mostly read-only inventory + preflight scaffolding; 0b's deliverables are executable code. Reviewing them together would obscure both kinds of work in one diff. Per master §1.5 the chosen sequence is foundation-first with LOC reduction inserted as Phase 1 — the same logic that justifies a separate Phase 1 justifies the 0a/0b split. |
 
 ---
 
@@ -472,8 +453,8 @@ Phase 0 is done when:
 | Master ref | Question | Resolution |
 |---|---|---|
 | §8 Q1 | Vitest test methodology — behavior-only vs DOM snapshots vs both? | Behavior-only for utilities; RTL queries (`getByRole`, `getByText`) for any component; no DOM snapshots. |
-| §8 Q2 | Visual regression exact threshold within 0.5–1.0% range; re-baseline workflow details. | `maxDiffPixelRatio: 0.01` (1.0%) with existing `threshold: 0.2` preserved. Re-baseline workflow: **local-only** (`npm run test:e2e:update-snapshots`) — neither of the PR-label nor commit-message options at this stage. Picked per CLAUDE.md "MVP, 0 live users — skip ceremony." A PR-label automation can be reintroduced in Phase 2c if usage justifies (see §6 R0-2). |
-| §8 Q8 | CI choice — GitHub Actions vs other? | GitHub Actions. No alternative CI exists in the repo; CLAUDE.md uses `gh`; no signal of any other CI provider. |
+| §8 Q2 | Visual regression exact threshold within 0.5–1.0% range; re-baseline workflow details. | `maxDiffPixelRatio: 0.01` (1.0%) with existing `threshold: 0.2` preserved. Re-baseline workflow: **local-only** (`npm run test:e2e:update-snapshots`). No automation around re-baselining (no PR label, no commit-message trigger), and per §2.7 there is no CI at all to host such automation. Picked per CLAUDE.md "MVP, 0 live users — skip ceremony." If team growth justifies later, Phase 2c can revisit (see §6 R0-2). |
+| §8 Q8 | CI choice — GitHub Actions vs other? | **None.** No external CI in this repo. The pre-merge quality gate is `npm run preflight` (local), wired in §2.7 and codified in master §5.3 + §8 Q8. |
 
 ### 7.2 Deferred to plans
 
@@ -494,7 +475,8 @@ Created during Phase 0a:
 - `frontend/scripts/measure-baselines.sh` — NFR measurement script
 - `frontend/scripts/capture-bundle-baseline.ts` — bundle baseline capture script (uses `gzip-size`)
 - `frontend/knip.json` — knip config
-- `.github/workflows/ci.yml` — primary CI workflow (single `playwright` job at 0a; extended in 0b)
+- `frontend/scripts/preflight.sh` — bash wrapper for `npm run preflight` (section headers + per-check timing)
+- `frontend/package.json` — new `typecheck` + `preflight` npm scripts (preflight chain at 0a: typecheck + lint + build + Playwright; extended in later phases)
 - `frontend/playwright.config.ts` updated: `maxDiffPixelRatio: 0.01`, exact-pinned `@playwright/test`, comment block documenting local re-baseline command
 
 Created during Phase 0b:
@@ -509,6 +491,6 @@ Created during Phase 0b:
 - `frontend/src/lib/__tests__/rateLimitManager.test.ts`
 - `frontend/e2e/journeys/06-customers-page-load.spec.ts`
 - `frontend/e2e/journeys/07-settings-page-load.spec.ts`
-- `.github/workflows/ci.yml` — extended with the Vitest job
+- `frontend/package.json` — `npm run preflight` chain extended with `npm run test` (Vitest)
 
 Master plan reference: `specs/14-frontend-refactoring-master-plan-design.md` (§4 Phase 0, §8 open questions).

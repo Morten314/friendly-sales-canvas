@@ -127,8 +127,10 @@ This repo is structured for AI-native development: cross-cutting tasks (changes 
      - `/review-plan` → `/synthesize-plan-review` (loop until clean)
   3. Plan → atomic commits on a feature branch (impl)
      - `/review-impl` → `/synthesize-impl-review` (loop until clean)
-  4. Human-approved merge: `git merge` to `master` + `git push origin master`
-- **CI is a post-merge regression catcher, not a pre-merge gate.** The impl-review/synthesize-impl-review cycle is the quality gate before merge. CI runs on push to `master` after the merge; if it fails, **revert the merge commit immediately rather than fix-forward** (per spec 14 §5.3). PRs are not part of the primary flow — the workflow file may also trigger on `pull_request` but the default path is direct merge after impl-review convergence.
+  4. Human-approved merge:
+     - Controller runs `npm run preflight` in `frontend/` (typecheck + lint + build + Playwright; later phases extend with vitest, knip --strict, bundle-budget — see spec 14 §5.3)
+     - Green → `git checkout master && git merge <branch> && git push origin master`. Red → report which check failed; user decides fix vs abort.
+- **No CI; preflight is local.** There is no `.github/workflows/` or external runner. The `npm run preflight` chain in `frontend/package.json` is the only pre-merge gate, and it runs on the controller's machine before the merge commit. Each later phase appends one more check to the chain.
 - **NN numbering.** New specs and plans take the next NN after the highest existing N in `/plans/`, counting both prefix and suffix forms (e.g., `modularization-plan-9.md` counts as N=9, so the next slot is `10-`). The spec and plan for the same feature share the NN — `/specs/10-feature-X-design.md` pairs with `/plans/10-feature-X.md`.
 - **Specs and plans are a frozen record of intent, not current truth.** Once a plan merges, treat its contents as a historical snapshot of what was intended at that moment — not a representation of what the code does now. Don't update specs/plans to reflect post-merge drift; the code is authoritative for current behavior.
 - **Sync workflow** (during temp week only): `bash scripts/sync.sh` pulls Brewra-dev changes from old repos. `git merge develop` on master absorbs FE updates. After cutover (Plan 05 + Plan 06), this section is removed.

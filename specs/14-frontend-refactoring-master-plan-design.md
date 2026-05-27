@@ -71,12 +71,12 @@ The chosen sequence (this spec) is foundation-first with LOC reduction inserted 
 - All code under `frontend/src/`
 - `frontend/tsconfig.app.json`, `frontend/tsconfig.json`, `frontend/eslint.config.js`, `frontend/vite.config.ts`, `frontend/package.json`
 - New test harness (Vitest + RTL + MSW) and characterization tests
-- New CI gates (typecheck, lint, test, build, Playwright, visual regression, bundle budget, dead-code check)
+- New local preflight gates (typecheck, lint, test, build, Playwright, visual regression, bundle budget, dead-code check) wired into `npm run preflight`
 - LOC reduction passes (two of them — pre-foundation in Phase 1 and post-modularization in Phase 13)
 - Per-feature `README.md` files inside `src/features/<feature>/`
 - ADRs in `docs/adr/` for non-trivial decisions surfaced during phases
 - Agent-callable scripts in `frontend/scripts/` (feature scaffolder, codemods surfaced by Phase 13 audit)
-- Watchers in CI (bundle size, dead code, stale-doc grep)
+- Watchers in preflight (bundle size, dead code, stale-doc grep)
 - Amendments to root `CLAUDE.md`/`AGENTS.md` only where the new structure makes existing guidance stale
 
 ### 2.2 Out of scope (non-goals)
@@ -196,7 +196,7 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 | 1 | LOC reduction pass #1 (pre-foundation) | Phase-L-style audit-execute for dead code, dead deps, dead routes, dedup. Backstopped by Phase 0's safety net. |
 | 2a | Foundation: strict TS turn-on | Flip `strict: true`, `noImplicitAny`, `strictNullChecks`, `noUnusedLocals/Parameters`, `noFallthroughCasesInSwitch`. Fix the error storm. |
 | 2b | Foundation: ESLint type-aware + Prettier | Upgrade ESLint config, add type-aware rules, `import/order`, Prettier check. Features-specific dependency rules deferred to Phase 4 (where `src/features/` exists to enforce against). |
-| 2c | Foundation: CI gates + budget | Wire all gates into CI: typecheck, lint, test, build, Playwright, visual regression, bundle budget, `knip` dead-code |
+| 2c | Foundation: preflight gates + budget | Wire all gates into `npm run preflight`: typecheck, lint, test, build, Playwright, visual regression, bundle budget, `knip` dead-code |
 | 3 | API/data layer | Adopt TanStack Query. Collapse 3 caching layers into one. Centralize rate-limit. Define contract types in `src/shared/api/`. |
 | 4 | Feature scaffolding + shell extraction | Create `src/features/` skeleton + per-feature template + features-root README. Lock `src/components/ui/` for shadcn only. Establish ADR template. **Extract shell** (Sidebar, Header, AuthContext, route shell) into `src/features/shell/` — features render inside the shell, so it lands before Phase 5. Define `<FeatureErrorBoundary>` component. Wire features-specific lint rules (deferred from Phase 2b). |
 | 5 | Feature: market-research | Hardest feature first. Extract `pages/MarketResearch.tsx` + all `components/market-research/*` into `src/features/market-research/`. May sub-split (5a page decomposition, 5b component reshuffling). |
@@ -208,7 +208,7 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 | 11 | Shared utility extraction | Promote hooks, lib, types used by ≥2 features into `src/shared/`. (Shell extraction moved earlier to Phase 4 — see Phase 11 §.) |
 | 12 | Small-pages sweep | Calendar, Deals, Insights, Reports, Artifacts, NotFound — batched. Each becomes a small feature folder or moves into the nearest related feature. |
 | 13 | LOC reduction pass #2 (post-modularization audit) | Phase-L-proper. With strict types + tests + features in place, systematic per-file audit on the whole tree. Codemods extracted into `frontend/scripts/`. |
-| 14 | Agent affordances | Per-feature README backfill, ADR conventions consolidated, agent-callable scripts (feature scaffolder, codemod runner), CI watchers (bundle, dead-code, stale-doc grep). Amend root `AGENTS.md`/`CLAUDE.md` only where the new structure makes existing guidance stale. |
+| 14 | Agent affordances | Per-feature README backfill, ADR conventions consolidated, agent-callable scripts (feature scaffolder, codemod runner), preflight watchers (bundle, dead-code, stale-doc grep). Amend root `AGENTS.md`/`CLAUDE.md` only where the new structure makes existing guidance stale. |
 
 ### Phase 0 — Inventory + full safety net
 
@@ -218,16 +218,16 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 - Per-feature LOC scorecard (`docs/audits/<date>-frontend-baseline.md`)
 - Dependency graph from `knip` / `ts-prune` / `depcheck` (dead exports, dead files, dead deps)
 - Bundle-size baseline captured from `vite build`
-- **NFR baselines** measured and recorded: `vite build` wall time, `vite` dev-server cold start time, `tsc --noEmit` wall time (against current non-strict config), Playwright full-suite wall time. **CI pipeline duration:** captured at Phase 0 as *informational* only — the workflow at Phase 0 is mostly TODO scaffolding, so its duration is misleadingly short. The actual budget anchor for CI pipeline duration is re-measured in Phase 2c after all gates are wired. Phase 2c's spec sets the CI duration budget against its own measurement, not Phase 0's.
+- **NFR baselines** measured and recorded: `vite build` wall time, `vite` dev-server cold start time, `tsc --noEmit` wall time (against current non-strict config), Playwright full-suite wall time. **Preflight wall time:** captured at Phase 0 as *informational* only — the chain at Phase 0 covers only a subset of checks, so its duration is not the post-foundation anchor. The actual budget anchor for preflight wall time is re-measured in Phase 2c after all checks are wired into the chain. Phase 2c's spec sets the preflight duration budget against its own measurement, not Phase 0's.
 - Playwright suite locked green; visual regression snapshots captured for the top screens (market-research, mission-control, customers, signals, scout, settings, login, tenant-selection).
 - **Visual regression default:** Playwright's built-in screenshot diff (since the Playwright suite already exists). Heavier tools (Chromatic, Percy, Loki) deferred to post-MVP unless surfaced as needed during Phase 0 spec writing. **Threshold range: 0.5–1.0% pixel delta per screen** — Phase 0's spec selects the exact value within this range. An explicit re-baseline workflow handles accepted intentional UI changes.
 - Vitest + React Testing Library + MSW installed and wired.
 - **Characterization tests — refocused target.** Build tests against (a) the stable utility code in `src/lib/`, `src/hooks/`, `src/utils/` (these survive the refactor structurally; tests retain value), and (b) behavioral E2E coverage of the user-visible journeys the monster files participate in (these survive because routes and behavior are frozen interfaces per §2.3). **Do not** build deep characterization tests against the internal structure of the monster files themselves (MarketResearch.tsx, ICPSummaryOpportunity.tsx, MissionControl.tsx, DataSourcesManager.tsx, ICPManager.tsx) — those tests would be tied to internals that Phase 5+ extractions will rearrange anyway. The safety net for monster-file refactors is: behavioral E2E (Playwright) + visual regression + the unit tests built up during each feature extraction phase.
-- CI workflow file scaffolding (the gates added across Phase 2c are pre-shaped here as TODOs).
+- Preflight script scaffolding (`frontend/scripts/preflight.sh` + `npm run preflight` chain in `frontend/package.json`); each later phase appends its checks to the chain in the same commit that installs the tool.
 
 **Sub-split trigger:** if spec author judges the scope too large during spec writing, split into 0a (inventory + NFR baselines + Playwright/visual lock + bundle baseline) and 0b (Vitest + RTL + MSW + behavioral-coverage + utility-targeted characterization tests). Decision in the Phase 0 spec.
 
-**Done when:** all of the above merged on `master`; CI runs Playwright + visual regression green on every PR.
+**Done when:** all of the above merged on `master`; `npm run preflight` runs Playwright + visual regression locally and is required to pass before any merge to `master` (§5.3).
 
 ### Phase 1 — LOC reduction pass #1 (pre-foundation)
 
@@ -286,17 +286,17 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 
 **Done when:** `eslint . --max-warnings 0` green; `prettier --check .` green.
 
-### Phase 2c — Foundation: CI gates + bundle budget
+### Phase 2c — Foundation: preflight gates + bundle budget
 
-**Mission:** every gate runs on every PR, blocks merge on failure.
+**Mission:** every gate runs as part of `npm run preflight`, blocks merge on failure.
 
-- GitHub Actions workflow (or whatever CI the repo uses; spec author to confirm) running: install → typecheck → lint → test (Vitest) → build → Playwright → visual regression → bundle-size budget → `knip` (dead-code).
-- Bundle-size budget thresholds set from Phase 0 baseline + agreed headroom (spec author proposes; user approves).
-- **NFR gate thresholds set from Phase 0 baselines + agreed headroom.** Budgets cover: `tsc --noEmit` cold wall time, Vitest full-suite wall time, CI pipeline total duration. Round-2 ballparks (refined by Phase 2c spec against actual numbers): typecheck cold ≤ 30s, Vitest full ≤ 60s, CI total ≤ 8 min. The ballparks are starting anchors, not fixed mandates — Phase 2c's spec sets the actual budget values from Phase 0 measurements. Slow feedback loops defeat the agent-readiness goal, so these NFRs are first-class gates, not nice-to-haves.
-- `knip.json` config locked. Watcher: any new file with no inbound imports fails CI.
-- Visual regression diff threshold codified at the exact value chosen in Phase 0 (within the 0.5–1.0% range). A "re-baseline approved" workflow exists for accepted intentional UI changes (a labeled commit message or PR tag triggers snapshot refresh in CI).
+- `npm run preflight` chain in `frontend/package.json` (and `frontend/scripts/preflight.sh` wrapper) runs: typecheck → lint → test (Vitest) → build → Playwright → visual regression → bundle-size budget → `knip --strict` (dead-code). Local-only; no GitHub Actions.
+- Bundle-size budget thresholds set from Phase 0 baseline + agreed headroom (spec author proposes; user approves). Comparator script committed to `frontend/scripts/check-bundle-budget.ts`.
+- **NFR thresholds set from Phase 0 baselines + agreed headroom.** Budgets cover: `tsc --noEmit` cold wall time, Vitest full-suite wall time, preflight total wall time. Round-2 ballparks (refined by Phase 2c spec against actual numbers): typecheck cold ≤ 30s, Vitest full ≤ 60s, preflight total ≤ 8 min. The ballparks are starting anchors, not fixed mandates — Phase 2c's spec sets the actual budget values from Phase 0 measurements. Slow feedback loops defeat the agent-readiness goal, so these NFRs are first-class gates, not nice-to-haves.
+- `knip.json` config locked. Watcher: any new file with no inbound imports fails preflight (via `knip --strict`).
+- Visual regression diff threshold codified at the exact value chosen in Phase 0 (within the 0.5–1.0% range). A "re-baseline approved" workflow exists for accepted intentional UI changes: the author runs `npm run test:e2e:update-snapshots` locally and commits the refreshed PNGs as a deliberate change (no CI-side automation).
 
-**Done when:** all gates green on a representative PR; gates required to merge.
+**Done when:** `npm run preflight` green on the phase branch immediately before merge; gates required to pass for any merge to `master`.
 
 ### Phase 3 — API/data layer consolidation
 
@@ -509,13 +509,13 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
   - `scaffold-feature.sh` (from Phase 4) hardened
   - `codemod-runner.sh` (runs codemods from `scripts/codemods/`)
   - any others surfaced during the journey
-- CI watchers added:
+- Preflight watchers added (each runs as part of `npm run preflight`):
   - bundle-size delta watcher (warn on +5%, fail on +10% without override)
   - dead-code watcher (`knip` in --strict mode)
   - stale-doc grep (any reference to `Phase N` outside specs/, plans/, docs/audits/, docs/reviews/ fails — same pattern backend Phase L used for stale docstrings). **Default regex:** `\b[Pp]hase[- ]?\d+[a-z]?\b` (matches "Phase 5", "phase-5", "Phase 2a", "phase 12"). **Allowlist mechanism:** `.stale-doc-allowlist.txt` at repo root lists path patterns where phase references are legitimate (e.g., this spec, the master spec amendments, ADRs that name the phase that triggered them). The allowlist is expected to be non-trivial in size — Phase 14's spec should evaluate whether an inverted approach (scan only `src/` files, not docs/specs/plans) is more maintainable than maintaining a large allowlist. Phase 14's spec finalizes the regex and the allowlist policy.
 - Amend root `AGENTS.md`/`CLAUDE.md` **only where** the new structure makes existing guidance stale. No duplicate `frontend/AGENTS.md`.
 
-**Done when:** every feature has a `README.md`; ADR set is complete; scripts are working; CI watchers gate merges.
+**Done when:** every feature has a `README.md`; ADR set is complete; scripts are working; preflight watchers (bundle, dead-code, stale-doc) gate merges via `npm run preflight`.
 
 ---
 
@@ -546,13 +546,20 @@ brainstorm spec    →  review-spec     →  synthesize-spec-review (round N)
 - Additional rounds until findings are at `nit` severity or below.
 - Backend pattern of "fresh-eyes review" applies: a different agent (or a clean-context agent) does the review than wrote the artifact.
 
-### 5.3 CI gates per phase
+### 5.3 Preflight gates per phase
 
-- Phases 0, 1: Playwright + visual regression + (from 0b onward) Vitest must be green per commit
-- Phase 2a: above + `tsc --noEmit` green at phase end
-- Phase 2b: above + ESLint clean + Prettier check
-- Phase 2c onward: full gate set (typecheck, lint, test, build, Playwright, visual regression, bundle budget, `knip`)
-- No "fix forward" through a hook failure. Revert and re-plan, per backend Phase L methodology.
+There is no GitHub Actions CI in this repo. The pre-merge quality gate is `npm run preflight` in `frontend/`, run locally by the controller agent immediately before the user-approved merge step (§5.6). Each phase extends the preflight chain by appending its phase's checks; later phases' chains are supersets of earlier phases'.
+
+- Phase 0a: preflight = typecheck + lint + Playwright + visual regression + build (`tsc --noEmit && eslint . && vite build && playwright test`)
+- Phase 0b: above + Vitest (`npm run test`)
+- Phase 1: above + `knip --strict` (deferred to Phase 1 because Phase 0a's dead-code baseline shows 32 unused files; `--strict` becomes meaningful only after Phase 1's cleanup pass)
+- Phase 2a: above + strict-TS-aware typecheck (the same `tsc --noEmit` command, against the strict-mode config landed by 2a)
+- Phase 2b: above + Prettier check (`prettier --check`)
+- Phase 2c onward: above + bundle-budget comparator (`tsx scripts/check-bundle-budget.ts` against the baseline JSON from Phase 0a)
+
+**Preflight failure = no merge.** If preflight goes red, the controller reports which check failed and does not merge. The user decides whether to fix on the branch and re-run, or abort the phase. No "fix forward" through a failed preflight, and no override (the script does not have a `--force` flag, by design).
+
+The pre-shaped `frontend/scripts/preflight.sh` wrapper + `npm run preflight` chain in `frontend/package.json` are the source of truth. As each phase lands its tooling, that phase's plan appends to the chain in the same commit that installs the tool.
 
 ### 5.4 Artifacts per phase
 
@@ -583,14 +590,14 @@ The human orchestrator (user) kicks off each phase, approves transitions between
 
 - Approve spec → plan transition (after spec review converges)
 - Approve plan → impl transition (after plan review converges)
-- Approve impl → merge (after impl review converges). CI runs on `master` post-merge as a regression catcher, not a pre-merge gate; a red CI on `master` triggers immediate revert of the merge commit rather than fix-forward (§5.3).
+- Approve impl → merge (after impl review converges). Controller then runs `npm run preflight` locally per §5.3; green proceeds with `git merge` + `git push origin master`, red blocks the merge and reports the failing check.
 - Adjudicate conflicting agent rounds when synthesize step can't reconcile
 
 ### 5.7 Abort and revert protocol
 
 Not every phase will land cleanly. The protocol for when a phase branch cannot reach its done-when state:
 
-- **Trigger conditions:** (a) the implementation diverges substantially from the plan and the plan's assumptions have been invalidated (e.g., Phase 5 discovers market-research's coupling is far worse than the spec described); (b) CI gates can't be made green within bounded effort and the failures point to a deeper design problem rather than mechanical bugs; (c) implementation cost has clearly exceeded the spec's expected scope (≥2× by reasonable measure) without convergence.
+- **Trigger conditions:** (a) the implementation diverges substantially from the plan and the plan's assumptions have been invalidated (e.g., Phase 5 discovers market-research's coupling is far worse than the spec described); (b) `npm run preflight` can't be made green within bounded effort and the failures point to a deeper design problem rather than mechanical bugs; (c) implementation cost has clearly exceeded the spec's expected scope (≥2× by reasonable measure) without convergence.
 - **Action:** revert the branch (do not merge partial progress). Log findings as `TD-FE-<n>` entries in `docs/TECH_DEBT.md` capturing what was discovered. Open a follow-on revised spec (round 2 of the phase) addressing what the failure revealed.
 - **Human checkpoint:** the human orchestrator (user) confirms the abort decision. Agents propose; humans approve. This is not a unilateral agent decision.
 - **No "fix forward" through a failed phase.** Per §5.3, the rule against fixing forward through hook failures extends to phase-level: a phase that cannot finish does not ship partial. The cost of reverting is much smaller than the cost of merging half-broken structural work into `master`.
@@ -607,11 +614,11 @@ The master plan is "done" when **all** of these hold on `master`:
 3. **Type strictness.** `tsconfig.app.json` has `strict: true`, `noImplicitAny`, `strictNullChecks`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`. `any` confined to a documented `src/shared/types/escape-hatches.ts` — each entry requires documented justification and a call-site reference. Phase 2a's spec sets the initial count cap from actual error measurements; Phase 13's audit re-evaluates every entry. No hard cap mandated by the master plan.
 4. **Tests.** Vitest + RTL + MSW running. Every feature has unit tests. Stable utilities under `src/shared/` have characterization tests carried forward from Phase 0. Behavioral E2E coverage (Playwright) for the user journeys the originally-monster files participate in is green. Visual regression green at the threshold set in Phase 0.
 5. **Lints.** ESLint flat-config with type-aware rules, `import/order`, `import/no-restricted-paths` (per §3.3). Prettier check. `knip` dead-code gate.
-6. **CI.** Typecheck, lint, test, build, Playwright, visual regression, bundle-size budget, `knip` — all required to merge.
+6. **Preflight.** `npm run preflight` runs typecheck + lint + Vitest + Playwright + visual regression + build + bundle-size budget + `knip --strict` and is required to pass before any `git merge` to `master`. Local-only (no GitHub Actions); the controller agent runs it as part of the user-approved merge step (§5.3, §5.6).
 7. **Per-feature docs.** Every `src/features/<feature>/` has a `README.md`. `src/features/README.md` documents conventions. ADRs captured in `docs/adr/` for non-trivial decisions made across phases.
 8. **LOC trajectory.** Two LOC reduction passes complete (Phases 1 and 13). Final LOC reflects what was safely removable without behavior change — no hard target.
 9. **Data layer.** TanStack Query is the single source of server-state truth. Three caching layers collapsed into one. Rate-limit boundary centralized.
-10. **Agent affordances.** Per-feature scaffolding script working. Codemods committed for patterns surfaced in Phase 13. Watchers (bundle, dead-code, stale-doc) wired into CI.
+10. **Agent affordances.** Per-feature scaffolding script working. Codemods committed for patterns surfaced in Phase 13. Watchers (bundle, dead-code, stale-doc) wired into `npm run preflight`.
 
 A phase is "done" when its spec, plan, impl, and ≥1 review round of each are merged into `master`. The master plan is "done" when Phase 14 is merged.
 
@@ -620,7 +627,7 @@ A phase is "done" when its spec, plan, impl, and ≥1 review round of each are m
 ## §7 Risks and sequencing
 
 ### R1 — Strict TS error explosion (Phase 2a)
-**Mitigation:** Phase 1's LOC pass shrinks the surface first. Phase 2a has an error-count threshold (1,500) for sub-decomposition trigger — exceeding it requires the plan author to propose a sub-decomposition by feature folder or by error category before execution (the phase still proceeds, just with finer-grained sub-phases). "Gate" terminology is reserved for CI gates that actually block merge. Behavioral E2E + visual regression (locked in Phase 0) catch behavior regressions even when type signatures change, without requiring deep characterization tests against monster-file internals.
+**Mitigation:** Phase 1's LOC pass shrinks the surface first. Phase 2a has an error-count threshold (1,500) for sub-decomposition trigger — exceeding it requires the plan author to propose a sub-decomposition by feature folder or by error category before execution (the phase still proceeds, just with finer-grained sub-phases). "Gate" terminology is reserved for preflight checks that actually block merge. Behavioral E2E + visual regression (locked in Phase 0) catch behavior regressions even when type signatures change, without requiring deep characterization tests against monster-file internals.
 
 ### R2 — Characterization tests miss behavior
 **Mitigation:** layered safety net. Unit tests (Vitest + RTL) catch component behavior. MSW catches data-layer behavior. Visual regression catches rendering. Playwright catches user journeys. Manual smoke-test sign-off before merge of any phase that touches behavior.
@@ -650,13 +657,13 @@ A phase is "done" when its spec, plan, impl, and ≥1 review round of each are m
 These don't block the master plan — each becomes the appropriate phase's spec decision:
 
 1. **Vitest test methodology for stable utilities** — behavior-only assertions vs DOM snapshots vs both? → Phase 0 spec
-2. **Visual regression exact threshold** — within the 0.5–1.0% default range, what's the precise value? Re-baseline workflow details (PR label vs commit-message trigger). → Phase 0 spec
-3. **Bundle-size and NFR budget values** — measured in Phase 0, codified in Phase 2c. Round-2 ballparks (typecheck cold ≤ 30s, Vitest full ≤ 60s, CI total ≤ 8 min) are anchors, not fixed mandates.
+2. **Visual regression exact threshold** — within the 0.5–1.0% default range, what's the precise value? Re-baseline workflow details (local-only via `npm run test:e2e:update-snapshots`; no CI-side automation). → Phase 0 spec
+3. **Bundle-size and NFR budget values** — measured in Phase 0, codified in Phase 2c. Round-2 ballparks (typecheck cold ≤ 30s, Vitest full ≤ 60s, preflight total ≤ 8 min) are anchors, not fixed mandates.
 4. **API contract types source** — hand-written, OpenAPI codegen, or zod schemas? → Phase 3 spec
 5. **`src/shared/` promotion criteria** — what triggers promotion of a hook/util from a feature into shared? → Phase 4 spec, refined as features land
 6. **Feature naming canonicalization** — final kebab-case map (market-research, mission-control, customer-profile, etc.) → Phase 4 spec
 7. **ADR template** — MADR, Nygard's classic, or a custom slim form? → Phase 4 spec
-8. **CI choice** — confirm GitHub Actions vs other; spec author to verify what the repo currently has → Phase 2c spec
+8. **CI choice — RESOLVED:** no external CI in this repo. Pre-merge quality gate is the local `npm run preflight` chain run by the controller agent (§5.3). No GitHub Actions, no other runner.
 9. **TanStack Query persistence strategy** — `localStorage` plugin or no persistence by default? → Phase 3 spec
 10. **`scout` vs `scout + profiler` split** — one feature or two? → Phase 9 spec
 11. **Where does `AuthContext` live** — extracted in Phase 4 into `features/shell/` or `features/auth/`? → Phase 4 spec (now the phase that owns shell extraction)

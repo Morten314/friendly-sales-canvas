@@ -2,16 +2,16 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Land Phase 0a deliverables from `specs/15-frontend-phase-0-inventory-and-safety-net-design.md` §2.9 — audit scorecard, knip output, bundle + NFR baselines, tightened Playwright visual lock, CI workflow scaffolding, bun lockfile delete — on a `phase-0a-inventory` branch, merged to `master` after impl review.
+**Goal:** Land Phase 0a deliverables from `specs/15-frontend-phase-0-inventory-and-safety-net-design.md` §2.9 — audit scorecard, knip output, bundle + NFR baselines, tightened Playwright visual lock, preflight script scaffolding (`npm run preflight` + `frontend/scripts/preflight.sh`), bun lockfile delete — on a `phase-0a-inventory` branch, merged to `master` after impl review converges.
 
-**Architecture:** Eight commits on one branch, ordered by dependency. Pin Playwright exact → tighten visual threshold + refresh snapshots → delete bun lockfiles → install knip → bundle baseline → NFR baseline → audit scorecard (consumes knip JSON) → CI workflow → verify CI green. The bun delete precedes knip per spec §2.2 ("Run against the post-0a-cleanup tree"). Each task is one commit; cross-cutting changes that touch `package.json` + `package-lock.json` together (knip install, bundle-deps install) ship as one commit per CLAUDE.md "Cross-stack atomicity."
+**Architecture:** Eight commits on one branch, ordered by dependency. Pin Playwright exact → tighten visual threshold + refresh snapshots → delete bun lockfiles → install knip → bundle baseline → NFR baseline → audit scorecard (consumes knip JSON) → preflight script + npm script chain → final sanity-check + hand-off. The bun delete precedes knip per spec §2.2 ("Run against the post-0a-cleanup tree"). Each task is one commit; cross-cutting changes that touch `package.json` + `package-lock.json` together (knip install, bundle-deps install) ship as one commit per CLAUDE.md "Cross-stack atomicity." Per spec §2.7, this repo has no CI — the preflight script is the entire pre-merge gate, run locally by the controller agent.
 
 **Parallelization opportunities (subagent-driven execution mode):** After Task 2 completes, three independent chains can dispatch in parallel: `[Task 3 → Task 4 → Task 7]` (bun delete → knip → scorecard, sequential because Task 7 consumes Task 4's knip JSON), `[Task 5]` (bundle baseline), and `[Task 6]` (NFR baseline). Caveat: Tasks 4 and 5 both run `npm install`, so they truly parallelize only when subagent worktrees give each its own working tree; in a shared working tree they serialize on the lockfile. Tasks 8 and 9 must run after all three chains complete. Single-agent inline execution runs everything sequentially per the task numbering.
 
 **Abort criteria.** Per-task STOP conditions are documented inline (Tasks 0/2/3/5/6). In addition, two plan-level escalations apply:
 
 1. **Per-task budget.** If any single task fails after two independent debug attempts (i.e., two attempts to fix the root cause, not retries of the same approach), pause and report to the operator for a go/no-go decision rather than continuing the debug loop.
-2. **Task 9 CI budget.** If `playwright` on CI cannot go green within 3 pushes to `phase-0a-inventory`, log the failing-CI findings to `docs/TECH_DEBT.md` (commands tried, error pattern, hypothesis) and report to the operator. CI failures that repeat across pushes often indicate environment-vs-local divergence (spec §6 R0a-3) that warrants explicit handling rather than continued patching.
+2. **Task 9 preflight budget.** If `npm run preflight` cannot be made green within 3 distinct fix attempts on `phase-0a-inventory`, log the failing-preflight findings to `docs/TECH_DEBT.md` (which check failed, error pattern, hypothesis) and report to the operator. Repeated failures often indicate environment-specific issues (spec §6 R0a-3) that warrant explicit handling rather than continued patching.
 
 These thresholds are starting values; the operator can tighten or loosen per execution observation.
 
@@ -30,7 +30,7 @@ These thresholds are starting values; the operator can tighten or loosen per exe
 - `frontend/scripts/capture-bundle-baseline.ts` — post-build script reading `dist/`, using `gzip-size` to write per-chunk uncompressed + gzipped sizes
 - `frontend/scripts/measure-baselines.sh` — NFR measurement (3-run median for tsc/build/dev-start/playwright)
 - `frontend/scripts/build-audit-scorecard.ts` — joins knip JSON + per-file LOC + static-ref counts (ripgrep) into the Tier 1 + Tier 2 markdown scorecard
-- `.github/workflows/ci.yml` — single `playwright` job in `mcr.microsoft.com/playwright:v1.59.1-jammy` plus commented-out TODO blocks for vitest/typecheck/lint/prettier/build/bundle-budget/knip-dead-code phases
+- `frontend/scripts/preflight.sh` — thin bash wrapper for `npm run preflight` with section headers + per-check timing (same style as `measure-baselines.sh`)
 - `docs/audits/2026-05-26-frontend-baseline.md` — Tier 1 summary + Tier 2 per-file annex
 - `docs/audits/2026-05-26-frontend-deadcode-knip.json` — knip raw output (JSON reporter)
 - `docs/audits/2026-05-26-frontend-deadcode-knip.txt` — knip raw output (default reporter, human-readable)
@@ -38,7 +38,7 @@ These thresholds are starting values; the operator can tighten or loosen per exe
 - `docs/audits/2026-05-26-frontend-nfr-baseline.json` — tsc/build/dev-start/playwright median wall times + hardware metadata
 
 **Modified:**
-- `frontend/package.json` — pin `@playwright/test` to exact `1.59.1` (drop caret); add devDeps `knip@^5`, `gzip-size@^7`, `tsx@^4`
+- `frontend/package.json` — pin `@playwright/test` to exact `1.59.1` (drop caret); add devDeps `knip@^5`, `gzip-size@^7`, `tsx@^4`; add npm scripts `typecheck` (`tsc --noEmit`) and `preflight` (`npm run typecheck && npm run lint && npm run build && npm run test:e2e`)
 - `frontend/package-lock.json` — regenerated by the npm installs above
 - `frontend/playwright.config.ts` — `maxDiffPixels: 100` → `maxDiffPixelRatio: 0.01`; add 4-line comment block above `expect` documenting `npm run test:e2e:update-snapshots` and the Docker-image note for macOS/Windows authors
 
@@ -90,7 +90,7 @@ node --version
 npm --version
 ```
 
-Expected: Node `v22.x.x` (LTS), npm `10.x.x` or higher. If Node is `v20.x`: edit Task 8's `ci.yml` (Step 3) to use `node-version: '20'` instead of `'22'` per spec §2.7's plan-author confirmation note.
+Expected: Node `v22.x.x` (LTS), npm `10.x.x` or higher. If Node is `v20.x`: the preflight chain doesn't pin a Node version (it uses whatever Node is on PATH), so no Task 8 edit is needed; just record the local version in the impl-review handoff for any future agent reproducing the run.
 
 No commit at this task — only branch setup.
 
@@ -102,7 +102,7 @@ No commit at this task — only branch setup.
 - Modify: `frontend/package.json` (devDependencies)
 - Modify: `frontend/package-lock.json` (regenerated)
 
-Rationale (spec §1.3, §6 R0a-5): the CI workflow uses Docker image tag `mcr.microsoft.com/playwright:v1.59.1-jammy`, which bundles Chromium binaries matching `@playwright/test@1.59.1` exactly. A caret-range bump in `package.json` would silently change the Chromium binary version, breaking pixel-diff against locally-baselined PNGs. Exact pin ensures `package.json` and `ci.yml` are coupled.
+Rationale (spec §1.3, §6 R0a-5): the locally-baselined PNGs were captured against a specific Chromium binary that ships with `@playwright/test@1.59.1`. A caret-range bump in `package.json` would silently change the Chromium binary on any controller/agent machine that runs `npm install`, breaking pixel-diff against those snapshots. Exact pin ensures `npm ci` always installs the same Chromium across machines. (The §2.6 Docker-image command also references `v1.59.1-jammy` for cross-OS authoring; the pin keeps the npm side in lockstep with that opt-in workflow.)
 
 - [ ] **Step 1: Edit `frontend/package.json` to remove the caret**
 
@@ -160,10 +160,11 @@ git add frontend/package.json frontend/package-lock.json
 git commit -m "$(cat <<'EOF'
 chore(fe): pin @playwright/test to exact 1.59.1
 
-The Phase 0a CI workflow uses mcr.microsoft.com/playwright:v1.59.1-jammy,
-which ships Chromium binaries matching @playwright/test@1.59.1. A caret
-range would silently change the Chromium binary on minor bumps, breaking
-pixel-diff against locally-baselined PNGs. Spec 15 §6 R0a-5.
+The locally-baselined PNGs were captured against the Chromium binary that
+ships with @playwright/test@1.59.1. A caret range would silently change
+that binary on the next `npm install`, breaking pixel-diff. Exact pin
+keeps every controller/agent machine's Chromium in lockstep with the
+committed snapshots. Spec 15 §6 R0a-5.
 EOF
 )"
 ```
@@ -797,9 +798,10 @@ git commit -m "$(cat <<'EOF'
 chore(fe): capture NFR baselines (tsc / build / dev-start / playwright)
 
 3-run median wall times with explicit cold-cache cleanup between runs.
-Local-only (10-20 min runtime); Phase 2c re-measures against the wired
-pipeline and sets the actual budgets. The structured hardware block lets
-Phase 2c programmatically compare anchor environment to CI runner.
+Local-only (10-20 min runtime); Phase 2c re-measures `npm run preflight`
+once all checks are wired into the chain and sets the actual budgets.
+The structured hardware block lets Phase 2c programmatically compare the
+anchor environment to whatever machine eventually runs the full preflight.
 
 Spec 15 §2.4.
 EOF
@@ -1209,182 +1211,137 @@ EOF
 
 ---
 
-## Task 8: Add CI Workflow
+## Task 8: Add Preflight Script
 
 **Files:**
-- Create: `.github/workflows/ci.yml`
+- Modify: `frontend/package.json` (add `typecheck` + `preflight` npm scripts)
+- Create: `frontend/scripts/preflight.sh` (bash wrapper)
 
-Rationale (spec §2.7): single `playwright` job at 0a, runs inside `mcr.microsoft.com/playwright:v1.59.1-jammy` so Chromium binaries match the locally-baselined PNGs. `npm ci` runs inside the same job; no cross-job cache plumbing at 0a (Phase 2c is the right place when parallel gates land). Commented-out blocks pre-shape the future gates so each later phase only has to uncomment its block.
+> **Historical note (impl-branch flow only).** An earlier draft of this task created `.github/workflows/ci.yml`. The project subsequently decided against CI of any kind (spec §2.7), so the impl branch's Task 8 commit instead handles two things in one commit: (a) deletes any pre-existing `.github/workflows/ci.yml`, (b) lands the preflight script + npm scripts described below. Future readers running this plan from scratch on a clean tree do not need to delete anything — the deletion is a one-time cleanup for the in-flight `phase-0a-inventory` branch.
 
-- [ ] **Step 1: Ensure `.github/workflows/` exists**
+Rationale (spec §2.7): this repo has no GitHub Actions and no other external CI. The pre-merge quality gate is `npm run preflight`, run locally by the controller agent immediately before the user-approved merge step. At Phase 0a the chain is the four checks already wired today (typecheck, lint, build, Playwright). Each later phase appends one more check to the chain.
+
+- [ ] **Step 1: Add the `typecheck` and `preflight` npm scripts to `frontend/package.json`**
+
+In `frontend/package.json`, under `"scripts"`, add:
+
+```json
+"typecheck": "tsc --noEmit",
+"preflight": "npm run typecheck && npm run lint && npm run build && npm run test:e2e",
+```
+
+Place them so the alphabetical-ish ordering reads sensibly (e.g., `typecheck` after `test:e2e:ui`, `preflight` after `preview`). Other existing scripts (`dev`, `build`, `lint`, `test:e2e*`, `preview`) stay unchanged.
+
+**Why these four checks at 0a:** typecheck (tsc), lint (eslint), build (vite), Playwright (test:e2e) are all wired today (Playwright via Task 1's exact pin + Task 2's tightened threshold). Vitest is deferred to Phase 0b (it doesn't exist yet). knip --strict is deferred to Phase 1 (knip output at 0a shows 32 unused files; --strict would fail until Phase 1's cleanup, so including it now would mean a known-red preflight signal). Bundle-budget and Prettier are deferred to Phase 2c / 2b respectively.
+
+- [ ] **Step 2: Ensure `frontend/scripts/` exists** (it does, from Task 5/6, but `mkdir -p` is safe)
 
 ```bash
-mkdir -p /projects/Brewra/brewra-gtm-intelligence/.github/workflows
+mkdir -p /projects/Brewra/brewra-gtm-intelligence/frontend/scripts
 ```
 
-- [ ] **Step 2: Create `.github/workflows/ci.yml`**
+- [ ] **Step 3: Create `frontend/scripts/preflight.sh`**
 
-Write this exact content. (`node-version` is `'22'` per Task 0 Step 4 — if Task 0 found Node 20.x locally, change to `'20'`.)
-
-```yaml
-name: CI
-
-on:
-  pull_request:
-    branches: [master]
-  push:
-    branches: [master]
-
-jobs:
-  playwright:
-    runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.59.1-jammy
-    defaults:
-      run:
-        working-directory: frontend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
-      - run: npm run test:e2e
-    # required to merge
-
-  # ────────────── Phase 0b will turn this on ─────────────
-  # vitest:
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: frontend
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '22'
-  #         cache: 'npm'
-  #         cache-dependency-path: frontend/package-lock.json
-  #     - run: npm ci
-  #     - run: npm run test
-
-  # ────────────── Phase 2a will turn this on ──────────────
-  # typecheck:
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: frontend
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '22'
-  #         cache: 'npm'
-  #         cache-dependency-path: frontend/package-lock.json
-  #     - run: npm ci
-  #     - run: npm run typecheck     # script added in Phase 2a
-
-  # ────────────── Phase 2b will turn this on ──────────────
-  # lint:
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: frontend
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '22'
-  #         cache: 'npm'
-  #         cache-dependency-path: frontend/package-lock.json
-  #     - run: npm ci
-  #     - run: npx eslint . --max-warnings 0
-  # prettier:
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: frontend
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '22'
-  #         cache: 'npm'
-  #         cache-dependency-path: frontend/package-lock.json
-  #     - run: npm ci
-  #     - run: npx prettier --check .
-
-  # ────────────── Phase 2c will turn these on ─────────────
-  # build:
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: frontend
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '22'
-  #         cache: 'npm'
-  #         cache-dependency-path: frontend/package-lock.json
-  #     - run: npm ci
-  #     - run: npm run build
-  # bundle-budget:
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   # Reads docs/audits/<latest>-bundle-baseline.json, compares to dist/, fails if over budget.
-  # knip-dead-code:
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: frontend
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '22'
-  #         cache: 'npm'
-  #         cache-dependency-path: frontend/package-lock.json
-  #     - run: npm ci
-  #     - run: npx knip --strict
-```
-
-- [ ] **Step 3: Lint the YAML locally**
+Write this exact content (use Write tool):
 
 ```bash
-python3 -c "
-import yaml
-with open('.github/workflows/ci.yml') as f:
-    parsed = yaml.safe_load(f)
-print('OK — keys:', sorted(parsed.keys()))
-print('OK — jobs:', sorted(parsed['jobs'].keys()))
-"
+#!/usr/bin/env bash
+# Phase 0a preflight script. Spec 15 §2.7.
+# Pre-merge quality gate: runs all wired checks with section headers + per-check
+# timing. The controller agent runs this from frontend/ immediately before the
+# user-approved merge step. Green required for merge; red blocks the merge.
+#
+# At 0a the chain is: typecheck + lint + build + Playwright.
+# Each later phase appends one more check to npm run preflight in package.json:
+#   0b → + vitest
+#   1  → + knip --strict (after Phase 1's dead-code cleanup)
+#   2a → strict-TS typecheck (same `tsc --noEmit` command, against strict config)
+#   2b → + prettier --check .
+#   2c → + bundle-budget comparator
+#
+# Source of truth for the check list is the `preflight` npm script in
+# frontend/package.json. This wrapper just calls `npm run preflight` with
+# nicer output. To run without the wrapper: `npm run preflight`.
+
+set -euo pipefail
+
+FRONTEND_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$FRONTEND_DIR"
+
+start_total=$(python3 -c 'import time; print(time.time())')
+
+echo ""
+echo "════════════════════════════════════════════════════════════════"
+echo " npm run preflight  (Phase 0a — Spec 15 §2.7)"
+echo "════════════════════════════════════════════════════════════════"
+echo ""
+
+npm run preflight
+
+end_total=$(python3 -c 'import time; print(time.time())')
+elapsed=$(python3 -c "import sys; print(f'{float(sys.argv[1]) - float(sys.argv[2]):.1f}')" "$end_total" "$start_total")
+
+echo ""
+echo "════════════════════════════════════════════════════════════════"
+echo " preflight green — ${elapsed}s total"
+echo "════════════════════════════════════════════════════════════════"
+echo ""
 ```
 
-Expected: `OK — keys: ['jobs', 'name', 'on']` (or with `on` quoted as `True` in some YAML loaders — that's a known PyYAML quirk, not a real issue). `OK — jobs: ['playwright']`.
+The wrapper is intentionally thin — it delegates the actual check list to `npm run preflight` in `package.json` so there is one source of truth. The wrapper's only job is the timing + section headers.
 
-If yaml is not installed: `pip install pyyaml` first.
+- [ ] **Step 4: Make the script executable**
 
-- [ ] **Step 4: Commit**
+```bash
+chmod +x /projects/Brewra/brewra-gtm-intelligence/frontend/scripts/preflight.sh
+```
+
+- [ ] **Step 5: For the in-flight `phase-0a-inventory` branch only: delete the old `ci.yml`**
+
+If `phase-0a-inventory` already has `.github/workflows/ci.yml` from an earlier draft of this task (pre-pivot to local preflight), remove it in the same commit:
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
-git add .github/workflows/ci.yml
+test -f .github/workflows/ci.yml && git rm .github/workflows/ci.yml || true
+# If the .github/workflows/ directory ends up empty, git won't track it anyway.
+```
+
+Future readers running this plan on a clean tree (no prior ci.yml) can skip this step.
+
+- [ ] **Step 6: Run preflight to verify it works end-to-end**
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence/frontend
+bash scripts/preflight.sh
+```
+
+Expected: all four checks pass (typecheck → lint → build → Playwright). Total wall time ~90–120s depending on hardware (per Task 6's NFR baseline). If any check fails: STOP, do not commit. Fix the failing check on the branch, then re-run.
+
+- [ ] **Step 7: Commit**
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+git add frontend/package.json frontend/scripts/preflight.sh
+# If Step 5 staged the ci.yml deletion, it's already in the index — include it in the commit.
+git status   # sanity: package.json + preflight.sh (+ optional ci.yml deletion)
 git commit -m "$(cat <<'EOF'
-ci(fe): scaffold CI with playwright gate + phase-N TODO blocks
+chore(fe): add preflight script + npm chain (local pre-merge gate)
 
-Single playwright job at 0a, runs in mcr.microsoft.com/playwright:v1.59.1-jammy
-so Chromium binaries match the locally-baselined PNGs. npm ci runs in the
-same job — no cross-job cache plumbing at 0a; Phase 2c is the right place
-to design a setup-then-fan-out structure when parallel gates land.
+Spec 15 §2.7: this repo has no GitHub Actions and no other external CI.
+The pre-merge quality gate is `npm run preflight`, run locally by the
+controller agent immediately before the user-approved merge step.
 
-Commented-out blocks pre-shape vitest (0b), typecheck (2a), lint+prettier
-(2b), build+bundle-budget+knip-dead-code (2c). Each later phase uncomments
-its named block.
+At Phase 0a the chain is: typecheck + lint + build + Playwright.
+Vitest joins in 0b; knip --strict in 1; strict-TS typecheck in 2a;
+prettier in 2b; bundle-budget in 2c. Each later phase appends to the
+chain in the same commit that installs the tool.
 
-Spec 15 §2.7.
+frontend/scripts/preflight.sh is a thin wrapper that calls
+`npm run preflight` with section headers + total wall time. The
+package.json chain is the source of truth.
+
+(If this commit also deletes .github/workflows/ci.yml, that's the
+one-time cleanup of the pre-pivot draft on the in-flight branch.)
 EOF
 )"
 ```
@@ -1393,9 +1350,9 @@ EOF
 
 ## Task 9: Sanity-Check + Hand Off to Impl-Review Cycle
 
-**Files:** none (git verification only — no push, no PR, no CI watch).
+**Files:** none (git + preflight verification only — no push, no PR, no CI; this repo has no CI per spec §2.7).
 
-Per master spec 14 §5 and CLAUDE.md "Spec-driven flow," the impl review cycle (`/review-impl` → `/synthesize-impl-review`, looped until clean) is the quality gate before merge. CI on `master` is a post-merge regression catcher, not a pre-merge gate. The user triggers `git merge` + `git push` once impl review converges.
+Per master spec 14 §5 and CLAUDE.md "Spec-driven flow," the impl-review cycle (`/review-impl` → `/synthesize-impl-review`, looped until clean) is the quality gate before merge. The user triggers the merge once impl-review converges; the controller then runs `npm run preflight` (per master §5.6) and, only if green, executes `git merge` + `git push`.
 
 - [ ] **Step 1: Sanity-check the commit list**
 
@@ -1425,42 +1382,49 @@ test -f docs/audits/2026-05-26-frontend-nfr-baseline.json && \
 grep -E '"@playwright/test": "1\.59\.1"' frontend/package.json && echo "playwright pin: OK"
 # bun lockfiles gone?
 ! test -f frontend/bun.lock && ! test -f frontend/bun.lockb && echo "bun: OK"
-# CI workflow exists?
-test -f .github/workflows/ci.yml && echo "ci: OK"
+# Preflight script + npm scripts wired?
+test -x frontend/scripts/preflight.sh && \
+  grep -q '"preflight"' frontend/package.json && \
+  grep -q '"typecheck"' frontend/package.json && echo "preflight: OK"
+# No leftover ci.yml from the pre-pivot draft?
+! test -f .github/workflows/ci.yml && echo "no-ci: OK"
 # Playwright config has the comment block and the ratio?
 grep -q "maxDiffPixelRatio: 0.01" frontend/playwright.config.ts && \
   grep -q "test:e2e:update-snapshots" frontend/playwright.config.ts && echo "playwright config: OK"
 ```
 
-Expected: 8 lines of `OK`. Any missing → return to the relevant task.
+Expected: 9 lines of `OK`. Any missing → return to the relevant task.
 
-- [ ] **Step 3: Run the full Playwright suite one last time locally**
+- [ ] **Step 3: Run `npm run preflight` to verify the full pre-merge gate is green**
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
-npm run test:e2e
+bash scripts/preflight.sh
 ```
 
-Expected: green. This is the local equivalent of the CI gate that will run post-merge on `master`. A red run here means the merge will leave `master` red and trigger an immediate revert per spec 14 §5.3 — fix before handing off.
+Expected: green (typecheck + lint + build + Playwright all pass). This is the same script the controller will run at merge time. A red run here means the merge will fail at the controller's preflight step in Step 5 — fix the failing check on the branch before handing off.
 
 - [ ] **Step 4: Hand off to impl-review**
 
-The implementation is complete on `phase-0a-inventory`. Hand control back to the user with a brief summary (commits landed, headline findings from the audits, any non-blocking observations from inline reviews). The user then runs `/review-impl` (fresh-eyes agent reads the branch and writes `docs/reviews/15a-frontend-phase-0a-inventory-impl-review-<round>.md`).
+The implementation is complete on `phase-0a-inventory`. Hand control back to the user with a brief summary (commits landed, headline findings from the audits, any non-blocking observations from inline reviews, preflight green confirmation). The user then runs `/review-impl` (fresh-eyes agent reads the branch and writes `docs/reviews/15a-frontend-phase-0a-inventory-impl-review-<round>.md`).
 
 When the review file lands, the controller agent (this session) runs `/synthesize-impl-review`, writing `docs/reviews/15a-frontend-phase-0a-inventory-impl-synthesis-<round>.md` with agree/disagree/defer reasoning. Any "agree" items that require code changes land as additional commits on `phase-0a-inventory` and re-enter the review loop. Repeat until findings are at nit-severity or below.
 
 - [ ] **Step 5: Plan-level done — wait for user merge prompt**
 
-Once impl-review converges to nit-or-below and the user is satisfied with quality, the user explicitly prompts for merge. At that point (and only then), the controller executes:
+Once impl-review converges to nit-or-below and the user is satisfied with quality, the user explicitly prompts for merge. At that point (and only then), the controller executes the merge step per master §5.6:
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
+# 1. Re-run preflight on the latest branch tip (covers any commits added during the impl-review loop)
+cd frontend && bash scripts/preflight.sh && cd ..
+# 2. If green, merge and push. If red, report the failing check; do NOT merge.
 git checkout master
 git merge phase-0a-inventory          # no --no-ff needed; fast-forward is fine for a phase branch
-git push origin master                # CI runs here, post-merge, on master
+git push origin master
 ```
 
-CI runs on `master` after the push. If the Playwright job goes red, **revert the merge commit immediately** (`git revert -m 1 <merge-sha>`) rather than fix-forward — per spec 14 §5.3. The phase branch can then be amended and re-merged.
+If preflight is red at merge time, the controller does not merge — reports which check failed and waits for the user's call (fix on branch and re-run, or abort the phase). There is no CI after the push; the preflight is the only gate.
 
 The merge + push step is outside this plan's mechanical execution scope; this plan stops at Step 4's hand-off.
 
@@ -1477,7 +1441,7 @@ Cross-reference of Spec 15 §2.9 done-when bullets to the tasks that satisfy the
 | Bundle baseline JSON merged (with `capture-bundle-baseline.ts` committed) | Task 5 |
 | NFR baseline JSON merged | Task 6 |
 | Playwright suite green under tightened threshold; `@playwright/test` pinned exactly | Task 1 + Task 2 + Task 9 |
-| `ci.yml` runs on every push to `master` with Playwright job; red run reverts the merge | Task 8 + Task 9 |
+| `npm run preflight` runs locally before any merge; required to pass | Task 8 + Task 9 |
 | `bun.lock` and `bun.lockb` deleted; `package-lock.json` sole lockfile | Task 3 |
 | `playwright.config.ts` comment block documenting local re-baseline | Task 2 |
 
