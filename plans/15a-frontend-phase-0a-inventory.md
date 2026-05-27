@@ -1391,9 +1391,11 @@ EOF
 
 ---
 
-## Task 9: Push Branch and Verify CI Green
+## Task 9: Sanity-Check + Hand Off to Impl-Review Cycle
 
-**Files:** none (git + CI verification only).
+**Files:** none (git verification only — no push, no PR, no CI watch).
+
+Per master spec 14 §5 and CLAUDE.md "Spec-driven flow," the impl review cycle (`/review-impl` → `/synthesize-impl-review`, looped until clean) is the quality gate before merge. CI on `master` is a post-merge regression catcher, not a pre-merge gate. The user triggers `git merge` + `git push` once impl review converges.
 
 - [ ] **Step 1: Sanity-check the commit list**
 
@@ -1432,63 +1434,35 @@ grep -q "maxDiffPixelRatio: 0.01" frontend/playwright.config.ts && \
 
 Expected: 8 lines of `OK`. Any missing → return to the relevant task.
 
-- [ ] **Step 3: Push the branch**
+- [ ] **Step 3: Run the full Playwright suite one last time locally**
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence/frontend
+npm run test:e2e
+```
+
+Expected: green. This is the local equivalent of the CI gate that will run post-merge on `master`. A red run here means the merge will leave `master` red and trigger an immediate revert per spec 14 §5.3 — fix before handing off.
+
+- [ ] **Step 4: Hand off to impl-review**
+
+The implementation is complete on `phase-0a-inventory`. Hand control back to the user with a brief summary (commits landed, headline findings from the audits, any non-blocking observations from inline reviews). The user then runs `/review-impl` (fresh-eyes agent reads the branch and writes `docs/reviews/15a-frontend-phase-0a-inventory-impl-review-<round>.md`).
+
+When the review file lands, the controller agent (this session) runs `/synthesize-impl-review`, writing `docs/reviews/15a-frontend-phase-0a-inventory-impl-synthesis-<round>.md` with agree/disagree/defer reasoning. Any "agree" items that require code changes land as additional commits on `phase-0a-inventory` and re-enter the review loop. Repeat until findings are at nit-severity or below.
+
+- [ ] **Step 5: Plan-level done — wait for user merge prompt**
+
+Once impl-review converges to nit-or-below and the user is satisfied with quality, the user explicitly prompts for merge. At that point (and only then), the controller executes:
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
-git push -u origin phase-0a-inventory
+git checkout master
+git merge phase-0a-inventory          # no --no-ff needed; fast-forward is fine for a phase branch
+git push origin master                # CI runs here, post-merge, on master
 ```
 
-Expected: branch created on origin, tracking set up.
+CI runs on `master` after the push. If the Playwright job goes red, **revert the merge commit immediately** (`git revert -m 1 <merge-sha>`) rather than fix-forward — per spec 14 §5.3. The phase branch can then be amended and re-merged.
 
-If push fails with auth: per CLAUDE.md, the sandbox proxy injects GitHub credentials automatically. If `git push` still fails, the user needs to run `sbx secret set <sandbox-name> github -t "$(gh auth token)"` on their host.
-
-- [ ] **Step 4: Open the PR**
-
-```bash
-cd /projects/Brewra/brewra-gtm-intelligence
-gh pr create --title "Phase 0a: frontend inventory + safety net" --body "$(cat <<'EOF'
-## Summary
-- Lands Spec 15 §2.9 deliverables: audit scorecard, knip output, bundle + NFR baselines, tightened Playwright threshold, CI workflow, bun lockfile delete.
-- Pins `@playwright/test` to exact `1.59.1` so the Docker image and local snapshots stay in lockstep (spec §6 R0a-5).
-- CI runs `playwright` only at 0a; future-phase gates are pre-shaped as TODO blocks in `ci.yml`.
-
-## Spec
-`specs/15-frontend-phase-0-inventory-and-safety-net-design.md` (§2, §2.9, §6).
-
-## Plan
-`plans/15a-frontend-phase-0a-inventory.md`.
-
-## Test plan
-- [ ] CI's `playwright` job is green on this PR.
-- [ ] Audit scorecard in `docs/audits/` reviewed for false-positive flags on lazy routes / barrel exports / Vite transforms (spec §2.2 categories).
-- [ ] NFR baseline JSON's hardware block reflects the dev machine the measurements were taken on.
-- [ ] Bundle baseline JSON's `chunks` array is sorted descending by `size_bytes`.
-- [ ] `bun.lock` and `bun.lockb` are absent from `frontend/`.
-EOF
-)"
-```
-
-Expected: PR URL printed. Capture it.
-
-- [ ] **Step 5: Watch CI to green**
-
-```bash
-gh pr checks --watch
-```
-
-Expected: the `playwright` job runs inside the Docker container, `npm ci` succeeds, `npm run test:e2e` runs all journey + stub specs to green. Total runtime typically 3–8 minutes depending on runner load.
-
-If `playwright` fails:
-- Visual diff failure on CI but not locally → the Docker-image-version vs `@playwright/test`-version coupling is what guards this. Confirm `package.json` says exact `1.59.1` and `ci.yml` says `v1.59.1-jammy`. If both match, the failure is genuine and needs investigation per spec §6 R0a-3.
-- `npm ci` failure on lockfile drift → re-run `npm install` locally, commit the regenerated lockfile, push.
-- Other test failure → it's a real bug surfaced by CI's clean environment; debug.
-
-- [ ] **Step 6: Plan-level done**
-
-Once CI is green and the PR is ready for spec/plan/impl review per master §5.4 cycle, this plan is done. The merge itself happens after the impl-review round, which is outside this plan's scope.
-
-If impl-review finds gaps that require code changes, those land in additional commits on `phase-0a-inventory` before merge.
+The merge + push step is outside this plan's mechanical execution scope; this plan stops at Step 4's hand-off.
 
 ---
 
@@ -1503,7 +1477,7 @@ Cross-reference of Spec 15 §2.9 done-when bullets to the tasks that satisfy the
 | Bundle baseline JSON merged (with `capture-bundle-baseline.ts` committed) | Task 5 |
 | NFR baseline JSON merged | Task 6 |
 | Playwright suite green under tightened threshold; `@playwright/test` pinned exactly | Task 1 + Task 2 + Task 9 |
-| `ci.yml` runs on every PR with Playwright gate required | Task 8 + Task 9 |
+| `ci.yml` runs on every push to `master` with Playwright job; red run reverts the merge | Task 8 + Task 9 |
 | `bun.lock` and `bun.lockb` deleted; `package-lock.json` sole lockfile | Task 3 |
 | `playwright.config.ts` comment block documenting local re-baseline | Task 2 |
 

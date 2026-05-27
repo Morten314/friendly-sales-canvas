@@ -583,7 +583,7 @@ The human orchestrator (user) kicks off each phase, approves transitions between
 
 - Approve spec → plan transition (after spec review converges)
 - Approve plan → impl transition (after plan review converges)
-- Approve impl → merge (after impl review converges, CI green, visual regression accepted)
+- Approve impl → merge (after impl review converges). CI runs on `master` post-merge as a regression catcher, not a pre-merge gate; a red CI on `master` triggers immediate revert of the merge commit rather than fix-forward (§5.3).
 - Adjudicate conflicting agent rounds when synthesize step can't reconcile
 
 ### 5.7 Abort and revert protocol

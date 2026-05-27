@@ -12,7 +12,7 @@
 
 ### 1.1 Goal
 
-Establish the audit baseline and the safety net that every subsequent phase (1 through 14) relies on. After Phase 0 merges, the frontend has: a per-file inventory with dead-code candidates surfaced, NFR + bundle baselines on disk, the existing Playwright + visual regression suite locked green on every PR under a tightened threshold, a working Vitest + RTL + MSW harness with behavior-only characterization tests against the pure utilities that survive the refactor, and a GitHub Actions CI workflow scaffolded with future-phase gates pre-shaped as TODOs.
+Establish the audit baseline and the safety net that every subsequent phase (1 through 14) relies on. After Phase 0 merges, the frontend has: a per-file inventory with dead-code candidates surfaced, NFR + bundle baselines on disk, the existing Playwright + visual regression suite locked green on every push to `master` under a tightened threshold, a working Vitest + RTL + MSW harness with behavior-only characterization tests against the pure utilities that survive the refactor, and a GitHub Actions CI workflow scaffolded with future-phase gates pre-shaped as TODOs.
 
 ### 1.2 Why now
 
@@ -183,7 +183,7 @@ Master spec §8 Q2 listed PR-label and commit-message triggers as the two option
 
 ### 2.7 CI workflow scaffolding
 
-**File:** `.github/workflows/ci.yml`. Triggers: PRs to `master`, pushes to `master`.
+**File:** `.github/workflows/ci.yml`. Triggers: pushes to `master` (primary), `pull_request` against `master` (secondary — kept on the workflow for future use, but the default flow per CLAUDE.md "Spec-driven flow" is direct merge to `master` after impl-review convergence, not via PR).
 
 **Single job at 0a.** Only `playwright` is wired. Runs inside `mcr.microsoft.com/playwright:v1.59.1-jammy` (Playwright pinned exactly — see §1.3 and §6 R0a-5). `npm ci` runs inside the same job, so there is no cross-job cache plumbing — a setup-then-job split would not be useful at 0a because the container's filesystem layout differs from the host runner's and `actions/cache` paths don't translate cleanly across the boundary. Phase 2c (when parallel gates land — typecheck, lint, build, etc.) is the right place to introduce a shared setup job, and at that point all jobs can run in the same image or a shared volume strategy can be designed deliberately.
 
@@ -207,7 +207,8 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run test:e2e
-    # required to merge
+    # required to stay green on master — a red CI run after a merge triggers
+    # immediate revert of the merge commit, not fix-forward (spec 14 §5.3).
 
   # ────────────── Phase 0b will turn this on ─────────────
   # vitest:
@@ -259,8 +260,8 @@ Discrete commit. Deletes `frontend/bun.lock` and `frontend/bun.lockb`. Commit me
 - Knip raw output merged.
 - Bundle baseline JSON merged (with `capture-bundle-baseline.ts` script committed).
 - NFR baseline JSON merged.
-- Playwright suite green on a representative PR under the tightened threshold; `@playwright/test` pinned exactly in `package.json`.
-- `ci.yml` runs on every PR with the Playwright gate required to merge.
+- Playwright suite green on `master` post-merge under the tightened threshold; `@playwright/test` pinned exactly in `package.json`.
+- `ci.yml` runs on every push to `master` with the Playwright job; a red run triggers immediate revert of the merge commit (no fix-forward — spec 14 §5.3).
 - `bun.lock` and `bun.lockb` deleted; `package-lock.json` is the sole lockfile.
 - `playwright.config.ts` carries a comment block documenting the local re-baseline command (per §2.6).
 
@@ -439,7 +440,7 @@ Phase 0 is done when:
 
 1. **0a deliverables** (§2.9) are merged.
 2. **0b deliverables** (§3.7) are merged.
-3. On every PR, `ci.yml` runs install → playwright → vitest, all required to pass.
+3. On every push to `master`, `ci.yml` runs install → playwright → vitest. A red run triggers immediate revert of the merge commit, not fix-forward (spec 14 §5.3).
 4. Visual snapshots are refreshed locally via `npm run test:e2e:update-snapshots` when an intentional UI change is accepted; the documenting comment block in `playwright.config.ts` explains the workflow.
 5. Audit scorecard, dead-code raw outputs, NFR + bundle baseline JSON files all committed under `docs/audits/`.
 6. `bun.lock` and `bun.lockb` are gone.
