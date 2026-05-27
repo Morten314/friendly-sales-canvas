@@ -17,7 +17,7 @@
     "test:e2e:update-snapshots": "playwright test --update-snapshots",
     "test:e2e:ui": "playwright test --ui",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit -p tsconfig.app.json"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.0",
