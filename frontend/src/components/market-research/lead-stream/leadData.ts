@@ -22,7 +22,7 @@ export const REPORT_COLUMNS = [
 
 export const RATING_SCORE: Record<Rating, number> = { High: 20, Medium: 12, Low: 5 };
 
-export function computeScore(ratings: Record<string, Rating>): number {
+function computeScore(ratings: Record<string, Rating>): number {
   return REPORT_COLUMNS.reduce((sum, col) => sum + (RATING_SCORE[ratings[col.key]] || 0), 0);
 }
 
@@ -126,7 +126,7 @@ export const heatmapLeads = buildHeatmapLeads();
 
 // ─── Tier Intelligence Data ──────────────────────────────────────────────────
 
-export interface TierIntelligence {
+interface TierIntelligence {
   label: string;
   fitScore: number;
   whyItFits: string;
@@ -160,14 +160,14 @@ export const TIER_INTELLIGENCE: Record<string, TierIntelligence> = {
 
 // ─── Per-Component Rating Explanations ──────────────────────────────────────
 
-export interface ComponentExplanations {
+interface ComponentExplanations {
   High: string;
   Medium: string;
   Low: string;
 }
 
 // Generic fallbacks (used when no lead-specific explanation exists)
-export const COMPONENT_EXPLANATIONS: Record<string, ComponentExplanations> = {
+const COMPONENT_EXPLANATIONS: Record<string, ComponentExplanations> = {
   "market-size": {
     High: "Operating in a large, expanding TAM with strong demand signals.",
     Medium: "Addressable market is moderate with some growth indicators.",
@@ -197,7 +197,7 @@ export const COMPONENT_EXPLANATIONS: Record<string, ComponentExplanations> = {
 
 // ─── Lead-Specific Explanations (business-contextualized) ───────────────────
 
-export const LEAD_SPECIFIC_EXPLANATIONS: Record<string, Record<string, string>> = {
+const LEAD_SPECIFIC_EXPLANATIONS: Record<string, Record<string, string>> = {
   "1": {
     "market-size": "Acme Corp operates in the enterprise CRM space valued at $72B globally. Their 2,400-employee base and 23% YoY revenue growth place them squarely in the high-value mid-market segment expanding fastest in NA.",
     "industry-trends": "Acme is actively investing in AI-powered sales automation — their recent job postings show 8 open roles in ML engineering. This aligns with the 34% industry shift toward predictive analytics in sales tech.",
@@ -271,13 +271,13 @@ export const LEAD_SPECIFIC_EXPLANATIONS: Record<string, Record<string, string>> 
 };
 
 // Helper to get the best available explanation for a lead + component + rating
-export function getLeadExplanation(leadId: string, componentKey: string, rating: Rating): string {
+function getLeadExplanation(leadId: string, componentKey: string, rating: Rating): string {
   return LEAD_SPECIFIC_EXPLANATIONS[leadId]?.[componentKey] || COMPONENT_EXPLANATIONS[componentKey]?.[rating] || "";
 }
 
 // ─── Computed report component scores ────────────────────────────────────────
 
-export interface ReportComponentScore {
+interface ReportComponentScore {
   name: string;
   key: string;
   high: number;
@@ -288,7 +288,7 @@ export interface ReportComponentScore {
 
 // ─── Segment Intelligence Data ───────────────────────────────────────────────
 
-export interface LeadSegment {
+interface LeadSegment {
   industry: string;
   region: string;
   geographies: string[];
@@ -392,6 +392,6 @@ export function computeReportComponentScoresForLeads(leads: HeatmapLead[]): Repo
   }).sort((a, b) => b.totalScore - a.totalScore);
 }
 
-export function getReportComponentScores(): ReportComponentScore[] {
+function getReportComponentScores(): ReportComponentScore[] {
   return computeReportComponentScoresForLeads(heatmapLeads);
 }
