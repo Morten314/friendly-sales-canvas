@@ -43,7 +43,6 @@ const EMPTY_PROFILER_CONTEXT: SignalsChatContext = {
 export function ProfilerChatWithHistory({
   initialContext,
   onClearContext,
-  onTabChange,
 }: ProfilerChatWithHistoryProps) {
   const { currentUser } = useAuth();
   const [sessions, setSessions] = useState<ProfilerChatSession[]>([]);

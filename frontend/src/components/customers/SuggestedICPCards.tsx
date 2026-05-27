@@ -27,35 +27,25 @@ import {
   Check,
   X,
   Eye,
-  TrendingUp,
   Users,
   Target,
-  ChevronDown,
-  ChevronUp,
-  Edit,
-  Save,
-  Download,
-  Minimize2,
   Sparkles,
   RefreshCw,
   Plus,
   ArrowRight,
   AlertTriangle,
   ThumbsUp,
-  ThumbsDown,
   Undo2,
   Shield,
   Gauge,
   Lightbulb,
   Zap,
   MessageSquare,
-  Pencil,
   Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
 import { getLeadCountForICP } from "@/components/customers/LeadStream";
 import { buildIcpUrl, buildApiUrl, apiFetchJson, apiFetch } from "@/lib/api";
 import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
@@ -919,7 +909,6 @@ export const SuggestedICPCards = ({
 }: SuggestedICPCardsProps) => {
   const { toast } = useToast();
   const { currentUser, orgId } = useAuth();
-  const navigate = useNavigate();
 
   /** Always filled from GET /profile/company (or legacy); avoid hydrating stale localStorage before fetch. */
   const [existingICPs, setExistingICPs] = useState<ExistingICP[]>([]);
@@ -935,11 +924,9 @@ export const SuggestedICPCards = ({
 
   const [loading, setLoading] = useState(true);
 
-  const [selectedExistingICP, setSelectedExistingICP] = useState<ExistingICP | null>(null);
   const [expandedCurrentICPId, setExpandedCurrentICPId] = useState<string | null>(null);
   const [confirmAcceptICP, setConfirmAcceptICP] = useState<SuggestedICP | null>(null);
-  const [showAnnouncement, setShowAnnouncement] = useState(true);
-  const [showRecommendations, setShowRecommendations] = useState(() => {
+  const [showRecommendations, _setShowRecommendations] = useState(() => {
     try {
       return localStorage.getItem("profiler_showRecommendations") === "true";
     } catch {}
@@ -1401,7 +1388,6 @@ export const SuggestedICPCards = ({
   // --- Render ---
   const allSuggestions = [...refinedICPs, ...newICPs];
   const visibleRecommendedIcps = allSuggestions.filter((s) => cardStatuses[s.id]?.status !== "accepted");
-  const pendingCount = allSuggestions.filter((s) => cardStatuses[s.id]?.status === "suggested").length;
 
   return (
     <div className="space-y-8 relative">
@@ -2098,9 +2084,7 @@ const RecommendedICPCard = ({
   onReject,
   onUndo,
   onToggleReport,
-  onViewProspects,
 }: RecommendedICPCardProps) => {
-  const { toast } = useToast();
   const isAccepted = status.status === "accepted";
   const isRejected = status.status === "rejected";
   const isSuggested = status.status === "suggested";

@@ -313,33 +313,21 @@
 // }
 
 
-import { 
-  Users, 
-  FileText, 
-  Calendar, 
-  Settings, 
-  LogOut, 
+import {
+  Users,
+  FileText,
+  Settings,
+  LogOut,
   Search,
-  BarChart, 
   Menu,
-  LayoutDashboard,
   ChevronDown,
   ChevronUp,
-  User,
-  Compass,
   Zap,
-  Presentation,
-  Shield,
-  FileCheck,
-  Target,
-  Activity,
   Command,
   Archive,
   X,
-  Plus,
-  Minus
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -348,16 +336,9 @@ import { useTenant } from "@/contexts/TenantContext";
 import { clearUserCache } from "@/utils/cacheUtils";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { 
-  Collapsible, 
-  CollapsibleContent, 
-  CollapsibleTrigger 
-} from "@/components/ui/collapsible";
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
-  SheetTitle,
 } from "@/components/ui/sheet";
 import { ProfileDialog } from "./ProfileDialog";
 import { PopoverTrigger } from "@/components/ui/popover";

@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Zap, Target, Mail, Users, TrendingUp, Eye, Megaphone,
-  ArrowRight, Shield, MessageSquare, Handshake, BarChart3,
+  ArrowRight, Shield, Handshake, BarChart3,
 } from "lucide-react";
 import { heatmapLeads } from "@/components/market-research/lead-stream/leadData";
 
