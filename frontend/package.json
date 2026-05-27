@@ -8,7 +8,7 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preflight": "npm run typecheck && npm run build && npm run test:e2e",
+    "preflight": "npm run typecheck && npm run build && npm run test:e2e && npm run test",
     "preview": "vite preview",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
