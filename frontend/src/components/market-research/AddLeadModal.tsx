@@ -14,7 +14,7 @@ import { buildApiUrl } from "@/lib/api";
 import jwtManager from "@/lib/jwt";
 import { Loader2 } from "lucide-react";
 
-export interface AddLeadFormData {
+interface AddLeadFormData {
   fullName: string;
   email: string;
   mobile: string;
