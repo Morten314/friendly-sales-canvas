@@ -2276,5 +2276,3 @@ const RecommendedICPCard = ({
     </div>
   );
 };
-
-export default SuggestedICPCards;
