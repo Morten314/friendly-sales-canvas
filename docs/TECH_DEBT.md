@@ -230,3 +230,146 @@ Design questions to resolve during the spec session: (a) template engine choice 
 - First analysis request requiring "what was the cost/latency of prompt X at version Y?" — currently unanswerable.
 
 **Owner:** TBD.
+
+---
+
+## TD-FE-3 — Deferred unused exports: src/lib/ (firebase, api, leadStreamHeatmapSession, missionProfilerSessionCache)
+
+**Date logged:** 2026-05-27
+**Origin:** Spec 16 Phase 1 (plans/16-frontend-phase-1-loc-reduction.md), Step 5.
+
+**Current state:**
+Knip flags these symbols in `src/lib/` files as unused exports:
+  - `src/lib/firebase.ts` — `default` (default export of the Firebase `app` instance; named `auth` export is live)
+  - `src/lib/api.ts` — `API_BASE_URL`, `ApiFetchOptions`, `ICP_BACKEND_URL`
+  - `src/lib/leadStreamHeatmapSession.ts` — `leadStreamHeatmapCacheKey`
+  - `src/lib/missionProfilerSessionCache.ts` — `ProfilerSessionSnapshot`
+
+Per-symbol rg + test-import check returned no live inbound references (API_BASE_URL appears only in
+commented-out code in DataHistoryDialog.tsx).
+
+**Why deferred:**
+All files are under `src/lib/` — conservative posture per Spec 16 §2.3. The lib/ area is the
+utility/abstraction layer; removing exports here before Phase 13 modularization could silently break
+import patterns not yet visible to knip (dynamic import, late binding, or re-export chains).
+
+**Pull-forward trigger:**
+Phase 13 (post-modularization LOC pass) with strict TS context may relax the conservative-posture
+barrier. Confirm no dynamic consumers before removal.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-4 — Deferred unused export: src/hooks/use-toast.ts
+
+**Date logged:** 2026-05-27
+**Origin:** Spec 16 Phase 1 (plans/16-frontend-phase-1-loc-reduction.md), Step 5.
+
+**Current state:**
+Knip flags these symbols in `src/hooks/use-toast.ts` as unused exports:
+  - `reducer` — internal state reducer exported at line 74; only used internally at line 134
+
+Note: `toast` was also flagged by knip but is retained — it IS re-exported via
+`src/components/ui/use-toast.ts` (`export { useToast, toast }`) and consumed downstream.
+
+Per-symbol rg + test-import check: `reducer` has zero inbound references outside the file.
+
+**Why deferred:**
+File is under `src/hooks/` — conservative posture per Spec 16 §2.3.
+
+**Pull-forward trigger:**
+Phase 13 (post-modularization LOC pass) with strict TS context.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-5 — Deferred unused exports: src/utils/apiUtils.ts
+
+**Date logged:** 2026-05-27
+**Origin:** Spec 16 Phase 1 (plans/16-frontend-phase-1-loc-reduction.md), Step 5.
+
+**Current state:**
+Knip flags these symbols in `src/utils/apiUtils.ts` as unused exports:
+  - `forceFreshData`
+  - `isDataFresh`
+  - `marketResearchApiCallWithCacheBust`
+  - `rateLimitedApiCall`
+  - `simpleApiCall`
+
+Per-symbol rg: `isDataFresh` appears in `MarketResearch.tsx` but only as a locally-defined shadow
+variable (not imported from apiUtils.ts). The other four have zero inbound references.
+
+**Why deferred:**
+File is under `src/utils/` — conservative posture per Spec 16 §2.3.
+
+**Pull-forward trigger:**
+Phase 13 (post-modularization LOC pass) with strict TS context may relax the conservative-posture
+barrier. Verify no remaining call sites that use a version-shadowing import pattern.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-6 — Deferred unused exports: src/utils/profilerAcceptedIcpDisplay.ts
+
+**Date logged:** 2026-05-27
+**Origin:** Spec 16 Phase 1 (plans/16-frontend-phase-1-loc-reduction.md), Step 5.
+
+**Current state:**
+Knip flags these symbols in `src/utils/profilerAcceptedIcpDisplay.ts` as unused exports:
+  - `ProfilerAcceptedIcpDisplayMeta`
+  - `isProfilerPlaceholderIcp`
+  - `mergeProfilerAcceptedIcpDisplayIfPlaceholder`
+
+Per-symbol rg + test-import check returned zero inbound references outside the file.
+
+**Why deferred:**
+File is under `src/utils/` — conservative posture per Spec 16 §2.3.
+
+**Pull-forward trigger:**
+Phase 13 (post-modularization LOC pass) with strict TS context.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-7 — Deferred unused exports: src/components/ui/ (shadcn-locked primitives)
+
+**Date logged:** 2026-05-27
+**Origin:** Spec 16 Phase 1 (plans/16-frontend-phase-1-loc-reduction.md), Step 5.
+Spec 16 §2.2 and §8 explicitly lock `src/components/ui/` from Phase 4 onward.
+
+**Current state:**
+Knip flags unused exports in 14 shadcn-ui primitive files:
+  - `sonner.tsx` — `toast`
+  - `avatar.tsx` — `AvatarImage`
+  - `badge.tsx` — `BadgeProps`, `badgeVariants`
+  - `alert.tsx` — `AlertTitle`
+  - `select.tsx` — `SelectGroup`, `SelectLabel`, `SelectScrollDownButton`, `SelectScrollUpButton`, `SelectSeparator`
+  - `dialog.tsx` — `DialogClose`, `DialogOverlay`, `DialogPortal`
+  - `table.tsx` — `TableCaption`, `TableFooter`
+  - `dropdown-menu.tsx` — `DropdownMenuCheckboxItem`, `DropdownMenuGroup`, `DropdownMenuPortal`, `DropdownMenuRadioGroup`, `DropdownMenuRadioItem`, `DropdownMenuShortcut`
+  - `alert-dialog.tsx` — `AlertDialogOverlay`, `AlertDialogPortal`, `AlertDialogTrigger`
+  - `drawer.tsx` — `DrawerOverlay`, `DrawerPortal`, `DrawerTrigger`
+  - `command.tsx` — `CommandDialog`, `CommandSeparator`, `CommandShortcut`
+  - `sheet.tsx` — `SheetClose`, `SheetDescription`, `SheetFooter`, `SheetOverlay`, `SheetPortal`, `SheetTrigger`
+  - `button.tsx` — `ButtonProps`
+  - `textarea.tsx` — `TextareaProps`
+
+These are shadcn-ui generated primitives. The extra sub-components are exported by the shadcn
+scaffolding convention even when not yet consumed by this project. Removing them would diverge
+the files from the upstream shadcn source and complicate future shadcn upgrades.
+
+**Why deferred:**
+`src/components/ui/` is shadcn-locked per Spec 16 §2.2 — any unused primitives flagged by knip
+stay in place. Removing upstream-scaffold exports here provides minimal LOC savings while creating
+maintenance drag on future shadcn version bumps.
+
+**Pull-forward trigger:**
+If Brewra forks shadcn components (copies them out of the upstream pattern into fully local files),
+these exports can be pruned. Or if the unused sub-components remain untouched past Phase 4 and a
+deliberate audit confirms they will never be used.
+
+**Owner:** TBD.
