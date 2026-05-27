@@ -89,7 +89,6 @@ const App = () => (
                 </ProtectedRoute>
               } />
               <Route path="/market-research" element={<Navigate to="/your-ai-team/scout/marketintelligence" replace />} />
-              <Route path="/your-lead-stream" element={<Navigate to="/your-ai-team/scout/leadstream" replace />} />
               <Route path="/your-ai-team/scout/:tab" element={
                 <ProtectedRoute requireTenant>
                   <MarketResearch />
