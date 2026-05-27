@@ -188,6 +188,31 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 
 17 phases, executed in order. Each phase ships through a full adversarial cycle (see §5).
 
+### Status
+
+| Phase | Status | Merged |
+|---|---|---|
+| 0a — Inventory | done | 2026-05-26 |
+| 0b — Test harness + characterization + gap journeys | done | 2026-05-27 |
+| 1 — LOC reduction pass #1 | pending | — |
+| 2a — Strict TS turn-on | pending | — |
+| 2b — ESLint type-aware + Prettier | pending | — |
+| 2c — Preflight gates + bundle budget | pending | — |
+| 3 — API/data layer consolidation | pending | — |
+| 4 — Feature scaffolding + shell extraction | pending | — |
+| 5 — Feature: market-research | pending | — |
+| 6 — Feature: mission-control | pending | — |
+| 7 — Feature: customers | pending | — |
+| 8 — Feature: signals + strategist | pending | — |
+| 9 — Feature: scout + profiler | pending | — |
+| 10 — Feature: settings + tenant + auth | pending | — |
+| 11 — Shared utility extraction | pending | — |
+| 12 — Small-pages sweep | pending | — |
+| 13 — LOC reduction pass #2 | pending | — |
+| 14 — Agent affordances | pending | — |
+
+*Status reflects merge state to `master`. Update at merge time only. Phase descriptions below are intentionally not amended after a phase ships — they're a frozen record of intent per CLAUDE.md "Spec-driven flow."*
+
 ### Overview
 
 | # | Phase | Mission |
