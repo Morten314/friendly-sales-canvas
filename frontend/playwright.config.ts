@@ -29,9 +29,15 @@ export default defineConfig({
     timeout: 120 * 1000,
   },
   expect: {
+    // Re-baseline visual snapshots when an intentional UI change is accepted:
+    //   npm run test:e2e:update-snapshots
+    // On macOS/Windows, run inside the Playwright Docker image so PNGs are
+    // pixel-stable across host OS:
+    //   docker run --rm -v "$PWD:/work" -w /work mcr.microsoft.com/playwright:v1.59.1-jammy \
+    //     bash -c "npm ci && npm run test:e2e:update-snapshots"
     toHaveScreenshot: {
-      maxDiffPixels: 100,
-      threshold: 0.2,
+      maxDiffPixelRatio: 0.01,   // 1% of total pixels — was maxDiffPixels: 100, an absolute count; now a ratio
+      threshold: 0.2,            // per-pixel color tolerance — unchanged
       animations: 'disabled',
     },
   },
