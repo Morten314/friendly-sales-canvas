@@ -252,6 +252,7 @@ commented-out code in DataHistoryDialog.tsx).
 All files are under `src/lib/` — conservative posture per Spec 16 §2.3. The lib/ area is the
 utility/abstraction layer; removing exports here before Phase 13 modularization could silently break
 import patterns not yet visible to knip (dynamic import, late binding, or re-export chains).
+Note: the export-keyword-only operation applied aggressively in Step 5 for `components/signals/` (commits 2e086f7, f47b204) was held conservative here per the Spec 16 §2.3 lib/ boundary, not the per-symbol risk. Phase 13 can revisit by applying the same drop-export-keyword op if the conservative posture relaxes.
 
 **Pull-forward trigger:**
 Phase 13 (post-modularization LOC pass) with strict TS context may relax the conservative-posture
@@ -362,6 +363,7 @@ strategies. Fixing it properly would require either (a) ensuring the app entry (
 explicitly in the entry array WITHOUT triggering the "redundant entry" hint, or (b) upgrading to a
 future knip version that unifies the tracing strategy. The `ignoreDependencies` workaround is
 correct and safe: all 30 packages are genuinely used.
+Note: empirical verification 2026-05-27 — adding `src/main.tsx` to `entry` does not enable knip --strict tracing through Vite plugins; the 30-package list reflects the strict-mode tracer's actual capability boundary, not a policy lax-list. Future agents removing entries should re-run `knip --strict --no-progress` to confirm tracing reaches the package before deleting.
 
 **Pull-forward trigger:**
 When knip is upgraded to a major version that resolves the strict/non-strict tracing discrepancy,
@@ -402,6 +404,7 @@ the files from the upstream shadcn source and complicate future shadcn upgrades.
 `src/components/ui/` is shadcn-locked per Spec 16 §2.2 — any unused primitives flagged by knip
 stay in place. Removing upstream-scaffold exports here provides minimal LOC savings while creating
 maintenance drag on future shadcn version bumps.
+Note: per-file comparison against upstream shadcn-ui source was not performed in Phase 1. Phase 4's shadcn consolidation should verify each primitive against upstream before deciding what to consolidate vs prune.
 
 **Pull-forward trigger:**
 If Brewra forks shadcn components (copies them out of the upstream pattern into fully local files),

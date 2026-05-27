@@ -1,0 +1,1 @@
+0 groups; no byte-identical patterns above threshold (>=3 occurrences, self-contained, normalized SHA-256). See companion .json for empty schema.

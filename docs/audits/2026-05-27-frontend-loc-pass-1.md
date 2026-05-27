@@ -23,28 +23,28 @@
 
 ### Per-area
 
-| Area | Files (after) | LOC (after) |
-|---|---:|---:|
-| src/ (root) | 3 | 184 |
-| components/ (loose) | 4 | 529 |
-| components/common/ | 1 | 120 |
-| components/customers/ | 3 | 2,765 |
-| components/layout/ | 4 | 1,517 |
-| components/market-research/ | 33 | 19,433 |
-| components/mission-control/ | 2 | 7,018 |
-| components/settings/ | 4 | 1,340 |
-| components/signals/ | 3 | 1,165 |
-| components/strategist/ | 2 | 432 |
-| components/ui/ | 51 | 4,943 |
-| contexts/ | 3 | 503 |
-| hooks/ | 4 | 291 |
-| lib/ | 15 | 1,812 |
-| pages/ | 14 | 24,443 |
-| services/ | 1 | 149 |
-| test/ | 4 | 120 |
-| utils/ | 5 | 861 |
+| Area | Files (after) | LOC (after) | LOC delta (Phase 1) |
+|---|---:|---:|---:|
+| src/ (root) | 3 | 184 | — |
+| components/ (loose) | 4 | 529 | — |
+| components/common/ | 1 | 120 | −192 (RateLimitStatus.tsx removed) |
+| components/customers/ | 3 | 2,765 | −8,114 (ICPSummaryOpportunity + SuggestedICPsGallery + ProfilerChatPanel removed) |
+| components/layout/ | 4 | 1,517 | — |
+| components/market-research/ | 33 | 19,433 | −166 (marketData.ts removed) |
+| components/mission-control/ | 2 | 7,018 | — |
+| components/settings/ | 4 | 1,340 | — |
+| components/signals/ | 3 | 1,165 | — |
+| components/strategist/ | 2 | 432 | — |
+| components/ui/ | 51 | 4,943 | — |
+| contexts/ | 3 | 503 | — |
+| hooks/ | 4 | 291 | −113 (useAuthenticatedApi.ts removed) |
+| lib/ | 15 | 1,812 | −786 (authenticatedApi + enhancedApi + testFirebase removed) |
+| pages/ | 14 | 24,443 | — |
+| services/ | 1 | 149 | — |
+| test/ | 4 | 120 | — |
+| utils/ | 5 | 861 | −85 (pwaDiagnostics.ts removed) |
 
-Note: "before" column omitted because Phase 0a baseline's Tier 1 table doesn't directly map to the per-area aggregation produced here. The delta-vs-start above (overall) captures the net change; per-area current state is informational for Phase 2+ planning.
+Note: "before" column omitted because Phase 0a baseline's Tier 1 table doesn't directly map to the per-area aggregation produced here. The delta-vs-start above (overall) captures the net change; per-area LOC delta reflects dead-file removals attributed to each area (from commit body line counts); areas with no dead-file removal show "—".
 
 ---
 
@@ -55,6 +55,7 @@ Note: "before" column omitted because Phase 0a baseline's Tier 1 table doesn't d
 - **Removed:** 24 packages (20 from `dependencies`, 4 from `devDependencies`) — commit dd8b060
   - dependencies: @hookform/resolvers, @radix-ui/react-aspect-ratio, @radix-ui/react-context-menu, @radix-ui/react-hover-card, @radix-ui/react-menubar, @radix-ui/react-navigation-menu, @radix-ui/react-radio-group, @radix-ui/react-slider, @radix-ui/react-switch, @radix-ui/react-toggle, @radix-ui/react-toggle-group, @types/jsonwebtoken, date-fns, embla-carousel-react, input-otp, jsonwebtoken, react-day-picker, react-hook-form, react-resizable-panels, zod
   - devDependencies: @tailwindcss/typography, @testing-library/react, @testing-library/user-event, tsx (tsx later restored in Task 6.1)
+  - (devDeps count expanded from Spec 16 §1.3 baseline of 1 to 4 after Task 1's Vitest entry expansion exposed @tailwindcss/typography, @testing-library/react, and @testing-library/user-event as no longer transitively required.)
 - **Kept (false positive):** none — all 24 verified clean on vite build
 - **Deferred:** none
 - **Lockfile impact:** 51 transitive packages removed, 1,286 lockfile lines deleted
@@ -123,7 +124,7 @@ Note: "before" column omitted because Phase 0a baseline's Tier 1 table doesn't d
 
 - **Step 6a groups found (≥3 occurrences, self-contained):** 0
 - **Step 6b extractions committed:** 0 (no-op per Spec 16 §3 Step 6 / §7 R3)
-- **Phase 13 handoff (near-identical, outer-scope-referencing patterns logged):** 0
+- **Phase 13 handoff (near-identical, outer-scope-referencing patterns logged):** not enumerated — scan-inline-blocks.ts filters outer-scope-referencing blocks at the gate per Spec 16 §3 Step 6a definition (line 174 of the script). Future Phase 13 enumeration requires a separate scan variant.
 
 ---
 
@@ -257,9 +258,17 @@ frontend/scripts/preflight.sh unchanged — delegates via npm run preflight.
 
 1. ✅ Final scorecard committed (THIS FILE)
 2. ✅ Every execute finding from Step 1 + Step 3 baselines applied or documented (10 removed, 21 shadcn kept, 7 TD-FE entries)
-3. ⚠️ Knip config has zero hints — 8 configuration hints resolved; the generic "N unused files" advisory persists as long as shadcn defers exist (acceptable per pragmatic interpretation of "0 hints" = 0 config hints, not 0 advisory notices)
+3. ⚠️ Knip config has zero fixable hints (8 resolved; 1 generic "N unused files" advisory remains, downstream of TD-FE-7 shadcn deferrals — not a config gap) — controller-accepted pragmatic interpretation: "0 hints" means 0 configuration hints, not 0 advisory notices
 4. ⏳ Pending: `knip --strict --no-progress` appended to preflight (Task 7.2)
 5. ✅ npm run preflight green end-to-end (verified post-Step 6.1; pending re-verify after Task 7.2)
 6. ✅ All 32 originally-flagged dead-file flags have verdict (10 remove + 21 keep + 1 deleted via Step 2.6)
 7. ✅ TD-FE entries written to docs/TECH_DEBT.md (TD-FE-1..7)
 8. ⏳ Pending: Spec 14 §4 row update at merge (Task 7.3, controller-driven on master post-merge)
+
+---
+
+## 8. Process debt observed during Phase 1
+
+**Tasks 4 + 5 preflight cadence:** Tasks 4 (dead-file removal) and 5 (dead-export removal) ran `npm run preflight` at end-of-loop rather than per-commit. HEAD preflight is green; per-commit greenness was not verified by re-running preflight at each intermediate commit. The topological removal ordering (dependency-graph-first) and per-commit ripgrep 6-check kit provide a structural correctness argument, but intermediate commits were not individually tested. Recommendation forwarded to Phase 13: enforce per-commit preflight or explicitly waive in spec with a documented justification (e.g., topological-ordering guarantees no new imports are introduced).
+
+**tsx restore bundled with scan-inline-blocks.ts addition (Task 6.1):** The manifest restore for `tsx` (removed in Task 2.5, later needed by scan-inline-blocks.ts) landed inside commit 8792669 which also added the script. The commit body explicitly documents the restoration, but a cleaner audit trail would have had a separate restore commit. Forward to Phase 13/future LOC phases: when a manifest restore is needed mid-phase, commit the restore independently before the script addition.
