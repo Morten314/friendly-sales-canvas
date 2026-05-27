@@ -6,6 +6,66 @@ Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases
 
 ---
 
+## TD-FE-1 — Deferred orphan-route investigation: /tenant-selection
+
+**Date logged:** 2026-05-27
+**Origin:** Spec 16 Phase 1 (plans/16-frontend-phase-1-loc-reduction.md), Step 4 (orphan-route sub-pass).
+
+**Current state:**
+`App.tsx` defines `<Route path="/tenant-selection" element={<ProtectedRoute><TenantSelection /></ProtectedRoute>}`.
+The route is not linked from `src/components/layout/Sidebar.tsx`. The 6-check kit (orphan variant):
+  rg-basename: 0 (no Sidebar.tsx reference to /tenant-selection)
+  rg-dynamic-import: 0
+  rg-reexport: 0
+  rg-plain-text: 0 (no references outside App.tsx itself)
+  route-walk: none
+  test-imports: none
+
+**Why deferred:**
+`/tenant-selection` is an auth/onboarding flow route — the app is expected to redirect here programmatically
+post-login when the user has no tenant selected. It is intentionally absent from the Sidebar nav.
+Conservative posture for auth/tenant/protected-route wrappers per Spec 16 §2.3.
+
+**Pull-forward trigger:**
+Phase 13 (post-modularization LOC pass) re-evaluates with strict TS context and richer test coverage;
+verify the redirect chain (login → /tenant-selection → mission-control) is covered by e2e before
+considering removal.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-2 — Deferred orphan-route investigation: /scout-deployment
+
+**Date logged:** 2026-05-27
+**Origin:** Spec 16 Phase 1 (plans/16-frontend-phase-1-loc-reduction.md), Step 4 (orphan-route sub-pass).
+
+**Current state:**
+`App.tsx` defines `<Route path="/scout-deployment" element={<ProtectedRoute requireTenant><ScoutDeploymentPage /></ProtectedRoute>}`.
+The route is not linked from `src/components/layout/Sidebar.tsx`. The 6-check kit (orphan variant):
+  rg-basename: 0 (no Sidebar.tsx reference to /scout-deployment)
+  rg-dynamic-import: 0
+  rg-reexport: 0
+  rg-plain-text: 0 (no references outside App.tsx itself)
+  route-walk: none
+  test-imports: none
+
+**Why deferred:**
+`ScoutDeploymentPage` (`src/pages/ScoutDeployment.tsx`) is a live component wrapping
+`src/components/settings/ScoutDeployment.tsx`. The `ScoutDeploymentDetails` sub-component is also
+actively rendered inside `MarketResearch.tsx`. The page may be intentionally accessible via direct URL
+only (admin/configuration path, not a regular user nav destination). Removing the route while the
+component is live warrants Brewra-dev confirmation.
+
+**Pull-forward trigger:**
+Confirm with Brewra devs whether `/scout-deployment` is intentionally unlisted from the Sidebar
+(admin-URL pattern) or is dead product surface. If dead: remove the Route element and run 6-check
+kit on `src/pages/ScoutDeployment.tsx` for full dead-file removal.
+
+**Owner:** TBD.
+
+---
+
 ## TD-004 — Captured LLM fixtures are stubs, not real responses
 
 **Date logged:** 2026-05-22
