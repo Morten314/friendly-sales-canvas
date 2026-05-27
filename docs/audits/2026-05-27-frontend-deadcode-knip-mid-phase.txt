@@ -1,0 +1,107 @@
+Unused files (31)
+src/components/common/RateLimitStatus.tsx         
+src/components/customers/ICPSummaryOpportunity.tsx
+src/components/customers/ProfilerChatPanel.tsx    
+src/components/customers/SuggestedICPsGallery.tsx 
+src/components/market-research/data/marketData.ts 
+src/components/ui/aspect-ratio.tsx                
+src/components/ui/breadcrumb.tsx                  
+src/components/ui/calendar.tsx                    
+src/components/ui/carousel.tsx                    
+src/components/ui/chart.tsx                       
+src/components/ui/context-menu.tsx                
+src/components/ui/form.tsx                        
+src/components/ui/hover-card.tsx                  
+src/components/ui/input-otp.tsx                   
+src/components/ui/menubar.tsx                     
+src/components/ui/navigation-menu.tsx             
+src/components/ui/pagination.tsx                  
+src/components/ui/radio-group.tsx                 
+src/components/ui/resizable.tsx                   
+src/components/ui/sidebar.tsx                     
+src/components/ui/skeleton.tsx                    
+src/components/ui/slider.tsx                      
+src/components/ui/switch.tsx                      
+src/components/ui/toggle-group.tsx                
+src/components/ui/toggle.tsx                      
+src/components/ui/use-toast.ts                    
+src/hooks/useAuthenticatedApi.ts                  
+src/lib/authenticatedApi.ts                       
+src/lib/enhancedApi.ts                            
+src/lib/testFirebase.ts                           
+src/utils/pwaDiagnostics.ts                       
+Unused exports (56)
+apiMocks                                                e2e/fixtures/api-mocks.ts:5:14                               
+TEST_LEAD_ID_2                                          e2e/fixtures/identities.ts:6:14                              
+TEST_FILE_KEY                                           e2e/fixtures/identities.ts:10:14                             
+computeScore                                  function  src/components/market-research/lead-stream/leadData.ts:25:17 
+COMPONENT_EXPLANATIONS                                  src/components/market-research/lead-stream/leadData.ts:170:14
+LEAD_SPECIFIC_EXPLANATIONS                              src/components/market-research/lead-stream/leadData.ts:200:14
+getLeadExplanation                            function  src/components/market-research/lead-stream/leadData.ts:274:17
+getReportComponentScores                      function  src/components/market-research/lead-stream/leadData.ts:395:17
+AlertDialogPortal                                       src/components/ui/alert-dialog.tsx:129:3                     
+AlertDialogOverlay                                      src/components/ui/alert-dialog.tsx:130:3                     
+AlertDialogTrigger                                      src/components/ui/alert-dialog.tsx:131:3                     
+AlertTitle                                              src/components/ui/alert.tsx:59:17                            
+AvatarImage                                             src/components/ui/avatar.tsx:48:18                           
+badgeVariants                                           src/components/ui/badge.tsx:37:17                            
+CommandDialog                                           src/components/ui/command.tsx:145:3                          
+CommandShortcut                                         src/components/ui/command.tsx:151:3                          
+CommandSeparator                                        src/components/ui/command.tsx:152:3                          
+DialogPortal                                            src/components/ui/dialog.tsx:111:3                           
+DialogOverlay                                           src/components/ui/dialog.tsx:112:3                           
+DialogClose                                             src/components/ui/dialog.tsx:113:3                           
+DrawerPortal                                            src/components/ui/drawer.tsx:107:3                           
+DrawerOverlay                                           src/components/ui/drawer.tsx:108:3                           
+DrawerTrigger                                           src/components/ui/drawer.tsx:109:3                           
+DropdownMenuCheckboxItem                                src/components/ui/dropdown-menu.tsx:187:3                    
+DropdownMenuRadioItem                                   src/components/ui/dropdown-menu.tsx:188:3                    
+DropdownMenuShortcut                                    src/components/ui/dropdown-menu.tsx:191:3                    
+DropdownMenuGroup                                       src/components/ui/dropdown-menu.tsx:192:3                    
+DropdownMenuPortal                                      src/components/ui/dropdown-menu.tsx:193:3                    
+DropdownMenuRadioGroup                                  src/components/ui/dropdown-menu.tsx:197:3                    
+SelectGroup                                             src/components/ui/select.tsx:149:3                           
+SelectLabel                                             src/components/ui/select.tsx:153:3                           
+SelectSeparator                                         src/components/ui/select.tsx:155:3                           
+SelectScrollUpButton                                    src/components/ui/select.tsx:156:3                           
+SelectScrollDownButton                                  src/components/ui/select.tsx:157:3                           
+SheetClose                                              src/components/ui/sheet.tsx:128:10                           
+SheetDescription                                        src/components/ui/sheet.tsx:129:17                           
+SheetFooter                                             src/components/ui/sheet.tsx:129:35                           
+SheetOverlay                                            src/components/ui/sheet.tsx:129:61                           
+SheetPortal                                             src/components/ui/sheet.tsx:129:75                           
+SheetTrigger                                            src/components/ui/sheet.tsx:129:100                          
+toast                                                   src/components/ui/sonner.tsx:29:19                           
+TableFooter                                             src/components/ui/table.tsx:112:3                            
+TableCaption                                            src/components/ui/table.tsx:116:3                            
+reducer                                                 src/hooks/use-toast.ts:74:14                                 
+toast                                                   src/hooks/use-toast.ts:191:20                                
+API_BASE_URL                                            src/lib/api.ts:6:14                                          
+ICP_BACKEND_URL                                         src/lib/api.ts:20:14                                         
+default                                       variable  src/lib/firebase.ts:31:16                                    
+leadStreamHeatmapCacheKey                     function  src/lib/leadStreamHeatmapSession.ts:5:17                     
+simpleApiCall                                           src/utils/apiUtils.ts:21:14                                  
+marketResearchApiCallWithCacheBust                      src/utils/apiUtils.ts:95:14                                  
+rateLimitedApiCall                                      src/utils/apiUtils.ts:148:14                                 
+isDataFresh                                             src/utils/apiUtils.ts:161:14                                 
+forceFreshData                                          src/utils/apiUtils.ts:179:14                                 
+isProfilerPlaceholderIcp                      function  src/utils/profilerAcceptedIcpDisplay.ts:112:17               
+mergeProfilerAcceptedIcpDisplayIfPlaceholder  function  src/utils/profilerAcceptedIcpDisplay.ts:124:17               
+Unused exported types (15)
+Lead                            interface  e2e/fixtures/seed-data.ts:6:18                               
+AddLeadFormData                 interface  src/components/market-research/AddLeadModal.tsx:17:18        
+TierIntelligence                interface  src/components/market-research/lead-stream/leadData.ts:129:18
+ComponentExplanations           interface  src/components/market-research/lead-stream/leadData.ts:163:18
+ReportComponentScore            interface  src/components/market-research/lead-stream/leadData.ts:280:18
+LeadSegment                     interface  src/components/market-research/lead-stream/leadData.ts:291:18
+ProfilerChatSession             interface  src/components/signals/ProfilerChatWithHistory.tsx:9:18      
+LeadStreamChatContext           type       src/components/signals/ScoutChatWithHistory.tsx:14:15        
+ChatSession                     interface  src/components/signals/ScoutChatWithHistory.tsx:18:18        
+BadgeProps                      interface  src/components/ui/badge.tsx:27:18                            
+ButtonProps                     interface  src/components/ui/button.tsx:36:18                           
+TextareaProps                   interface  src/components/ui/textarea.tsx:6:18                          
+ApiFetchOptions                 interface  src/lib/api.ts:24:18                                         
+ProfilerSessionSnapshot         type       src/lib/missionProfilerSessionCache.ts:9:13                  
+ProfilerAcceptedIcpDisplayMeta  interface  src/utils/profilerAcceptedIcpDisplay.ts:10:18                
+Configuration hints (1)
+. (root)    knip.json  Add entry and/or refine project files (31 unused files)
