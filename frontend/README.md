@@ -1,73 +1,22 @@
-# Welcome to your Lovable project
+# Brewra Frontend (PWA)
 
-## Project info
+React 18 + Vite + TypeScript + Tailwind + shadcn-ui PWA for the Brewra GTM intelligence product.
 
-**URL**: https://lovable.dev/projects/6f5aa9b2-c8a6-404f-9203-be784d029e2b
+See repo root `CLAUDE.md` and `AGENTS.md` for architecture, branch model, and gotchas.
 
-## How can I edit this code?
+## Local dev
 
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/6f5aa9b2-c8a6-404f-9203-be784d029e2b) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```bash
+npm install
+npm run dev          # vite dev server on :5175, proxies /api/* to production backend
 ```
 
-**Edit a file directly in GitHub**
+## Tests and pre-merge gate
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+npm run preflight    # typecheck → build → test:e2e → test
+```
 
-**Use GitHub Codespaces**
+The wrapper at `scripts/preflight.sh` runs the same chain with section headers and timing.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/6f5aa9b2-c8a6-404f-9203-be784d029e2b) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+(Phase 1 appends `knip --strict` to this chain in its final commit; if you're reading this README in a tree after that lands, the chain ends with `→ knip --strict`.)
