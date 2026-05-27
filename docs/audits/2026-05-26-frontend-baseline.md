@@ -71,7 +71,7 @@ The knip dead-file flag is the authoritative dead-file signal.
 | `src/components/market-research/lead-stream/leadData.ts` | 398 | 5 | Y | N | N |  |
 | `src/components/market-research/lead-stream/LeadsTable.tsx` | 697 | 0 | N | N | N |  |
 | `src/components/market-research/lead-stream/OpportunityDashboard.tsx` | 167 | 0 | N | N | N |  |
-| `src/components/market-research/LeadStream.tsx` | 1 | 0 | N | Y | N |  |
+| `src/components/market-research/LeadStream.tsx` | 1 | 0 | N | Y | N | empty file (0 lines of code); actual implementation lives at `src/components/customers/LeadStream.tsx` — Phase 1 deletes |
 | `src/components/market-research/MarketDetailDrawer.tsx` | 373 | 1 | N | N | N |  |
 | `src/components/market-research/MarketEntrySection.tsx` | 3720 | 0 | N | N | N | monster file (>1500 LOC) |
 | `src/components/market-research/MarketIntelligenceSections.tsx` | 318 | 0 | N | N | N |  |
