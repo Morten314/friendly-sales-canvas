@@ -8,8 +8,60 @@
     "node_version": "v22.13.0",
     "npm_version": "10.9.2"
   },
-  "tsc_noemit_seconds":          { "median": 0.448,   "min": 0.424,   "max": 0.498 },
-  "vite_build_seconds":          { "median": 34.731, "min": 33.424, "max": 36.672 },
-  "vite_dev_start_seconds":      { "median": 1.182,   "min": 1.045,   "max": 1.628 },
-  "playwright_full_suite_seconds": { "median": 51.332,    "min": 50.224,    "max": 71.660 }
+  "tsc_noemit_seconds": {
+    "median": 0.448,
+    "min": 0.424,
+    "max": 0.498
+  },
+  "vite_build_seconds": {
+    "median": 34.731,
+    "min": 33.424,
+    "max": 36.672
+  },
+  "vite_dev_start_seconds": {
+    "median": 1.182,
+    "min": 1.045,
+    "max": 1.628
+  },
+  "playwright_full_suite_seconds": {
+    "median": 51.332,
+    "min": 50.224,
+    "max": 71.66
+  },
+  "after_phase_0b": {
+    "captured_at": "2026-05-27T05:05:27Z",
+    "captured_on": "local-dev-machine",
+    "hardware": {
+      "os": "Linux 7.0.3 x86_64",
+      "cpu_model": "06/97",
+      "ram_gb": 7,
+      "node_version": "v22.13.0",
+      "npm_version": "10.9.2"
+    },
+    "tsc_noemit_seconds": {
+      "median": 0.446,
+      "min": 0.412,
+      "max": 0.452
+    },
+    "vite_build_seconds": {
+      "median": 37.466,
+      "min": 35.184,
+      "max": 39.018
+    },
+    "vite_dev_start_seconds": {
+      "median": 1.479,
+      "min": 1.207,
+      "max": 1.541
+    },
+    "playwright_full_suite_seconds": {
+      "median": 72.286,
+      "min": 62.243,
+      "max": 80.433
+    },
+    "vitest_full_suite_seconds": {
+      "median": 33.448,
+      "min": 32.831,
+      "max": 36.776
+    }
+  }
 }
