@@ -20,7 +20,6 @@ class RateLimitManager {
   private requestQueue: QueuedRequest[] = [];
   private requestHistory: { timestamp: number }[] = [];
   private isProcessing = false;
-  private currentDelay = 0;
 
   constructor(config: Partial<RateLimitConfig> = {}) {
     this.config = {

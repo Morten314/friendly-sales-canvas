@@ -22,7 +22,7 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
 // Initialize Analytics (optional)
-const analytics = getAnalytics(app);
+getAnalytics(app);
 
 // Verify Firebase is properly initialized
 console.log('Firebase initialized:', app.name);
