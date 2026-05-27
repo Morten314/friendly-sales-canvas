@@ -18,7 +18,6 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import MarketResearch from "./pages/MarketResearch";
 import Insights from "./pages/Insights";
-import AgentHub from "./pages/AgentHub";
 import ScoutDeploymentPage from "./pages/ScoutDeployment";
 import Signals from "./pages/Signals";
 import MissionControl from "./pages/MissionControl";
