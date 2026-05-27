@@ -86,7 +86,7 @@ function classifyArea(file: string): string {
   if (top === "services") return "services";
   if (top === "contexts") return "contexts";
   if (top === "components") {
-    if (!sub) return "components (loose)";
+    if (!sub || /\.[jt]sx?$/.test(sub)) return "components (loose)";
     return `components/${sub}`;
   }
   return top;

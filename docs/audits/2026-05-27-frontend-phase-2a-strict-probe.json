@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-27T23:12:16.623Z",
+  "generatedAt": "2026-05-27T23:23:08.440Z",
   "date": "2026-05-27",
   "totalErrors": 417,
   "errorsByCode": {
@@ -15,8 +15,7 @@
     "TS18048": 2
   },
   "errorsByArea": {
-    "components/MiniLineChart.tsx": 1,
-    "components/MiniPieChart.tsx": 1,
+    "components (loose)": 2,
     "components/customers": 18,
     "components/layout": 24,
     "components/market-research": 103,
