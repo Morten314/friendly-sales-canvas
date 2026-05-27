@@ -3,7 +3,7 @@ import {
   TEST_USER_ID, TEST_ORG_ID, TEST_TIMESTAMP,
 } from './identities';
 
-export interface Lead {
+interface Lead {
   lead_id: string;
   user_id: string;
   org_id: string;
