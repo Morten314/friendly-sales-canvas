@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
-# Phase 0a preflight script. Spec 15 §2.7.
+# Phase 1 preflight script. Spec 15 §2.7 / Spec 16 §3 Step 7.
 # Pre-merge quality gate: runs all wired checks with section headers + total
 # wall time. The controller agent runs this from frontend/ immediately before
 # the user-approved merge step. Green required for merge; red blocks the merge.
 #
-# At 0a the chain is: typecheck + build + Playwright.
+# Current chain (Phase 1): typecheck + build + Playwright + vitest + knip --strict
 # Each later phase appends one more check to npm run preflight in package.json:
-#   0b → + vitest
-#   1  → + knip --strict (after Phase 1's dead-code cleanup; currently red — 32 unused files)
 #   2a → strict-TS typecheck (same `tsc --noEmit` command, against strict config)
 #   2b → + eslint . (currently red — 428 errors; 2b lands type-aware rules
 #                    + Prettier and tightens/loosens config to be green) + prettier --check .
@@ -26,7 +24,7 @@ start_total=$(python3 -c 'import time; print(time.time())')
 
 echo ""
 echo "════════════════════════════════════════════════════════════════"
-echo " npm run preflight  (Phase 0a — Spec 15 §2.7)"
+echo " npm run preflight  (Phase 1 — Spec 16 §3 Step 7)"
 echo "════════════════════════════════════════════════════════════════"
 echo ""
 
