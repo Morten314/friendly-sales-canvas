@@ -6,7 +6,7 @@ import { SignalsContextChat, SignalsChatContext, ChatMessage } from './SignalsCo
 
 const STORAGE_KEY_PREFIX = 'profiler_chat_sessions';
 
-export interface ProfilerChatSession {
+interface ProfilerChatSession {
   id: string;
   title: string;
   context: SignalsChatContext | null;
