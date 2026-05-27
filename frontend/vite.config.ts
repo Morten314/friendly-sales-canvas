@@ -41,6 +41,20 @@ export default defineConfig(({ mode }) => ({
       }
     }
   },
+  preview: {
+    // Mirror the dev server's /api proxy so manual `npm run preview` works
+    // for the PWA-install + production-bundle smoke workflows documented in
+    // PWA_SETUP.md, TEST_PWA_INSTALL.md, PRODUCTION_PWA.md, DEV_VS_PREVIEW_PWA.md.
+    // E2E tests don't hit this proxy — Playwright's page.route intercepts first.
+    proxy: {
+      '/api': {
+        target: 'https://backend-11kr.onrender.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+        secure: true,
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({
