@@ -55,10 +55,6 @@ import { ScoutCapabilities } from "@/components/market-research/ScoutCapabilitie
 
 
 
-import { MarketRankings } from "@/components/market-research/MarketRankings";
-
-
-
 import { CompetitorAnalysis } from "@/components/market-research/CompetitorAnalysis";
 
 
