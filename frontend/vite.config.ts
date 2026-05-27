@@ -8,6 +8,19 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 5175, // Changed from 8080 to test if port/origin affects PWA behavior
+    warmup: {
+      // Pre-transform the entry + the four heavy pages that drive e2e cold-start
+      // contention (01 login, 02 csv-upload, 04 market-research, 05 icp-create).
+      // Removes the first-request compile penalty when Playwright workers race.
+      clientFiles: [
+        './src/main.tsx',
+        './src/App.tsx',
+        './src/contexts/AuthContext.tsx',
+        './src/pages/Login.tsx',
+        './src/pages/MissionControl.tsx',
+        './src/pages/MarketResearch.tsx',
+      ],
+    },
     proxy: {
       '/api': {
         target: 'https://backend-11kr.onrender.com',

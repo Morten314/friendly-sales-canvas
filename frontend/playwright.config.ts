@@ -6,6 +6,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: 0,
   workers: 4,
+  timeout: 60_000,
   reporter: 'list',
   use: {
     baseURL: 'http://localhost:5173',
@@ -23,10 +24,12 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npx vite --port 5173',
+    // Build + preview serves the production bundle, eliminating Vite's
+    // transform-on-demand penalty that caused cold-start flake under 4 workers.
+    command: 'npm run build && npm run preview -- --port 5173 --strictPort',
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
+    timeout: 180 * 1000,
   },
   expect: {
     // Re-baseline visual snapshots when an intentional UI change is accepted:
