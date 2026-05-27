@@ -22,13 +22,13 @@ These thresholds are starting values; the operator can tighten or loosen per exe
 
 **Where to run commands:** Per CLAUDE.md "Run tooling from the correct subdir," npm/vite/vitest/playwright commands run from `frontend/`. Plan steps below use absolute paths so they're unambiguous; engineer's `cd` is `frontend/` for any `npm`/`npx` invocation unless noted.
 
-**Spec adherence vs code reality (read this before starting).** Three places where the spec's prose drifted from the current code. Characterization tests assert what the code does *today* (per master spec 14 — these tests are a behavioral baseline for the refactor, not a wish-list):
+**Spec adherence vs code reality (read this before starting).** Three places where an earlier draft of spec 15 had drifted from the current code. The spec has since been reconciled pre-merge (see spec §3.3 + §6 R0b-2) — these notes are retained for traceability and to explain the rationale captured in each Task's commit body:
 
-1. **`rateLimitManager.maxRequestsPerMinute` default is `30`, not `4`.** Spec §3.3 says "The 4 req/min boundary holds" and §6 R0b-2 calls 4 a "frozen interface per master §2.3." The constructor at `frontend/src/lib/rateLimitManager.ts:27` reads `maxRequestsPerMinute: 30` with a code comment "// Increased limit for faster processing" — the default was bumped after the docs were written. Task 6 tests the actual `30` boundary and includes a note in the commit body flagging the discrepancy. Per CLAUDE.md "Spec-driven flow" ("specs and plans are a frozen record of intent... don't update specs/plans to reflect post-merge drift; the code is authoritative"), the spec is **not** amended. Tracked post-merge via a TD-FE entry — see Open Questions at end of plan.
-2. **`utils.ts` exports two functions, not one.** Spec §3.3 mentions only `cn()`. The file at `frontend/src/lib/utils.ts` also exports `sanitizeAnswerText(text: string): string` — a markdown/symbol stripper. Task 5 tests both. (Excluding `sanitizeAnswerText` would leave a survivor function uncharacterized.) Documentation oversight; no action needed.
-3. **`marketScoreDescriptions.ts` is a column-key → description lookup, not "score-band descriptions."** Spec §3.3 implies the lookup returns "descriptions for each score band." The actual function `getDescriptionTextForColumn(response, reportColumnKey)` looks up by report-column key (e.g., `"market-size"`) via the `REPORT_KEY_TO_DESCRIPTION_LABEL` map, with case-insensitive fallback. Task 3 tests the actual lookup shape. Documentation oversight; no action needed.
+1. **`rateLimitManager.maxRequestsPerMinute` default is `30`, not `4`.** The constructor at `frontend/src/lib/rateLimitManager.ts:27` reads `maxRequestsPerMinute: 30` with a code comment "// Increased limit for faster processing" — the default was bumped after the spec was first drafted. Task 6 tests the actual `30` boundary and includes a note in the commit body flagging the original discrepancy. **Resolution (pre-merge):** spec §3.3 row + §6 R0b-2 amended to state 30 req/min as the normative cap. No follow-up TD-FE entry needed.
+2. **`utils.ts` exports two functions, not one.** The file at `frontend/src/lib/utils.ts` also exports `sanitizeAnswerText(text: string): string` — a markdown/symbol stripper. Task 5 tests both. (Excluding `sanitizeAnswerText` would leave a survivor function uncharacterized.) **Resolution (pre-merge):** spec §3.3 row amended to list both `cn` and `sanitizeAnswerText`.
+3. **`marketScoreDescriptions.ts` is a column-key → description lookup, not "score-band descriptions."** The actual function `getDescriptionTextForColumn(response, reportColumnKey)` looks up by report-column key (e.g., `"market-size"`) via the `REPORT_KEY_TO_DESCRIPTION_LABEL` map, with case-insensitive fallback. Task 3 tests the actual lookup shape. **Resolution (pre-merge):** spec §3.3 row amended to describe the column-key lookup shape.
 
-These are recorded as Open Questions at the end of this plan; only item 1 requires a tracked follow-up (TD-FE entry).
+All three are now consistent across spec, plan, and code. No post-merge follow-up required.
 
 ---
 
@@ -2189,17 +2189,12 @@ This matches spec §3.7 done-when criteria 1-on-1.
 
 ## Open Questions for Post-Merge Follow-Up
 
-Three documented spec drifts that surfaced during plan-writing. Per CLAUDE.md "Spec-driven flow" — "specs and plans are a frozen record of intent... don't update specs/plans to reflect post-merge drift; the code is authoritative" — the spec is **not** amended. Item 1 is genuine tech debt and gets tracked; items 2 and 3 are documentation oversights with no action needed.
+All three spec drifts identified during plan-writing have been **reconciled pre-merge** by amending spec 15 §3.3 + §6 R0b-2 in this same branch. No outstanding follow-ups remain from this set.
 
-1. **Spec 15 §3.3 + CLAUDE.md state `rateLimitManager` cap is 4 req/min; actual code is 30.** Code comment at `frontend/src/lib/rateLimitManager.ts:27` says "Increased limit for faster processing" — the default was bumped after the docs were written. This *is* potentially load-bearing: if the 4/min cap was intentionally normative (to stay under provider rate limits), the bumped default could cause production rate-limit hits when traffic scales.
+For traceability, the three reconciliations were:
 
-   **Action (post-merge, not blocking 0b):** add a TD-FE entry to `docs/TECH_DEBT.md` capturing the discrepancy with these fields:
-   - **Title:** "rateLimitManager default 30/min diverges from spec/CLAUDE.md (4/min)"
-   - **Current state:** `frontend/src/lib/rateLimitManager.ts:27` defaults to `maxRequestsPerMinute: 30`.
-   - **Documented intent:** Spec 15 §3.3 + §6 R0b-2 + CLAUDE.md "Frontend topology" all reference 4 req/min as the FE cap to stay under provider limits.
-   - **Why deferred:** Phase 0b is characterization-only; changing runtime behavior is out of scope.
-   - **Trigger:** Phase 3 touches the auth/data layer (rateLimitManager is collapsed into TanStack Query per spec 14 §1.5). At that point, the spec-author decides: align code to 4/min (intentional cap) or accept 30/min as the new normative value.
+1. **`rateLimitManager` cap.** Earlier draft of spec §3.3 + §6 R0b-2 stated 4 req/min; code at `frontend/src/lib/rateLimitManager.ts:27` defaults to 30 ("Increased limit for faster processing"). **Resolved:** spec amended to state 30 req/min as normative — accepting the bumped value rather than reverting code. The earlier 4/min language was a stale draft; 30/min is the intentional cap. (Note: CLAUDE.md "Frontend topology" still references 4 req/min — that update is out of scope for this plan and tracked separately if/when the CTO chooses to refresh that paragraph.)
 
-2. **Spec 15 §3.3 lists only `cn` for `utils.ts`; the file also exports `sanitizeAnswerText`.** Plan Task 5 tests both. **No action needed** — documentation oversight; characterization covers both exports.
+2. **`utils.ts` second export.** Earlier draft of spec §3.3 listed only `cn`; the file also exports `sanitizeAnswerText`. **Resolved:** spec row amended to list both. Plan Task 5 ships characterization for both.
 
-3. **Spec 15 §3.3 describes `marketScoreDescriptions.ts` as a "score band" lookup; the actual function is a report-column → description-text lookup.** Plan Task 3 tests the actual lookup shape. **No action needed** — documentation oversight; characterization covers the actual function behavior.
+3. **`marketScoreDescriptions.ts` lookup shape.** Earlier draft of spec §3.3 described "score band descriptions"; the actual function `getDescriptionTextForColumn(response, reportColumnKey)` is a column-key → description-text lookup via `REPORT_KEY_TO_DESCRIPTION_LABEL`. **Resolved:** spec row amended to describe the column-key lookup shape. Plan Task 3 ships characterization for the actual function behavior.
