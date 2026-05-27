@@ -1,10 +1,15 @@
 // API utility for handling base URL and proxy configuration
 const isDevelopment = import.meta.env.DEV;
 const isVercel = import.meta.env.VITE_VERCEL || window.location.hostname.includes('vercel.app');
+// `vite preview` and e2e tests run on localhost serving a production bundle —
+// without this branch, requests would resolve to direct Render and bypass
+// Playwright's `**/api/*` route handlers.
+const isLocalhost = typeof window !== 'undefined'
+  && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-// Use proxy in development and Vercel, direct URL in other production environments
-export const API_BASE_URL = (isDevelopment || isVercel)
-  ? '/api' 
+// Use proxy in development, Vercel, and localhost; direct URL elsewhere.
+export const API_BASE_URL = (isDevelopment || isVercel || isLocalhost)
+  ? '/api'
   : 'https://backend-11kr.onrender.com';
 
 // Helper function to build API URLs
