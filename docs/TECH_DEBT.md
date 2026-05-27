@@ -336,38 +336,40 @@ Phase 13 (post-modularization LOC pass) with strict TS context.
 
 ---
 
-## TD-FE-8 — knip --strict ignoreDependencies for shadcn ecosystem packages
+## TD-FE-8 — knip ignoreDependencies for two untraceable packages
 
 **Date logged:** 2026-05-27
 **Origin:** Spec 16 Phase 1 Task 7.2 (plans/16-frontend-phase-1-loc-reduction.md), knip --strict wire-in.
+**Last updated:** 2026-05-27 (root cause identified; scope reduced from 30 → 2 packages).
 
 **Current state:**
-`frontend/knip.json` contains `ignoreDependencies` for 30 packages: all 17 `@radix-ui/*` primitives,
-`class-variance-authority`, `clsx`, `cmdk`, `vaul`, `tailwind-merge`, `tailwindcss-animate`,
-`lucide-react`, `next-themes`, `sonner`, `firebase`, `react-router-dom`, `recharts`,
-and `@tanstack/react-query`.
-
-In `knip --strict` mode, these packages are flagged as "unused dependencies" because knip's strict
-dependency-tracing scope cannot confirm they are used (the entry array covers test/e2e/script files,
-not the app tree starting from `src/main.tsx`). In non-strict mode, knip finds them through the
-vite-plugin trace and does not flag them. The `ignoreDependencies` suppresses the strict-mode
-false positives.
-
-Note: knip's non-strict mode emits "Remove from ignoreDependencies" hints for all 30 entries (it
-finds them itself in non-strict), but these are display-only hints with exit 0 — they do not block
-the preflight gate. `--strict` is the gate.
+`frontend/knip.json` ignores 2 packages: `tailwindcss-animate` (Tailwind plugin consumer in
+`tailwind.config.ts` — knip's strict mode doesn't trace through Tailwind config plugins) and
+`tsx` (invoked as a CLI tool via `npx tsx scripts/*.ts` — no package.json script reference for
+knip's `tsx` plugin to detect).
 
 **Why deferred:**
-The root cause is that knip's `--strict` and non-strict modes use different dependency-tracing
-strategies. Fixing it properly would require either (a) ensuring the app entry (`src/main.tsx`) is
-explicitly in the entry array WITHOUT triggering the "redundant entry" hint, or (b) upgrading to a
-future knip version that unifies the tracing strategy. The `ignoreDependencies` workaround is
-correct and safe: all 30 packages are genuinely used.
-Note: empirical verification 2026-05-27 — adding `src/main.tsx` to `entry` does not enable knip --strict tracing through Vite plugins; the 30-package list reflects the strict-mode tracer's actual capability boundary, not a policy lax-list. Future agents removing entries should re-run `knip --strict --no-progress` to confirm tracing reaches the package before deleting.
+Both ignores are genuine tool-boundary limitations rather than policy decisions. `tailwindcss-animate`
+is correctly traced by knip non-strict (which uses Tailwind plugin trace) but lost under strict;
+`tsx` would be detected if a package.json script invoked it directly. Neither is a "real" debt
+in the sense of pending work — they document why these two packages bypass the merge gate.
+
+**Original scope (resolved):**
+Earlier this entry covered 30 packages including @radix-ui/*, lucide-react, firebase,
+react-router-dom, recharts, and @tanstack/react-query. Root cause was identified as knip
+`--production` mode not recursively walking imports from entry points (only files matching
+entry patterns count as "used"). The 30-package workaround was replaced by using
+`"src/**/*.{ts,tsx}!"` as a production-marker entry pattern, so the full app tree is
+production-scoped, and `"ignore": ["src/components/ui/**"]` for the Phase 4-locked shadcn
+primitives. After that fix, 28 of the original 30 packages traced correctly; only the 2
+listed above remained genuinely untraceable.
 
 **Pull-forward trigger:**
-When knip is upgraded to a major version that resolves the strict/non-strict tracing discrepancy,
-re-run `knip --strict` without `ignoreDependencies` and verify exit 0. Remove stale entries.
+- For `tsx`: when a package.json script directly references `tsx <file>`, the knip tsx plugin
+  will detect it and the entry can be removed
+- For `tailwindcss-animate`: when knip's strict-mode tracing unifies with non-strict plugin
+  detection (likely a future major knip version), or when this project migrates away from
+  the package
 
 **Owner:** TBD.
 
@@ -412,3 +414,12 @@ these exports can be pruned. Or if the unused sub-components remain untouched pa
 deliberate audit confirms they will never be used.
 
 **Owner:** TBD.
+
+**2026-05-27 update — remediation mechanism:**
+The Phase 4 lock is now expressed as `"ignore": ["src/components/ui/**"]` in `frontend/knip.json`
+rather than per-file `defer-export` annotations. Behavioral semantics are unchanged (files
+remain in the codebase, locked from Phase 1 cleanup, deferred to Phase 4 shadcn consolidation),
+but knip now reports zero findings against the directory in either mode, simplifying the
+merge-gate config.
+
+Pull-forward trigger is unchanged: Phase 4 shadcn primitive consolidation.

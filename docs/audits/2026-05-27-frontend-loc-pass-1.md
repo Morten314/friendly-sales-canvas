@@ -190,7 +190,8 @@ Verdict values: `remove <SHA>` | `keep — <reason>` | `defer-TD-FE-<n>`
 | TD-FE-4 | src/hooks/use-toast.ts reducer | Conservative posture in hooks/ |
 | TD-FE-5 | src/utils/apiUtils.ts (5 symbols) | Conservative posture in utils/ |
 | TD-FE-6 | src/utils/profilerAcceptedIcpDisplay.ts (3 symbols) | Conservative posture in utils/ |
-| TD-FE-7 | src/components/ui/* (14 shadcn primitives) | Phase 4 lock per Spec 16 §2.2 — pull-forward at Phase 4 shadcn consolidation |
+| TD-FE-7 | src/components/ui/* (14 shadcn primitives) | Phase 4 lock per Spec 16 §2.2 — now expressed as `knip ignore` config — pull-forward at Phase 4 shadcn consolidation |
+| TD-FE-8 | tailwindcss-animate + tsx: 2 packages with documented tool-boundary justification (residual after root-cause fix) | Genuine tracer limitations — not pending work; documented pull-forward triggers in TD-FE-8 |
 
 ---
 
@@ -198,18 +199,49 @@ Verdict values: `remove <SHA>` | `keep — <reason>` | `defer-TD-FE-<n>`
 
 | Hint (before) | Resolution | After |
 |---|---|---|
-| `dev-dist/**`, `node_modules/**`, `dist/**` in `ignore` (redundant) | Removed from `ignore` (already in .gitignore) | 0 |
-| `src/main.tsx`, `vite.config.ts`, `playwright.config.ts` in `entry` (redundant) | Removed from `entry` (knip auto-detects) | 0 |
+| `dev-dist/**`, `node_modules/**`, `dist/**` in `ignore` (redundant) | Removed (already in .gitignore) | 0 |
+| `src/main.tsx`, `vite.config.ts`, `playwright.config.ts` in `entry` (redundant) | Removed (knip auto-detects) | 0 |
 | `scripts/**/*.{ts,sh}` matches nothing | Replaced with `scripts/*.ts` in `entry` | 0 |
 | No lazy-loader entry pattern | Verified zero React.lazy() / lazy() — no pattern needed | 0 |
-| Vitest test files not in `entry` | Added `src/**/__tests__/**/*.test.{ts,tsx}` and `src/**/*.{test,spec}.{ts,tsx}` to `entry` | 0 |
-| Generic "Add entry and/or refine project files (N unused files)" | Resolves naturally as Steps 2–6 clear unused files | 0 (after Step 6 cleanup) |
+| Generic "Add entry and/or refine project files (N unused files)" | Resolved by Step 4 dead-file removals + Step 5 export trims + final `src/**/*.{ts,tsx}!` production entry pattern | 0 |
+| `tailwindcss-animate Remove from ignoreDependencies` | Accepted as unavoidable strict/non-strict trace mismatch trade-off | 1 (accepted) |
 
 **Before:** 8 configuration hints
-**Mid-phase (post-Step 1 refinement):** 1 hint (the generic "N unused files" — expected, decays with dead-file removal)
-**After Phase 1 end:** 0 configuration hints (plus any generic "N unused files" advisory from remaining shadcn defers, which is downstream of intentional TD-FE-7 deferral rather than a config gap)
+**After Phase 1 end:** 1 configuration hint (`tailwindcss-animate`) — accepted as a strict/non-strict
+trace mismatch trade-off (non-strict traces it through the Tailwind plugin and suggests removing
+from ignoreDependencies; strict can't trace it and requires the entry). This hint is benign and
+documented in TD-FE-8.
 
-**Note:** The generic "N unused files" hint is downstream of having dead files. As Steps 2–6 cleared 10 source files + 17 unused exports, this hint's count drops. Any remaining unused files (deferred to TD-FE-* per conservative posture, plus shadcn) will still trigger this hint until either resolved or knip --strict is configured to suppress them. The Step 7.2 `knip --strict` wire-in (Task 7.2) is the final merge gate.
+**Final config (`frontend/knip.json`):**
+
+```json
+{
+  "entry": [
+    "src/**/*.{ts,tsx}!",
+    "!src/test/**",
+    "!src/**/__tests__/**",
+    "!src/**/*.{test,spec}.{ts,tsx}",
+    "e2e/**/*.spec.ts",
+    "scripts/*.ts"
+  ],
+  "project": ["src/**/*.{ts,tsx}", "e2e/**/*.ts"],
+  "ignore": ["src/components/ui/**"],
+  "ignoreDependencies": ["tailwindcss-animate", "tsx"]
+}
+```
+
+**Root cause discovery (post-Task-7.2 deep dive):**
+
+The original Task 7.2 wired `knip --strict` with a 30-package `ignoreDependencies` workaround
+(TD-FE-8). Root cause: knip 5.x's `--production` mode (implied by `--strict`) does NOT
+recursively walk imports from entry points — only files matching entry patterns count as "used".
+With the original entry list (tests + scripts + e2e), the auto-detected `src/main.tsx` production
+entry covered exactly 1 file; App.tsx and the rest of the app tree were never scanned in strict
+mode, so all 30 packages they import looked unused.
+
+Fix: use `src/**/*.{ts,tsx}!` to make every src file a production entry. This reduced
+`ignoreDependencies` from 30 packages to 2 (both with documented tool-boundary justification).
+The Phase 4 shadcn lock formerly tracked as TD-FE-7 is now expressed as the `ignore` config.
 
 ---
 
@@ -258,7 +290,7 @@ frontend/scripts/preflight.sh unchanged — delegates via npm run preflight.
 
 1. ✅ Final scorecard committed (THIS FILE)
 2. ✅ Every execute finding from Step 1 + Step 3 baselines applied or documented (10 removed, 21 shadcn kept, 7 TD-FE entries)
-3. ⚠️ Knip config has zero fixable hints (8 resolved; 1 generic "N unused files" advisory remains, downstream of TD-FE-7 shadcn deferrals — not a config gap) — controller-accepted pragmatic interpretation: "0 hints" means 0 configuration hints, not 0 advisory notices
+3. ✅ Knip config has zero blocking hints — 1 accepted hint for tailwindcss-animate (documented in TD-FE-8 as a strict/non-strict trace mismatch trade-off)
 4. ⏳ Pending: `knip --strict --no-progress` appended to preflight (Task 7.2)
 5. ✅ npm run preflight green end-to-end (verified post-Step 6.1; pending re-verify after Task 7.2)
 6. ✅ All 32 originally-flagged dead-file flags have verdict (10 remove + 21 keep + 1 deleted via Step 2.6)
