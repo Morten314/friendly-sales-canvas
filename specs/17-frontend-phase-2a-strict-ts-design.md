@@ -13,11 +13,11 @@
 
 Turn strict TypeScript on across the frontend in one short-lived branch. By end of phase:
 
-- `frontend/tsconfig.app.json` has all five strict-mode compiler flags it explicitly carries set to `true`: `strict`, `noImplicitAny`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`. (`strict: true` is the umbrella flag that enables seven sub-flags: `noImplicitAny`, `strictNullChecks`, `strictFunctionTypes`, `strictBindCallApply`, `strictPropertyInitialization`, `noImplicitThis`, `alwaysStrict`, `useUnknownInCatchVariables`. The Step 0 probe ran with `strict: true`, so all 461 baseline errors come from this expanded surface — see §3 Step 1b.)
+- `frontend/tsconfig.app.json` has all five strict-mode compiler flags it explicitly carries set to `true`: `strict`, `noImplicitAny`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`. (`strict: true` enables eight sub-flags transitively — see §1.3 "Strict-mode sub-flag composition" for the canonical list. The Step 0 probe ran with `strict: true`, so all 461 baseline errors come from this composed surface.)
 - `frontend/tsconfig.json` (composite root) has its four relaxing overrides removed (`noImplicitAny`, `noUnusedParameters`, `noUnusedLocals`, `strictNullChecks` — each currently set to `false`). The composite root no longer relaxes what the app config tightens.
 - `tsc --noEmit` (via `npm run typecheck`) returns zero errors against the full `src/` tree.
 - The 15 dead shadcn primitive files whose npm dependencies Phase 1 removed are deleted (they fail to compile under strict and have zero inbound references).
-- If escape hatches were needed, `src/lib/types/escape-hatches.ts` holds them with documented justification and call-site references. Single soft cap of 5: the 5th entry triggers a TD-FE registration capturing the pattern. Beyond 5, each additional batch of 5 entries triggers another TD-FE. No hard cap, no phase halt — Phase 13's audit re-evaluates every entry per master spec line 298 (see §3 Step 3).
+- If escape hatches were needed, `src/lib/types/escape-hatches.ts` holds them with documented justification and call-site references. A single TD-FE registration lands at the 5th entry (the pattern-capture point); entries past 5 are logged in the file but trigger no further TD-FEs. No hard cap, no phase halt — Phase 13's audit re-evaluates every entry per master spec line 298 (see §3 Step 3).
 - The 238 existing inline `any` types remain — they're a Phase 2b lint-rule concern, not a Phase 2a typecheck concern.
 - `npm run preflight` is green on the final commit before merge.
 
@@ -36,7 +36,7 @@ Master spec §4 places Phase 2a immediately after Phase 1's LOC reduction so the
 | Error code histogram | 315× TS6133 (unused locals/params) · 83× TS7006 (implicit any) · 15× TS2307 (cannot find module — all in dead-shadcn files) · 12× TS6192 (all imports unused) · 8× TS2345 · 8× TS18046 · 7× TS2322 · 5× TS18047 · 4× TS2339 · 2× TS6196 · 2× TS18048 |
 | Concentration | `pages/MarketResearch.tsx` 144 · `pages/MissionControl.tsx` 80 · `market-research/RegulatoryComplianceSection.tsx` 25 · `market-research/MarketEntrySection.tsx` 22 · `market-research/CompetitorLandscapeSection.tsx` 18 · `customers/SuggestedICPCards.tsx` 18 · `mission-control/ICPManager.tsx` 17 · `layout/Sidebar.tsx` 16. Top 8 files = 340/461 ≈ 74% of errors. |
 | Per-area roll-up | `pages/` 249 · `components/market-research/` 115 · `components/layout/` 24 · `components/mission-control/` 23 · `components/ui/` 18 · `components/customers/` 18 · `lib/` 5 · `components/settings/` 4 · `contexts/` 1 · `components/strategist/` 1 · `components/signals/` 1 · `components/` (loose) 2 |
-| Existing inline `any` count | 238 (`rg -nE ':\s*any\b\|as\s+any\b\|<any>'` across `src/`). Out of scope for 2a per master spec — Phase 2b's lint rule decides per call site. |
+| Existing inline `any` count | 238 (`rg -n ':\s*any\b\|as\s+any\b\|<any>' -g '*.ts' -g '*.tsx' src/` ripgrep form — escape the `\|` only in this Markdown table cell to keep pipes from breaking the table; in shell, use the form shown in §3 Step 5 and §4 item 6). Out of scope for 2a per master spec — Phase 2b's lint rule decides per call site. |
 | `@ts-*` suppressions | 5 (`@ts-ignore` / `@ts-expect-error` / `@ts-nocheck`). Leave for Phase 2b decision. |
 | Current `tsconfig.app.json` (5 explicit flags) | `strict: false`, `noImplicitAny: false`, `noUnusedLocals: false`, `noUnusedParameters: false`, `noFallthroughCasesInSwitch: false`. |
 | `strictNullChecks` in `tsconfig.app.json` | Not explicitly listed. Effective value derives from `strict: false` (which implies `strictNullChecks: false`) and the composite root's explicit override below. |
@@ -44,6 +44,7 @@ Master spec §4 places Phase 2a immediately after Phase 1's LOC reduction so the
 | `skipLibCheck` | `true` in `tsconfig.app.json`. Phase 2a keeps this as-is — third-party `.d.ts` content stays unchecked (a separate concern from TS7016 "missing declaration file," which R10 addresses). Phase 2c or Phase 4 may revisit if a third-party-type issue surfaces. |
 | `compilerOptions.types` | Not explicitly set. The default behavior — include all `@types/*` packages in `node_modules/@types/` — applies. Phase 2a does not introduce an explicit `types` array. |
 | Absent error categories | The probe surfaces zero TS2564 (`strictPropertyInitialization`) and zero TS2683 (`noImplicitThis`) errors. The codebase is predominantly React function components, not classes — these patterns simply aren't present. If they surface during execution, they belong in Wave C. |
+| Strict-mode sub-flag composition | `strict: true` is the umbrella flag that transitively enables **eight sub-flags**: `noImplicitAny`, `strictNullChecks`, `strictFunctionTypes`, `strictBindCallApply`, `strictPropertyInitialization`, `noImplicitThis`, `alwaysStrict`, `useUnknownInCatchVariables`. The Step 0 probe ran with `strict: true`, so all 461 baseline errors come from this composed surface. References in §1.1, §2.1, §3 Step 1b, and §4 all point back to this canonical list rather than re-enumerating. |
 | Preflight chain | `npm run preflight` = `typecheck → vite build → test:e2e (Playwright incl. visual regression) → test (Vitest) → knip --strict --no-progress`. 2a tightens what `typecheck` enforces; no chain additions in this phase. |
 | Safety net inherited from Phase 0b | Vitest + RTL + MSW harness; characterization tests on `cn`, `sanitizeAnswerText`, `rateLimitManager`, `marketScoresHeatmap`, `marketScoreDescriptions`, `timestampUtils`; Playwright behavioral journeys incl. `/customers` and `/settings`; visual regression at `maxDiffPixelRatio 0.01`. |
 | Existing TD-FE entries | TD-FE-1 through TD-FE-7 from Phase 1 (orphan routes + conservative-deferral exports). Phase 2a may add entries; numbering continues from TD-FE-8. |
@@ -64,10 +65,10 @@ Master spec §4 places Phase 2a immediately after Phase 1's LOC reduction so the
 
 ### 2.1 In scope
 
-- Flip the five strict-mode compiler flags currently set to `false` in `frontend/tsconfig.app.json` (one config edit — `strict`, `noImplicitAny`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`). `strict: true` is an umbrella that enables seven sub-flags transitively (`noImplicitAny`, `strictNullChecks`, `strictFunctionTypes`, `strictBindCallApply`, `strictPropertyInitialization`, `noImplicitThis`, `alwaysStrict`, `useUnknownInCatchVariables`). Remove the four relaxing overrides in `frontend/tsconfig.json` (one config edit — `noImplicitAny`, `noUnusedParameters`, `noUnusedLocals`, `strictNullChecks`).
+- Flip the five strict-mode compiler flags currently set to `false` in `frontend/tsconfig.app.json` (one config edit — `strict`, `noImplicitAny`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`). `strict: true` is an umbrella enabling eight sub-flags transitively (see §1.3 "Strict-mode sub-flag composition"). Remove the four relaxing overrides in `frontend/tsconfig.json` (one config edit — `noImplicitAny`, `noUnusedParameters`, `noUnusedLocals`, `strictNullChecks`).
 - Drive `tsc --noEmit` to zero strict errors across `frontend/src/` (the tree that `tsconfig.app.json`'s `"include": ["src"]` covers — test files included).
 - Delete the 15 dead shadcn primitives whose npm dependencies Phase 1 removed: `aspect-ratio.tsx`, `calendar.tsx`, `carousel.tsx`, `context-menu.tsx`, `form.tsx`, `hover-card.tsx`, `input-otp.tsx`, `menubar.tsx`, `navigation-menu.tsx`, `radio-group.tsx`, `resizable.tsx`, `slider.tsx`, `switch.tsx`, `toggle.tsx`, `toggle-group.tsx`. Each delete applies Phase 1's 6-check kit (basename rg, dynamic-import rg, re-export rg, plain-text rg, App.tsx route walk, e2e/tests import scan). Treated as Phase-1-followup cleanup, not a Spec 16 §2.2 ui/-lock violation — the lock was about not refactoring shadcn primitives, not about preserving syntactically-broken files.
-- Create `src/lib/types/escape-hatches.ts` **only if needed**. Single soft cap of 5: the 5th entry triggers a `TD-FE-<n>` registration capturing the pattern (per master spec line 298's "Phase 13's audit re-evaluates every entry"). Each additional batch of 5 (entries 10, 15, 20…) triggers another TD-FE. No hard cap, no phase halt, no user checkpoint. Each entry requires (a) a `// TODO(phase-13):` comment, (b) a call-site reference, and (c) a one-line justification for why proper typing is unreasonable at this phase. **The interim location `src/lib/types/escape-hatches.ts` deviates from Spec 14 §4 Phase 2a's `src/shared/types/escape-hatches.ts` only because `src/shared/` doesn't exist until Phase 4** — Phase 4 relocates the file to the master-plan-specified path when it creates `src/shared/`.
+- Create `src/lib/types/escape-hatches.ts` **only if needed**. A single `TD-FE-<n>` registration lands at the 5th entry capturing the pattern (per master spec line 298's "Phase 13's audit re-evaluates every entry"). Entries past 5 are logged in the file but trigger no further TD-FEs. No hard cap, no phase halt, no user checkpoint. Each entry requires (a) a `// TODO(phase-13):` comment, (b) a call-site reference, and (c) a one-line justification for why proper typing is unreasonable at this phase. **The interim location `src/lib/types/escape-hatches.ts` deviates from Spec 14 §4 Phase 2a's `src/shared/types/escape-hatches.ts` only because `src/shared/` doesn't exist until Phase 4** — Phase 4 relocates the file to the master-plan-specified path when it creates `src/shared/`. If the file exists at phase end, §3 Step 5 registers a TD-FE for the relocation deferral.
 - Final scorecard merged at `docs/audits/<date>-frontend-phase-2a-strict-ts.md` per §3 Step 5.
 
 ### 2.2 Out of scope (deferred)
@@ -111,6 +112,7 @@ When fixing a strict-mode error, the grain is "what the type system needs to be 
 4. **Behavior unchanged.** Type-only edits. If you find yourself rewriting logic to satisfy a type, stop — that's option 3 territory.
 5. **Underscore convention.** Unused parameters required for interface compliance (callback signatures mandated by an external API or by an internal callee that does pass the arg) get the `_argName` form — named underscore, never bare `_`. Bare `_` carries no information about what the parameter would have been called; named `_argName` preserves it. Applies to free functions and class methods uniformly. **Note:** TypeScript honors bare `_` as "intentionally unused" for `noUnusedParameters` (and TS 4.0+ allows multiple bare `_` parameters in the same signature without error), so pre-existing bare `_` parameters in the codebase do **not** surface as TS6133 errors and are not retroactively renamed by this phase. The `_argName` convention applies only to new fixes added during Wave A.
 6. **Test-file conventions.** Test code (`src/**/__tests__/**`, `src/**/*.{test,spec}.{ts,tsx}`) is in scope for strict errors but has distinct patterns: mock objects may use `as Partial<T>` or locally-typed shapes; test fixtures may keep their existing `any` typing (already counted in the 238 inline-any baseline that Phase 2b addresses, so they don't consume Phase 2a's escape-hatch budget); unused test-helper parameters follow the `_argName` convention. Over-typing test mocks beyond what the assertion requires is out of scope per posture rule 3.
+7. **No new `@ts-*` suppressions.** Adding new `@ts-expect-error`, `@ts-ignore`, or `@ts-nocheck` suppressions is out of scope for Phase 2a — use the escape-hatches file with `Untyped*` types instead. The §4 item 7 done-when gate (`@ts-*` suppression count ≤5, the design-time baseline) enforces this. Phase 2b's lint rule will revisit existing suppressions per call site.
 
 ---
 
@@ -128,13 +130,14 @@ Run the strict probe against the current `master` state immediately on branch cr
 The probe config is a throwaway:
 
 ```json
-// frontend/tsconfig.strict-probe.json (not committed; built and removed by the probe script)
+// frontend/tsconfig.strict-probe.json (not committed; built and removed by the probe script).
+// noUnusedLocals / noUnusedParameters / noFallthroughCasesInSwitch are NOT covered by the
+// strict umbrella; the other strict sub-flags (noImplicitAny, strictNullChecks, etc.) are
+// — see §1.3 "Strict-mode sub-flag composition."
 {
   "extends": "./tsconfig.app.json",
   "compilerOptions": {
     "strict": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
@@ -191,7 +194,7 @@ Zero / `none` on every check is required for every file in the batch. Commit sub
 
 **Step 1b — Flip strict flags (one commit):**
 
-- Update `frontend/tsconfig.app.json` so its five explicit strict-mode compiler flags are all `true`: `strict`, `noImplicitAny`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`. The umbrella `strict: true` transitively enables seven sub-flags: `noImplicitAny`, `strictNullChecks`, `strictFunctionTypes`, `strictBindCallApply`, `strictPropertyInitialization`, `noImplicitThis`, `alwaysStrict`, `useUnknownInCatchVariables`. (TS2564 and TS2683, the most class-oriented of these, produced zero baseline errors — see §1.3 absent-error-categories row.)
+- Update `frontend/tsconfig.app.json` so its five explicit strict-mode compiler flags are all `true`: `strict`, `noImplicitAny`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`. The umbrella `strict: true` transitively enables eight sub-flags (see §1.3 "Strict-mode sub-flag composition"). Note: `noImplicitAny` appears both in the explicit list and the strict umbrella — keeping it explicit is defensive and harmless; the spec doesn't strip it. (TS2564 and TS2683, the most class-oriented of the strict sub-flags, produced zero baseline errors — see §1.3 absent-error-categories row.)
 - Update `frontend/tsconfig.json` (composite root): remove the four overrides that re-soften flags — `noImplicitAny: false`, `noUnusedParameters: false`, `noUnusedLocals: false`, `strictNullChecks: false`. The composite root no longer relaxes what the app config tightens. After this edit, the effective configuration has the full strict-mode surface active.
 - `tsconfig.node.json` untouched (out of scope per §2.2). `skipLibCheck: true` also untouched.
 
@@ -211,7 +214,7 @@ Targets TS6133 (unused locals/params, 315) + TS6192 (all-imports-unused, 12).
 - **Unused destructured prop:** delete from destructuring; if all become unused, simplify the component signature.
 - **Public-export protection (§2.3):** if removing an "unused" symbol would remove a public export of `src/lib/`, `src/hooks/`, `src/utils/`, or `src/contexts/`, do not delete. Apply `_` prefix to the parameter, or restructure locally if the symbol is a const/function. Test and e2e files must continue resolving.
 
-**Commit grain:** by area, leaves before monsters. Suggested order:
+**Commit grain:** by area, low-error files before high-error files. Suggested order:
 
 1. `src/lib/`, `src/hooks/`, `src/utils/`, `src/services/`, `src/contexts/` (light counts, broad blast radius — fix cleanly first).
 2. `src/components/ui/` shadcn (light counts after 15 deletes in Step 1a).
@@ -254,12 +257,12 @@ The mechanism is intentionally minimal — master spec line 298 puts post-hoc au
   export type UntypedLeadFilter = any;
   ```
 
-  The `// TODO(phase-13):` comment is mandatory on every entry — it gives Phase 13's audit a greppable marker. The `Untyped*` type prefix is also mandatory — visible at import sites (where the comment is not), it signals temporariness without requiring callers to scroll to the definition. The justification line should describe *why* typing is unreasonable now without pinning a specific future phase as the owner (specific owners can shift; the TODO marker is enough).
+  The `// TODO(phase-13):` comment is mandatory on every entry — it gives Phase 13's audit a greppable marker. The `Untyped*` type prefix is also mandatory — visible at most import sites (where the comment is not), it signals temporariness without requiring callers to scroll to the definition. **Caveat:** callers can defeat the visibility with `import { UntypedX as Y }` aliasing. The spec considers this acceptable while the file is expected to be small; if it grows to a count where aliasing becomes a risk, Phase 2b can add a lint rule (e.g., `no-rename-imports` scoped to `escape-hatches.ts`) to enforce. The justification line should describe *why* typing is unreasonable now without pinning a specific future phase as the owner (specific owners can shift; the TODO marker is enough).
 - **TD-FE registration at the 5th entry.** When the file accumulates its 5th entry, the commit body that adds the 5th entry includes a `TD-FE-<n>` registration line (numbering continues from TD-FE-8 or wherever the register stands). The TD-FE captures: which 5 sites used escape hatches, the pattern they share (if any), and the trigger (typed-data missing? generic refactor needed?). The phase continues without halting.
 - **Beyond 5.** Entries past the 5th are logged in the file with their mandatory comment + prefix + justification, but they do not trigger additional `TD-FE-<n>` registrations — the 5th-entry TD-FE already captured the pattern. Phase 13's audit re-evaluates every entry regardless of count.
 - **Materially high count (~15+).** No automatic trigger, but if the count grows to a level the implementer judges out of proportion with the spec's expectations, raise the pattern to the user. This is judgment, not a hard rule.
 
-**Commit grain:** file-by-file with a batching threshold, leaves before monsters. **Batching rule:** files with ≤3 errors in the same area may be bundled into one commit; files with >3 errors get individual commits. This keeps Wave B's commit count proportional to its real review surface (analog of Wave A's 60-line split). Suggested order:
+**Commit grain:** file-by-file with a batching threshold, low-error files before high-error files. **Batching rule:** files with ≤3 errors in the same area may be bundled into one commit; files with >3 errors get individual commits. This keeps Wave B's commit count proportional to its real review surface (analog of Wave A's 60-line split). Suggested order:
 
 1. `src/lib/`, `src/hooks/`, `src/utils/`, `src/services/`, `src/contexts/`.
 2. `src/components/` — small areas first (signals, strategist, settings, layout), then larger (customers, market-research sections, mission-control sub-components).
@@ -281,7 +284,7 @@ Targets TS2345 (8), TS2322 (7), TS18046 (8), TS18047 (5), TS18048 (2), TS2339 (4
 - **Argument / type assignment mismatches (TS2345, TS2322):** fix the type on the assigning side first; only adjust the callee signature if the callee is genuinely too narrow.
 - **`Class declared but never used` (TS6196):** treat as Wave A residue — delete or `_` prefix if it's a class declaration that was missed. If it's a type-import alias, prune.
 
-**Escape-hatches policy:** same single soft cap as Wave B (5 entries; TD-FE registration on the 5th and every additional batch of 5). The count is global to Phase 2a — entries added in Wave B count toward the 5-entry threshold during Wave C.
+**Escape-hatches policy:** same as Wave B (a single TD-FE at the 5th entry; entries past 5 logged without further TD-FEs). The count is global to Phase 2a — entries added in Wave B count toward the 5-entry threshold during Wave C.
 
 **Commit grain:** file-by-file. Each file with semantic errors gets at least one commit. Commit subject: `refactor(fe): tighten types in <file>`.
 
@@ -293,8 +296,8 @@ Targets TS2345 (8), TS2322 (7), TS18046 (8), TS18047 (5), TS18048 (2), TS2339 (4
 
 - `npm run typecheck` → 0 errors.
 - `src/lib/types/escape-hatches.ts` is absent OR contains entries each with the required `// TODO(phase-13):` comment, `Untyped*` type-name prefix, and call-site reference. If the count reached 5 during the phase, a `TD-FE-<n>` registration exists capturing the pattern.
-- `rg -nE ':\s*any\b\|as\s+any\b\|<any>' --include='*.ts' --include='*.tsx' src/ | wc -l` returns ≤238 (no inline-any regression vs design-time baseline).
-- `rg -nE '@ts-(ignore|expect-error|nocheck)' --include='*.ts' --include='*.tsx' src/ | wc -l` returns ≤5 (no new suppression regression).
+- `rg -n ':\s*any\b|as\s+any\b|<any>' -g '*.ts' -g '*.tsx' src/ | wc -l` returns ≤238 (no inline-any regression vs design-time baseline).
+- `rg -n '@ts-(ignore|expect-error|nocheck)' -g '*.ts' -g '*.tsx' src/ | wc -l` returns ≤5 (no new suppression regression).
 - `npm run preflight` green: `typecheck → vite build → playwright test → vitest run → knip --strict --no-progress`.
 
 **Residual-fix commit (only if checklist fails):** small fixes to address whatever check went red. Commit subject: `fix(fe): residual phase 2a verification fixes`. Re-run the checklist after.
@@ -303,7 +306,7 @@ Targets TS2345 (8), TS2322 (7), TS18046 (8), TS18047 (5), TS18048 (2), TS2339 (4
 
 1. **Error count:** Step 0 re-baseline number → 0. Per-area delta cites the Step 0 JSON (already committed); the scorecard does not duplicate it as a table.
 2. **Files deleted:** 15 dead-shadcn primitives with their LOC deltas (or fewer if any 6-check kit blocked a deletion).
-3. **Escape-hatches:** count, location (`src/lib/types/escape-hatches.ts` if present), list of entries with justifications and call-site references, OR `none created`. If the 5th-entry TD-FE landed during the phase, it's cited here.
+3. **Escape-hatches:** count, location (`src/lib/types/escape-hatches.ts` if present), list of entries with justifications and call-site references, OR `none created`. If the 5th-entry TD-FE landed during the phase, it's cited here. **If the file exists at phase end, a separate `TD-FE-<n>` is registered for the relocation deferral: "Escape-hatch file at interim path `src/lib/types/escape-hatches.ts` — relocate to `src/shared/types/escape-hatches.ts` when Phase 4 creates `src/shared/`."** This makes the deferred move visible as an action item, not an implicit assumption about Phase 4's scope.
 4. **TD-FE entries created during the phase:** IDs (e.g., `TD-FE-8`) and one-line summaries.
 5. **Commit summary:** one-paragraph narrative describing how the phase progressed wave-by-wave, with the output of `git log --oneline master..HEAD` attached verbatim (not annotated per-commit).
 6. **Diff size:** total additions / deletions from `git diff --stat master..HEAD` reported verbatim. The 15 dead-shadcn deletions are called out separately so the reviewable-code surface is visible without arithmetic. No target, no gate — just reporting for impl-review's context.
@@ -316,12 +319,12 @@ Scorecard commit subject: `docs(audits): phase 2a strict ts scorecard`.
 
 The phase is "done" when **all** of these hold on `phase-2a-strict-ts` immediately before merge:
 
-1. `frontend/tsconfig.app.json` has its five explicit strict-mode compiler flags (`strict`, `noImplicitAny`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`) all set to `true`. The umbrella `strict: true` transitively enables `strictNullChecks`, `strictFunctionTypes`, `strictBindCallApply`, `strictPropertyInitialization`, `noImplicitThis`, `alwaysStrict`, and `useUnknownInCatchVariables`.
+1. `frontend/tsconfig.app.json` has its five explicit strict-mode compiler flags (`strict`, `noImplicitAny`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`) all set to `true`. The umbrella `strict: true` transitively enables the full sub-flag set per §1.3 "Strict-mode sub-flag composition."
 2. `frontend/tsconfig.json` (composite root) no longer overrides any of those flags back to `false`.
 3. `tsc --noEmit` (via `npm run typecheck`) returns **zero** errors.
 4. The 15 dead shadcn primitives listed in §2.1 are deleted (or any deferral has a documented `TD-FE-<n>` entry and a 6-check-kit reason).
 5. `src/lib/types/escape-hatches.ts` is absent OR contains entries each with the mandatory `// TODO(phase-13):` comment, `Untyped*` type-name prefix, a call-site reference, and a one-line justification. If the count reached 5 during the phase, a `TD-FE-<n>` registration exists capturing the pattern.
-6. Inline `any` count ≤238 (`rg -nE ':\s*any\b\|as\s+any\b\|<any>' --include='*.ts' --include='*.tsx' src/ | wc -l`). **Escape-hatch entries in `src/lib/types/escape-hatches.ts` use `= any` syntax not matched by this regex and are tracked separately under item 5** — the inline-any count therefore reflects call-site any-usage only, not the escape-hatch file.
+6. Inline `any` count ≤238 (`rg -n ':\s*any\b|as\s+any\b|<any>' -g '*.ts' -g '*.tsx' src/ | wc -l`). **Escape-hatch entries in `src/lib/types/escape-hatches.ts` use `= any` syntax not matched by this regex and are tracked separately under item 5** — the inline-any count therefore reflects call-site any-usage only, not the escape-hatch file.
 7. `@ts-*` suppression count ≤5.
 8. `npm run preflight` green: typecheck + vite build + Playwright (incl. visual regression) + Vitest + `knip --strict --no-progress`.
 9. Scorecard merged at `docs/audits/<date>-frontend-phase-2a-strict-ts.md` per §3 Step 5.
@@ -335,7 +338,7 @@ The master plan's row for Phase 2a (Spec 14 §4) updates to `done` with the merg
 | # | Risk | Mitigation |
 |---|---|---|
 | R1 | Step 0 re-baseline finds >1,500 errors (Phase 1 drift, or strict-mode flag interaction the design-time probe missed). | Master spec §4's sub-decomposition trigger fires — plan author proposes a sub-split (`2a-i` mechanical / `2a-ii` implicit-any / `2a-iii` semantic, or by feature folder) before Step 1b. Spec does not need rewriting; plan absorbs the structure. |
-| R2 | A Wave C semantic error reveals a structural problem requiring out-of-scope refactor (e.g., a type-narrowing fix that cascades across 10 files). | Escape-hatches soft cap (§3 Step 3): the 5th entry triggers a TD-FE capturing the pattern; every additional batch of 5 triggers another. No hard cap (master spec line 298 puts post-hoc audit responsibility on Phase 13). If accumulation grows materially beyond expectations, the implementer raises the pattern to the user — judgment call, no automatic trigger. The TD-FE entries preserve the structural signal that the spec under-scoped semantic work; Phase 13's audit re-evaluates each entry. |
+| R2 | A Wave C semantic error reveals a structural problem requiring out-of-scope refactor (e.g., a type-narrowing fix that cascades across 10 files). | Escape-hatches (§3 Step 3): the 5th entry triggers a single TD-FE capturing the pattern. Entries past 5 are logged in the file but trigger no further TD-FEs. No hard cap (master spec line 298 puts post-hoc audit responsibility on Phase 13). If accumulation grows materially beyond expectations (~15+), the implementer raises the pattern to the user — judgment call, no automatic trigger. The 5th-entry TD-FE preserves the structural signal that the spec under-scoped semantic work; Phase 13's audit re-evaluates each entry. |
 | R3 | Wave A's `noUnused*` deletions break a test-only or e2e import. | §2.3 freezes the public exports of `src/lib/`, `src/hooks/`, `src/utils/`, `src/contexts/`. Step 2 rule mandates `_` prefix over deletion when an exported symbol is "unused-in-src" but referenced from tests or e2e. Preflight's Vitest + Playwright catches any missed reference. |
 | R4 | Wave B implicit-any fixes cascade — typing one parameter surfaces more TS7006 errors downstream. | Same-commit fix is the default; the file-grain commits absorb cascades within a file. Cross-file cascades that genuinely change a contract get their own commit. Unbounded cascade across many files is R2 territory (escape-hatch + TD-FE, or abort). |
 | R5 | Phase branch has red typecheck for most of the phase (Step 1b through end of Step 4). | Acceptable: `master` stays green; the controller agent never merges a red branch. Vitest + Playwright continue mid-phase because esbuild transpiles without typechecking. The final pre-merge preflight (Step 5) is the binding gate. |
