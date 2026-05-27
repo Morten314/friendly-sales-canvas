@@ -1,0 +1,60 @@
+// Spec 15 §3.2 — MSW handler set (minimal).
+//
+// Five handlers shipped at 0b:
+//   1. Proof-of-pipeline GET /api/_health — used by msw-pipeline.test.ts to
+//      assert MSW intercepts fetch under jsdom.
+//   2. Firebase sign-in (identitytoolkit) — shape mirrors firebaseSignInResponse
+//      from e2e/fixtures/auth.ts so the Vitest and Playwright layers agree.
+//   3. Firebase token refresh (securetoken).
+//   4. JWT mint POST /api/auth/token.
+//   5. JWT refresh POST /api/auth/refresh.
+//
+// Per-feature handlers (market-research, mission-control, customers, signals,
+// scout, settings) are NOT shipped here. They grow per feature in Phases 5–10
+// as unit tests need them. Spec §3.2 last paragraph.
+import { http, HttpResponse } from 'msw';
+
+export const handlers = [
+  // 1. Proof-of-pipeline
+  http.get('/api/_health', () => HttpResponse.json({ ok: true })),
+
+  // 2. Firebase sign-in. MSW v2 ignores query strings by default, so this
+  //    matches /accounts:signInWithPassword?key=API_KEY too. Shape matches
+  //    firebaseSignInResponse from e2e/fixtures/auth.ts.
+  http.post(
+    'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword',
+    () =>
+      HttpResponse.json({
+        kind: 'identitytoolkit#VerifyPasswordResponse',
+        idToken: 'mock_firebase_token',
+        email: 'test@brewra.test',
+        localId: 'test_user_123',
+        registered: true,
+        refreshToken: 'mock_refresh_token',
+        expiresIn: '3600',
+      }),
+  ),
+
+  // 3. Firebase token refresh
+  http.post('https://securetoken.googleapis.com/v1/token', () =>
+    HttpResponse.json({
+      access_token: 'mock_firebase_token',
+      id_token: 'mock_firebase_token',
+      refresh_token: 'mock_refresh_token',
+      expires_in: '3600',
+      token_type: 'Bearer',
+      user_id: 'test_user_123',
+      project_id: '710721694093',
+    }),
+  ),
+
+  // 4. JWT mint
+  http.post('/api/auth/token', () =>
+    HttpResponse.json({ access_token: 'mock_jwt_token', expires_in: 3600 }),
+  ),
+
+  // 5. JWT refresh
+  http.post('/api/auth/refresh', () =>
+    HttpResponse.json({ access_token: 'mock_jwt_token', expires_in: 3600 }),
+  ),
+];
