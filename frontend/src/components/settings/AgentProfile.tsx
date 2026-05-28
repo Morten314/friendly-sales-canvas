@@ -12,11 +12,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import type { UntypedBackendProfile } from "@/lib/types/escape-hatches";
 
 interface AgentProfileProps {
   onProfileUpdate?: () => void;
   isEditMode?: boolean;
-  profileData?: any;
+  profileData?: UntypedBackendProfile;
 }
 
 export function AgentProfile({

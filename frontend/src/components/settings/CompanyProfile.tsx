@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
+import type { UntypedBackendProfile } from "@/lib/types/escape-hatches";
 import {
   getUserLocalStorage,
   setUserLocalStorage,
@@ -29,7 +30,7 @@ interface SocialMediaUrl {
 interface CompanyProfileProps {
   onProfileUpdate?: () => void;
   isEditMode?: boolean;
-  profileData?: any;
+  profileData?: UntypedBackendProfile;
 }
 
 export function CompanyProfile({ profileData }: CompanyProfileProps) {
@@ -417,9 +418,12 @@ export function CompanyProfile({ profileData }: CompanyProfileProps) {
       );
 
       // Clear market data cache
-      if (typeof window !== "undefined" && (window as any).cachedMarketData) {
-        (window as any).cachedMarketData = null;
-        (window as any).cacheTimestamp = null;
+      if (typeof window !== "undefined") {
+        const w = window as unknown as Record<string, unknown>;
+        if (w.cachedMarketData) {
+          w.cachedMarketData = null;
+          w.cacheTimestamp = null;
+        }
       }
 
       // Dispatch a global event to notify other components

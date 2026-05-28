@@ -61,3 +61,11 @@ export type UntypedReportSection = any;
 // `Record<string, unknown>` requires typing those call-site `merged.X || merged.Y`
 // patterns first.
 export type UntypedProfilerIcpRecord = any;
+
+// TODO(phase-13): replace with concrete UserProfile/AgentProfile/CompanyProfile interfaces
+// once the backend customer_profile contract is defined.
+// src/components/settings/UserProfile.tsx:24, src/components/settings/AgentProfile.tsx:19,
+// src/components/settings/CompanyProfile.tsx (companyProfileData prop).
+// — Props receive untyped JSON from backend; tightening to `Record<string, unknown>`
+// cascades into ~10 TS2322 errors at `setX(profileData?.field)` consumer sites.
+export type UntypedBackendProfile = any;

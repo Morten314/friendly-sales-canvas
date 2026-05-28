@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
+import type { UntypedBackendProfile } from "@/lib/types/escape-hatches";
 
 interface SocialMediaUrl {
   platform: string;
@@ -21,7 +22,7 @@ interface SocialMediaUrl {
 interface UserProfileProps {
   onProfileUpdate?: () => void;
   isEditMode?: boolean;
-  profileData?: any;
+  profileData?: UntypedBackendProfile;
 }
 
 export function UserProfile({
