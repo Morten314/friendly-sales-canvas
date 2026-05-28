@@ -428,6 +428,9 @@ export function Sidebar() {
         sessionStorage.setItem("signalsDropdownOpen", "true");
       }
     }
+    // signalsOpen intentionally omitted: only react to path change, reading
+    // the latest open-state inside the effect avoids a redundant re-open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
   const handleLinkClick = () => {
