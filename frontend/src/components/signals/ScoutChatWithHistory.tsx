@@ -1,5 +1,3 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { Button } from "@/components/ui/button";
 import {
   MessageSquarePlus,
   PanelLeftClose,
@@ -8,11 +6,16 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { SignalsContextChat, SignalsChatContext, ChatMessage } from "./SignalsContextChat";
+import { useState, useEffect, useCallback, useRef } from "react";
+
+import type { SignalsChatContext, ChatMessage } from "./SignalsContextChat";
+import { SignalsContextChat } from "./SignalsContextChat";
+
+import { AddLeadModal } from "@/components/market-research/AddLeadModal";
 import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
 import { SuggestedCompaniesSection } from "@/components/market-research/SuggestedCompaniesSection";
-import { AddLeadModal } from "@/components/market-research/AddLeadModal";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   LEAD_STREAM_CHAT_CONTEXT_KEY,
   type LeadStreamChatContext,
@@ -120,7 +123,7 @@ export function ScoutChatWithHistory({
     } catch {
       // ignore
     }
-  }, [storageKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [storageKey]);
 
   // Persist sessions to localStorage (strip leadContext so Suggested companies only show when coming from Lead Stream)
   useEffect(() => {

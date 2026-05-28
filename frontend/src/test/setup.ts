@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { afterAll, afterEach, beforeAll } from "vitest";
+
 import { server } from "./msw/server";
 
 // Spec 15 §3.1 — MSW lifecycle. `onUnhandledRequest: 'error'` is intentional:

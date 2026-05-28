@@ -1,4 +1,4 @@
-import { User } from "firebase/auth";
+import type { User } from "firebase/auth";
 
 const getApiBaseUrl = () => {
   const isDev = import.meta.env.DEV;

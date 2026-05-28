@@ -1,4 +1,4 @@
-import { EditRecord, TrendSnapshot, IndustryTrendsRecommendations } from "./types";
+import type { EditRecord, TrendSnapshot, IndustryTrendsRecommendations } from "./types";
 
 export interface MarketIntelligenceTabProps {
   // General refresh state for all components

@@ -1968,8 +1968,6 @@
 
 // export default MarketEntrySection;
 
-import React, { useEffect, useState, useRef } from "react";
-import type { UntypedReportState, UntypedReportSection } from "@/lib/types/escape-hatches";
 import {
   MapPin,
   Bot,
@@ -1986,16 +1984,20 @@ import {
   ChevronUp,
   Check,
 } from "lucide-react";
+import React, { useEffect, useState, useRef } from "react";
+
+import type { EditRecord } from "./types";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useToast } from "@/hooks/use-toast";
-import { EditRecord } from "./types";
-import { executeWithRateLimit } from "@/lib/rateLimitManager";
-import { apiFetchJson } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { apiFetchJson } from "@/lib/api";
+import { executeWithRateLimit } from "@/lib/rateLimitManager";
+import type { UntypedReportState, UntypedReportSection } from "@/lib/types/escape-hatches";
 import { getUserLocalStorage } from "@/utils/cacheUtils";
 
 interface MarketEntrySectionProps {

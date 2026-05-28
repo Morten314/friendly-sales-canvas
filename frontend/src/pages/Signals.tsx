@@ -12,9 +12,12 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+
+import { Layout } from "@/components/layout/Layout";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
 import {
   Drawer,
   DrawerContent,
@@ -23,12 +26,10 @@ import {
   DrawerClose,
 } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
-import { useState, useEffect } from "react";
-import { Layout } from "@/components/layout/Layout";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 import { sanitizeAnswerText } from "@/lib/utils";
 type Agent = "scout" | "profiler";
 type ActionType = "accept" | "dismiss" | "save" | "ask";

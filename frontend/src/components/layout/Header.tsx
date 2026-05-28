@@ -1,5 +1,3 @@
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import {
   Search,
   MessageSquare,
@@ -12,6 +10,16 @@ import {
   Menu,
   Building2,
 } from "lucide-react";
+import { useState, useEffect } from "react";
+
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -20,16 +28,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { useTenant } from "@/contexts/TenantContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 // import { AskBrewra } from "@/components/agent-hub/AskBrewra"; // Commented out - removed Ask button
 // import { ViewToggle } from "@/components/market-research/ViewToggle"; // Commented out - removed User/AI toggle

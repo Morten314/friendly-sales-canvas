@@ -1,8 +1,10 @@
 import React, { useState } from "react";
-import { Separator } from "@/components/ui/separator";
-import OpportunityDashboard from "./lead-stream/OpportunityDashboard";
-import LeadsTable from "./lead-stream/LeadsTable";
+
 import type { HeatmapLead } from "./lead-stream/leadData";
+import LeadsTable from "./lead-stream/LeadsTable";
+import OpportunityDashboard from "./lead-stream/OpportunityDashboard";
+
+import { Separator } from "@/components/ui/separator";
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 

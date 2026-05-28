@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
+import { useEffect, useState } from "react";
+
+import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface BeforeInstallPromptEvent extends Event {

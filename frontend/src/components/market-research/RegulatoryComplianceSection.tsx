@@ -1,16 +1,3 @@
-import React, { useState, useEffect } from "react";
-import type {
-  UntypedRegulatoryUpdate,
-  UntypedVisualDataCard,
-  UntypedRegionData,
-} from "@/lib/types/escape-hatches";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { useAuth } from "@/contexts/AuthContext";
-import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
 import {
   Scale,
   Shield,
@@ -35,6 +22,16 @@ import {
   BarChart3,
   Factory,
 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+
+import { EditRecord } from "./types";
+
+import MiniPieChart from "../MiniPieChart";
+import MiniLineChart from "../MiniLineChart";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -44,12 +41,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { EditRecord } from "./types";
-
-import MiniPieChart from "../MiniPieChart";
-import MiniLineChart from "../MiniLineChart";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import { apiFetchJson } from "@/lib/api";
 import { executeWithRateLimit } from "@/lib/rateLimitManager";
+import type {
+  UntypedRegulatoryUpdate,
+  UntypedVisualDataCard,
+  UntypedRegionData,
+} from "@/lib/types/escape-hatches";
+import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
 
 interface RegulatoryComplianceSectionProps {
   isEditing: boolean;

@@ -1,24 +1,3 @@
-import React, { useState, useEffect, useLayoutEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Bot,
   ArrowRight,
@@ -32,6 +11,9 @@ import {
   ChevronUp,
   Loader2,
 } from "lucide-react";
+import React, { useState, useEffect, useLayoutEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+
 import {
   type Rating,
   type HeatmapLead,
@@ -40,23 +22,43 @@ import {
   TIER_INTELLIGENCE,
   heatmapLeads,
 } from "./leadData";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
-  extractMarketScoreRowsFromResponse,
-  heatmapLeadFromUnknownRow,
-} from "@/lib/marketScoresHeatmap";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useTenant } from "@/contexts/TenantContext";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { buildApiUrl } from "@/lib/api";
+import jwtManager from "@/lib/jwt";
+import {
+  readLeadStreamHeatmapFromSession,
+  writeLeadStreamHeatmapToSession,
+} from "@/lib/leadStreamHeatmapSession";
 import {
   getDescriptionTextForColumn,
   type MarketScoreDescriptionsResponse,
 } from "@/lib/marketScoreDescriptions";
 import {
-  readLeadStreamHeatmapFromSession,
-  writeLeadStreamHeatmapToSession,
-} from "@/lib/leadStreamHeatmapSession";
-import { useAuth } from "@/hooks/useAuth";
-import { useTenant } from "@/contexts/TenantContext";
-import { useToast } from "@/hooks/use-toast";
-import { buildApiUrl } from "@/lib/api";
-import jwtManager from "@/lib/jwt";
+  extractMarketScoreRowsFromResponse,
+  heatmapLeadFromUnknownRow,
+} from "@/lib/marketScoresHeatmap";
 
 // ─── Score Breakdown Popover ────────────────────────────────────────────────
 

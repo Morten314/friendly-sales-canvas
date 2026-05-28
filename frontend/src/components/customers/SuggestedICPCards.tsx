@@ -1,28 +1,3 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { EditDropdownMenu } from "@/components/market-research/EditDropdownMenu";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import {
   Check,
   X,
@@ -43,11 +18,43 @@ import {
   MessageSquare,
   Trash2,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect, useCallback, useRef } from "react";
+
+import { getLeadCountForICP } from "@/components/customers/LeadStream";
+import { EditDropdownMenu } from "@/components/market-research/EditDropdownMenu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ToastAction } from "@/components/ui/toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { getLeadCountForICP } from "@/components/customers/LeadStream";
+import { useToast } from "@/hooks/use-toast";
 import { buildIcpUrl, buildApiUrl, apiFetchJson, apiFetch } from "@/lib/api";
+import {
+  ensureMissionProfilerScope,
+  isProfilerCacheValid,
+  getProfilerSnapshot,
+  commitProfilerSnapshot,
+} from "@/lib/missionProfilerSessionCache";
 import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
 import { fetchIcpsRowsForOrg } from "@/utils/profileIcpsExtract";
 import {
@@ -64,12 +71,6 @@ import {
   PROFILER_ICP_DISPLAY_KEY,
   removeProfilerAcceptedIcpDisplayMeta,
 } from "@/utils/profilerAcceptedIcpDisplay";
-import {
-  ensureMissionProfilerScope,
-  isProfilerCacheValid,
-  getProfilerSnapshot,
-  commitProfilerSnapshot,
-} from "@/lib/missionProfilerSessionCache";
 
 const PROFILER_PENDING_RECOMMENDED_REJECT_KEY = "profiler_pendingRecommendedRejects";
 const PROFILER_DISMISSED_RECOMMENDED_IDS_KEY = "profiler_dismissedRecommendedIcpIds";

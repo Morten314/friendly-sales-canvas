@@ -1,6 +1,7 @@
 import React from "react";
+
 import MarketIntelligenceSections from "./MarketIntelligenceSections";
-import { MarketIntelligenceTabProps } from "./MarketIntelligenceTabProps";
+import type { MarketIntelligenceTabProps } from "./MarketIntelligenceTabProps";
 
 const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) => {
   return (

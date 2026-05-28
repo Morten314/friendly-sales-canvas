@@ -1,6 +1,3 @@
-import { useNavigate } from "react-router-dom";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Zap,
   Target,
@@ -14,7 +11,11 @@ import {
   Handshake,
   BarChart3,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
 import { heatmapLeads } from "@/components/market-research/lead-stream/leadData";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 
 interface Recommendation {
   title: string;

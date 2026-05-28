@@ -1632,11 +1632,22 @@
 
 // export default ICPManager;
 
+import { Plus, Trash2, Edit, X, Check, Target, Eye, ChevronsUpDown } from "lucide-react";
 import React, { useState, useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useLocation } from "react-router-dom";
+
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -1645,15 +1656,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import {
   Table,
   TableBody,
   TableCell,
@@ -1661,22 +1663,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Trash2, Edit, X, Check, Target, Eye, ChevronsUpDown } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useLocation } from "react-router-dom";
+import { apiFetch } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import {
   setUserLocalStorage,
   getUserLocalStorage,
   removeUserLocalStorage,
 } from "@/utils/cacheUtils";
+import { extractIcpsDataFromFlexibleApiResponse } from "@/utils/profileIcpsExtract";
 import {
   mergeProfilerAcceptedIcpDisplay,
   removeProfilerAcceptedIcpDisplayMeta,
 } from "@/utils/profilerAcceptedIcpDisplay";
-import { cn } from "@/lib/utils";
-import { apiFetch } from "@/lib/api";
-import { extractIcpsDataFromFlexibleApiResponse } from "@/utils/profileIcpsExtract";
 
 // Types
 type FitConfidence = "high" | "medium" | "low";

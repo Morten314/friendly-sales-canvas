@@ -1,5 +1,5 @@
+import { Users, BarChart3, Bot } from "lucide-react";
 import React, { useMemo } from "react";
-import { Card } from "@/components/ui/card";
 import {
   BarChart,
   Bar,
@@ -12,8 +12,10 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { Users, BarChart3, Bot } from "lucide-react";
+
 import { type HeatmapLead, heatmapLeads, computeReportComponentScoresForLeads } from "./leadData";
+
+import { Card } from "@/components/ui/card";
 
 // ─── Custom tooltip ─────────────────────────────────────────────────────────
 

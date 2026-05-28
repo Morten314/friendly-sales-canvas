@@ -1,8 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { Button } from "@/components/ui/button";
 import { MessageSquarePlus, PanelLeftClose, PanelLeft, MessageCircle, Trash2 } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+
+import type { SignalsChatContext, ChatMessage } from "./SignalsContextChat";
+import { SignalsContextChat } from "./SignalsContextChat";
+
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { SignalsContextChat, SignalsChatContext, ChatMessage } from "./SignalsContextChat";
 
 const STORAGE_KEY_PREFIX = "profiler_chat_sessions";
 

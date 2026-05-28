@@ -11,6 +11,7 @@
 // fetch implementations. The request:unhandled event is a documented,
 // version-stable MSW v2 API that fires regardless of how the fetch resolves.
 import { describe, expect, it } from "vitest";
+
 import { server } from "../msw/server";
 
 describe("MSW pipeline (jsdom + node MSW server)", () => {

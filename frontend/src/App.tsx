@@ -1,27 +1,29 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
-import { TenantProvider } from "./contexts/TenantContext";
-import { SidebarProvider } from "./contexts/SidebarContext";
+
 import ProtectedRoute from "./components/ProtectedRoute";
-import Login from "./pages/Login";
-import TenantSelection from "./pages/TenantSelection";
+import PWAInstallPrompt from "./components/PWAInstallPrompt";
+import { AuthProvider } from "./contexts/AuthContext";
+import { SidebarProvider } from "./contexts/SidebarContext";
+import { TenantProvider } from "./contexts/TenantContext";
+import Artifacts from "./pages/Artifacts";
+import Calendar from "./pages/Calendar";
 import Customers from "./pages/Customers";
 import Deals from "./pages/Deals";
-import Calendar from "./pages/Calendar";
-import Reports from "./pages/Reports";
-import Settings from "./pages/Settings";
+import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import Reports from "./pages/Reports";
+import TenantSelection from "./pages/TenantSelection";
+import Settings from "./pages/Settings";
 import MarketResearch from "./pages/MarketResearch";
 import Insights from "./pages/Insights";
 import ScoutDeploymentPage from "./pages/ScoutDeployment";
 import Signals from "./pages/Signals";
 import MissionControl from "./pages/MissionControl";
-import Artifacts from "./pages/Artifacts";
-import PWAInstallPrompt from "./components/PWAInstallPrompt";
+
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const queryClient = new QueryClient();
 

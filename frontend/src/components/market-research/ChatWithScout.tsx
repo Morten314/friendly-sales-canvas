@@ -1,7 +1,8 @@
+import { MessageSquare, Send, ArrowRight, Loader2 } from "lucide-react";
 import React, { useState, useRef, useEffect } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { MessageSquare, Send, ArrowRight, Loader2 } from "lucide-react";
 
 interface ChatMessage {
   role: "user" | "assistant";

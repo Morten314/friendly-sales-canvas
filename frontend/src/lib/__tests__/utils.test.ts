@@ -2,6 +2,7 @@
 // Two exported functions: cn (shadcn classnames) and sanitizeAnswerText
 // (markdown/symbol stripper for agent recommendation display).
 import { describe, expect, it } from "vitest";
+
 import { cn, sanitizeAnswerText } from "@/lib/utils";
 
 describe("cn", () => {

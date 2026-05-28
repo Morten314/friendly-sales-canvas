@@ -184,23 +184,18 @@
 //   );
 // };
 
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  useCallback,
-  ReactNode,
-} from "react";
+import type { User } from "firebase/auth";
 import {
-  User,
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   createUserWithEmailAndPassword,
 } from "firebase/auth";
-import { auth } from "../lib/firebase";
+import type { ReactNode } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+
 import { buildApiUrl } from "../lib/api";
+import { auth } from "../lib/firebase";
 
 interface AuthContextType {
   currentUser: User | null;

@@ -1,11 +1,12 @@
-import { useState } from "react";
-import { Layout } from "@/components/layout/Layout";
-import { usePageTitle } from "@/hooks/usePageTitle";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { MessageSquare, Send, Settings, Play, CheckSquare } from "lucide-react";
+import { useState } from "react";
+
+import { Layout } from "@/components/layout/Layout";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 const Calendar = () => {
   usePageTitle("⚡ Activator - Brewra");

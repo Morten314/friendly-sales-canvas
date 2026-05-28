@@ -1,10 +1,11 @@
+import { ArrowRight, LogOut } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTenant } from "../contexts/TenantContext";
-import { useAuth } from "../contexts/AuthContext";
+
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { ArrowRight, LogOut } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import { useTenant } from "../contexts/TenantContext";
 
 const TenantSelection: React.FC = () => {
   const { availableTenants, selectTenant, setAvailableTenants, clearTenant } = useTenant();

@@ -1,8 +1,10 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Bot } from "lucide-react";
 import { useState, useEffect } from "react";
+
 import { EmergingTrendsDrawer } from "./EmergingTrendsDrawer";
+
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface EmergingTrend {
   trend: string;

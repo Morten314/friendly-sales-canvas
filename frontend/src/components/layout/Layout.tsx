@@ -19,8 +19,9 @@
 //   );
 // }
 
-import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
+import { Sidebar } from "./Sidebar";
+
 import { Toaster } from "@/components/ui/toaster";
 
 interface LayoutProps {

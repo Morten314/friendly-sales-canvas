@@ -1,13 +1,12 @@
+import { Loader2, Mail, Lock, Building2 } from "lucide-react";
 import React, { useState } from "react";
-import { useAuth } from "../contexts/AuthContext";
-import { useTenant } from "../contexts/TenantContext";
 import { useNavigate } from "react-router-dom";
-import { auth } from "../lib/firebase";
+
+import { Alert, AlertDescription } from "../components/ui/alert";
 import { Button } from "../components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { Alert, AlertDescription } from "../components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -15,8 +14,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
+import { useAuth } from "../contexts/AuthContext";
+import { useTenant } from "../contexts/TenantContext";
 import { useToast } from "../hooks/use-toast";
-import { Loader2, Mail, Lock, Building2 } from "lucide-react";
+import { auth } from "../lib/firebase";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");

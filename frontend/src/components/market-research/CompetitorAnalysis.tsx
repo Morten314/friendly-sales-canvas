@@ -1,3 +1,9 @@
+import { BarChart3, Bot } from "lucide-react";
+import { useState } from "react";
+
+import { CompetitorAnalysisDrawer } from "./CompetitorAnalysisDrawer";
+
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -7,10 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { BarChart3, Bot } from "lucide-react";
-import { useState } from "react";
-import { CompetitorAnalysisDrawer } from "./CompetitorAnalysisDrawer";
 
 interface Market {
   name: string;

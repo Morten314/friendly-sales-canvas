@@ -3,6 +3,7 @@
 // case tolerance. No color mapping or sort order in the file itself — those
 // helpers live in consumer components and will be tested at extraction time.
 import { describe, expect, it } from "vitest";
+
 import {
   extractMarketScoreRowsFromResponse,
   heatmapLeadFromUnknownRow,

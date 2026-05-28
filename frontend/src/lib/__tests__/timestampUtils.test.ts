@@ -1,6 +1,7 @@
 // Spec 15 §3.3 — characterization for src/lib/timestampUtils.ts.
 // Covers all 4 exported functions on representative inputs and edge cases.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import {
   getCurrentUTCTimestamp,
   isTimestampNewer,

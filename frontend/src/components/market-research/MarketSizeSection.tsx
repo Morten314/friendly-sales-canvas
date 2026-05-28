@@ -1,4 +1,3 @@
-import React, { useState, useEffect, useRef } from "react";
 import {
   BarChart3,
   Bot,
@@ -15,18 +14,21 @@ import {
   ChevronUp,
   Check,
 } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+
+import type { EditRecord } from "./types";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import MiniLineChart from "@/components/ui/MiniLineChart";
+import MiniPieChart from "@/components/ui/MiniPieChart";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useToast } from "@/hooks/use-toast";
-import MiniPieChart from "@/components/ui/MiniPieChart";
-import MiniLineChart from "@/components/ui/MiniLineChart";
-import { EditRecord } from "./types";
-import { executeWithRateLimit } from "@/lib/rateLimitManager";
-import { apiFetchJson } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { apiFetchJson } from "@/lib/api";
+import { executeWithRateLimit } from "@/lib/rateLimitManager";
 import { setUserLocalStorage } from "@/utils/cacheUtils";
 
 interface MarketSizeSectionProps {

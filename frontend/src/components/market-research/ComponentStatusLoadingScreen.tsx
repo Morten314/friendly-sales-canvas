@@ -1,4 +1,3 @@
-import React from "react";
 import {
   CheckCircle,
   XCircle,
@@ -10,9 +9,11 @@ import {
   Shield,
   X,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import React from "react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface ComponentStatus {
   name: string;

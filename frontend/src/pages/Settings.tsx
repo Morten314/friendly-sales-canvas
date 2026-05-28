@@ -67,8 +67,14 @@
 
 // export default Settings;
 
+import { Edit, Save } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+
 import { Layout } from "@/components/layout/Layout";
+import { AgentProfile } from "@/components/settings/AgentProfile";
+import { CompanyProfile } from "@/components/settings/CompanyProfile";
+import { UserProfile } from "@/components/settings/UserProfile";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -76,11 +82,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { CompanyProfile } from "@/components/settings/CompanyProfile";
-import { UserProfile } from "@/components/settings/UserProfile";
-import { AgentProfile } from "@/components/settings/AgentProfile";
-import { Edit, Save } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Settings = () => {

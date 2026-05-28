@@ -1,11 +1,3 @@
-import React, { useState, useEffect } from "react";
-import { Layout } from "@/components/layout/Layout";
-import { usePageTitle } from "@/hooks/usePageTitle";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import {
   FileText,
   TrendingUp,
@@ -24,6 +16,15 @@ import {
   Mail,
   Satellite,
 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+
+import { Layout } from "@/components/layout/Layout";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface ArtefactItem {
   id: string;

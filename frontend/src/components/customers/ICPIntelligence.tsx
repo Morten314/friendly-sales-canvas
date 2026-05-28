@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+
 import { SuggestedICPCards } from "./SuggestedICPCards";
+
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SuggestedICP {
   id: string;

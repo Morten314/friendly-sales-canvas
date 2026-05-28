@@ -1,4 +1,3 @@
-import React, { useState, useEffect, useRef, useReducer } from "react";
 import {
   BarChart3,
   Bot,
@@ -13,11 +12,12 @@ import {
   Loader2,
   Check,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
+import React, { useState, useEffect, useRef, useReducer } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import MiniLineChart from "@/components/ui/MiniLineChart";
 import {
   Table,
   TableBody,
@@ -26,11 +26,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useToast } from "@/hooks/use-toast";
-
-import MiniLineChart from "@/components/ui/MiniLineChart";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
 
 interface EditRecord {

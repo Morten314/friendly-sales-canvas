@@ -1,3 +1,9 @@
+import { BarChart3, Edit3, Save, X } from "lucide-react";
+import { useState, useEffect } from "react";
+
+import { AIPromptingInterface } from "./AIPromptingInterface";
+
+import { Button } from "@/components/ui/button";
 import {
   Drawer,
   DrawerClose,
@@ -7,12 +13,8 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { BarChart3, Edit3, Save, X } from "lucide-react";
-import { AIPromptingInterface } from "./AIPromptingInterface";
-import { useState, useEffect } from "react";
 
 interface Market {
   name: string;
