@@ -120,7 +120,7 @@ Must be green for merge.
 
 1. **Step 0 re-baseline numbers (§7.1):** captured at execution start by Task 1 — the plan describes the procedure, not the numbers.
 2. **Wave A split decisions per area (§7.2):** ascending file-count within an area; if `prettier --write <area>` produces a diff >250 line-changes, split by sub-folder (next directory level down) or by file group (≤30 files per sub-commit). See Task 3.prep.
-3. **Wave B batching decisions (§7.3):** auto-fix runs as **one combined `eslint --fix` sweep** producing a single commit, *unless* the total diff exceeds 500 line-changes (`insertions + deletions`), in which case the executor splits per-rule by reverting and re-applying with `--rule '<rule>: error'` per rule. Default is combined; split is the exception. This sidesteps ESLint v9 flat-config `--rule` flag uncertainty for the common case. Manual mechanical residue commits **group by area** (not by rule) following Wave A's order. See Task 4.prep.
+3. **Wave B batching decisions (§7.3):** auto-fix runs as **one combined `eslint --fix` sweep** producing a single commit, *unless* the total diff exceeds 500 line-changes (`insertions + deletions`), in which case the executor splits per-rule by reverting and re-applying with `--rule '<rule>: error'` per rule. Default is combined; split is the exception. **This overrides the spec §4 Step 3's implicit per-rule default**, exchanging finer commit-grain for execution-time simplicity and removing the ESLint v9 `--rule` flag uncertainty for the common case (diff ≤500). Spec §7.3 explicitly defers batching to plan stage. Manual mechanical residue commits **group by area** (not by rule) following Wave A's order. See Task 4.prep.
 4. **Wave C within-pages ordering (§7.4):** ascending error count from the Step 0 probe JSON; alphabetical tiebreak. See Task 5.prep.
 5. **Wave D `checksVoidReturn` decision (§7.5):** **defer to Step 0 probe count**. If Step 0 surfaces ≥10 `no-misused-promises` violations in JSX-attribute contexts (counted as violations where the diagnostic message mentions `JSX attribute` or the location is a JSX attribute), Wave D's first commit (`Task 6.JSX-decision`) edits the `eslint.config.js` to add `"@typescript-eslint/no-misused-promises": ["error", { checksVoidReturn: { attributes: false } }]`. Otherwise the rule stays at default. Decision is recorded in the Step 6 scorecard.
 6. **`build-lint-probe.ts` location (§7.6):** **sibling script** under `frontend/scripts/build-lint-probe.ts` (not an extension of `build-strict-probe.ts`). Reason: distinct responsibility — the lint probe invokes `eslint`, `prettier`, and `find`, parses JSON output, writes 4 artifacts. Mixing surfaces with the strict-TS probe increases maintenance drag. The probe is implemented from scratch (no shared utilities needed beyond Node `fs`/`path`/`child_process`). Lifecycle: **kept permanently** as project tooling (re-runnable for future ESLint config audits), same precedent as Phase 2a's `build-strict-probe.ts`.
@@ -141,7 +141,6 @@ Must be green for merge.
 - `docs/audits/2026-05-28-frontend-phase-2b-lint-probe.txt` — Step 0 raw `eslint .` output.
 - `docs/audits/2026-05-28-frontend-phase-2b-prettier-probe.txt` — Step 0 `prettier --check .` output.
 - `docs/audits/2026-05-28-frontend-phase-2b-area-tree.txt` — Step 0 directory enumeration (input for Wave C ordering validation).
-- `docs/audits/2026-05-28-post-wave-a-frontend-phase-2b-lint-probe.{json,txt}` — Task 3.end inter-wave re-probe (sanity check; Wave A is pure formatting so the eslint surface should be ~unchanged).
 - `docs/audits/2026-05-28-post-wave-b-frontend-phase-2b-lint-probe.{json,txt}` — Task 4.end inter-wave re-probe (input for Wave C's prep script — drives per-file ordering for `no-explicit-any` + `no-unsafe-*`).
 - `docs/audits/2026-05-28-post-wave-c-frontend-phase-2b-lint-probe.{json,txt}` — Task 5.end inter-wave re-probe (input for Wave D's prep script — drives per-file ordering for `no-floating-promises`, `no-misused-promises`, `exhaustive-deps`).
 - `frontend/.prettierrc` — Prettier config per Spec 18 §3.1.
@@ -430,10 +429,13 @@ Create the file with this exact content:
  * Usage (run from frontend/):
  *   npx tsx scripts/build-lint-probe.ts [--date YYYY-MM-DD] [--prefix LABEL]
  *
- * --prefix is used by inter-wave re-probes (e.g., --prefix post-wave-a).
+ * --prefix is used by inter-wave re-probes (e.g., --prefix post-wave-b for
+ * Task 4.end's Wave-B-end re-probe).
  * If --date is omitted, defaults to today's UTC date.
  *
- * Spec 18 §4 Step 0 / Task 3.end / Task 4.end / Task 5.end.
+ * Spec 18 §4 Step 0 / Task 4.end / Task 5.end. (Wave A end-of-wave does
+ * not run a committed re-probe — post-Wave-A re-probing is optional
+ * local-only sanity, per synthesis-2 M1.)
  */
 
 import { execFileSync, execSync } from "node:child_process";
@@ -1629,15 +1631,15 @@ Expected: a subset of `vite.config.ts`, `tailwind.config.ts`, `postcss.config.js
 
 - [ ] **Step 2: Apply Prettier**
 
-Substitute the actual config file list from Step 1 into the command:
+Uses command substitution to feed Step 1's `ls` output directly to `prettier --write`, avoiding manual filename construction:
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
-# Replace <config-files> with the actual list from Step 1, e.g.:
-#   vite.config.ts tailwind.config.ts postcss.config.js playwright.config.ts vitest.config.ts
-npx prettier --write e2e/ scripts/ <config-files>
+npx prettier --write e2e/ scripts/ $(ls *.config.* 2>/dev/null)
 git diff --shortstat
 ```
+
+If `ls *.config.* 2>/dev/null` returns nothing (no root configs match the pattern), the command degrades to `npx prettier --write e2e/ scripts/` which is still correct.
 
 - [ ] **Step 3: Gate checks + commit**
 
@@ -1660,10 +1662,8 @@ EOF
 
 **Files:**
 - Modify: `brewra-gtm-intelligence/.git-blame-ignore-revs` (append all Wave A SHAs)
-- Create: `docs/audits/2026-05-28-post-wave-a-frontend-phase-2b-lint-probe.{json,txt}` (sanity re-probe)
-- Create: `docs/audits/2026-05-28-post-wave-a-frontend-phase-2b-prettier-probe.txt`
 
-Two commits: (1) `.git-blame-ignore-revs` aggregation, (2) post-Wave-A re-probe artifacts.
+One commit: `.git-blame-ignore-revs` aggregation. No post-Wave-A re-probe is committed — Wave A is pure formatting (posture rule 8), so the eslint surface from Step 0's probe remains the authoritative input for Wave B (any incidental `import-x/order` resolution from Prettier reordering imports surfaces during Wave B's combined `eslint --fix` sweep as smaller-than-expected diff, which is benign).
 
 - [ ] **Step 1: Collect Wave A SHAs**
 
@@ -1742,35 +1742,7 @@ EOF
 )"
 ```
 
-- [ ] **Step 6: Run post-Wave-A re-probe (sanity check; informational)**
-
-```bash
-cd /projects/Brewra/brewra-gtm-intelligence/frontend
-npx tsx scripts/build-lint-probe.ts --date 2026-05-28 --prefix post-wave-a
-```
-
-Expected: total problems should be ~unchanged from Step 0 (Prettier reformatting shouldn't move ESLint counts much; some `import-x/order` violations may resolve if Prettier reordered imports). Note any movement.
-
-- [ ] **Step 7: Commit the re-probe artifacts**
-
-```bash
-cd /projects/Brewra/brewra-gtm-intelligence
-git add docs/audits/2026-05-28-post-wave-a-frontend-phase-2b-lint-probe.json \
-        docs/audits/2026-05-28-post-wave-a-frontend-phase-2b-lint-probe.txt \
-        docs/audits/2026-05-28-post-wave-a-frontend-phase-2b-prettier-probe.txt
-git commit -m "$(cat <<'EOF'
-chore(audits): phase 2b post-Wave-A lint re-probe
-
-Captures the post-formatting lint surface for Wave B planning. The
-prettier-probe artifact should show zero remaining format violations
-(Wave A end-of-wave verified format:check green); the lint-probe
-captures whether Prettier's reformatting incidentally resolved any
-ESLint violations (e.g., import-x/order if Prettier reordered).
-
-Spec 18 §4 Step 2 end-of-wave.
-EOF
-)"
-```
+**Optional local sanity check (not committed):** the executor may run `npx tsx scripts/build-lint-probe.ts --date 2026-05-28 --prefix post-wave-a` locally to observe whether Prettier's reformatting incidentally resolved any ESLint violations. If run, delete the resulting artifacts before committing — Wave A's commit history stays clean. Wave B's prep (Task 4.prep) reads the Step 0 probe, not a post-Wave-A artifact.
 
 ---
 
@@ -1778,7 +1750,7 @@ EOF
 
 Apply all mechanical lint fixes — both auto-fixable (`eslint --fix`) and small manual ones. Each commit contains only the rule's targeted output (Spec 18 §2.4 posture rule 9). Per-site type fixes go to Wave C; per-site semantic fixes go to Wave D.
 
-### Task 4.prep — Read post-Wave-A re-probe, plan Wave B sub-commits
+### Task 4.prep — Read Step 0 probe, plan Wave B sub-commits
 
 **Files:** none (analysis only).
 
@@ -1788,8 +1760,10 @@ Apply all mechanical lint fixes — both auto-fixable (`eslint --fix`) and small
 cd /projects/Brewra/brewra-gtm-intelligence
 python3 <<'PY'
 import json
-d = json.load(open("docs/audits/2026-05-28-post-wave-a-frontend-phase-2b-lint-probe.json"))
-# Wave B targets:
+d = json.load(open("docs/audits/2026-05-28-frontend-phase-2b-lint-probe.json"))
+# Wave B targets (read from Step 0's authoritative probe; Wave A's pure
+# formatting doesn't materially change the lint surface, so post-Wave-A
+# re-probing is skipped per synthesis-2 M1):
 wave_b_auto_fix = {
     "@typescript-eslint/consistent-type-imports",
     "import-x/order",
@@ -1872,7 +1846,24 @@ git diff src/lib/ | head -50   # sample area; verify changes are import/type-syn
 
 Expected: changes are `import X` → `import type X`, import-block reorderings, `{}` → `object` substitutions, and similar mechanical transforms. No identifier renames, no expression edits, no JSX changes. If logic edits appear, abort the commit and reset (`git checkout -- .`) — `eslint --fix` should never change semantics.
 
-- [ ] **Step 3: Gate checks**
+- [ ] **Step 3: Spot-check for Wave C/D rules incidentally resolved**
+
+`eslint --fix` without `--rule` scoping applies fixes for any auto-fixable rule. Most Wave C rules (`no-explicit-any`, `no-unsafe-*`) and Wave D rules (`no-misused-promises`, `exhaustive-deps`, `rules-of-hooks`) are not auto-fixable. The one exception is `no-floating-promises`, which has a limited auto-fix (prefixes some calls with `void`). If the combined sweep fixed any Wave D `no-floating-promises` sites, the commit body notes it (the resolved sites just don't surface in Wave D's count later — not a posture violation, but worth recording for the impl-review and scorecard).
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence/frontend
+# Surface any Wave D rule patterns in the diff:
+git diff | grep -E '^\+.*\bvoid\s+\w+\(' | head -5    # void prefix indicates no-floating-promises auto-fix
+git diff | grep -cE 'no-floating-promises|no-misused-promises|exhaustive-deps' || echo 0
+# The grep -cE counts diff lines mentioning Wave D rule names. Usually 0
+# (rule names don't appear in the diff itself). A non-zero count usually
+# means an inline disable comment moved or a rule reference in a JSDoc;
+# inspect manually.
+```
+
+Expected: usually no Wave D fix patterns. If `void` prefixes appear in the diff, record the count in the commit body's notes block ("Incidentally resolved N no-floating-promises sites via `void` prefix").
+
+- [ ] **Step 4: Gate checks**
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
@@ -1881,9 +1872,9 @@ npx vitest run
 npm run typecheck
 ```
 
-Expected: all green. Auto-fixes are import/type-syntax-only.
+Expected: all green. Auto-fixes are import/type-syntax-only (plus any `void` prefixes from Step 3).
 
-- [ ] **Step 4: Commit (combined)**
+- [ ] **Step 5: Commit (combined)**
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
@@ -1899,6 +1890,11 @@ one commit (default path per plan stage decision #3):
   per context, Boolean/Number/String/Object → lowercase primitives
 - @typescript-eslint/no-empty-object-type (~3 auto-fixable; manual
   residue handled by Task 4.4)
+
+[If Step 3 surfaced Wave D side-effects, append:]
+Incidentally resolved N @typescript-eslint/no-floating-promises sites
+via `void` prefix (Wave D's count from Step 0 absorbs this; the
+remaining Wave D count is therefore baseline minus N).
 
 Pure mechanical transform (ESLint --fix output verbatim, no manual
 edits — Spec 18 §2.4 posture rule 9). No runtime change.
@@ -2491,6 +2487,8 @@ EOF
 Track progress against the Task 5.prep ordered list. Approximate cadence: 4–8 minutes per individual-file commit, 6–12 minutes per bundled commit.
 
 After every ~10 commits, run `npm run lint 2>&1 | grep -E '(no-explicit-any|no-unsafe-)' | wc -l` to confirm the count is decreasing monotonically.
+
+If the count increases between checks, the most recent commit likely introduced a cascade (e.g., narrowing a type at one site triggered `no-unsafe-*` flags at downstream usages the file-grain commit didn't absorb). Apply the plan header's **Wave C cascade recovery** procedure: revert the offending commit and choose one of (a) tighter fix that doesn't change inferred types downstream, (b) escape-hatch the source via `src/lib/types/escape-hatches.ts`, or (c) abort the file and register a `TD-FE-<n>` deferral. Do not "fix forward" past a cascade — file-grain isolation is the whole point of Wave C's commit shape.
 
 ### Task 5.end — Wave C end-of-wave checkpoint
 
@@ -3157,7 +3155,7 @@ Per Spec 18 §7 open questions:
 Wave-by-wave narrative:
 - Step 0 (2 commits): install deps + lint+prettier probe baseline.
 - Step 1 (1 commit): wire eslint type-aware rules + prettier config + scripts + .git-blame-ignore-revs scaffold.
-- Wave A (<M> commits): Prettier per-area mass-format + .git-blame-ignore-revs aggregation + post-Wave-A re-probe.
+- Wave A (<M> commits): Prettier per-area mass-format + .git-blame-ignore-revs aggregation.
 - Wave B (<K> commits): auto-fix sweeps + manual mechanical residue per area + unused-directives + post-Wave-B re-probe.
 - Wave C (<P> commits): per-file `no-explicit-any` + `no-unsafe-*` cascade fixes + post-Wave-C re-probe.
 - Wave D (<R> commits): per-file semantic fixes + 1 rules-of-hooks restructure.
