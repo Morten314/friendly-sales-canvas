@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,11 +31,11 @@ export function ScoutDeployment() {
   });
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleCheckboxChange = (item: string, checked: boolean) => {
-    setCheckedItems(prev => ({ ...prev, [item]: checked }));
+    setCheckedItems((prev) => ({ ...prev, [item]: checked }));
   };
 
   const handleDeploy = () => {
@@ -51,7 +50,7 @@ export function ScoutDeployment() {
         <p className="text-sm text-blue-700 mb-4">
           Configure Scout for market research and lead generation activities.
         </p>
-        
+
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
@@ -66,7 +65,10 @@ export function ScoutDeployment() {
 
             <div className="space-y-2">
               <Label htmlFor="tone">Communication Tone</Label>
-              <Select value={formData.tone} onValueChange={(value) => handleInputChange("tone", value)}>
+              <Select
+                value={formData.tone}
+                onValueChange={(value) => handleInputChange("tone", value)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select tone" />
                 </SelectTrigger>
@@ -82,7 +84,10 @@ export function ScoutDeployment() {
 
             <div className="space-y-2">
               <Label htmlFor="autonomyLevel">Autonomy Level</Label>
-              <Select value={formData.autonomyLevel} onValueChange={(value) => handleInputChange("autonomyLevel", value)}>
+              <Select
+                value={formData.autonomyLevel}
+                onValueChange={(value) => handleInputChange("autonomyLevel", value)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select autonomy level" />
                 </SelectTrigger>
@@ -96,7 +101,10 @@ export function ScoutDeployment() {
 
             <div className="space-y-2">
               <Label htmlFor="frequency">Check-in Frequency</Label>
-              <Select value={formData.frequency} onValueChange={(value) => handleInputChange("frequency", value)}>
+              <Select
+                value={formData.frequency}
+                onValueChange={(value) => handleInputChange("frequency", value)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select frequency" />
                 </SelectTrigger>
@@ -132,7 +140,7 @@ export function ScoutDeployment() {
                     onCheckedChange={(checked) => handleCheckboxChange(key, checked as boolean)}
                   />
                   <Label htmlFor={key} className="text-sm">
-                    {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                    {key.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())}
                   </Label>
                 </div>
               ))}
