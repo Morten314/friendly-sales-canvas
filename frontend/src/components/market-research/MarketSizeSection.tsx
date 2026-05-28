@@ -1314,7 +1314,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                                if (parsedSegments && typeof parsedSegments === 'object') {
                                  return Object.entries(parsedSegments).map(([name, value], index) => ({
                                    name,
-                                   value: parseInt(value.toString().replace('%', '')),
+                                   value: parseInt(String(value).replace('%', '')),
                                    color: ["#3B82F6", "#10B981", "#8B5CF6", "#F59E0B"][index % 4]
                                  }));
                                }
@@ -1364,7 +1364,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                                 const parsedProjections = JSON.parse(projectionsToUse);
                                 if (parsedProjections && typeof parsedProjections === 'object') {
                                   return Object.entries(parsedProjections).map(([year, value]) => {
-                                    const numericValue = parseFloat(value.toString());
+                                    const numericValue = parseFloat(String(value));
                                     return {
                                       name: year,
                                       value: isNaN(numericValue) ? 100 : numericValue * 100
