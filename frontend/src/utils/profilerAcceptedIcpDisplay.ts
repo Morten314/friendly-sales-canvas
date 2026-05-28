@@ -5,7 +5,37 @@
  * when rendering Mission Control + Profiler Current ICPs.
  */
 
+import type { UntypedProfilerIcpRecord } from "@/lib/types/escape-hatches";
+
 export const PROFILER_ICP_DISPLAY_KEY = (icpId: string) => `profiler_icp_display_${icpId}`;
+
+/**
+ * Untyped backend ICP row. Both API and localStorage shapes are loose records
+ * with mixed snake/camel aliases; callers narrow per-field with `??` defaults
+ * and `Array.isArray` guards.
+ *
+ * The exported merge / build helpers cross into `ICPManager.tsx` and
+ * `SuggestedICPCards.tsx`, which still consume returned fields under
+ * legacy `any` accesses (`merged.primary_region || ...`). Tightening the
+ * return to `unknown` cascades into those call sites; until those callers
+ * are themselves typed (Wave C continues per area), use the
+ * `UntypedProfilerIcpRecord` escape-hatch.
+ */
+type IcpRecord = UntypedProfilerIcpRecord;
+type ApiPayload = Record<string, unknown> | null | undefined;
+
+/** Coerce an unknown to a non-empty string, returning "" otherwise. */
+const asString = (v: unknown): string => (v == null ? "" : String(v));
+/** Pick the first truthy string-coercible value from a list. */
+const firstString = (...vs: unknown[]): string => {
+  for (const v of vs) {
+    const s = asString(v);
+    if (s) return s;
+  }
+  return "";
+};
+/** Narrow unknown array to unknown[] (or empty). */
+const asArray = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 
 export interface ProfilerAcceptedIcpDisplayMeta {
   regions: string[];
@@ -30,14 +60,14 @@ const locationNeedsMetaRegions = (location: string[]): boolean => {
   return location.every((x) => isUnknownPlaceholder(String(x)));
 };
 
-function pickIcpNameFromRecord(icp: any): string {
+function pickIcpNameFromRecord(icp: IcpRecord): string {
   const raw =
-    icp?.name ??
-    icp?.icp_name ??
-    icp?.icpName ??
-    icp?.title ??
-    icp?.display_name ??
-    icp?.displayName;
+    icp.name ??
+    icp.icp_name ??
+    icp.icpName ??
+    icp.title ??
+    icp.display_name ??
+    icp.displayName;
   return raw != null ? String(raw).trim() : "";
 }
 
@@ -45,34 +75,35 @@ function pickIcpNameFromRecord(icp: any): string {
  * Best-effort parse of POST /customer_profile/from_suggested_icp JSON so we can key
  * local display metadata under the persisted profile ICP id (often differs from suggested id).
  */
-export function extractPersistedIcpIdFromSuggestedProfileResponse(res: any): string | undefined {
+export function extractPersistedIcpIdFromSuggestedProfileResponse(res: unknown): string | undefined {
   if (res == null || typeof res !== "object") return undefined;
-  const d = (res as any).data ?? res;
+  const root = res as Record<string, unknown>;
+  const d = (root.data as ApiPayload) ?? root;
   if (d == null || typeof d !== "object") return undefined;
 
   const tryStr = (v: unknown): string | undefined =>
     typeof v === "string" && v.trim() ? v.trim() : undefined;
 
   const direct =
-    tryStr((d as any).icp_id) ??
-    tryStr((d as any).icpId) ??
-    tryStr((d as any).persisted_icp_id) ??
-    tryStr((d as any).customer_profile_icp_id);
+    tryStr(d.icp_id) ??
+    tryStr(d.icpId) ??
+    tryStr(d.persisted_icp_id) ??
+    tryStr(d.customer_profile_icp_id);
   if (direct) return direct;
 
-  const icps = (d as any).icps;
+  const icps = d.icps;
   if (Array.isArray(icps) && icps.length > 0) {
     const last = icps[icps.length - 1];
-    const id = last && typeof last === "object" ? tryStr((last as any).id) : undefined;
+    const id = last && typeof last === "object" ? tryStr((last as Record<string, unknown>).id) : undefined;
     if (id) return id;
   }
 
-  const cp = (d as any).customer_profile ?? (d as any).customer_profiles;
+  const cp = (d.customer_profile ?? d.customer_profiles) as ApiPayload;
   if (cp && typeof cp === "object") {
-    const nested = (cp as any).icps;
+    const nested = (cp as Record<string, unknown>).icps;
     if (Array.isArray(nested) && nested.length > 0) {
       const last = nested[nested.length - 1];
-      const id = last && typeof last === "object" ? tryStr((last as any).id) : undefined;
+      const id = last && typeof last === "object" ? tryStr((last as Record<string, unknown>).id) : undefined;
       if (id) return id;
     }
   }
@@ -115,11 +146,11 @@ export function copyProfilerDisplayMetaToProfileId(
 }
 
 /** True when API stored Profiler placeholders (global + unknown industry). */
-export function isProfilerPlaceholderIcp(icp: any): boolean {
-  const pr = String(icp?.primary_region ?? icp?.primaryRegion ?? "")
+export function isProfilerPlaceholderIcp(icp: IcpRecord): boolean {
+  const pr = String(icp.primary_region ?? icp.primaryRegion ?? "")
     .trim()
     .toLowerCase();
-  const ind = Array.isArray(icp?.industry) ? icp.industry : [];
+  const ind = Array.isArray(icp.industry) ? icp.industry : [];
   const singleUnknown = ind.length === 1 && String(ind[0]).trim().toLowerCase() === "unknown";
   return pr === "global" && singleUnknown;
 }
@@ -128,16 +159,16 @@ export function isProfilerPlaceholderIcp(icp: any): boolean {
  * Legacy helper: merge only when API used the classic global + unknown placeholder shape.
  * Prefer {@link mergeProfilerAcceptedIcpDisplay} for Customer Profile / Current ICPs.
  */
-export function mergeProfilerAcceptedIcpDisplayIfPlaceholder(icp: any): any {
-  const hasId = icp?.id ?? icp?.icp_id ?? icp?.customer_profile_icp_id;
+export function mergeProfilerAcceptedIcpDisplayIfPlaceholder(icp: IcpRecord): IcpRecord {
+  const hasId = icp.id ?? icp.icp_id ?? icp.customer_profile_icp_id;
   if (!hasId) return icp;
   if (!isProfilerPlaceholderIcp(icp)) return icp;
   return mergeProfilerAcceptedIcpDisplay(icp);
 }
 
 /** Backend GET may return `icp_id` (or aliases) while local merge/display key on `id`. */
-function resolveCustomerProfileIcpId(icp: any): string {
-  const candidates = [icp?.id, icp?.icp_id, icp?.customer_profile_icp_id, icp?.icpId];
+function resolveCustomerProfileIcpId(icp: IcpRecord): string {
+  const candidates = [icp.id, icp.icp_id, icp.customer_profile_icp_id, icp.icpId];
   for (const c of candidates) {
     if (c != null && String(c).trim() !== "") return String(c).trim();
   }
@@ -147,32 +178,36 @@ function resolveCustomerProfileIcpId(icp: any): string {
 /**
  * Merge local accept-time metadata into a customer_profile ICP object (API shape).
  */
-export function mergeProfilerAcceptedIcpDisplay(icp: any): any {
+export function mergeProfilerAcceptedIcpDisplay(icp: IcpRecord): IcpRecord {
   const resolvedId = resolveCustomerProfileIcpId(icp);
   if (!resolvedId) return icp;
-  const icpWithId = icp?.id === resolvedId ? icp : { ...icp, id: resolvedId };
+  const icpWithId: IcpRecord = icp.id === resolvedId ? icp : { ...icp, id: resolvedId };
   let meta: ProfilerAcceptedIcpDisplayMeta | null = null;
   try {
     const raw = localStorage.getItem(PROFILER_ICP_DISPLAY_KEY(resolvedId));
-    if (raw) meta = JSON.parse(raw);
+    if (raw) meta = JSON.parse(raw) as ProfilerAcceptedIcpDisplayMeta;
   } catch {
     return icpWithId;
   }
   if (!meta) return icpWithId;
 
-  const out = { ...icpWithId, id: resolvedId };
+  const out: IcpRecord = { ...icpWithId, id: resolvedId };
   let primaryRegion = String(icpWithId.primary_region || icpWithId.primaryRegion || "");
-  let location = Array.isArray(icpWithId.location) ? [...icpWithId.location] : [];
-  let industry = Array.isArray(icpWithId.industry) ? [...icpWithId.industry] : [];
-  let companySize = Array.isArray(icpWithId.company_size)
-    ? [...icpWithId.company_size]
+  let location: string[] = Array.isArray(icpWithId.location)
+    ? [...(icpWithId.location as string[])]
+    : [];
+  let industry: string[] = Array.isArray(icpWithId.industry)
+    ? [...(icpWithId.industry as string[])]
+    : [];
+  let companySize: string[] = Array.isArray(icpWithId.company_size)
+    ? [...(icpWithId.company_size as string[])]
     : Array.isArray(icpWithId.companySize)
-      ? [...icpWithId.companySize]
+      ? [...(icpWithId.companySize as string[])]
       : [];
-  let buyerRole = Array.isArray(icpWithId.buyer_role)
-    ? [...icpWithId.buyer_role]
+  let buyerRole: string[] = Array.isArray(icpWithId.buyer_role)
+    ? [...(icpWithId.buyer_role as string[])]
     : Array.isArray(icpWithId.buyerRole)
-      ? [...icpWithId.buyerRole]
+      ? [...(icpWithId.buyerRole as string[])]
       : [];
 
   const existingName = pickIcpNameFromRecord(icpWithId);
@@ -247,15 +282,17 @@ export interface SuggestedIcpCardFields {
   segment?: string;
 }
 
-export function extractIcpsArrayFromCustomerProfileResponse(profileData: any): any[] {
-  const data = profileData?.data ?? profileData;
-  if (!data || typeof data !== "object") return [];
-  const arr =
-    (data as any).icps ??
-    (data as any).customer_profiles?.icps ??
-    (data as any).customer_profile?.icps ??
-    [];
-  return Array.isArray(arr) ? arr : [];
+export function extractIcpsArrayFromCustomerProfileResponse(profileData: unknown): IcpRecord[] {
+  const root =
+    profileData && typeof profileData === "object" ? (profileData as Record<string, unknown>) : null;
+  const data =
+    (root?.data && typeof root.data === "object" ? (root.data as Record<string, unknown>) : null) ??
+    root;
+  if (!data) return [];
+  const profilesPlural = data.customer_profiles as Record<string, unknown> | undefined;
+  const profileSingular = data.customer_profile as Record<string, unknown> | undefined;
+  const arr = data.icps ?? profilesPlural?.icps ?? profileSingular?.icps ?? [];
+  return Array.isArray(arr) ? (arr as IcpRecord[]) : [];
 }
 
 /**
@@ -263,9 +300,9 @@ export function extractIcpsArrayFromCustomerProfileResponse(profileData: any): a
  * Matches what users get when adding an ICP manually in Mission Control.
  */
 export function mergeSuggestedIntoCustomerProfileApiRow(
-  existing: any,
+  existing: IcpRecord,
   suggested: SuggestedIcpCardFields,
-): any {
+): IcpRecord {
   const regions = Array.isArray(suggested.regions) ? suggested.regions : [];
   const primary = regions[0] || existing.primary_region || existing.primaryRegion || "";
   const fit =
@@ -305,10 +342,10 @@ export function mergeSuggestedIntoCustomerProfileApiRow(
 }
 
 /** Same POST body shape as ICPManager `saveCustomerProfileToBackend`. */
-export function buildCustomerProfileSavePayload(icps: any[], orgId: string) {
+export function buildCustomerProfileSavePayload(icps: IcpRecord[], orgId: string) {
   return {
     org_id: orgId,
-    icps: icps.map((row: any) => ({
+    icps: icps.map((row: IcpRecord) => ({
       id: row.id ?? row.icp_id,
       primary_region: row.primary_region ?? row.primaryRegion ?? "",
       location: Array.isArray(row.location) ? row.location : [],
@@ -344,43 +381,58 @@ export function buildCustomerProfileSavePayload(icps: any[], orgId: string) {
   };
 }
 
+/**
+ * Mapped ICP shape returned to localStorage `customerProfile`. Aligns 1:1 with
+ * ICPManager's local `ICP` interface, so the same array also flows into the
+ * SuggestedICPCards display projection (`name`, `geography`, …).
+ */
+export interface MappedStoredIcp {
+  id: string;
+  primaryRegion: string;
+  location: unknown[];
+  industry: unknown[];
+  companySize: unknown[];
+  buyerRole: unknown[];
+  accountsOnWatchlist: unknown[];
+  accountsToAvoid: unknown[];
+  fitConfidence: string;
+  additionalContext: string;
+  status: string;
+  createdAt: Date;
+}
+
 /** Aligns with ICPManager `loadCustomerProfileFromBackend` → localStorage `customerProfile`. */
-export function mapCustomerProfileApiRowsToStoredIcps(icpsData: any[]): any[] {
-  return icpsData.map((icp: any) => {
+export function mapCustomerProfileApiRowsToStoredIcps(icpsData: IcpRecord[]): MappedStoredIcp[] {
+  return icpsData.map((icp: IcpRecord): MappedStoredIcp => {
     const merged = mergeProfilerAcceptedIcpDisplay(icp);
+    const createdAtRaw = merged.created_at ?? merged.createdAt;
+    const createdAt =
+      createdAtRaw instanceof Date
+        ? createdAtRaw
+        : typeof createdAtRaw === "string" || typeof createdAtRaw === "number"
+          ? new Date(createdAtRaw)
+          : new Date();
     return {
-      id: merged.id || merged.icp_id || `icp-${Date.now()}-${Math.random()}`,
-      primaryRegion: merged.primary_region || merged.primaryRegion || "",
-      location: Array.isArray(merged.location) ? merged.location : [],
-      industry: Array.isArray(merged.industry) ? merged.industry : [],
-      companySize: Array.isArray(merged.company_size)
-        ? merged.company_size
-        : Array.isArray(merged.companySize)
-          ? merged.companySize
-          : [],
-      buyerRole: Array.isArray(merged.buyer_role)
-        ? merged.buyer_role
-        : Array.isArray(merged.buyerRole)
-          ? merged.buyerRole
-          : [],
-      accountsOnWatchlist: Array.isArray(merged.accounts_on_watchlist)
-        ? merged.accounts_on_watchlist
-        : Array.isArray(merged.accountsOnWatchlist)
-          ? merged.accountsOnWatchlist
-          : [],
-      accountsToAvoid: Array.isArray(merged.accounts_to_avoid)
-        ? merged.accounts_to_avoid
-        : Array.isArray(merged.accountsToAvoid)
-          ? merged.accountsToAvoid
-          : [],
-      fitConfidence: merged.fit_confidence || merged.fitConfidence || "medium",
-      additionalContext: merged.additional_context || merged.additionalContext || "",
-      status: merged.status || "saved",
-      createdAt: merged.created_at
-        ? new Date(merged.created_at)
-        : merged.createdAt
-          ? new Date(merged.createdAt)
-          : new Date(),
+      id: firstString(merged.id, merged.icp_id) || `icp-${Date.now()}-${Math.random()}`,
+      primaryRegion: firstString(merged.primary_region, merged.primaryRegion),
+      location: asArray(merged.location),
+      industry: asArray(merged.industry),
+      companySize: asArray(merged.company_size).length
+        ? asArray(merged.company_size)
+        : asArray(merged.companySize),
+      buyerRole: asArray(merged.buyer_role).length
+        ? asArray(merged.buyer_role)
+        : asArray(merged.buyerRole),
+      accountsOnWatchlist: asArray(merged.accounts_on_watchlist).length
+        ? asArray(merged.accounts_on_watchlist)
+        : asArray(merged.accountsOnWatchlist),
+      accountsToAvoid: asArray(merged.accounts_to_avoid).length
+        ? asArray(merged.accounts_to_avoid)
+        : asArray(merged.accountsToAvoid),
+      fitConfidence: firstString(merged.fit_confidence, merged.fitConfidence) || "medium",
+      additionalContext: firstString(merged.additional_context, merged.additionalContext),
+      status: firstString(merged.status) || "saved",
+      createdAt,
     };
   });
 }

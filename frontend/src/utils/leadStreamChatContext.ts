@@ -40,8 +40,16 @@ const SUGGESTED_MULTI_LEAD: string[] = [
   "How do these align with our ICP?",
 ];
 
+/** Minimal shape consumed by buildLeadStreamChatContext — anything extra is ignored. */
+interface LeadInput {
+  name?: string;
+  company?: string;
+  industry?: unknown;
+  source?: unknown;
+}
+
 export function buildLeadStreamChatContext(
-  leads: any[],
+  leads: LeadInput[],
   reportFilter?: string,
 ): LeadStreamChatContext {
   const segmentPrompt =

@@ -8,7 +8,7 @@ interface ApiCallOptions {
   componentName?: string;
 }
 
-interface ApiResponse<T = any> {
+interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -18,9 +18,9 @@ interface ApiResponse<T = any> {
 /**
  * Simple API call function - NO RETRIES, just single attempt
  */
-export const simpleApiCall = async <T = any>(
+export const simpleApiCall = async <T = unknown>(
   endpoint: string,
-  payload: any,
+  payload: unknown,
   options: ApiCallOptions = {},
 ): Promise<ApiResponse<T>> => {
   const { timeout = 30000, componentName = "Unknown" } = options;
@@ -52,7 +52,7 @@ export const simpleApiCall = async <T = any>(
       throw new Error(`HTTP ${response.status}: ${errorText}`);
     }
 
-    const result = await response.json();
+    const result = (await response.json()) as T;
     console.log(`✅ ${componentName} - API call successful`);
 
     return {
@@ -76,7 +76,7 @@ export const simpleApiCall = async <T = any>(
  */
 export const marketResearchApiCall = async (
   componentName: string,
-  payload: any,
+  payload: unknown,
   options: ApiCallOptions = {},
 ): Promise<ApiResponse> => {
   return simpleApiCall("market-research", payload, {
@@ -90,7 +90,7 @@ export const marketResearchApiCall = async (
  */
 export const marketResearchApiCallWithCacheBust = async (
   componentName: string,
-  payload: any,
+  payload: Record<string, unknown>,
   options: ApiCallOptions = {},
 ): Promise<ApiResponse> => {
   // Add cache busting parameters to payload
@@ -125,7 +125,15 @@ export const shouldUseCachedData = (apiResponse: ApiResponse, refresh: boolean):
 export const logApiCallResult = (componentName: string, result: ApiResponse, refresh: boolean) => {
   if (result.success) {
     console.log(`✅ ${componentName} - API call successful, data received`);
-    if (result.data?.status === "success" && result.data?.data) {
+    const data = result.data;
+    const hasValidShape =
+      typeof data === "object" &&
+      data !== null &&
+      "status" in data &&
+      (data as { status: unknown }).status === "success" &&
+      "data" in data &&
+      Boolean((data as { data: unknown }).data);
+    if (hasValidShape) {
       console.log(`📊 ${componentName} - Valid data structure received`);
     } else {
       console.warn(`⚠️ ${componentName} - Unexpected data structure:`, result.data);
@@ -174,11 +182,11 @@ export const isDataFresh = (timestamp: string | number | Date | null | undefined
 /**
  * Force fresh data by clearing cache and making new API call
  */
-export const forceFreshData = async (
+export const forceFreshData = async <T = unknown>(
   componentName: string,
-  apiCall: () => Promise<any>,
+  apiCall: () => Promise<T>,
   localStorageKey?: string,
-): Promise<any> => {
+): Promise<T> => {
   console.log(`🔄 ${componentName} - Forcing fresh data...`);
 
   // Clear localStorage cache if key provided

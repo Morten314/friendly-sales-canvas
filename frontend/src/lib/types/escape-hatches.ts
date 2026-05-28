@@ -51,3 +51,13 @@ export type UntypedRegionData = any;
 // — MarketEntry report-section array items (executiveSummary lines, entryBarriers,
 //   competitiveDifferentiation, strategicRecommendations, riskAssessment) shaped by untyped backend payload.
 export type UntypedReportSection = any;
+
+// TODO(phase-13): replace with the customer_profile ICP contract once backend types
+// it. The shape mixes snake/camel aliases (`primary_region` vs `primaryRegion`,
+// `company_size` vs `companySize`, etc.) and is consumed by `mergeProfilerAcceptedIcpDisplay`,
+// `buildCustomerProfileSavePayload`, and friends — plus their callers in
+// `src/components/mission-control/ICPManager.tsx` and
+// `src/components/customers/SuggestedICPCards.tsx`. Tightening to
+// `Record<string, unknown>` requires typing those call-site `merged.X || merged.Y`
+// patterns first.
+export type UntypedProfilerIcpRecord = any;
