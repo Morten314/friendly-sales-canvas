@@ -12,7 +12,7 @@ import { EditRecord } from './types';
 import { executeWithRateLimit } from '@/lib/rateLimitManager';
 import { apiFetchJson } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserLocalStorage, setUserLocalStorage, removeUserLocalStorage } from '@/utils/cacheUtils';
+import { getUserLocalStorage, setUserLocalStorage } from '@/utils/cacheUtils';
 
 interface MarketSizeSectionProps {
   isEditing: boolean;
@@ -62,7 +62,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   isEditing,
   isSplitView,
   isExpanded,
-  hasEdits,
+  hasEdits: _hasEdits,
   deletedSections,
   editHistory,
   executiveSummary,
@@ -108,8 +108,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   
   // API data fetching state
   const [isLoadingData, setIsLoadingData] = useState(false);
-  const [errorData, setErrorData] = useState<string | null>(null);
-  const [marketSizeData, setMarketSizeData] = useState<any>(null);
+  const [_errorData, setErrorData] = useState<string | null>(null);
+  const [_marketSizeData, setMarketSizeData] = useState<any>(null);
 
   // Local editing state for inline editing - initialize once and keep values
   const [localExecutiveSummary, setLocalExecutiveSummary] = useState(executiveSummary || '');
@@ -121,8 +121,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   const [localMarketDrivers, setLocalMarketDrivers] = useState<string[]>(marketDrivers || []);
   const [localMarketSizeBySegment, setLocalMarketSizeBySegment] = useState<Record<string, string>>(marketSizeBySegment || {});
   const [localGrowthProjections, setLocalGrowthProjections] = useState<Record<string, string>>(growthProjections || {});
-  const [localError, setLocalError] = useState<string | null>(null);
-  
+
   // Track if we just saved to prevent useEffect from overwriting our changes
   const justSavedRef = useRef(false);
   const savedLocalStateRef = useRef<{
@@ -138,12 +137,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   // Debug logging for state changes removed
 
   const { toast } = useToast();
-
-  // Handle section delete
-  const handleSectionDelete = () => {
-    // Implementation for section deletion
-    onDeleteSection('market-size');
-  };
 
   const handleModify = () => {
     onToggleEdit();
@@ -329,12 +322,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         growthProjections: localGrowthProjections
       };
 
-      const editData = {
-        original_json: originalData,
-        modified_json: modifiedData,
-        edit_type: "modification"
-      };
-
       console.log('📤 Market Size - original_json:', originalData);
       console.log('📤 Market Size - modified_json:', modifiedData);
 
@@ -424,37 +411,12 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
     }
   };
 
-  const fetchUpdatedData = async () => {
-    if (!currentUser?.uid) {
-      console.error('User not authenticated');
-      return;
-    }
-    try {
-      const data = await executeWithRateLimit(
-        () => apiFetchJson('market-research', {
-          method: 'POST',
-          body: { component_name: "market_size", org_id: orgIdToUse }
-        }),
-        'Market Size Update'
-      );
-      // The parent component should handle updating the data
-      if (onRefresh) {
-        onRefresh();
-      }
-    } catch (error) {
-      console.error('Error fetching updated data:', error);
-    }
-  };
-
   // Fetch Market Size data from API
   const fetchMarketSizeData = async (refresh = false) => {
     try {
       setIsLoadingData(true);
       setErrorData(null);
 
-      // Get company profile data for dynamic reports (user-specific)
-      const profile = companyProfile || JSON.parse(getUserLocalStorage('companyProfile', currentUser?.uid) || '{}');
-      
       if (!currentUser?.uid) {
         console.error('User not authenticated');
         setErrorData('User not authenticated');

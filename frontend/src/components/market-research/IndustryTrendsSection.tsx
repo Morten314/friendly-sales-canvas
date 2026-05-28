@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useToast } from '@/hooks/use-toast';
 import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
-import { toUTCTimestamp, isTimestampNewer, getCurrentUTCTimestamp, logTimestampComparison } from '@/lib/timestampUtils';
+import { toUTCTimestamp, getCurrentUTCTimestamp } from '@/lib/timestampUtils';
 import { executeWithRateLimit } from '@/lib/rateLimitManager';
 import { apiFetchJson } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -106,7 +106,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   isIndustryTrendsEditing,
   isSplitView,
   industryTrendsExpanded,
-  industryTrendsHasEdits,
+  industryTrendsHasEdits: _industryTrendsHasEdits,
   industryTrendsDeletedSections,
   industryTrendsEditHistory,
   onIndustryTrendsToggleEdit,
@@ -283,9 +283,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       const currentTime = Date.now();
       const randomId = Math.random().toString(36).substring(7);
       
-      // Get company profile data for dynamic reports (user-specific)
-      const profile = companyProfile || JSON.parse(getUserLocalStorage('companyProfile', currentUser?.uid) || '{}');
-      
       if (!currentUser?.uid) {
         console.error('User not authenticated');
         setError('User not authenticated');
@@ -306,8 +303,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         data: {}
       };
 
-      const requestTimestamp = Date.now();
-      
       const result = await executeWithRateLimit(
         () => apiFetchJson('market-research', {
           method: 'POST',
@@ -322,25 +317,17 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         // Convert timestamps to UTC for comparison  
         const currentTimestampUTC = toUTCTimestamp(industryTrendsData?.timestamp);
         const newTimestampUTC = toUTCTimestamp(reportData.timestamp);
-        const requestTimeUTC = getCurrentUTCTimestamp();
-        
-        
         // Determine if we should update
         let shouldUpdate = false;
-        let updateReason = '';
-        
+
         if (!currentTimestampUTC) {
           shouldUpdate = true;
-          updateReason = 'No existing timestamp - first load';
         } else if (!newTimestampUTC) {
           shouldUpdate = false;
-          updateReason = 'Invalid new timestamp';
         } else if (newTimestampUTC > currentTimestampUTC) {
           shouldUpdate = true;
-          updateReason = 'Swagger data is newer';
         } else {
           shouldUpdate = false;
-          updateReason = 'Current data is up to date or newer';
         }
         
         if (shouldUpdate) {
@@ -538,13 +525,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         visualCharts: editVisualCharts
       };
 
-      // Prepare data for API according to schema
-      const editData = {
-        original_json: originalData,
-        modified_json: modifiedData,
-        edit_type: "modification"
-      };
-
       // Store data for /ask API
       localStorage.setItem('industry-trends_original_json', JSON.stringify(originalData));
       localStorage.setItem('industry-trends_modified_json', JSON.stringify(modifiedData));
@@ -661,26 +641,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       title: "Saved",
       description: "Visual Charts changes committed.",
     });
-  };
-
-  const fetchUpdatedData = async () => {
-    try {
-      const response = await executeWithRateLimit(
-        () => fetch('/api/market-research', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ component_name: "industry_trends", org_id: orgIdToUse })
-        }),
-        'Industry Trends Update'
-      );
-      if (response.ok) {
-        const data = await response.json();
-        // Refresh the data if needed
-        fetchIndustryTrendsData(false);
-      }
-    } catch (error) {
-      console.error('Error fetching updated data:', error);
-    }
   };
 
   // Show loading state only if we don't have props data and we're not refreshing

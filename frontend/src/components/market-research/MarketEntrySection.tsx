@@ -1977,7 +1977,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { EditRecord } from './types';
-import { toUTCTimestamp, isTimestampNewer } from '@/lib/timestampUtils';
 import { executeWithRateLimit } from '@/lib/rateLimitManager';
 import { apiFetchJson } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -2027,7 +2026,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   isExpanded,
   hasEdits,
   deletedSections,
-  editHistory,
+  editHistory: _editHistory,
   executiveSummary,
   entryBarriers,
   recommendedChannel,
@@ -2061,7 +2060,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [_error, setError] = useState<string | null>(null);
   const [marketEntryData, setMarketEntryData] = useState<any>(null);
   // Use ref to track if we have API data to prevent props from overwriting it
   const hasApiDataRef = useRef(false);
@@ -2106,9 +2105,6 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       setIsLoading(true);
       setError(null);
 
-      // Get company profile data for dynamic reports (user-specific)
-      const profile = companyProfile || JSON.parse(getUserLocalStorage('companyProfile', currentUser?.uid) || '{}');
-      
       if (!currentUser?.uid) {
         console.error('User not authenticated');
         setError('User not authenticated');
@@ -2334,8 +2330,6 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
     const needsInitialData = !hasLocalData && (!hasPropsData || isReceivingFallbackData);
     
     if (needsInitialData || needsSwotData) {
-      const reason = needsInitialData ? 'No data found' : 'Missing SWOT data';
-      
       // Mark that we're trying to fetch SWOT if that's the reason
       if (needsSwotData) {
         hasTriedSwotFetchRef.current = true;
@@ -2483,52 +2477,6 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
     onToggleEdit();
   };
 
-  const handleMarketEntrySaveChanges = () => {
-    
-    // Apply local edits to parent state
-    onExecutiveSummaryChange(editExecutiveSummary);
-    onEntryBarriersChange(editEntryBarriers);
-    onRecommendedChannelChange(editRecommendedChannel);
-    onTimeToMarketChange(editTimeToMarket);
-    onTopBarrierChange(editTopBarrier);
-    onCompetitiveDifferentiationChange(editCompetitiveDifferentiation);
-    onStrategicRecommendationsChange(editStrategicRecommendations);
-    onRiskAssessmentChange(editRiskAssessment);
-    
-    // Log original and modified JSON for debugging
-    const originalJson = {
-      executiveSummary: displayData.executiveSummary || '',
-      entryBarriers: displayData.entryBarriers || [],
-      recommendedChannel: displayData.recommendedChannel || '',
-      timeToMarket: displayData.timeToMarket || '',
-      topBarrier: displayData.topBarrier || '',
-      competitiveDifferentiation: displayData.competitiveDifferentiation || [],
-      strategicRecommendations: displayData.strategicRecommendations || [],
-      riskAssessment: displayData.riskAssessment || [],
-      swotAnalysis: displayData.swotAnalysis || {
-        strengths: ['Strong tech platform'],
-        weaknesses: ['Limited local presence'],
-        opportunities: ['Growing market'],
-        threats: ['Regulatory changes']
-      }
-    };
-
-    const modifiedJson = {
-      executiveSummary: editExecutiveSummary,
-      entryBarriers: editEntryBarriers,
-      recommendedChannel: editRecommendedChannel,
-      timeToMarket: editTimeToMarket,
-      topBarrier: editTopBarrier,
-      competitiveDifferentiation: editCompetitiveDifferentiation,
-      strategicRecommendations: editStrategicRecommendations,
-      riskAssessment: editRiskAssessment,
-      swotAnalysis: editSwotAnalysis
-    };
-
-
-    onSaveChanges();
-  };
-
   // Handle save changes with API integration
   const handleMarketEntryFullSaveChanges = async () => {
     try {
@@ -2564,13 +2512,6 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
         strategicRecommendations: editStrategicRecommendations,
         riskAssessment: editRiskAssessment,
         swotAnalysis: editSwotAnalysis
-      };
-
-      // Prepare data for API according to schema
-      const editData = {
-        original_json: originalData,
-        modified_json: modifiedData,
-        edit_type: "modification"
       };
 
       console.log('📤 Market Entry - original_json:', originalData);
@@ -2811,10 +2752,6 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
     swotAnalysis: finalSwotData || undefined
   };
   
-  
-  // Check if we're showing fallback data (the "being prepared" message)
-  const isShowingFallbackData = displayData.executiveSummary?.includes('being prepared') || 
-                                displayData.executiveSummary?.includes('Market entry analysis is being prepared');
   
   const hasData = displayData.executiveSummary || displayData.entryBarriers?.length > 0 || displayData.recommendedChannel || displayData.timeToMarket || displayData.topBarrier || displayData.competitiveDifferentiation?.length > 0 || displayData.strategicRecommendations?.length > 0 || displayData.riskAssessment?.length > 0;
 
