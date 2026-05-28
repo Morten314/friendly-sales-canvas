@@ -1,7 +1,7 @@
 # Spec 18 — Frontend Phase 2b: ESLint type-aware + Prettier
 
-**Status:** Design — round 1
-**Date:** 2026-05-28
+**Status:** Design — round 2 (round 1 review synthesized at `docs/reviews/18-frontend-phase-2b-eslint-prettier-design-spec-synthesis-1.md`)
+**Date:** 2026-05-28 (round 1), 2026-05-28 (round 2 revisions)
 **Type:** Phase spec (descendant of `specs/14-frontend-refactoring-master-plan-design.md` §4 Phase 2b)
 **Paired plan:** `plans/18-frontend-phase-2b-eslint-prettier.md` (written next)
 
@@ -13,7 +13,7 @@
 
 Land ESLint type-aware rules + Prettier across the frontend in one short-lived branch. By end of phase:
 
-- `frontend/eslint.config.js` enables the five mandated rules from master spec §4 Phase 2b: `@typescript-eslint/no-explicit-any`, `@typescript-eslint/no-unused-vars`, `@typescript-eslint/consistent-type-imports`, `@typescript-eslint/no-floating-promises`, `@typescript-eslint/no-misused-promises`. Plus `import/order` from `eslint-plugin-import` and stylistic-rule disabling via `eslint-config-prettier` applied last.
+- `frontend/eslint.config.js` enables the five mandated rules from master spec §4 Phase 2b: `@typescript-eslint/no-explicit-any`, `@typescript-eslint/no-unused-vars`, `@typescript-eslint/consistent-type-imports`, `@typescript-eslint/no-floating-promises`, `@typescript-eslint/no-misused-promises`. Plus `import-x/order` from `eslint-plugin-import-x` (the flat-config-native fork — see §3.1.5) and stylistic-rule disabling via `eslint-config-prettier` applied last.
 - `frontend/.prettierrc` exists with the §3.1 config; `frontend/.prettierignore` excludes build artifacts and snapshots; `.git-blame-ignore-revs` at the **monorepo root** (`brewra-gtm-intelligence/.git-blame-ignore-revs`) accumulates Wave A's mass-format commit SHAs so `git blame` (and GitHub's blame UI) skip them.
 - `npm run lint` (= `eslint . --max-warnings 0`) returns 0 errors and 0 warnings.
 - `npm run format:check` (= `prettier --check .`) returns 0 violations.
@@ -36,13 +36,13 @@ Master spec §4 places Phase 2b immediately after Phase 2a so the lint storm hit
 | `tsconfig.app.json` | Strict: `strict`, `noImplicitAny`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch` all `true` (per Phase 2a) |
 | Current ESLint config | `tseslint.configs.recommended` extended; `eslint-plugin-react-hooks` recommended rules; `react-refresh/only-export-components` as `warn`; `@typescript-eslint/no-unused-vars` explicitly OFF |
 | Current `eslint .` baseline | **392 problems (336 errors, 56 warnings)** under the existing config |
-| Error origin (336) | Predominantly `@typescript-eslint/no-explicit-any` (already in `tseslint.configs.recommended` as `error` — 224 inline `any` sites yield ~330+ violations after counting positions the regex misses); 1× `@typescript-eslint/no-require-imports` in `tailwind.config.ts` |
-| Warning origin (56) | Predominantly `react-refresh/only-export-components` from `src/components/ui/` shadcn primitives; 13× "unused eslint-disable directive" (Phase 2a's strict cleanup obviated some prior `eslint-disable` comments) |
-| Inline `any` count | 224 (`rg -n ':\s*any\b\|as\s+any\b\|<any>' -g '*.ts' -g '*.tsx' src/`). Same regex as Phase 2a §1.3 — excludes multi-argument generics (`Record<string, any>`, `Map<string, any>`) that this phase's `@typescript-eslint/no-explicit-any` lint rule does cover. The ESLint count may exceed 224 once those positions are factored in; Step 0 probe re-measures. |
+| Error origin (336) — verified per-rule | `@typescript-eslint/no-explicit-any` 233 · `no-empty` 46 · `no-useless-escape` 16 · `@typescript-eslint/ban-types` 11 · `@typescript-eslint/no-unsafe-assignment` 9 · `@typescript-eslint/no-unsafe-return` 6 · `@typescript-eslint/no-unsafe-member-access` 3 · `@typescript-eslint/no-empty-object-type` 3 · `@typescript-eslint/no-unused-expressions` 2 · `no-control-regex` 2 · `@typescript-eslint/ban-ts-comment` 2 · `react-hooks/rules-of-hooks` 1 · `no-case-declarations` 1 · `@typescript-eslint/no-require-imports` 1 (in `tailwind.config.ts`). **103 errors come from rules outside the 5 mandated set** — Phase 2b's scope (§2.1) and methodology (§4) cover all of them because `--max-warnings 0` requires it. |
+| Warning origin (56) — verified per-rule | `react-hooks/exhaustive-deps` 35 · unused `eslint-disable` directives 13 · `react-refresh/only-export-components` 8. The dominant warning category is `exhaustive-deps` (62.5%), not `only-export-components` (14%) — Phase 2b's scope (§2.1) addresses both. |
+| Inline `any` count | 224 (`rg -n ':\s*any\b\|as\s+any\b\|<any>' -g '*.ts' -g '*.tsx' src/`). Same regex as Phase 2a §1.3 — excludes multi-argument generics (`Record<string, any>`, `Map<string, any>`) and other positions the ESLint rule catches. The ESLint `no-explicit-any` rule reports **233 violations** (9 more than the regex), confirming the regex undercounts by ~4%. Step 0 probe re-measures. |
 | `@ts-*` suppressions | 5 (unchanged from Phase 2a baseline) |
 | Escape-hatches file | `src/lib/types/escape-hatches.ts` present with 6 entries from Phase 2a Wave B. Last TD-FE: TD-FE-9. Phase 2b continues this file; relocation to `src/shared/types/escape-hatches.ts` remains deferred to Phase 4. |
 | Prettier installed | No. No `.prettierrc`, no `.prettierignore` (in `frontend/`), no `.git-blame-ignore-revs` (at monorepo root). |
-| `eslint-plugin-import` installed | No. |
+| `eslint-plugin-import-x` installed | No. |
 | `eslint-config-prettier` installed | No. |
 | `typescript-eslint` version | `^8.0.1` — supports `projectService` for type-aware rules. |
 | Current `lint` script | `eslint .` (no `--max-warnings` flag — Phase 2b tightens to `--max-warnings 0`) |
@@ -55,14 +55,16 @@ Master spec §4 places Phase 2b immediately after Phase 2a so the lint storm hit
 ### 1.4 Numbering and branch
 
 - Spec NN = 18 (Phase 2a used NN=17; next slot per CLAUDE.md numbering rule).
-- Branch name: `phase-2b-eslint-prettier`, branched off `master` at the post-Phase-2a commit (`ce08615` or successor).
+- Branch name: `phase-2b-eslint-prettier`, branched off `master` at the `master` HEAD at the time the branch is created (Phase 2a merge commit was `b22ca59`, master spec update was `ce08615`; later `master` advances are absorbed).
 - Branch lifecycle: short-lived; deleted after merge per Spec 14 §5.1.
 
-### 1.5 Why 5 waves (no sub-split)
+### 1.5 Why this structure (single phase, 4 waves)
 
-The design-time count of `no-explicit-any` violations (~330) is the largest single workload, comparable to Phase 2a's Wave A (~327 `noUnused*` errors). Per-rule sub-decomposition would mirror the wave structure already. The 5-wave layout — Step 0 + Wave A (Prettier per-area) + Wave B (auto-fix lint sweep) + Wave C (`no-explicit-any` per-site) + Wave D (`no-floating-promises` + `no-misused-promises` per-site) + Step 5 (verify) — gives each rule category its own commit cohesion without formal sub-phases.
+The design-time count of `no-explicit-any` violations is **233** (verified by `eslint . --format json` at commit `80860ba`) — comparable to Phase 2a's Wave A (~327 `noUnused*` errors) and well under the 1,500 sub-decomposition trigger. The 4-wave layout (Wave A Prettier per-area, Wave B mechanical lint fixes, Wave C per-site type fixes, Wave D per-site semantic fixes) across 6 steps (Step 0 re-baseline + Step 1 config land + Steps 2–5 waves + Step 6 verify) gives each fix category its own commit cohesion without formal sub-phases.
 
-**Step 0 threshold gate:** if the re-baseline probe surfaces `no-floating-promises` + `no-misused-promises` combined count above 300, the plan author proposes a sub-decomposition of Wave D (D-i / D-ii by area or by rule). The 300 figure is a starting heuristic — the plan stage validates against actual measurements.
+**Step 0 threshold gates:**
+- If the re-baseline probe surfaces `no-floating-promises` + `no-misused-promises` + `react-hooks/exhaustive-deps` combined count above 300, the plan author proposes a sub-decomposition of Wave D (D-i / D-ii by rule or by area). The 300 figure is a starting heuristic — the plan stage validates against actual measurements.
+- **If the re-baseline surfaces rule categories not enumerated in §1.3's error/warning rows contributing ≥20 violations collectively, the plan author halts and re-enters a scope decision before continuing.** This catches unanticipated rule diversity beyond the round-1 verified set.
 
 ---
 
@@ -70,10 +72,10 @@ The design-time count of `no-explicit-any` violations (~330) is the largest sing
 
 ### 2.1 In scope
 
-- **Install npm dependencies** in `frontend/`: `prettier`, `eslint-plugin-import`, `eslint-config-prettier`. Co-commit with the probe artifacts in Step 0 (the probe needs the deps to run). One npm install commit + one probe-artifact commit.
+- **Install npm dependencies** in `frontend/`: `prettier`, `eslint-plugin-import-x` (the flat-config-native fork; see §3 rationale), `eslint-config-prettier`. Co-commit with the probe artifacts in Step 0 (the probe needs the deps to run). One npm install commit + one probe-artifact commit.
 - **Update `frontend/eslint.config.js`** with the configuration target in §3:
   - Five new/re-enabled rules: `@typescript-eslint/no-explicit-any` (already error under current `recommended` — kept explicit), `@typescript-eslint/no-unused-vars` (re-enable from `off`), `@typescript-eslint/consistent-type-imports`, `@typescript-eslint/no-floating-promises`, `@typescript-eslint/no-misused-promises`.
-  - `eslint-plugin-import` registered; `import/order` configured per §3 alphabetical-grouped form.
+  - `eslint-plugin-import-x` registered; `import-x/order` configured per §3 alphabetical-grouped form.
   - `eslint-config-prettier` applied last in the `extends` chain.
   - Type-aware parser config (`projectService: true`).
   - Override zones for `src/components/ui/**`, root config files, and test files per §3.3.
@@ -86,11 +88,18 @@ The design-time count of `no-explicit-any` violations (~330) is the largest sing
   - Add `"format": "prettier --write ."`.
   - Add `"format:check": "prettier --check ."`.
   - Extend `preflight` to include lint + format:check immediately after typecheck: `"preflight": "npm run typecheck && npm run lint && npm run format:check && npm run build && npm run test:e2e && npm run test && npx knip --strict --no-progress"`.
-- **Per-site fix all 224+ inline `any`s** (the regex-matched count plus any multi-argument-generic positions Step 0's probe surfaces). Same posture as Phase 2a §2.4 Wave B/C: proper type when reasonable; escape-hatches entry when not; `eslint-disable-next-line` allowed only in test files (per §3.3 override zone).
-- **Resolve the 56 warnings:**
-  - `react-refresh/only-export-components` warnings under `src/components/ui/`: silenced via override zone in `eslint.config.js`. Shadcn primitives are locked from Phase 4 — restructuring their exports is out of scope.
-  - 13 "unused eslint-disable directive" warnings: each directive removed in a dedicated commit (`refactor(fe): remove unused eslint-disable directives`).
-- **Resolve `tailwind.config.ts` `no-require-imports`** via the root-config override zone in §3.3. The `require()` is intentional for Tailwind plugin loading.
+- **Drive `eslint . --max-warnings 0` to green** by addressing all 336 errors + 56 warnings under the §1.3 verified breakdown. Per-rule disposition:
+  - `@typescript-eslint/no-explicit-any` (233) — per-site fix in Wave C. Same posture as Phase 2a §2.4 Wave B/C: proper type when reasonable; escape-hatches entry when not; `eslint-disable-next-line` allowed only in test files (per §3.3 override zone).
+  - `@typescript-eslint/no-unsafe-assignment` (9), `no-unsafe-return` (6), `no-unsafe-member-access` (3) — most resolve as side-effect of Wave C's `no-explicit-any` fixes (the rules fire on usage of `any`-typed values; once the upstream is typed, downstream usages narrow). Residual cases (the rule's count after Wave C completes) get individual per-site treatment within Wave C.
+  - `@typescript-eslint/ban-types` (11) — Wave B `--fix` sweep (rule is mostly auto-fixable to specific types like `object`, `unknown`).
+  - `@typescript-eslint/no-empty-object-type` (3) — Wave B `--fix` sweep where auto-fixable; manual fix otherwise.
+  - `@typescript-eslint/no-floating-promises`, `no-misused-promises` (Step 0 counts) — per-site fix in Wave D.
+  - `react-hooks/exhaustive-deps` (35 warnings) — per-site fix in Wave D. Each site is one of: add missing dep, wrap in `useCallback`/`useMemo`, use a ref for non-reactive values, or `eslint-disable-next-line react-hooks/exhaustive-deps` with one-line justification (this rule is the documented exception to §2.4 posture rule 10's "production code uses escape-hatches" pattern — the warnings legitimately need per-site judgment; no central abstraction helps).
+  - `no-empty` (46), `no-useless-escape` (16), `no-control-regex` (2), `no-unused-expressions` (2), `no-case-declarations` (1), `@typescript-eslint/ban-ts-comment` (2), `react-hooks/rules-of-hooks` (1) — Wave B's manual mechanical residue. Each is a small per-site fix (add a `// intentional` comment for genuinely-empty blocks, remove unnecessary regex escapes, wrap case bodies in braces, etc.). 70 total fixes — comparable to a single area-grouping in Wave A; bundled by area into ~3–5 commits.
+  - `@typescript-eslint/no-require-imports` (1, `tailwind.config.ts`) — Wave B / Step 1 override zone in `eslint.config.js`. The `require()` is intentional for Tailwind plugin loading.
+  - `react-refresh/only-export-components` (8 warnings under `src/components/ui/`) — Wave B / Step 1 override zone. Shadcn primitives are locked from Phase 4 — restructuring their exports is out of scope.
+  - Unused `eslint-disable` directives (13 warnings) — Wave B single commit removing them.
+  - `@typescript-eslint/no-unused-vars` re-enable — likely ≤5 new violations after Phase 2a's `noUnused*` cleanup; Wave B residue commit if any.
 - **Final scorecard** merged at `docs/audits/<date>-frontend-phase-2b-eslint-prettier.md` per §4 Step 6.
 
 ### 2.2 Out of scope (deferred)
@@ -111,24 +120,23 @@ Out-of-scope discoveries are logged to `docs/TECH_DEBT.md` as `TD-FE-<n>` entrie
 
 ### 2.3 Frozen interfaces
 
-These do not change as a result of Phase 2b (covered by Phase 0b's characterization tests and Phase 0a's visual regression):
+These could be accidentally affected by lint/format changes and are explicitly frozen:
 
-- HTTP API contract with the backend.
-- Routes.
-- Visible UI is unchanged (validated by visual regression at `maxDiffPixelRatio 0.01` in the preflight chain).
-- Auth flow, rate-limit boundary value (4 req/min), bundle output format.
-- Existing Playwright behavioral journeys stay green.
-- Existing Vitest characterization suite stays green.
+- **Visible UI is unchanged** (validated by visual regression at `maxDiffPixelRatio 0.01` in the preflight chain). Prettier reformatting JSX cannot change rendered output.
+- **Existing Playwright behavioral journeys stay green.** Type narrowing and lint fixes must not change runtime control flow.
+- **Existing Vitest characterization suite stays green.**
 - **Public exports of `src/lib/`, `src/hooks/`, `src/utils/`, `src/contexts/`.** Signatures may narrow further (when an explicit-any fix tightens a return type), but no rename, no removal, no semantic change. Test imports and e2e fixture imports must continue resolving.
 - **`tsconfig.app.json` strict configuration from Phase 2a.** Phase 2b does not modify any TypeScript compiler flags. `typecheck` remains green throughout.
 - **Existing 6 escape-hatches entries from Phase 2a.** Phase 2b may add new entries; it does not remove or rename Phase 2a's entries (Phase 13 audits all).
 - **Type-level cascades from Wave C narrowing are in scope, not a frozen-interface violation.** Same logic as Phase 2a §2.3 — annotations tighten downstream call sites; cascade-related errors get fixed under the same wave's rules; file-grain commits absorb them. Runtime behavior unchanged.
 
+Items the master spec freezes (HTTP API contract, routes, auth flow, rate-limit boundary, bundle output format) are not in this list because lint/format changes cannot reach them — they're protected by the master spec at a different layer.
+
 ### 2.4 Posture rules
 
 When fixing a lint violation, the grain is "what the rule needs to be satisfied," not "what would make the file better." Specifically:
 
-1. **Default fix:** add the proper type or apply the canonical lint-fix. For `no-explicit-any`: type the parameter, return, or assertion. For `consistent-type-imports`: ESLint `--fix` handles the conversion to `import type { ... }`. For `import/order`: ESLint `--fix` reorders. For `no-floating-promises`: add `await` if the call is in an async context, `void` prefix if fire-and-forget is intentional, or chain `.then`/`.catch` if neither. For `no-misused-promises`: restructure handler signature to wrap in IIFE or void wrapper.
+1. **Default fix:** add the proper type or apply the canonical lint-fix. For `no-explicit-any`: type the parameter, return, or assertion. For `consistent-type-imports`: ESLint `--fix` handles the conversion to `import type { ... }`. For `import-x/order`: ESLint `--fix` reorders. For `no-floating-promises`: add `await` if the call is in an async context, `void` prefix if fire-and-forget is intentional, or chain `.then`/`.catch` if neither. For `no-misused-promises`: extract a named wrapper function or use a void-returning arrow wrapper.
 2. **Acceptable narrowing refactor:** if the fix needs a type guard, `typeof` narrow, user-defined predicate, non-null assertion on a value with known initial, extracting a typed local, or `as Foo` cast where the runtime shape is provable from call-site context — that's in scope. Same as Phase 2a §2.4 rule 2. **For catch blocks:** `catch (e: any)` becomes `catch (e: unknown)` plus narrowing (`if (e instanceof Error)`). When in doubt, narrow rather than cast.
 3. **Out-of-scope refactor encountered:** if a lint violation reveals a deeper design problem (e.g., a generic `any` that would need restructuring across 10 call sites), one of:
    - escape-hatch the immediate site via `src/lib/types/escape-hatches.ts` (per §4 Wave C policy), OR
@@ -140,7 +148,7 @@ When fixing a lint violation, the grain is "what the rule needs to be satisfied,
 6. **Test-file conventions.** Test code (`src/**/__tests__/**`, `src/**/*.{test,spec}.{ts,tsx}`, `e2e/**`) is in scope for lint, with the relaxed rules in §3.3: `no-explicit-any` becomes `warn` (allowing `eslint-disable-next-line` for legitimate mock typing); `no-floating-promises` is off (Vitest awaits everything that matters). Over-typing test mocks beyond what the assertion requires is out of scope per posture rule 3.
 7. **No new `@ts-*` suppressions.** Continues Phase 2a §2.4 rule 7. The §5 done-when gate (item 9: `@ts-*` count ≤5) enforces this. Existing 5 suppressions remain for now; revisited only if a phase-specific reason surfaces.
 8. **Prettier commits contain only formatting.** Wave A's per-area commits run `prettier --write <area>` and nothing else. Mixing logic edits into a Wave A commit is a posture violation — split into a separate commit before merging. This preserves the `.git-blame-ignore-revs` invariant: any SHA listed there is a pure-formatting commit.
-9. **Auto-fix commits contain only the rule's auto-fix output.** Wave B's per-rule sweeps run `eslint --fix --rule '{<rule>: "error"}'` against a target area; the resulting diff is committed verbatim with no manual edits added. Manual edits belong in Wave C/D.
+9. **Auto-fix commits contain only the rule's auto-fix output.** Wave B's per-rule sweeps run `eslint --fix --rule '{<rule>: "error"}'` against a target area; the resulting diff is committed verbatim with no manual edits added. Manual edits belong in Wave C/D. **Note:** Wave B's `--fix` diffs may include trivial whitespace changes on lines Prettier (Wave A) already moved — this is benign and expected. The posture-rule-9 purity check is "no non-rule-targeted code changes" rather than "no whitespace changes."
 10. **`eslint-disable-next-line` is allowed only in test files** (per §3.3 override zone). Production code under `src/` (excluding `__tests__/` and `*.{test,spec}.{ts,tsx}`) routes any unfixable `no-explicit-any` through `src/lib/types/escape-hatches.ts`. The §5 done-when gate (item 8) verifies this.
 
 ---
@@ -171,7 +179,18 @@ Rationale per option:
 - `arrowParens: "always"` — already the prevailing style in `src/`.
 - `endOfLine: "lf"` — repo standard; prevents Windows-checkout drift.
 
-The plan stage may adjust these before Step 1 if a quick `prettier --check` dry-run against a representative file (e.g., `src/components/customers/ICPSummaryOpportunity.tsx`) shows a smaller-diff alternative.
+**Config is locked at the spec stage.** A pre-Step-1 sanity dry-run against a representative file (e.g., `src/components/customers/ICPSummaryOpportunity.tsx`) verifies Prettier behaves as expected; the dry-run does not change the config values.
+
+### 3.1.5 `eslint-plugin-import-x` vs `eslint-plugin-import`
+
+Phase 2b uses **`eslint-plugin-import-x`**, the flat-config-native fork. Rationale:
+
+- Phase 2b is on ESLint v9 flat config (no legacy `.eslintrc` chain) and `typescript-eslint@^8.0.1`.
+- `eslint-plugin-import@^2.31` added flat-config exports but inherits legacy CommonJS module-resolution paths that fight with `typescript-eslint`'s flat-config import semantics in some setups.
+- `eslint-plugin-import-x` is the maintained fork built specifically for flat config; it has converged as the v9-ecosystem default.
+- Rule names switch from `import/X` to `import-x/X` (e.g., `import/order` → `import-x/order`). The functionality is the same.
+
+If a plan-stage probe shows `eslint-plugin-import@^2.31` resolves cleanly without parser-resolver conflicts, the plan author may switch back — the difference at end-state is a name prefix. Default: use `import-x`.
 
 ### 3.2 ESLint type-aware parser config
 
@@ -239,7 +258,7 @@ Phase 2b does not narrow this scope. The `eslint.config.js` `ignores: ["dist"]` 
 
 ---
 
-## §4 Methodology — 5 waves, all-rules-on
+## §4 Methodology — 4 waves over 6 steps, all-rules-on
 
 Six steps. `eslint .` is red between Step 1 and end of Wave D; `prettier --check .` is red between Step 1 and end of Wave A. `tsc --noEmit` (Phase 2a's gate) stays green throughout — acceptable because `master` stays green; only the phase branch is in flight. `vite build`, Vitest, and Playwright continue to pass mid-phase (esbuild transpiles without linting; tests don't lint).
 
@@ -247,11 +266,11 @@ Six steps. `eslint .` is red between Step 1 and end of Wave D; `prettier --check
 
 Run a probe against the current `master` state immediately on branch creation, with the new rules wired behind a throwaway config.
 
-**Commit 0a — Install npm deps.** Add `prettier`, `eslint-plugin-import`, `eslint-config-prettier` to `frontend/package.json` devDependencies. `package-lock.json` updates. No other edits. Commit subject: `chore(fe): install prettier + eslint-plugin-import + eslint-config-prettier`.
+**Commit 0a — Install npm deps.** Add `prettier`, `eslint-plugin-import-x`, `eslint-config-prettier` to `frontend/package.json` devDependencies. `package-lock.json` updates. No other edits. Commit subject: `chore(fe): install prettier + eslint-plugin-import-x + eslint-config-prettier`.
 
 **Commit 0b — Run probe + capture artifacts.** Write a throwaway `frontend/eslint.probe.config.js` that:
 - Extends the current `eslint.config.js` shape.
-- Adds the five new rules + `import/order` + `eslint-config-prettier`.
+- Adds the five new rules + `import-x/order` + `eslint-config-prettier`.
 - Adds the §3.3 override zones (so the probe surface matches Step 1's production surface).
 - Adds `languageOptions.parserOptions.projectService: true` for type-aware rules.
 
@@ -259,6 +278,7 @@ Run:
 - `eslint . --config eslint.probe.config.js --max-warnings 0 --format json > docs/audits/<date>-frontend-phase-2b-lint-probe.json`
 - `eslint . --config eslint.probe.config.js --max-warnings 0 > docs/audits/<date>-frontend-phase-2b-lint-probe.txt 2>&1`
 - `prettier --check . > docs/audits/<date>-frontend-phase-2b-prettier-probe.txt 2>&1`
+- Capture a directory enumeration: `find src components pages -maxdepth 2 -type d | sort > docs/audits/<date>-frontend-phase-2b-area-tree.txt` (so Wave C's plan-stage author validates the §4 Step 4 area order against the actual filesystem before ordering commits).
 
 Generate a `frontend/scripts/build-lint-probe.ts` helper that runs the above and produces a per-rule × per-area roll-up in the JSON (modelled on Phase 2a's `build-strict-probe.ts`). The script may be committed for re-use; the probe config is deleted before commit.
 
@@ -266,19 +286,23 @@ Commit subject: `chore(audits): phase 2b lint+prettier re-baseline`.
 
 **Probe-config lifecycle:** identical to Phase 2a's Step 0 — the helper creates `eslint.probe.config.js`, runs the probe, captures artifacts, then deletes the throwaway. Only the JSON + TXT + helper script land.
 
-**Re-baseline output is the spec's official "before" anchor.** Phase 2a merged today, but any commit between this spec's drafting and execution start may shift counts. If the re-baseline `no-floating-promises` + `no-misused-promises` combined count exceeds **300**, the plan author halts and re-enters a sub-decomposition decision for Wave D (D-i / D-ii by area or by rule) before continuing.
+**Re-baseline output is the spec's official "before" anchor.** Phase 2a merged today, but any commit between this spec's drafting and execution start may shift counts.
+
+**Step 0 threshold gates** (re-stated from §1.5):
+- If `no-floating-promises` + `no-misused-promises` + `react-hooks/exhaustive-deps` combined count exceeds **300**, plan author proposes Wave D sub-decomposition (D-i / D-ii by rule or by area) before continuing.
+- If the probe surfaces rule categories not listed in §1.3 contributing ≥**20 violations** collectively, plan author halts and re-enters a scope decision before continuing. This catches rule diversity beyond the round-1 verified set.
 
 ### Step 1 — Tool config + format infra (one commit)
 
 Land the production config in one atomic commit:
 
 - **Edit `frontend/eslint.config.js`:**
-  - Add `import importPlugin from "eslint-plugin-import";` and `import eslintConfigPrettier from "eslint-config-prettier";`.
-  - Register `eslint-plugin-import` in `plugins`.
+  - Add `import importX from "eslint-plugin-import-x";` and `import eslintConfigPrettier from "eslint-config-prettier";`.
+  - Register `eslint-plugin-import-x` in `plugins` as `"import-x": importX`.
   - Add the five new rules (per §1.1) with `error` severity (test override zone downgrades two; see §3.3).
-  - Configure `import/order` per §3:
+  - Configure `import-x/order` per §3:
     ```js
-    "import/order": ["error", {
+    "import-x/order": ["error", {
       groups: ["builtin", "external", "internal", "parent", "sibling", "index"],
       "newlines-between": "always",
       alphabetize: { order: "asc", caseInsensitive: true },
@@ -306,6 +330,7 @@ Land the production config in one atomic commit:
   # Locally: git config blame.ignoreRevsFile .git-blame-ignore-revs
   # GitHub honors this file automatically.
   ```
+  Contributors who want `git blame` locally to skip Wave A's mass-format commits run the one-time `git config` command above. This is a contributor-education concern, not a phase risk.
 - **Edit `frontend/package.json`:**
   - `"lint": "eslint . --max-warnings 0"`
   - `"format": "prettier --write ."`
@@ -335,7 +360,7 @@ Each commit:
 - Subject: `style(fe): prettier format <area>` (or `<area>/<sub-area>` if split per the split-threshold below).
 - Contains no other changes.
 
-**Split threshold:** if an area's `prettier --write` diff exceeds **500 line-changes**, split into sub-area commits (by sub-folder or by file group). The threshold is higher than Phase 2a Wave A's 60-line split because Prettier's output is mechanical and large diffs are inherent. One commit per area is the default.
+**Split threshold:** if an area's `prettier --write` diff exceeds **250 line-changes**, split into sub-area commits (by sub-folder or by file group). The threshold is higher than Phase 2a Wave A's 60-line split because Prettier's output is mechanical and doesn't require careful per-line review, but lower than a fully-relaxed threshold to preserve commit-level bisection and revert granularity. One commit per area is the default.
 
 **End-of-wave consolidation commit.** A single follow-up commit appends every Wave A SHA into `.git-blame-ignore-revs` at the monorepo root. Subject: `chore(fe): add Wave A prettier commits to git blame ignore-revs`.
 
@@ -346,27 +371,43 @@ Each commit:
 
 `eslint .` still red (rules not yet auto-fixed).
 
-### Step 3 — Wave B: Auto-fix lint sweep (~3–6 commits)
+### Step 3 — Wave B: Mechanical lint fixes (auto-fix + manual residue, ~6–10 commits)
 
-Apply mechanical auto-fixes by rule. Each commit contains only the rule's `--fix` output (posture rule 9).
+Apply all mechanical lint fixes — both auto-fixable and small manual ones. Each commit contains only the rule's targeted output (posture rule 9). Wave B's expanded scope absorbs the rule categories §1.3 surfaced beyond the master spec's 5 mandated rules; per-site type fixes go to Wave C, semantic per-site fixes to Wave D.
 
-**Commit grain:**
+**Auto-fix commit grain:**
 
-- **`consistent-type-imports`** auto-fix sweep — one batched commit if the diff is small, or per-area if large. Subject: `refactor(fe): apply consistent-type-imports --fix`.
-- **`import/order`** auto-fix sweep — same shape. Subject: `refactor(fe): apply import/order --fix`.
-- **`no-unused-vars`** residue — `npm run typecheck` already catches most unused symbols (Phase 2a baseline); re-enabling the lint rule should surface ≤5 new violations, likely zero. Fixed in a residue commit if any. Subject: `refactor(fe): resolve no-unused-vars residue`.
-- **13 unused `eslint-disable` directives** removed — single commit. Subject: `refactor(fe): remove unused eslint-disable directives`.
+- **`consistent-type-imports`** `--fix` sweep — one batched commit if the diff is small, or per-area if large. Subject: `refactor(fe): apply consistent-type-imports --fix`.
+- **`import-x/order`** `--fix` sweep — same shape. Subject: `refactor(fe): apply import-x/order --fix`.
+- **`@typescript-eslint/ban-types`** `--fix` sweep — rule is largely auto-fixable to specific types (e.g., `{}` → `object`, `Function` → `(...args: unknown[]) => unknown` or similar context-specific replacement). 11 errors expected, mostly resolved automatically. Subject: `refactor(fe): apply ban-types --fix`.
+- **`@typescript-eslint/no-empty-object-type`** `--fix` where auto-fixable; manual fix otherwise. 3 errors. Subject: `refactor(fe): resolve no-empty-object-type`.
+- **`@typescript-eslint/no-unused-vars`** residue — re-enabling the rule should surface ≤5 new violations after Phase 2a's `noUnused*` cleanup. Subject: `refactor(fe): resolve no-unused-vars residue` (skipped if zero violations).
+
+**Manual mechanical residue commit grain** (bundled by area, ~3–5 commits):
+
+These rules' violations are small mechanical fixes (not warranting per-file commits like Wave C):
+- `no-empty` (46) — add a `// intentional` comment to genuinely-empty blocks; restructure if the empty body indicates dead code.
+- `no-useless-escape` (16) — remove unnecessary backslash escapes in regex/strings.
+- `no-control-regex` (2) — escape control characters properly or document the intentional use.
+- `no-unused-expressions` (2) — fix the expression (likely typos like `foo === bar` instead of `foo = bar`) or remove.
+- `no-case-declarations` (1) — wrap case body in braces (`case X: { const foo = ...; }`).
+- `@typescript-eslint/ban-ts-comment` (2) — replace `@ts-ignore` with `@ts-expect-error: description` (the rule's preferred form). Note: this is reshaping existing suppressions, not adding new ones; the §5 item 9 count stays at ≤5.
+- `react-hooks/rules-of-hooks` (1) — bug fix; restructure the hook call to satisfy ordering rules. **Verify behavior unchanged** (run Vitest + visual regression for the affected component).
+
+Commit grain: bundled by area following Wave A's order. Each commit's subject specifies the area + rule scope, e.g., `refactor(fe): fix no-empty + no-useless-escape in src/components/customers`.
+
+**Unused `eslint-disable` directives commit:** 13 warnings. Single commit removing them. Subject: `refactor(fe): remove unused eslint-disable directives`.
 
 **Per-rule batching:** if a single rule's `--fix` output exceeds **300 line-changes** across the tree, split by area following Wave A's order. Otherwise one commit per rule.
 
 **Wave-end checkpoint:** before starting Wave C, run two checks:
 
-1. **Auto-fix verification.** `npm run lint` should now report violations only from the manual-fix rules: `no-explicit-any`, `no-floating-promises`, `no-misused-promises`, and possibly residual `no-unused-vars` if any. Verify the residual error categories match the probe artifacts.
+1. **Mechanical-fix verification.** `npm run lint` should now report violations only from the per-site type/semantic rules: `no-explicit-any`, `no-unsafe-*` family, `no-floating-promises`, `no-misused-promises`, `react-hooks/exhaustive-deps`. Verify the residual error categories match the probe artifacts.
 2. **Unit-test health.** `npx vitest run` → green.
 
-### Step 4 — Wave C: `no-explicit-any` per-site (file-by-file commits, ~30–60 commits)
+### Step 4 — Wave C: per-site type fixes (file-by-file commits, ~30–60 commits)
 
-Targets all `no-explicit-any` violations (~330 sites — the regex-matched 224 inline `any`s plus multi-argument-generic positions the regex missed plus any new sites Wave A's Prettier reformatting exposed).
+Targets `@typescript-eslint/no-explicit-any` (233 sites verified) and the `no-unsafe-*` cascade family (`no-unsafe-assignment` 9, `no-unsafe-return` 6, `no-unsafe-member-access` 3 = 18 total). The cascade family largely resolves as a side-effect of `no-explicit-any` fixes — when an `any` value is typed at the upstream, downstream usages narrow and the rules stop firing. Per-site treatment is only needed for residual `no-unsafe-*` violations that don't auto-resolve.
 
 **Fix rules (per §2.4 posture):**
 
@@ -392,28 +433,31 @@ Subject: `refactor(fe): type <file>` (or `refactor(fe): type <area>` when bundle
 
 **Wave-end checkpoint:** before starting Wave D, run two checks:
 
-1. **`no-explicit-any` verification.** `npx eslint . --rule '{"@typescript-eslint/no-explicit-any": "error"}' --no-eslintrc --quiet 2>&1 | grep -c 'error'` returns 0 outside test paths (or matches the expected residual count from `eslint-disable-next-line` in tests).
+1. **`no-explicit-any` + `no-unsafe-*` verification.** `npm run lint 2>&1 | grep -E 'no-explicit-any|no-unsafe-' | wc -l` returns 0 outside test paths (or matches the expected residual count from `eslint-disable-next-line` exemptions in test files). The production config is used directly (no `--no-eslintrc` flag — that's a legacy-config option not valid under ESLint v9 flat config).
 2. **Unit-test health.** `npx vitest run` → green.
 
-### Step 5 — Wave D: `no-floating-promises` + `no-misused-promises` per-site
+### Step 5 — Wave D: per-site semantic fixes (file-by-file commits)
 
-Type-aware rules. Count unknown until Step 0 probe. Same per-site posture as Wave C.
+Targets type-aware semantic rules: `no-floating-promises`, `no-misused-promises` (counts unknown until Step 0 probe), and `react-hooks/exhaustive-deps` (35 warnings). All three require per-site judgment about intent. Same posture as Wave C.
 
 **Fix rules:**
 
 - **`no-floating-promises`:**
   - Async call in async context → `await`.
   - Fire-and-forget intentional → `void` prefix (`void doSomethingAsync()`).
-  - Effect cleanup or unmount handler → wrap in IIFE or use `.catch(handleError)`.
+  - Effect cleanup or unmount handler → use `.catch(handleError)` or extract a named async wrapper.
 - **`no-misused-promises`:**
-  - Promise passed to a non-promise-expecting context (e.g., `setTimeout(asyncFn, ...)`) → wrap in arrow `() => { void asyncFn(); }`.
+  - Promise passed to a non-promise-expecting context (e.g., `setTimeout(asyncFn, ...)`) → extract a named wrapper function rather than an inline IIFE when the wrapped call appears multiple times or has surrounding logic; an inline `() => { void asyncFn(); }` is acceptable for one-off cases but obscures intent at heavier call sites.
   - Async event handler attached to JSX prop (e.g., `<button onClick={asyncFn}>`) → if Step 0 surfaces many of these, the plan stage may configure `no-misused-promises` with `checksVoidReturn: { attributes: false }` to relax for JSX attributes (the runtime behavior is fine in React). Decision recorded in plan stage.
+- **`react-hooks/exhaustive-deps`** (35 warnings):
+  - Missing dependency → add it to the deps array.
+  - Dependency intentionally omitted (e.g., single-shot effect) → restructure with `useCallback`/`useMemo`, use a ref for non-reactive values, or `// eslint-disable-next-line react-hooks/exhaustive-deps` with a one-line justification. **This rule is the documented exception to §2.4 posture rule 10** — exhaustive-deps overrides legitimately need per-site judgment that no shared abstraction helps. Each disable must carry the justification comment in the same commit.
 
-**Escape-hatches:** rarely needed for these rules; fixes are usually mechanical. If a site genuinely needs an escape, follow Wave C's same policy.
+**Escape-hatches:** rarely needed for these rules; fixes are usually mechanical. If a site genuinely needs an escape (e.g., a Promise whose contract can't be tightened), follow Wave C's same policy.
 
 **Commit grain:** file-by-file with the same ≤3/>3 batching threshold as Wave C.
 
-Subject: `fix(fe): resolve floating/misused promises in <file>` (or `<area>` when bundled).
+Subject: `fix(fe): resolve floating/misused promises in <file>`, `fix(fe): resolve exhaustive-deps in <file>` (or `<area>` when bundled).
 
 **Wave-end checkpoint:** before Step 6, run two checks:
 
@@ -429,7 +473,7 @@ Subject: `fix(fe): resolve floating/misused promises in <file>` (or `<area>` whe
 - `npm run typecheck` → green (Phase 2a's gate not regressed).
 - `npm run preflight` → green end-to-end.
 - `src/lib/types/escape-hatches.ts` — every entry (Phase 2a's 6 + Phase 2b's additions) carries `// TODO(phase-13):`, `Untyped*` prefix, call-site reference, justification. If Phase 2b added 5+ new entries, a `TD-FE-<n>` (likely TD-FE-10) registration exists capturing the Phase 2b pattern.
-- `rg -n ':\s*any\b|as\s+any\b|<any>|Record<[^>]*, any>|Map<[^>]*, any>' -g '*.ts' -g '*.tsx' -g '!src/lib/types/escape-hatches.ts' -g '!src/**/__tests__/**' -g '!src/**/*.{test,spec}.{ts,tsx}' src/ | wc -l` returns 0. (Production code has no inline `any`; escape-hatches.ts uses `= any` syntax not matched by the regex; test files are excluded — see next check.)
+- `npm run lint 2>&1 | grep 'no-explicit-any' | wc -l` returns 0 (the primary check — `eslint . --max-warnings 0` is already green per item 3, so this is a redundant sanity check that any residual cases would surface; preferred over a regex-based gate because the regex misses positions like `Function`, `...args: any[]`, type-parameter defaults).
 - `rg -n 'eslint-disable.*no-explicit-any' -g '*.ts' -g '*.tsx' src/` returns hits only in test paths (`__tests__/`, `*.{test,spec}.{ts,tsx}`).
 - `rg -n '@ts-(ignore|expect-error|nocheck)' -g '*.ts' -g '*.tsx' src/ | wc -l` returns ≤5 (no regression from Phase 2a baseline).
 - `.git-blame-ignore-revs` contains every Wave A commit SHA (verify by `git log --grep='^style(fe): prettier format' --format=%H` matches the file's contents).
@@ -453,13 +497,13 @@ Scorecard commit subject: `docs(audits): phase 2b eslint+prettier scorecard`.
 
 The phase is "done" when **all** of these hold on `phase-2b-eslint-prettier` immediately before merge:
 
-1. `frontend/eslint.config.js` enables the five mandated rules + `import/order` + `eslint-config-prettier` (applied last). Type-aware parser config (`projectService`) wired. Override zones for `src/components/ui/`, root configs, and test files present per §3.3.
+1. `frontend/eslint.config.js` enables the five mandated rules + `import-x/order` (from `eslint-plugin-import-x`) + `eslint-config-prettier` (applied last). Type-aware parser config (`projectService`) wired. Override zones for `src/components/ui/`, root configs, and test files present per §3.3.
 2. `frontend/.prettierrc` and `frontend/.prettierignore` present in the frontend root. `.git-blame-ignore-revs` present at the **monorepo root** and contains every Wave A commit SHA.
 3. `npm run lint` (= `eslint . --max-warnings 0`) returns 0 errors and 0 warnings.
 4. `npm run format:check` (= `prettier --check .`) green.
 5. `npm run typecheck` still green (Phase 2a's gate not regressed by Phase 2b).
 6. `npm run preflight` extended to include lint + format:check, green end-to-end.
-7. No inline `any` (matched by `:\s*any\b|as\s+any\b|<any>|Record<[^>]*, any>|Map<[^>]*, any>`) survives in production code under `src/` excluding `src/lib/types/escape-hatches.ts` and test paths. Unfixable cases are routed through `escape-hatches.ts` (which uses `= any` syntax not matched by the regex); test files may carry `eslint-disable-next-line` exemptions (covered by item 8).
+7. `npm run lint` reports 0 `no-explicit-any` violations and 0 `no-unsafe-*` violations in production code paths (i.e., `eslint .` over `src/` excluding `src/**/__tests__/**`, `*.{test,spec}.{ts,tsx}`, and explicit `eslint-disable-next-line` exemptions covered by item 8). Unfixable cases are routed through `src/lib/types/escape-hatches.ts` (Phase 2a discipline continues).
 8. `eslint-disable-next-line @typescript-eslint/no-explicit-any` count outside `src/**/__tests__/**` and `*.{test,spec}.{ts,tsx}` is 0 (production code routes through escape-hatches).
 9. `@ts-*` suppression count ≤5 (Phase 2a baseline preserved; no new suppressions from 2b).
 10. New escape-hatches entries (if any) each carry `// TODO(phase-13):`, `Untyped*` prefix, call-site reference, justification. If 5+ new entries land, a fresh `TD-FE-<n>` (likely TD-FE-10) captures the Phase 2b pattern.
@@ -482,7 +526,7 @@ The master plan's row for Phase 2b (Spec 14 §4) updates to `done` with the merg
 | R7 | The 56 existing warnings include categories not foreseen here (e.g., test-file specifics that don't fit §3.3 override zones). | Step 0 probe enumerates every warning by rule × file. Plan stage refines override zones if Step 0 surfaces categories §3.3 missed. |
 | R8 | `eslint-config-prettier` conflict — Prettier and ESLint have stylistic rules that overlap; without `eslint-config-prettier` applied last, lint and format fight. | `eslint-config-prettier` is in §2.1 Step 1's required install list and is configured last in the `extends` chain. Step 0 probe verifies no conflicts surface in the violation set. |
 | R9 | Wave D `no-misused-promises` flags legitimate fire-and-forget patterns in JSX event handlers as errors (e.g., `<button onClick={asyncSubmit}>`). | Per-site fix with `void` wrapper is the default convention. If Step 0 surfaces many such cases, plan stage configures `no-misused-promises` with `checksVoidReturn: { attributes: false }` to relax for JSX attributes only (the runtime is fine in React). Decision documented in plan. |
-| R10 | A future contributor's local `git blame` doesn't honor `.git-blame-ignore-revs` because they haven't set `blame.ignoreRevsFile`. | The header comment in `.git-blame-ignore-revs` documents the local-config command. GitHub UI honors the file automatically. Phase 14 (agent affordances) may add a one-time setup script to set the config; not in Phase 2b's scope. |
+| R10 | Step 0 probe surfaces rule categories not enumerated in §1.3 contributing significant violation counts beyond the 20-threshold gate. | §1.5 / §4 Step 0's categorization gate halts execution at threshold breach; plan author re-enters scope decision. The round-1 review caught the design-time gap (103 errors + 35 warnings from un-anticipated rules); the gate prevents the same gap from compounding at execution time. |
 
 ---
 
@@ -490,16 +534,14 @@ The master plan's row for Phase 2b (Spec 14 §4) updates to `done` with the merg
 
 These do not block the spec — each becomes a plan-stage decision documented in `plans/18-frontend-phase-2b-eslint-prettier.md`:
 
-1. **Step 0 re-baseline numbers.** Not known until execution start. Plan records exact post-Phase-2a-merge figures and notes any delta from the design-time 392-problem count + 224-inline-any anchor.
-2. **Wave A split decisions per area.** Whether any area exceeds the 500-line split threshold; if so, sub-area boundaries.
-3. **Wave B batching decisions.** Whether `consistent-type-imports` and `import/order` ship in one combined commit each or split by area. Driven by Step 0 diff-size measurement.
+1. **Step 0 re-baseline numbers.** Not known until execution start. Plan records exact post-Phase-2a-merge figures and notes any delta from the design-time anchors (392 problems, 233 no-explicit-any, 35 exhaustive-deps).
+2. **Wave A split decisions per area.** Whether any area exceeds the 250-line split threshold; if so, sub-area boundaries.
+3. **Wave B batching decisions.** Whether the auto-fix sweeps (`consistent-type-imports`, `import-x/order`, `ban-types`, `no-empty-object-type`) ship in one combined commit each or split by area; whether the manual mechanical residue commits group by rule or by area. Driven by Step 0 diff-size measurement.
 4. **Wave C within-pages ordering.** §4 Step 4 lists "small pages first"; plan picks exact small-page order from Step 0 per-file counts (likely error-count ascending).
-5. **Wave D `checksVoidReturn` decision.** Whether `no-misused-promises` should configure `checksVoidReturn: { attributes: false }` to relax for JSX. Driven by Step 0's count of JSX-attribute-promise sites.
+5. **Wave D `checksVoidReturn` decision.** Whether `no-misused-promises` should configure `checksVoidReturn: { attributes: false }` to relax for JSX attributes. Driven by Step 0's count of JSX-attribute-promise sites.
 6. **`build-lint-probe.ts` location and reuse.** Step 0's helper script — extend Phase 2a's `build-strict-probe.ts` or write a sibling. Either lives under `frontend/scripts/` and is committed at Step 0.
-7. **Prettier config validation.** Whether a quick dry-run against a representative file (e.g., `ICPSummaryOpportunity.tsx`) shows a smaller-diff alternative to §3.1's choices. Plan stage validates before Step 1 lands the production `.prettierrc`.
-8. **`eslint-plugin-import` flat-config integration.** Plugin's flat-config support varies by version. Plan stage confirms `eslint-plugin-import@^2.31` (which added flat-config exports) vs `eslint-plugin-import-x` (the flat-config-native fork) — picks whichever resolves cleanly with `typescript-eslint@^8.0.1` + `eslint@^9.9.0`.
-9. **Diff size reporting depth.** §4 Step 6 mandates `git diff --stat` in the scorecard. Plan decides whether to also break down by wave for impl-review's convenience, or leave as one aggregate.
-10. **TD-FE numbering.** Continues from TD-FE-10 (current next slot) unless Phase 2c's spec preempts.
+7. **Diff size reporting depth.** §4 Step 6 mandates `git diff --stat` in the scorecard. Plan decides whether to also break down by wave for impl-review's convenience, or leave as one aggregate.
+8. **TD-FE numbering.** Continues from TD-FE-10 (current next slot) unless Phase 2c's spec preempts.
 
 ---
 
