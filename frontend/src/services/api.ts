@@ -55,12 +55,12 @@ class ApiService {
   }
 
   // Example API methods
-  async get(endpoint: string): Promise<any> {
+  async get(endpoint: string): Promise<unknown> {
     const response = await this.makeRequest(endpoint, { method: "GET" });
     return response.json();
   }
 
-  async post(endpoint: string, data: any): Promise<any> {
+  async post(endpoint: string, data: unknown): Promise<unknown> {
     const response = await this.makeRequest(endpoint, {
       method: "POST",
       body: JSON.stringify(data),
@@ -68,7 +68,7 @@ class ApiService {
     return response.json();
   }
 
-  async put(endpoint: string, data: any): Promise<any> {
+  async put(endpoint: string, data: unknown): Promise<unknown> {
     const response = await this.makeRequest(endpoint, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -76,17 +76,17 @@ class ApiService {
     return response.json();
   }
 
-  async delete(endpoint: string): Promise<any> {
+  async delete(endpoint: string): Promise<unknown> {
     const response = await this.makeRequest(endpoint, { method: "DELETE" });
     return response.json();
   }
 
   // Tenant-specific API methods
-  async getTenantData(endpoint: string): Promise<any> {
+  async getTenantData(endpoint: string): Promise<unknown> {
     return this.get(`/tenant${endpoint}`);
   }
 
-  async postTenantData(endpoint: string, data: any): Promise<any> {
+  async postTenantData(endpoint: string, data: unknown): Promise<unknown> {
     return this.post(`/tenant${endpoint}`, data);
   }
 
@@ -104,11 +104,11 @@ class ApiService {
       password?: string;
     };
     headers?: Record<string, string>;
-    body?: any;
+    body?: unknown;
     scopes?: string[];
     permissions?: string[];
     type: string;
-  }): Promise<any> {
+  }): Promise<unknown> {
     return this.post("/data-sources", data);
   }
 
@@ -124,16 +124,16 @@ class ApiService {
       password?: string;
     };
     headers?: Record<string, string>;
-    body?: any;
-  }): Promise<any> {
+    body?: unknown;
+  }): Promise<unknown> {
     return this.post("/data-sources/test", data);
   }
 
-  async getDataSources(): Promise<any> {
+  async getDataSources(): Promise<unknown> {
     return this.get("/data-sources");
   }
 
-  async deleteDataSource(id: string): Promise<any> {
+  async deleteDataSource(id: string): Promise<unknown> {
     return this.delete(`/data-sources/${id}`);
   }
 }
