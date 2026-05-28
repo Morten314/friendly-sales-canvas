@@ -47,6 +47,8 @@ import { useToast } from "@/hooks/use-toast";
 import { apiFetchJson } from "@/lib/api";
 import { executeWithRateLimit } from "@/lib/rateLimitManager";
 import type {
+  UntypedBackendApiResponse,
+  UntypedBackendProfile,
   UntypedRegulatoryUpdate,
   UntypedVisualDataCard,
   UntypedRegionData,
@@ -86,10 +88,10 @@ interface RegulatoryComplianceSectionProps {
   onGenerateShareableLink: () => void;
   // Add refresh props
   isRefreshing?: boolean;
-  companyProfile?: any;
+  companyProfile?: UntypedBackendProfile;
 
   // Add centralized data prop
-  regulatoryData?: any;
+  regulatoryData?: UntypedBackendApiResponse;
 }
 
 const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = ({
@@ -220,17 +222,18 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   const [localKeyDataValues, setLocalKeyDataValues] = useState<Record<string, string>>({});
 
   // Local state for regional data (table)
-  const [localRegionalData, setLocalRegionalData] = useState<any[]>([]);
+  const [localRegionalData, setLocalRegionalData] = useState<UntypedRegionData[]>([]);
 
   // Local state for visual data cards
-  const [localVisualDataCards, setLocalVisualDataCards] = useState<any[]>([]);
+  const [localVisualDataCards, setLocalVisualDataCards] = useState<UntypedVisualDataCard[]>([]);
 
   // Local state for strategic recommendations
-  const [localStrategicRecommendations, setLocalStrategicRecommendations] = useState<any>({
-    mitigateRegulatoryRisks: [],
-    competitivePositioning: [],
-    goToMarketStrategy: [],
-  });
+  const [localStrategicRecommendations, setLocalStrategicRecommendations] =
+    useState<UntypedBackendApiResponse>({
+      mitigateRegulatoryRisks: [],
+      competitivePositioning: [],
+      goToMarketStrategy: [],
+    });
 
   // Save local state to localStorage whenever it changes
   useEffect(() => {
@@ -317,7 +320,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   useEffect(() => {
     if (!isEditing && regulatoryData?.keyUpdates && Array.isArray(regulatoryData.keyUpdates)) {
       const initialValues: Record<string, string> = {};
-      regulatoryData.keyUpdates.forEach((update: any, index: number) => {
+      regulatoryData.keyUpdates.forEach((update: UntypedRegulatoryUpdate, index: number) => {
         if (update) {
           // Parse if update is a JSON string
           let parsedUpdate = update;
@@ -366,7 +369,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     // Initialize dynamic key data values
     if (regulatoryData?.keyUpdates && Array.isArray(regulatoryData.keyUpdates)) {
       const initialValues: Record<string, string> = {};
-      regulatoryData.keyUpdates.forEach((update: any, index: number) => {
+      regulatoryData.keyUpdates.forEach((update: UntypedRegulatoryUpdate, index: number) => {
         if (update) {
           // Parse if update is a JSON string
           let parsedUpdate = update;
@@ -638,7 +641,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         // Update dynamic key data values if available
         if (apiData.keyUpdates) {
           const initialValues: Record<string, string> = {};
-          apiData.keyUpdates.forEach((update: any) => {
+          apiData.keyUpdates.forEach((update: UntypedRegulatoryUpdate) => {
             if (!update || !update.title) return;
             const id = update.title.toLowerCase().replace(/\s+/g, "-");
             initialValues[id] = update.description || "";
@@ -820,8 +823,8 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   const keyDataPoints =
     regulatoryData?.keyUpdates && Array.isArray(regulatoryData.keyUpdates)
       ? regulatoryData.keyUpdates
-          .filter((update: any) => update)
-          .map((update: any, index: number) => {
+          .filter((update: UntypedRegulatoryUpdate) => update)
+          .map((update: UntypedRegulatoryUpdate, index: number) => {
             // Parse if update is a JSON string
             let parsedUpdate = update;
             if (typeof update === "string") {
@@ -1323,7 +1326,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                                     // Find max value to normalize progress bars
                                     const maxValue = Math.max(
                                       ...card.data.map(
-                                        (item: any) =>
+                                        (item: UntypedBackendApiResponse) =>
                                           Number(item.value) || Number(item.name?.value) || 0,
                                       ),
                                     );
@@ -1332,89 +1335,94 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                                         ? Math.min((val / maxValue) * 100, 100)
                                         : Math.min(val, 100);
 
-                                    return card.data.map((item: any, index: number) => {
-                                      const numericValue = Number(item.value) || 0;
-                                      const normalizedWidth = normalizeValue(numericValue);
-                                      const itemName = item.name || item.label || "";
+                                    return card.data.map(
+                                      (item: UntypedBackendApiResponse, index: number) => {
+                                        const numericValue = Number(item.value) || 0;
+                                        const normalizedWidth = normalizeValue(numericValue);
+                                        const itemName = item.name || item.label || "";
 
-                                      return (
-                                        <div
-                                          key={index}
-                                          className="flex items-center justify-between gap-2"
-                                        >
-                                          {isEditing ? (
-                                            <>
-                                              <Input
-                                                value={itemName}
-                                                onChange={(e) => {
-                                                  const updated = [...localVisualDataCards];
-                                                  updated[cardIndex].data[index] = {
-                                                    ...updated[cardIndex].data[index],
-                                                    name: e.target.value,
-                                                    label: e.target.value,
-                                                  };
-                                                  setLocalVisualDataCards(updated);
-                                                }}
-                                                className="flex-1 text-sm"
-                                                placeholder="Name"
-                                              />
-                                              <Input
-                                                type="number"
-                                                value={item.value || ""}
-                                                onChange={(e) => {
-                                                  const updated = [...localVisualDataCards];
-                                                  updated[cardIndex].data[index] = {
-                                                    ...updated[cardIndex].data[index],
-                                                    value: Number(e.target.value) || 0,
-                                                  };
-                                                  setLocalVisualDataCards(updated);
-                                                }}
-                                                className="w-20 text-sm"
-                                                placeholder="Value"
-                                              />
-                                              <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => {
-                                                  const updated = [...localVisualDataCards];
-                                                  updated[cardIndex].data = updated[
-                                                    cardIndex
-                                                  ].data.filter((_: any, i: number) => i !== index);
-                                                  setLocalVisualDataCards(updated);
-                                                }}
-                                                className="text-red-600 hover:text-red-700"
-                                              >
-                                                <X className="h-4 w-4" />
-                                              </Button>
-                                            </>
-                                          ) : (
-                                            <>
-                                              <span className="text-sm text-gray-600">
-                                                {itemName}
-                                              </span>
-                                              <div className="flex items-center space-x-2">
-                                                <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                                  <div
-                                                    className="h-2 rounded-full"
-                                                    style={{
-                                                      width: `${normalizedWidth}%`,
-                                                      backgroundColor:
-                                                        item.color ||
-                                                        `hsl(${index * 60}, 70%, 50%)`,
-                                                      maxWidth: "100%",
-                                                    }}
-                                                  />
-                                                </div>
-                                                <span className="text-sm font-medium text-gray-900">
-                                                  {item.value}
-                                                  {card.title?.includes("Growth") ? "B" : ""}
+                                        return (
+                                          <div
+                                            key={index}
+                                            className="flex items-center justify-between gap-2"
+                                          >
+                                            {isEditing ? (
+                                              <>
+                                                <Input
+                                                  value={itemName}
+                                                  onChange={(e) => {
+                                                    const updated = [...localVisualDataCards];
+                                                    updated[cardIndex].data[index] = {
+                                                      ...updated[cardIndex].data[index],
+                                                      name: e.target.value,
+                                                      label: e.target.value,
+                                                    };
+                                                    setLocalVisualDataCards(updated);
+                                                  }}
+                                                  className="flex-1 text-sm"
+                                                  placeholder="Name"
+                                                />
+                                                <Input
+                                                  type="number"
+                                                  value={item.value || ""}
+                                                  onChange={(e) => {
+                                                    const updated = [...localVisualDataCards];
+                                                    updated[cardIndex].data[index] = {
+                                                      ...updated[cardIndex].data[index],
+                                                      value: Number(e.target.value) || 0,
+                                                    };
+                                                    setLocalVisualDataCards(updated);
+                                                  }}
+                                                  className="w-20 text-sm"
+                                                  placeholder="Value"
+                                                />
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  onClick={() => {
+                                                    const updated = [...localVisualDataCards];
+                                                    updated[cardIndex].data = updated[
+                                                      cardIndex
+                                                    ].data.filter(
+                                                      (_: UntypedBackendApiResponse, i: number) =>
+                                                        i !== index,
+                                                    );
+                                                    setLocalVisualDataCards(updated);
+                                                  }}
+                                                  className="text-red-600 hover:text-red-700"
+                                                >
+                                                  <X className="h-4 w-4" />
+                                                </Button>
+                                              </>
+                                            ) : (
+                                              <>
+                                                <span className="text-sm text-gray-600">
+                                                  {itemName}
                                                 </span>
-                                              </div>
-                                            </>
-                                          )}
-                                        </div>
-                                      );
-                                    });
+                                                <div className="flex items-center space-x-2">
+                                                  <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                                    <div
+                                                      className="h-2 rounded-full"
+                                                      style={{
+                                                        width: `${normalizedWidth}%`,
+                                                        backgroundColor:
+                                                          item.color ||
+                                                          `hsl(${index * 60}, 70%, 50%)`,
+                                                        maxWidth: "100%",
+                                                      }}
+                                                    />
+                                                  </div>
+                                                  <span className="text-sm font-medium text-gray-900">
+                                                    {item.value}
+                                                    {card.title?.includes("Growth") ? "B" : ""}
+                                                  </span>
+                                                </div>
+                                              </>
+                                            )}
+                                          </div>
+                                        );
+                                      },
+                                    );
                                   })()
                                 ) : (
                                   <p className="text-gray-500 text-sm">No data available</p>
@@ -1465,76 +1473,81 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                               )}
                               <div className="space-y-3">
                                 {card.data && card.data.length > 0 ? (
-                                  card.data.map((item: any, index: number) => (
-                                    <div key={index} className="flex items-start space-x-3">
-                                      {!isEditing && (
-                                        <div
-                                          className={`w-2 h-2 rounded-full mt-2 ${
-                                            item.status === "critical"
-                                              ? "bg-red-500"
-                                              : "bg-blue-500"
-                                          }`}
-                                        />
-                                      )}
-                                      <div className="flex-1 space-y-2">
-                                        {isEditing ? (
-                                          <>
-                                            <Input
-                                              value={item.event || item.label || ""}
-                                              onChange={(e) => {
-                                                const updated = [...localVisualDataCards];
-                                                updated[cardIndex].data[index] = {
-                                                  ...updated[cardIndex].data[index],
-                                                  event: e.target.value,
-                                                  label: e.target.value,
-                                                };
-                                                setLocalVisualDataCards(updated);
-                                              }}
-                                              className="text-sm"
-                                              placeholder="Event"
-                                            />
-                                            <Input
-                                              value={item.date || item.time || ""}
-                                              onChange={(e) => {
-                                                const updated = [...localVisualDataCards];
-                                                updated[cardIndex].data[index] = {
-                                                  ...updated[cardIndex].data[index],
-                                                  date: e.target.value,
-                                                  time: e.target.value,
-                                                };
-                                                setLocalVisualDataCards(updated);
-                                              }}
-                                              className="text-xs"
-                                              placeholder="Date"
-                                            />
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              onClick={() => {
-                                                const updated = [...localVisualDataCards];
-                                                updated[cardIndex].data = updated[
-                                                  cardIndex
-                                                ].data.filter((_: any, i: number) => i !== index);
-                                                setLocalVisualDataCards(updated);
-                                              }}
-                                              className="text-red-600 hover:text-red-700"
-                                            >
-                                              <X className="h-4 w-4" />
-                                            </Button>
-                                          </>
-                                        ) : (
-                                          <>
-                                            <p className="text-sm font-medium text-gray-900">
-                                              {item.event || item.label}
-                                            </p>
-                                            <p className="text-xs text-gray-500">
-                                              {item.date || item.time}
-                                            </p>
-                                          </>
+                                  card.data.map(
+                                    (item: UntypedBackendApiResponse, index: number) => (
+                                      <div key={index} className="flex items-start space-x-3">
+                                        {!isEditing && (
+                                          <div
+                                            className={`w-2 h-2 rounded-full mt-2 ${
+                                              item.status === "critical"
+                                                ? "bg-red-500"
+                                                : "bg-blue-500"
+                                            }`}
+                                          />
                                         )}
+                                        <div className="flex-1 space-y-2">
+                                          {isEditing ? (
+                                            <>
+                                              <Input
+                                                value={item.event || item.label || ""}
+                                                onChange={(e) => {
+                                                  const updated = [...localVisualDataCards];
+                                                  updated[cardIndex].data[index] = {
+                                                    ...updated[cardIndex].data[index],
+                                                    event: e.target.value,
+                                                    label: e.target.value,
+                                                  };
+                                                  setLocalVisualDataCards(updated);
+                                                }}
+                                                className="text-sm"
+                                                placeholder="Event"
+                                              />
+                                              <Input
+                                                value={item.date || item.time || ""}
+                                                onChange={(e) => {
+                                                  const updated = [...localVisualDataCards];
+                                                  updated[cardIndex].data[index] = {
+                                                    ...updated[cardIndex].data[index],
+                                                    date: e.target.value,
+                                                    time: e.target.value,
+                                                  };
+                                                  setLocalVisualDataCards(updated);
+                                                }}
+                                                className="text-xs"
+                                                placeholder="Date"
+                                              />
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                  const updated = [...localVisualDataCards];
+                                                  updated[cardIndex].data = updated[
+                                                    cardIndex
+                                                  ].data.filter(
+                                                    (_: UntypedBackendApiResponse, i: number) =>
+                                                      i !== index,
+                                                  );
+                                                  setLocalVisualDataCards(updated);
+                                                }}
+                                                className="text-red-600 hover:text-red-700"
+                                              >
+                                                <X className="h-4 w-4" />
+                                              </Button>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <p className="text-sm font-medium text-gray-900">
+                                                {item.event || item.label}
+                                              </p>
+                                              <p className="text-xs text-gray-500">
+                                                {item.date || item.time}
+                                              </p>
+                                            </>
+                                          )}
+                                        </div>
                                       </div>
-                                    </div>
-                                  ))
+                                    ),
+                                  )
                                 ) : (
                                   <p className="text-gray-500 text-sm">
                                     No timeline data available
@@ -1586,77 +1599,82 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                               )}
                               <div className="space-y-3">
                                 {card.data && card.data.length > 0 ? (
-                                  card.data.map((item: any, index: number) => (
-                                    <div
-                                      key={index}
-                                      className="flex items-center justify-between gap-2"
-                                    >
-                                      {isEditing ? (
-                                        <>
-                                          <Input
-                                            value={item.metric || item.label || ""}
-                                            onChange={(e) => {
-                                              const updated = [...localVisualDataCards];
-                                              updated[cardIndex].data[index] = {
-                                                ...updated[cardIndex].data[index],
-                                                metric: e.target.value,
-                                                label: e.target.value,
-                                              };
-                                              setLocalVisualDataCards(updated);
-                                            }}
-                                            className="flex-1 text-sm"
-                                            placeholder="Metric"
-                                          />
-                                          <Input
-                                            type="number"
-                                            value={item.value || ""}
-                                            onChange={(e) => {
-                                              const updated = [...localVisualDataCards];
-                                              updated[cardIndex].data[index] = {
-                                                ...updated[cardIndex].data[index],
-                                                value: Number(e.target.value) || 0,
-                                              };
-                                              setLocalVisualDataCards(updated);
-                                            }}
-                                            className="w-20 text-sm"
-                                            placeholder="Value"
-                                          />
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => {
-                                              const updated = [...localVisualDataCards];
-                                              updated[cardIndex].data = updated[
-                                                cardIndex
-                                              ].data.filter((_: any, i: number) => i !== index);
-                                              setLocalVisualDataCards(updated);
-                                            }}
-                                            className="text-red-600 hover:text-red-700"
-                                          >
-                                            <X className="h-4 w-4" />
-                                          </Button>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <span className="text-sm text-gray-600">
-                                            {item.metric || item.label}
-                                          </span>
-                                          <div className="flex items-center space-x-2">
-                                            <span className="text-sm font-medium text-gray-900">
-                                              {item.value}%
-                                            </span>
-                                            <TrendingUp
-                                              className={`h-3 w-3 ${
-                                                item.trend === "up"
-                                                  ? "text-green-600"
-                                                  : "text-red-600"
-                                              } ${item.trend === "down" ? "rotate-180" : ""}`}
+                                  card.data.map(
+                                    (item: UntypedBackendApiResponse, index: number) => (
+                                      <div
+                                        key={index}
+                                        className="flex items-center justify-between gap-2"
+                                      >
+                                        {isEditing ? (
+                                          <>
+                                            <Input
+                                              value={item.metric || item.label || ""}
+                                              onChange={(e) => {
+                                                const updated = [...localVisualDataCards];
+                                                updated[cardIndex].data[index] = {
+                                                  ...updated[cardIndex].data[index],
+                                                  metric: e.target.value,
+                                                  label: e.target.value,
+                                                };
+                                                setLocalVisualDataCards(updated);
+                                              }}
+                                              className="flex-1 text-sm"
+                                              placeholder="Metric"
                                             />
-                                          </div>
-                                        </>
-                                      )}
-                                    </div>
-                                  ))
+                                            <Input
+                                              type="number"
+                                              value={item.value || ""}
+                                              onChange={(e) => {
+                                                const updated = [...localVisualDataCards];
+                                                updated[cardIndex].data[index] = {
+                                                  ...updated[cardIndex].data[index],
+                                                  value: Number(e.target.value) || 0,
+                                                };
+                                                setLocalVisualDataCards(updated);
+                                              }}
+                                              className="w-20 text-sm"
+                                              placeholder="Value"
+                                            />
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={() => {
+                                                const updated = [...localVisualDataCards];
+                                                updated[cardIndex].data = updated[
+                                                  cardIndex
+                                                ].data.filter(
+                                                  (_: UntypedBackendApiResponse, i: number) =>
+                                                    i !== index,
+                                                );
+                                                setLocalVisualDataCards(updated);
+                                              }}
+                                              className="text-red-600 hover:text-red-700"
+                                            >
+                                              <X className="h-4 w-4" />
+                                            </Button>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <span className="text-sm text-gray-600">
+                                              {item.metric || item.label}
+                                            </span>
+                                            <div className="flex items-center space-x-2">
+                                              <span className="text-sm font-medium text-gray-900">
+                                                {item.value}%
+                                              </span>
+                                              <TrendingUp
+                                                className={`h-3 w-3 ${
+                                                  item.trend === "up"
+                                                    ? "text-green-600"
+                                                    : "text-red-600"
+                                                } ${item.trend === "down" ? "rotate-180" : ""}`}
+                                              />
+                                            </div>
+                                          </>
+                                        )}
+                                      </div>
+                                    ),
+                                  )
                                 ) : (
                                   <p className="text-gray-500 text-sm">
                                     No percentage data available
@@ -2229,10 +2247,10 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                       keyUpdates:
                         (regulatoryData?.keyUpdates || [])
                           .filter(
-                            (update: any) =>
+                            (update: UntypedRegulatoryUpdate) =>
                               update && update?.title && typeof update.title === "string",
                           )
-                          .map((update: any) => {
+                          .map((update: UntypedRegulatoryUpdate) => {
                             const id = update.title.toLowerCase().replace(/\s+/g, "-");
                             let localValue = localKeyDataValues[id];
 
@@ -2402,7 +2420,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                         {/* Render based on chart type */}
                         {card.type === "pie-chart" ? (
                           <MiniPieChart
-                            data={card.data.map((item: any) => ({
+                            data={card.data.map((item: UntypedBackendApiResponse) => ({
                               name: item.label,
                               value: item.value,
                               color: `hsl(${cardIndex * 137 + item.value * 2}, 70%, 50%)`,
@@ -2411,7 +2429,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                           />
                         ) : card.type === "line-chart" ? (
                           <MiniLineChart
-                            data={card.data.map((item: any) => ({
+                            data={card.data.map((item: UntypedBackendApiResponse) => ({
                               name: item.label,
                               value: item.value,
                             }))}
@@ -2423,47 +2441,51 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                             {(() => {
                               // Find max value to normalize progress bars
                               const maxValue = Math.max(
-                                ...card.data.map((item: any) => Number(item.value) || 0),
+                                ...card.data.map(
+                                  (item: UntypedBackendApiResponse) => Number(item.value) || 0,
+                                ),
                               );
                               const normalizeValue = (val: number) =>
                                 maxValue > 100
                                   ? Math.min((val / maxValue) * 100, 100)
                                   : Math.min(val, 100);
 
-                              return card.data.map((item: any, index: number) => {
-                                const numericValue = Number(item.value) || 0;
-                                const normalizedWidth = normalizeValue(numericValue);
+                              return card.data.map(
+                                (item: UntypedBackendApiResponse, index: number) => {
+                                  const numericValue = Number(item.value) || 0;
+                                  const normalizedWidth = normalizeValue(numericValue);
 
-                                return (
-                                  <div key={index} className="flex items-center justify-between">
-                                    <span className="text-sm text-gray-600">
-                                      {item.label || item.name}
-                                    </span>
-                                    <div className="flex items-center space-x-2">
-                                      <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                        <div
-                                          className="h-2 rounded-full"
-                                          style={{
-                                            width: `${normalizedWidth}%`,
-                                            backgroundColor:
-                                              item.color || `hsl(${index * 60}, 70%, 50%)`,
-                                            maxWidth: "100%",
-                                          }}
-                                        />
-                                      </div>
-                                      <span className="text-sm font-medium text-gray-900">
-                                        {item.value}
-                                        {card.title?.includes("Growth") ? "B" : ""}
+                                  return (
+                                    <div key={index} className="flex items-center justify-between">
+                                      <span className="text-sm text-gray-600">
+                                        {item.label || item.name}
                                       </span>
+                                      <div className="flex items-center space-x-2">
+                                        <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                          <div
+                                            className="h-2 rounded-full"
+                                            style={{
+                                              width: `${normalizedWidth}%`,
+                                              backgroundColor:
+                                                item.color || `hsl(${index * 60}, 70%, 50%)`,
+                                              maxWidth: "100%",
+                                            }}
+                                          />
+                                        </div>
+                                        <span className="text-sm font-medium text-gray-900">
+                                          {item.value}
+                                          {card.title?.includes("Growth") ? "B" : ""}
+                                        </span>
+                                      </div>
                                     </div>
-                                  </div>
-                                );
-                              });
+                                  );
+                                },
+                              );
                             })()}
                           </div>
                         ) : card.type === "timeline" ? (
                           <div className="space-y-3">
-                            {card.data.map((item: any, index: number) => (
+                            {card.data.map((item: UntypedBackendApiResponse, index: number) => (
                               <div key={index} className="flex items-start space-x-3">
                                 <div
                                   className={`w-2 h-2 rounded-full mt-2 ${
@@ -2481,7 +2503,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                           </div>
                         ) : card.type === "percentage" ? (
                           <div className="space-y-3">
-                            {card.data.map((item: any, index: number) => (
+                            {card.data.map((item: UntypedBackendApiResponse, index: number) => (
                               <div key={index} className="flex items-center justify-between">
                                 <span className="text-sm text-gray-600">
                                   {item.metric || item.label}
@@ -2502,7 +2524,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                         ) : (
                           /* Fallback for unknown types or old format */
                           <div className="space-y-3">
-                            {card.data.map((item: any, index: number) => (
+                            {card.data.map((item: UntypedBackendApiResponse, index: number) => (
                               <div key={index} className="flex items-center justify-between">
                                 <span className="text-sm text-gray-600">
                                   {item.metric || item.name || item.label}
