@@ -1104,7 +1104,7 @@ export const SuggestedICPCards = ({
         });
       }
     },
-    [orgId, currentUser?.uid, toast, refetchCustomerProfileIcps],
+    [orgId, toast, refetchCustomerProfileIcps],
   );
 
   // Persist state changes
@@ -1396,7 +1396,7 @@ export const SuggestedICPCards = ({
         }));
       }
     },
-    [refinedICPs, newICPs, orgId, toast, onICPRejected],
+    [refinedICPs, newICPs, toast, onICPRejected],
   );
 
   const finalizeRecommendedRejectRef = useRef(finalizeRecommendedReject);
