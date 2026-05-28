@@ -162,7 +162,7 @@ All Spec 18 §5 done-when items verified at HEAD before merge:
 
 | # | Item | Status | Value |
 |---|---|---|---|
-| 1 | `frontend/eslint.config.js` has 5 rules + `import-x/order` + 3 override zones + `eslint-config-prettier` last + `projectService: true` | PASS | All present (verified by `grep`). |
+| 1 | `frontend/eslint.config.js` has 5 rules + `import-x/order` + 4 override zones + `eslint-config-prettier` last + `projectService: true` | PASS | All present (verified by `grep`). Override zones: shadcn ui, root configs, test files (the 3 from spec §3.3), plus a 4th added in Step 6 residual for `src/contexts/**` + `src/components/customers/LeadStream.tsx` co-export pattern (see §7). |
 | 2 | `.prettierrc` + `.prettierignore` at `frontend/`; `.git-blame-ignore-revs` at monorepo root with all Wave A SHAs | PASS | All 3 files present. 16 Wave A SHAs in blame-revs (verified by SHA-presence loop). |
 | 3 | `npm run lint` returns 0 errors / 0 warnings | PASS | `npm run lint` exit 0. |
 | 4 | `npm run format:check` green | PASS | "All matched files use Prettier code style!" |
