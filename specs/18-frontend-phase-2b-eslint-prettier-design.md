@@ -1,7 +1,7 @@
 # Spec 18 — Frontend Phase 2b: ESLint type-aware + Prettier
 
-**Status:** Design — round 2 (round 1 review synthesized at `docs/reviews/18-frontend-phase-2b-eslint-prettier-design-spec-synthesis-1.md`)
-**Date:** 2026-05-28 (round 1), 2026-05-28 (round 2 revisions)
+**Status:** Design — round 3 (rounds 1 and 2 reviews synthesized at `docs/reviews/18-frontend-phase-2b-eslint-prettier-design-spec-synthesis-1.md` and `…-synthesis-2.md`)
+**Date:** 2026-05-28 (round 1), 2026-05-28 (round 2 revisions), 2026-05-28 (round 3 revisions)
 **Type:** Phase spec (descendant of `specs/14-frontend-refactoring-master-plan-design.md` §4 Phase 2b)
 **Paired plan:** `plans/18-frontend-phase-2b-eslint-prettier.md` (written next)
 
@@ -35,7 +35,7 @@ Master spec §4 places Phase 2b immediately after Phase 2a so the lint storm hit
 | Source LOC | 59,651 across 142 `.ts`/`.tsx` files under `frontend/src/` (post-Phase-2a count; down from Phase 1's 67,469 due to dead-shadcn deletes + Wave A `noUnused*` cleanup) |
 | `tsconfig.app.json` | Strict: `strict`, `noImplicitAny`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch` all `true` (per Phase 2a) |
 | Current ESLint config | `tseslint.configs.recommended` extended; `eslint-plugin-react-hooks` recommended rules; `react-refresh/only-export-components` as `warn`; `@typescript-eslint/no-unused-vars` explicitly OFF |
-| Current `eslint .` baseline | **392 problems (336 errors, 56 warnings)** under the existing config |
+| Current `eslint .` baseline | 392 problems (336 errors, 56 warnings) under the existing config |
 | Error origin (336) — verified per-rule | `@typescript-eslint/no-explicit-any` 233 · `no-empty` 46 · `no-useless-escape` 16 · `@typescript-eslint/ban-types` 11 · `@typescript-eslint/no-unsafe-assignment` 9 · `@typescript-eslint/no-unsafe-return` 6 · `@typescript-eslint/no-unsafe-member-access` 3 · `@typescript-eslint/no-empty-object-type` 3 · `@typescript-eslint/no-unused-expressions` 2 · `no-control-regex` 2 · `@typescript-eslint/ban-ts-comment` 2 · `react-hooks/rules-of-hooks` 1 · `no-case-declarations` 1 · `@typescript-eslint/no-require-imports` 1 (in `tailwind.config.ts`). **103 errors come from rules outside the 5 mandated set** — Phase 2b's scope (§2.1) and methodology (§4) cover all of them because `--max-warnings 0` requires it. |
 | Warning origin (56) — verified per-rule | `react-hooks/exhaustive-deps` 35 · unused `eslint-disable` directives 13 · `react-refresh/only-export-components` 8. The dominant warning category is `exhaustive-deps` (62.5%), not `only-export-components` (14%) — Phase 2b's scope (§2.1) addresses both. |
 | Inline `any` count | 224 (`rg -n ':\s*any\b\|as\s+any\b\|<any>' -g '*.ts' -g '*.tsx' src/`). Same regex as Phase 2a §1.3 — excludes multi-argument generics (`Record<string, any>`, `Map<string, any>`) and other positions the ESLint rule catches. The ESLint `no-explicit-any` rule reports **233 violations** (9 more than the regex), confirming the regex undercounts by ~4%. Step 0 probe re-measures. |
@@ -95,7 +95,8 @@ The design-time count of `no-explicit-any` violations is **233** (verified by `e
   - `@typescript-eslint/no-empty-object-type` (3) — Wave B `--fix` sweep where auto-fixable; manual fix otherwise.
   - `@typescript-eslint/no-floating-promises`, `no-misused-promises` (Step 0 counts) — per-site fix in Wave D.
   - `react-hooks/exhaustive-deps` (35 warnings) — per-site fix in Wave D. Each site is one of: add missing dep, wrap in `useCallback`/`useMemo`, use a ref for non-reactive values, or `eslint-disable-next-line react-hooks/exhaustive-deps` with one-line justification (this rule is the documented exception to §2.4 posture rule 10's "production code uses escape-hatches" pattern — the warnings legitimately need per-site judgment; no central abstraction helps).
-  - `no-empty` (46), `no-useless-escape` (16), `no-control-regex` (2), `no-unused-expressions` (2), `no-case-declarations` (1), `@typescript-eslint/ban-ts-comment` (2), `react-hooks/rules-of-hooks` (1) — Wave B's manual mechanical residue. Each is a small per-site fix (add a `// intentional` comment for genuinely-empty blocks, remove unnecessary regex escapes, wrap case bodies in braces, etc.). 70 total fixes — comparable to a single area-grouping in Wave A; bundled by area into ~3–5 commits.
+  - `no-empty` (46), `no-useless-escape` (16), `no-control-regex` (2), `no-unused-expressions` (2), `no-case-declarations` (1), `@typescript-eslint/ban-ts-comment` (2) — Wave B's manual mechanical residue. Each is a small per-site fix (add a `// intentional` comment for genuinely-empty blocks, remove unnecessary regex escapes, wrap case bodies in braces, etc.). 69 total fixes — comparable to a single area-grouping in Wave A; bundled by area into ~3–5 commits.
+  - `react-hooks/rules-of-hooks` (1) — Wave D's per-site semantic fix. Restructure the hook call to satisfy ordering rules; potentially requires moving a hook out of a conditional or splitting a component. **Verify behavior unchanged** (run Vitest + visual regression for the affected component).
   - `@typescript-eslint/no-require-imports` (1, `tailwind.config.ts`) — Wave B / Step 1 override zone in `eslint.config.js`. The `require()` is intentional for Tailwind plugin loading.
   - `react-refresh/only-export-components` (8 warnings under `src/components/ui/`) — Wave B / Step 1 override zone. Shadcn primitives are locked from Phase 4 — restructuring their exports is out of scope.
   - Unused `eslint-disable` directives (13 warnings) — Wave B single commit removing them.
@@ -207,6 +208,8 @@ languageOptions: {
 ```
 
 `projectService: true` is the modern typescript-eslint v8 API. It lazy-loads project info per file, avoiding the "file not in project" error that bites test files and root config files under the older `project: true` form. The two type-aware rules (`no-floating-promises`, `no-misused-promises`) require this; the three syntactic rules (`no-explicit-any`, `no-unused-vars`, `consistent-type-imports`) work without it but coexist fine.
+
+**Node version note:** `import.meta.dirname` requires Node ≥21.2.0. The project's current runtime is Node v22.13.0 so this works, but typescript-eslint v8 + ESLint v9 themselves require only Node ≥18. A contributor on Node 20 LTS would get a load-time error. The plan stage picks between (a) keeping `import.meta.dirname` and documenting the Node ≥21.2 requirement in `frontend/package.json` `engines`, or (b) using the broader-compat form `tsconfigRootDir: fileURLToPath(new URL('.', import.meta.url))` (works on Node ≥18) with the `import { fileURLToPath } from 'node:url'` import at the top of the config.
 
 ### 3.3 Override zones
 
@@ -392,7 +395,8 @@ These rules' violations are small mechanical fixes (not warranting per-file comm
 - `no-unused-expressions` (2) — fix the expression (likely typos like `foo === bar` instead of `foo = bar`) or remove.
 - `no-case-declarations` (1) — wrap case body in braces (`case X: { const foo = ...; }`).
 - `@typescript-eslint/ban-ts-comment` (2) — replace `@ts-ignore` with `@ts-expect-error: description` (the rule's preferred form). Note: this is reshaping existing suppressions, not adding new ones; the §5 item 9 count stays at ≤5.
-- `react-hooks/rules-of-hooks` (1) — bug fix; restructure the hook call to satisfy ordering rules. **Verify behavior unchanged** (run Vitest + visual regression for the affected component).
+
+(`react-hooks/rules-of-hooks` is a semantic restructuring concern — moved to Wave D, see Step 5.)
 
 Commit grain: bundled by area following Wave A's order. Each commit's subject specifies the area + rule scope, e.g., `refactor(fe): fix no-empty + no-useless-escape in src/components/customers`.
 
@@ -452,6 +456,8 @@ Targets type-aware semantic rules: `no-floating-promises`, `no-misused-promises`
 - **`react-hooks/exhaustive-deps`** (35 warnings):
   - Missing dependency → add it to the deps array.
   - Dependency intentionally omitted (e.g., single-shot effect) → restructure with `useCallback`/`useMemo`, use a ref for non-reactive values, or `// eslint-disable-next-line react-hooks/exhaustive-deps` with a one-line justification. **This rule is the documented exception to §2.4 posture rule 10** — exhaustive-deps overrides legitimately need per-site judgment that no shared abstraction helps. Each disable must carry the justification comment in the same commit.
+- **`react-hooks/rules-of-hooks`** (1 error):
+  - Restructure the hook to satisfy ordering rules. Common patterns: a hook called inside a conditional gets lifted to the top of the component; a hook called inside a loop gets pulled into a child component. **Verify behavior unchanged** (run Vitest + visual regression for the affected component before commit). One-off semantic restructuring; commit it on its own.
 
 **Escape-hatches:** rarely needed for these rules; fixes are usually mechanical. If a site genuinely needs an escape (e.g., a Promise whose contract can't be tightened), follow Wave C's same policy.
 
