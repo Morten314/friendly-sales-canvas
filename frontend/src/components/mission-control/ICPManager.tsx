@@ -2028,9 +2028,9 @@ const ICPManager: React.FC = () => {
         'hasData': 'data' in responseData,
         'responseDataKeys': Object.keys(responseData || {}),
         'dataKeys': responseData?.data ? Object.keys(responseData.data) : [],
-        'data.icps': responseData?.data?.icps,
-        'data.customer_profiles': responseData?.data?.customer_profiles,
-        'data.customer_profiles.icps': responseData?.data?.customer_profiles?.icps,
+        'data.icps': (responseData?.data as Record<string, unknown>)?.icps,
+        'data.customer_profiles': (responseData?.data as Record<string, unknown>)?.customer_profiles,
+        'data.customer_profiles.icps': (responseData?.data as Record<string, Record<string, unknown>>)?.customer_profiles?.icps,
         'directIcps': responseData?.icps,
       });
       
