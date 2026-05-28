@@ -882,7 +882,7 @@ const MissionControl = () => {
                     errorMessage = errorData.substring(0, 200); // First 200 chars if not JSON
                   }
                 }
-              } catch (e) {
+              } catch (_e) {
                 // Ignore errors reading response body
               }
 

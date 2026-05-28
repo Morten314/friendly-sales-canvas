@@ -78,7 +78,7 @@ export function ScoutChatWithHistory({
         const parsed = JSON.parse(stored) as ChatSession[];
         if (Array.isArray(parsed) && parsed.length > 0) {
           loadedSessions = parsed.map((s) => {
-            const { leadContext, ...rest } = s;
+            const { leadContext: _leadContext, ...rest } = s;
             const session = { ...rest };
             if (session.context && (session.title.endsWith("…") || session.title.length < 50)) {
               session.title = getSessionTitle(session.context);
@@ -132,7 +132,7 @@ export function ScoutChatWithHistory({
       if (sessions.length === 0) {
         localStorage.removeItem(storageKey);
       } else {
-        const toSave = sessions.map(({ leadContext, ...rest }) => rest);
+        const toSave = sessions.map(({ leadContext: _leadContext, ...rest }) => rest);
         localStorage.setItem(storageKey, JSON.stringify(toSave));
       }
     } catch {

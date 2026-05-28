@@ -169,7 +169,7 @@ class JWTManager {
     if (!token || this.isTokenExpired()) {
       try {
         token = await this.refreshAccessToken();
-      } catch (error) {
+      } catch (_error) {
         // If refresh fails, JWT is optional - return empty string
         console.warn(
           "⚠️ JWT token refresh failed. Continuing without JWT (optional for most endpoints).",

@@ -2422,7 +2422,7 @@ const MarketResearch = React.memo(() => {
               companyProfileData = null;
             } else {
             }
-          } catch (error) {}
+          } catch (_error) {}
         }
       }
 
@@ -2452,7 +2452,7 @@ const MarketResearch = React.memo(() => {
               );
             }
           }
-        } catch (error) {}
+        } catch (_error) {}
       }
 
       // Only use companyProfileData if it belongs to the current user
@@ -2857,7 +2857,7 @@ const MarketResearch = React.memo(() => {
           } else {
           }
         }
-      } catch (error) {}
+      } catch (_error) {}
 
       // Ensure user is authenticated before making API call
       if (!currentUser?.uid) {
@@ -2946,7 +2946,7 @@ const MarketResearch = React.memo(() => {
                 }
               } else {
               }
-            } catch (altError) {}
+            } catch (_altError) {}
           }
         }
 
@@ -4277,7 +4277,7 @@ const MarketResearch = React.memo(() => {
         if (profileData) {
           setCompanyProfile(JSON.parse(profileData));
         }
-      } catch (error) {}
+      } catch (_error) {}
     };
 
     loadCompanyProfile();
@@ -4376,7 +4376,7 @@ const MarketResearch = React.memo(() => {
 
         minute: "2-digit",
       });
-    } catch (error) {
+    } catch (_error) {
       return timestamp;
     }
   };

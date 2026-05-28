@@ -142,7 +142,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         if (typeof comp === "string") {
           try {
             return JSON.parse(comp);
-          } catch (e) {
+          } catch (_e) {
             return null;
           }
         }
@@ -257,7 +257,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       if (typeof insights === "string") {
         try {
           insights = JSON.parse(insights);
-        } catch (e) {
+        } catch (_e) {
           insights = null;
         }
       }
@@ -267,7 +267,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           if (typeof insight === "string") {
             try {
               return JSON.parse(insight);
-            } catch (e) {
+            } catch (_e) {
               return null;
             }
           }
@@ -450,7 +450,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         if (typeof insights === "string") {
           try {
             insights = JSON.parse(insights);
-          } catch (e) {
+          } catch (_e) {
             insights = null;
           }
         }
@@ -460,7 +460,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               if (typeof insight === "string") {
                 try {
                   return JSON.parse(insight);
-                } catch (e) {
+                } catch (_e) {
                   return null;
                 }
               }
@@ -673,7 +673,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         // If the final response is still not ok, log it but don't throw (we'll preserve local state anyway)
         if (!response.ok) {
         }
-      } catch (fetchError) {
+      } catch (_fetchError) {
         // Network errors or other fetch errors - log but don't throw
         // We'll preserve local state anyway
         response = null; // Mark as no response
@@ -696,7 +696,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             getData = await getResponse.json();
           } else {
           }
-        } catch (getError) {}
+        } catch (_getError) {}
       } else {
       }
 

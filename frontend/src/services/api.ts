@@ -39,7 +39,7 @@ class ApiService {
           });
 
           return retryResponse;
-        } catch (refreshError) {
+        } catch (_refreshError) {
           // If refresh fails, redirect to login
           jwtManager.clearTokens();
           window.location.href = "/login";

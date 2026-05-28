@@ -100,7 +100,7 @@ export function ChatWithScout({ fullPage = false }: ChatWithScoutProps) {
         let errorText = "";
         try {
           errorText = await response.text();
-        } catch (e) {
+        } catch (_e) {
           errorText = "Could not read error response";
         }
 

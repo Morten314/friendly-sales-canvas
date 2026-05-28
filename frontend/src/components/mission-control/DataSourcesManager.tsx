@@ -1540,7 +1540,7 @@ const DataSourcesManager: React.FC = () => {
                     "Backend returned a different URL than what was sent. This may indicate a backend issue.",
                 });
               }
-            } catch (e) {
+            } catch (_e) {
               // Response might not be JSON, that's okay
               console.log(
                 "✅ DataSourcesManager - URL update success (no response body or not JSON)",
@@ -2892,7 +2892,7 @@ const DataSourcesManager: React.FC = () => {
           return;
         }
       }
-    } catch (validationError) {
+    } catch (_validationError) {
       toast({
         title: "Validation error",
         description: "Failed to validate CSV file. Please check the file format.",

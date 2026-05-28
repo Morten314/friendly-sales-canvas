@@ -970,7 +970,7 @@ export const DataHistoryDialog = ({ onReportSelected }: DataHistoryDialogProps) 
   const parseTimestamp = (timestamp: string): Date => {
     try {
       return new Date(timestamp);
-    } catch (error) {
+    } catch (_error) {
       console.warn("Failed to parse timestamp:", timestamp);
       return new Date();
     }
@@ -1069,7 +1069,7 @@ export const DataHistoryDialog = ({ onReportSelected }: DataHistoryDialogProps) 
         }),
         full: date.toLocaleString("en-US"),
       };
-    } catch (error) {
+    } catch (_error) {
       return {
         date: timestamp,
         time: "",

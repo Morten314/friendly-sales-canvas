@@ -232,7 +232,7 @@ export const AIPromptingInterface = ({
           const errorResponse = await response.text();
           console.log("Error response body:", errorResponse);
           errorDetails = errorResponse;
-        } catch (e) {
+        } catch (_e) {
           console.log("Could not read error response body");
         }
 
@@ -273,7 +273,7 @@ export const AIPromptingInterface = ({
           // STRICTLY only use response_message - do not fall back to other fields
           responseMessage = parsedData.response_message || "";
           responseJson = parsedData.response_json || parsedData.json || parsedData.data || null;
-        } catch (e) {
+        } catch (_e) {
           // If it's not JSON, use the string as-is
           responseMessage = data;
         }

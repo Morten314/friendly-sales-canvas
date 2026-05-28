@@ -1479,7 +1479,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                                       }),
                                     );
                                   }
-                                } catch (parseError) {}
+                                } catch (_parseError) {}
 
                                 // Only use fallback data if parsing fails
                                 return [
@@ -1536,7 +1536,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                                       },
                                     );
                                   }
-                                } catch (parseError) {}
+                                } catch (_parseError) {}
 
                                 // Only use fallback data if parsing fails
                                 return [

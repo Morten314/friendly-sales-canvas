@@ -323,7 +323,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
           if (typeof update === "string") {
             try {
               parsedUpdate = JSON.parse(update);
-            } catch (e) {
+            } catch (_e) {
               parsedUpdate = update;
             }
           }
@@ -372,7 +372,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
           if (typeof update === "string") {
             try {
               parsedUpdate = JSON.parse(update);
-            } catch (e) {
+            } catch (_e) {
               parsedUpdate = update;
             }
           }
@@ -737,7 +737,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
           } else {
           }
         }
-      } catch (error) {}
+      } catch (_error) {}
 
       fetchRegulatoryComplianceData(true); // refresh = true for company profile changes
     };
@@ -822,7 +822,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             if (typeof update === "string") {
               try {
                 parsedUpdate = JSON.parse(update);
-              } catch (e) {
+              } catch (_e) {
                 parsedUpdate = update;
               }
             }

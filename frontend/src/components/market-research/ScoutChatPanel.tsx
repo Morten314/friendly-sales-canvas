@@ -305,7 +305,7 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
           try {
             const parsedData = JSON.parse(data) as Record<string, unknown>;
             answer = pickScoutBody(parsedData);
-          } catch (e) {
+          } catch (_e) {
             // If it's not JSON, use the string as-is
             answer = data;
           }
