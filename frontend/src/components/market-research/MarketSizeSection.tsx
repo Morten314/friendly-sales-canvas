@@ -12,7 +12,7 @@ import { EditRecord } from './types';
 import { executeWithRateLimit } from '@/lib/rateLimitManager';
 import { apiFetchJson } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserLocalStorage, setUserLocalStorage } from '@/utils/cacheUtils';
+import { setUserLocalStorage } from '@/utils/cacheUtils';
 
 interface MarketSizeSectionProps {
   isEditing: boolean;
@@ -96,8 +96,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   isLoading,
   error,
   onRefresh,
-  isRefreshing,
-  companyProfile
+  isRefreshing
 }) => {
   const { currentUser, orgId } = useAuth();
   const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility

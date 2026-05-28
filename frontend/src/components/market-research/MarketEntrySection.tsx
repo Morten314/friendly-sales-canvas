@@ -2053,8 +2053,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   onExportPDF,
   onSaveToWorkspace,
   onGenerateShareableLink,
-  isRefreshing = false,
-  companyProfile
+  isRefreshing = false
 }) => {
   const { currentUser, orgId } = useAuth();
   const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility

@@ -9,11 +9,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useToast } from '@/hooks/use-toast';
 import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
-import { toUTCTimestamp, getCurrentUTCTimestamp } from '@/lib/timestampUtils';
+import { toUTCTimestamp } from '@/lib/timestampUtils';
 import { executeWithRateLimit } from '@/lib/rateLimitManager';
 import { apiFetchJson } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserLocalStorage, setUserLocalStorage } from '@/utils/cacheUtils';
+import { setUserLocalStorage } from '@/utils/cacheUtils';
 
 interface EditRecord {
   id: string;
@@ -120,7 +120,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   onSaveToWorkspace,
   onGenerateShareableLink,
   isRefreshing = false,
-  companyProfile,
   // Data props
   executiveSummary: propExecutiveSummary,
   aiAdoption: propAiAdoption,
