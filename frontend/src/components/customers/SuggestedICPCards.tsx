@@ -986,7 +986,9 @@ export const SuggestedICPCards = ({
     try {
       const saved = localStorage.getItem("profiler_cardStatuses");
       if (saved) return JSON.parse(saved);
-    } catch {}
+    } catch {
+      // intentional: ignore corrupt localStorage payload
+    }
     return {};
   });
 
@@ -997,7 +999,9 @@ export const SuggestedICPCards = ({
   const [showRecommendations, _setShowRecommendations] = useState(() => {
     try {
       return localStorage.getItem("profiler_showRecommendations") === "true";
-    } catch {}
+    } catch {
+      // intentional: ignore corrupt localStorage payload
+    }
     return false;
   });
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);

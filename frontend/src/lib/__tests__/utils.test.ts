@@ -45,9 +45,9 @@ describe("sanitizeAnswerText", () => {
     expect(sanitizeAnswerText("")).toBe("");
     // @ts-expect-error — exercising the typeof guard at line 11
     expect(sanitizeAnswerText(null)).toBe("");
-    // @ts-expect-error
+    // @ts-expect-error — exercising the typeof guard at line 11
     expect(sanitizeAnswerText(undefined)).toBe("");
-    // @ts-expect-error
+    // @ts-expect-error — exercising the typeof guard at line 11
     expect(sanitizeAnswerText(42)).toBe("");
   });
 

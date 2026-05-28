@@ -503,7 +503,8 @@ export const LeadStreamPanel = ({ filterByICP, onClearFilter }: LeadStreamPanelP
   const toggleSave = (id: string) => {
     setSavedLeads((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -511,7 +512,8 @@ export const LeadStreamPanel = ({ filterByICP, onClearFilter }: LeadStreamPanelP
   const toggleSegment = (icpName: string) => {
     setCollapsedSegments((prev) => {
       const next = new Set(prev);
-      next.has(icpName) ? next.delete(icpName) : next.add(icpName);
+      if (next.has(icpName)) next.delete(icpName);
+      else next.add(icpName);
       return next;
     });
   };

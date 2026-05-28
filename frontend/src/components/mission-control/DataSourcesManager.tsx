@@ -2190,6 +2190,7 @@ const DataSourcesManager: React.FC = () => {
           text = normalizeCsvAsciiDoubleQuotes(text);
 
           // Check for binary content in decoded text
+          // eslint-disable-next-line no-control-regex -- intentional: detecting control chars to identify binary uploads
           const binaryPattern = /[\x00-\x08\x0E-\x1F\x7F-\x9F]/g;
           const binaryMatches = text.substring(0, 1000).match(binaryPattern);
           if (binaryMatches && binaryMatches.length > 50) {
@@ -2233,6 +2234,7 @@ const DataSourcesManager: React.FC = () => {
           for (let i = 1; i < originalLines.length; i++) {
             const line = originalLines[i];
 
+            // eslint-disable-next-line no-control-regex -- intentional: detecting control chars to identify binary uploads
             const binaryPatternRow = /[\x00-\x08\x0E-\x1F\x7F-\x9F]/;
             if (binaryPatternRow.test(line)) {
               console.error("❌ CSV Validation Error - Binary content detected:", {
