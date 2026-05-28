@@ -1910,8 +1910,8 @@ const MarketResearch = React.memo(() => {
 
 
         // CRITICAL: Verify this data belongs to the current user
-        if (parsedData.user_id && parsedData.user_id !== currentUser.uid) {
-          removeUserLocalStorage('marketIntelligenceData', currentUser.uid);
+        if (parsedData.user_id && currentUser && parsedData.user_id !== currentUser.uid) {
+          removeUserLocalStorage('marketIntelligenceData', currentUser?.uid ?? '');
           // Don't return - will fall through to empty state
         } else if (parsedData.timestamp) {
           // Only return stored data if it has a timestamp AND belongs to current user
@@ -3879,10 +3879,10 @@ const MarketResearch = React.memo(() => {
             ...prev,
             ...transformedData,
             // Only update fields that exist in transformedData, preserve existing ones
-            strategicRecommendations: transformedData.strategicRecommendations?.length > 0 
-              ? transformedData.strategicRecommendations 
+            strategicRecommendations: (transformedData.strategicRecommendations?.length ?? 0) > 0
+              ? transformedData.strategicRecommendations
               : (prev?.strategicRecommendations || []),
-            marketDrivers: transformedData.marketDrivers?.length > 0 
+            marketDrivers: (transformedData.marketDrivers?.length ?? 0) > 0
               ? transformedData.marketDrivers 
               : (prev?.marketDrivers || []),
             marketSizeBySegment: transformedData.marketSizeBySegment && Object.keys(transformedData.marketSizeBySegment).length > 0
@@ -4886,7 +4886,7 @@ const MarketResearch = React.memo(() => {
 
 
           // Verify this profile belongs to the current user
-          if (companyData.user_id && companyData.user_id !== currentUser.uid) {
+          if (companyData.user_id && currentUser && companyData.user_id !== currentUser.uid) {
             companyData = null;
           } else {
           }
@@ -5510,7 +5510,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setMarketData(prev => {
+        setMarketData((prev: UntypedReportState) => {
 
 
 
@@ -6437,15 +6437,15 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.error('❌🏆 API Error Status:', error.status);
+      console.error('❌🏆 API Error Status:', error instanceof Error ? (error as any).status : String(error));
 
 
 
-      console.error('❌🏆 API Error Headers:', error.headers ? Object.fromEntries(error.headers.entries()) : 'No headers');
+      console.error('❌🏆 API Error Headers:', error instanceof Error && (error as any).headers ? Object.fromEntries((error as any).headers.entries()) : 'No headers');
 
 
 
-      console.error('❌🏆 API Error Message:', error.message);
+      console.error('❌🏆 API Error Message:', error instanceof Error ? error.message : String(error));
 
 
 
@@ -7218,7 +7218,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.error('❌🏆 Error details:', error.message);
+      console.error('❌🏆 Error details:', error instanceof Error ? error.message : String(error));
 
 
 
@@ -7812,7 +7812,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-              setMarketData(prev => {
+              setMarketData((prev: UntypedReportState) => {
 
 
 
@@ -8469,7 +8469,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-  const handleMarketSizeScoutClick = async (_context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, customMessage?: string) => {
+  const handleMarketSizeScoutClick = async (_context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, customMessage?: string) => {
 
 
 
@@ -8547,7 +8547,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-  const handleIndustryTrendsScoutClick = async (_context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, customMessage?: string) => {
+  const handleIndustryTrendsScoutClick = async (_context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, customMessage?: string) => {
 
 
 
@@ -8625,7 +8625,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-  const handleCompetitorScoutClick = async (_context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, customMessage?: string) => {
+  const handleCompetitorScoutClick = async (_context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, customMessage?: string) => {
 
 
 
@@ -10741,7 +10741,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-  const handleRegulatoryScoutClick = async (_context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance', _hasEdits?: boolean, customMessage?: string) => {
+  const handleRegulatoryScoutClick = async (_context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', _hasEdits?: boolean, customMessage?: string) => {
 
 
 

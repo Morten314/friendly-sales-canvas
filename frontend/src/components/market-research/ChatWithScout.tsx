@@ -9,8 +9,17 @@ interface ChatMessage {
   timestamp: string;
 }
 
+interface ChatWithScoutResearchContext {
+  leads: { name: string; company: string; jobTitle: string }[];
+  opportunity?: string;
+  icp?: string;
+  reportTraits?: string[];
+}
+
 interface ChatWithScoutProps {
   fullPage?: boolean;
+  researchContext?: ChatWithScoutResearchContext;
+  mode?: 'selected-leads' | 'full-list';
 }
 
 export function ChatWithScout({ fullPage = false }: ChatWithScoutProps) {
