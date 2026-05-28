@@ -1969,6 +1969,7 @@
 // export default MarketEntrySection;
 
 import React, { useEffect, useState, useRef } from 'react';
+import type { UntypedReportState, UntypedReportSection } from '@/lib/types/escape-hatches';
 import { MapPin, Bot, Edit, Target, Clock, AlertTriangle, X, FileText, Save, Share, TrendingUp, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -2213,7 +2214,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           apiDataTimestampRef.current = mappedApiData.timestamp;
           
           // Merge with existing marketEntryData to preserve any props data, but prioritize API data
-          setMarketEntryData((prev: any) => {
+          setMarketEntryData((prev: UntypedReportState) => {
             const merged = {
               ...prev, // Keep existing data
               ...mappedApiData, // Overwrite with API data (which has swotAnalysis)
@@ -2274,7 +2275,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
             if (hasContent) {
               
               // Update marketEntryData with SWOT from localStorage
-              setMarketEntryData((prev: any) => ({
+              setMarketEntryData((prev: UntypedReportState) => ({
                 ...prev,
                 swotAnalysis: swotFromStorage,
                 swot: swotFromStorage
@@ -2931,7 +2932,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
               Executive Summary
             </h3>
             <div className="text-gray-700 leading-relaxed space-y-3">
-              {displayData.executiveSummary.split('\n').map((paragraph: any, index: number) => (
+              {displayData.executiveSummary.split('\n').map((paragraph: UntypedReportSection, index: number) => (
                 <p key={index}>{paragraph}</p>
               ))}
             </div>
@@ -2974,7 +2975,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
                 Entry Barriers
               </h4>
               <ul className="space-y-2">
-                {displayData.entryBarriers.map((barrier: any, index: number) => (
+                {displayData.entryBarriers.map((barrier: UntypedReportSection, index: number) => (
                   <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
                     <span className="text-orange-500 mt-1">•</span>
                     {barrier}
@@ -2989,7 +2990,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
                 Competitive Differentiation
               </h4>
               <ul className="space-y-2">
-                {displayData.competitiveDifferentiation.map((diff: any, index: number) => (
+                {displayData.competitiveDifferentiation.map((diff: UntypedReportSection, index: number) => (
                   <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
                     <span className="text-green-500 mt-1">•</span>
                     {diff}
@@ -3005,7 +3006,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
               Strategic Recommendations
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {displayData.strategicRecommendations.map((recommendation: any, index: number) => (
+              {displayData.strategicRecommendations.map((recommendation: UntypedReportSection, index: number) => (
                 <div key={index} className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                   <div className="text-sm font-medium text-blue-900">{recommendation}</div>
                 </div>
@@ -3019,7 +3020,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
               Risk Assessment
             </h4>
             <div className="space-y-2">
-              {displayData.riskAssessment.map((risk: any, index: number) => (
+              {displayData.riskAssessment.map((risk: UntypedReportSection, index: number) => (
                 <div key={index} className="bg-red-50 p-3 rounded-lg border border-red-200">
                   <div className="text-sm text-red-900">{risk}</div>
                 </div>

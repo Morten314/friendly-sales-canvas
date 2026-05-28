@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import type { UntypedRegulatoryUpdate, UntypedVisualDataCard, UntypedRegionData } from '@/lib/types/escape-hatches';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserLocalStorage, setUserLocalStorage } from '@/utils/cacheUtils';
@@ -1079,7 +1080,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Key Regulatory Updates</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {keyDataPoints.map((point: any) => {
+                  {keyDataPoints.map((point: UntypedRegulatoryUpdate) => {
                     const IconComponent = point.icon;
                     return (
                       <div key={point.id} className="p-4 border border-gray-200 rounded-lg">
@@ -1171,7 +1172,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Compliance Analytics</h3>
                 {(isEditing ? localVisualDataCards : visualDataCards) && (isEditing ? localVisualDataCards : visualDataCards).length > 0 ? (
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {(isEditing ? localVisualDataCards : visualDataCards).map((card: any, cardIndex: number) => {
+                    {(isEditing ? localVisualDataCards : visualDataCards).map((card: UntypedVisualDataCard, cardIndex: number) => {
                       // Find card by type dynamically
                       if (card.type === 'bar-chart') {
                         return (
@@ -1505,7 +1506,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {(isEditing ? localRegionalData : regionalData).map((region: any, index: number) => (
+                      {(isEditing ? localRegionalData : regionalData).map((region: UntypedRegionData, index: number) => (
                         <TableRow key={index}>
                           <TableCell className="font-medium">
                             {isEditing ? (
@@ -1992,7 +1993,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Key Regulatory Updates</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {keyDataPoints.map((point: any) => {
+                {keyDataPoints.map((point: UntypedRegulatoryUpdate) => {
                   const IconComponent = point.icon;
                   return (
                     <div
@@ -2052,7 +2053,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Compliance Analytics</h3>
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {visualDataCards.map((card: any, cardIndex: number) => (
+                    {visualDataCards.map((card: UntypedVisualDataCard, cardIndex: number) => (
                       <div key={cardIndex} className="bg-white border border-gray-200 rounded-lg p-4">
                         <h5 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
                           {card.type === 'pie-chart' && <Users className="h-4 w-4 mr-2 text-blue-600" />}
@@ -2180,7 +2181,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {regionalData.map((region: any, index: number) => (
+                        {regionalData.map((region: UntypedRegionData, index: number) => (
                           <TableRow key={index}>
                             <TableCell className="font-medium">{region.region}</TableCell>
                             <TableCell>{region.framework}</TableCell>

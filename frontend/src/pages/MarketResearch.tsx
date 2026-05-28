@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import type { UntypedReportState, UntypedUiComponent } from '@/lib/types/escape-hatches';
 import { useAuth } from "@/contexts/AuthContext";
 import { getUserLocalStorage, setUserLocalStorage, removeUserLocalStorage } from "@/utils/cacheUtils";
 
@@ -4469,7 +4470,7 @@ const MarketResearch = React.memo(() => {
         }
         setIndustryTrendsData(null);
         setMarketEntryData(null);
-        setMarketIntelligenceData((prev: any) => ({
+        setMarketIntelligenceData((prev: UntypedReportState) => ({
           executiveSummary: prev?.executiveSummary || '',
           tamValue: prev?.tamValue || '',
           samValue: prev?.samValue || '',
@@ -5381,7 +5382,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setMarketIntelligenceData((prev: any) => {
+        setMarketIntelligenceData((prev: UntypedReportState) => {
 
 
 
@@ -6775,7 +6776,7 @@ const MarketResearch = React.memo(() => {
         // Try uiComponents array structure
         let uiComponentsData: any = {};
         if (apiData.uiComponents && Array.isArray(apiData.uiComponents)) {
-          const reportComponent = apiData.uiComponents.find((comp: any) => comp.type === 'report');
+          const reportComponent = apiData.uiComponents.find((comp: UntypedUiComponent) => comp.type === 'report');
           if (reportComponent) {
             uiComponentsData = reportComponent;
           }
@@ -7016,7 +7017,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-          setCompetitorData((prevData: any) => {
+          setCompetitorData((prevData: UntypedReportState) => {
 
 
 
@@ -7265,7 +7266,7 @@ const MarketResearch = React.memo(() => {
 
         
         // Update existing data with current timestamp to pass isDataFresh check
-        setCompetitorData((prevData: any) => ({
+        setCompetitorData((prevData: UntypedReportState) => ({
           ...prevData,
           timestamp: Date.now().toString()
         }));
@@ -9222,7 +9223,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setIndustryTrendsData((prev: any) => {
+    setIndustryTrendsData((prev: UntypedReportState) => {
 
       const updated = { ...prev, executiveSummary: value };
 
@@ -9302,7 +9303,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setIndustryTrendsData((prev: any) => {
+    setIndustryTrendsData((prev: UntypedReportState) => {
 
       const updated = { ...prev, aiAdoption: value };
 
@@ -9354,7 +9355,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setIndustryTrendsData((prev: any) => {
+    setIndustryTrendsData((prev: UntypedReportState) => {
 
       const updated = { ...prev, cloudMigration: value };
 
@@ -9406,7 +9407,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setIndustryTrendsData((prev: any) => {
+    setIndustryTrendsData((prev: UntypedReportState) => {
 
       const updated = { ...prev, regulatory: value };
 
@@ -9462,7 +9463,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setIndustryTrendsData((prev: any) => {
+    setIndustryTrendsData((prev: UntypedReportState) => {
 
       const updated = { ...prev, trendSnapshots: snapshots };
 
@@ -9836,7 +9837,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setCompetitorData((prev: any) => ({ ...prev, executiveSummary: value }));
+    setCompetitorData((prev: UntypedReportState) => ({ ...prev, executiveSummary: value }));
 
 
 
@@ -9880,7 +9881,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setCompetitorData((prev: any) => ({ ...prev, topPlayerShare: value }));
+    setCompetitorData((prev: UntypedReportState) => ({ ...prev, topPlayerShare: value }));
 
 
 
@@ -9924,7 +9925,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setCompetitorData((prev: any) => ({ ...prev, emergingPlayers: value }));
+    setCompetitorData((prev: UntypedReportState) => ({ ...prev, emergingPlayers: value }));
 
 
 
@@ -9968,7 +9969,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setCompetitorData((prev: any) => ({ ...prev, fundingNews: news }));
+    setCompetitorData((prev: UntypedReportState) => ({ ...prev, fundingNews: news }));
 
 
 
@@ -10016,7 +10017,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setMarketIntelligenceData((prev: any) => {
+    setMarketIntelligenceData((prev: UntypedReportState) => {
 
 
 
@@ -10077,7 +10078,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setMarketIntelligenceData((prev: any) => {
+    setMarketIntelligenceData((prev: UntypedReportState) => {
 
 
 
@@ -10138,7 +10139,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setMarketIntelligenceData((prev: any) => {
+    setMarketIntelligenceData((prev: UntypedReportState) => {
 
 
 
@@ -10199,7 +10200,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setMarketIntelligenceData((prev: any) => {
+    setMarketIntelligenceData((prev: UntypedReportState) => {
 
 
 
@@ -10552,7 +10553,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setRegulatoryData((prev: any) => ({ ...prev, executiveSummary: value }));
+    setRegulatoryData((prev: UntypedReportState) => ({ ...prev, executiveSummary: value }));
 
 
 
@@ -10596,7 +10597,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setRegulatoryData((prev: any) => ({ ...prev, euAiActDeadline: value }));
+    setRegulatoryData((prev: UntypedReportState) => ({ ...prev, euAiActDeadline: value }));
 
 
 
@@ -10640,7 +10641,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setRegulatoryData((prev: any) => ({ ...prev, gdprCompliance: value }));
+    setRegulatoryData((prev: UntypedReportState) => ({ ...prev, gdprCompliance: value }));
 
 
 
@@ -10684,7 +10685,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setRegulatoryData((prev: any) => ({ ...prev, potentialFines: value }));
+    setRegulatoryData((prev: UntypedReportState) => ({ ...prev, potentialFines: value }));
 
 
 
@@ -10728,7 +10729,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setRegulatoryData((prev: any) => ({ ...prev, dataLocalization: value }));
+    setRegulatoryData((prev: UntypedReportState) => ({ ...prev, dataLocalization: value }));
 
 
 
@@ -10962,7 +10963,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setMarketEntryData((prev: any) => ({ ...prev, executiveSummary: edit.oldValue }));
+        setMarketEntryData((prev: UntypedReportState) => ({ ...prev, executiveSummary: edit.oldValue }));
 
 
 
@@ -10974,7 +10975,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setMarketEntryData((prev: any) => ({ ...prev, entryBarriers: edit.oldValue.split(', ') }));
+        setMarketEntryData((prev: UntypedReportState) => ({ ...prev, entryBarriers: edit.oldValue.split(', ') }));
 
 
 
@@ -10986,7 +10987,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setMarketEntryData((prev: any) => ({ ...prev, recommendedChannel: edit.oldValue }));
+        setMarketEntryData((prev: UntypedReportState) => ({ ...prev, recommendedChannel: edit.oldValue }));
 
 
 
@@ -10998,7 +10999,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setMarketEntryData((prev: any) => ({ ...prev, timeToMarket: edit.oldValue }));
+        setMarketEntryData((prev: UntypedReportState) => ({ ...prev, timeToMarket: edit.oldValue }));
 
 
 
@@ -11010,7 +11011,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setMarketEntryData((prev: any) => ({ ...prev, topBarrier: edit.oldValue }));
+        setMarketEntryData((prev: UntypedReportState) => ({ ...prev, topBarrier: edit.oldValue }));
 
 
 
@@ -11022,7 +11023,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setMarketEntryData((prev: any) => ({ ...prev, competitiveDifferentiation: edit.oldValue.split(', ') }));
+        setMarketEntryData((prev: UntypedReportState) => ({ ...prev, competitiveDifferentiation: edit.oldValue.split(', ') }));
 
 
 
@@ -11034,7 +11035,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setMarketEntryData((prev: any) => ({ ...prev, strategicRecommendations: edit.oldValue.split(', ') }));
+        setMarketEntryData((prev: UntypedReportState) => ({ ...prev, strategicRecommendations: edit.oldValue.split(', ') }));
 
 
 
@@ -11046,7 +11047,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setMarketEntryData((prev: any) => ({ ...prev, riskAssessment: edit.oldValue.split(', ') }));
+        setMarketEntryData((prev: UntypedReportState) => ({ ...prev, riskAssessment: edit.oldValue.split(', ') }));
 
 
 
@@ -11181,7 +11182,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setMarketEntryData((prev: any) => {
+    setMarketEntryData((prev: UntypedReportState) => {
 
       const updated = { ...prev, executiveSummary: value };
 
@@ -11265,7 +11266,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setMarketEntryData((prev: any) => {
+    setMarketEntryData((prev: UntypedReportState) => {
 
       const updated = { ...prev, entryBarriers: barriers };
 
@@ -11345,7 +11346,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setMarketEntryData((prev: any) => {
+    setMarketEntryData((prev: UntypedReportState) => {
 
       const updated = { ...prev, recommendedChannel: value };
 
@@ -11425,7 +11426,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setMarketEntryData((prev: any) => {
+    setMarketEntryData((prev: UntypedReportState) => {
 
       const updated = { ...prev, timeToMarket: value };
 
@@ -11505,7 +11506,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setMarketEntryData((prev: any) => {
+    setMarketEntryData((prev: UntypedReportState) => {
 
       const updated = { ...prev, topBarrier: value };
 
@@ -11589,7 +11590,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setMarketEntryData((prev: any) => {
+    setMarketEntryData((prev: UntypedReportState) => {
 
       const updated = { ...prev, competitiveDifferentiation: differentiation };
 
@@ -11673,7 +11674,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setMarketEntryData((prev: any) => ({ ...prev, strategicRecommendations: recommendations }));
+    setMarketEntryData((prev: UntypedReportState) => ({ ...prev, strategicRecommendations: recommendations }));
 
 
 
@@ -11749,7 +11750,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    setMarketEntryData((prev: any) => ({ ...prev, riskAssessment: risks }));
+    setMarketEntryData((prev: UntypedReportState) => ({ ...prev, riskAssessment: risks }));
 
 
 
@@ -11899,7 +11900,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setRegulatoryData((prev: any) => ({ ...prev, executiveSummary: edit.oldValue }));
+        setRegulatoryData((prev: UntypedReportState) => ({ ...prev, executiveSummary: edit.oldValue }));
 
 
 
@@ -11911,7 +11912,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setRegulatoryData((prev: any) => ({ ...prev, euAiActDeadline: edit.oldValue }));
+        setRegulatoryData((prev: UntypedReportState) => ({ ...prev, euAiActDeadline: edit.oldValue }));
 
 
 
@@ -11923,7 +11924,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setRegulatoryData((prev: any) => ({ ...prev, gdprCompliance: edit.oldValue }));
+        setRegulatoryData((prev: UntypedReportState) => ({ ...prev, gdprCompliance: edit.oldValue }));
 
 
 
@@ -11935,7 +11936,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setRegulatoryData((prev: any) => ({ ...prev, potentialFines: edit.oldValue }));
+        setRegulatoryData((prev: UntypedReportState) => ({ ...prev, potentialFines: edit.oldValue }));
 
 
 
@@ -11947,7 +11948,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setRegulatoryData((prev: any) => ({ ...prev, dataLocalization: edit.oldValue }));
+        setRegulatoryData((prev: UntypedReportState) => ({ ...prev, dataLocalization: edit.oldValue }));
 
 
 
@@ -11967,7 +11968,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setMarketIntelligenceData((prev: any) => ({ ...prev, executiveSummary: edit.oldValue }));
+        setMarketIntelligenceData((prev: UntypedReportState) => ({ ...prev, executiveSummary: edit.oldValue }));
 
 
 
@@ -11979,7 +11980,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setMarketIntelligenceData((prev: any) => ({ ...prev, tamValue: edit.oldValue }));
+        setMarketIntelligenceData((prev: UntypedReportState) => ({ ...prev, tamValue: edit.oldValue }));
 
 
 
@@ -11991,7 +11992,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setMarketIntelligenceData((prev: any) => ({ ...prev, samValue: edit.oldValue }));
+        setMarketIntelligenceData((prev: UntypedReportState) => ({ ...prev, samValue: edit.oldValue }));
 
 
 
@@ -12003,7 +12004,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setMarketIntelligenceData((prev: any) => ({ ...prev, somValue: edit.oldValue }));
+        setMarketIntelligenceData((prev: UntypedReportState) => ({ ...prev, somValue: edit.oldValue }));
 
 
 
@@ -12015,7 +12016,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setMarketIntelligenceData((prev: any) => ({ ...prev, GrowthRate: edit.oldValue }));
+        setMarketIntelligenceData((prev: UntypedReportState) => ({ ...prev, GrowthRate: edit.oldValue }));
 
 
 
@@ -12027,7 +12028,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setMarketIntelligenceData((prev: any) => ({ ...prev, northAmericaGrowthRate: edit.oldValue }));
+        setMarketIntelligenceData((prev: UntypedReportState) => ({ ...prev, northAmericaGrowthRate: edit.oldValue }));
 
 
 
@@ -12039,7 +12040,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setMarketIntelligenceData((prev: any) => ({ ...prev, europeGrowthRate: edit.oldValue }));
+        setMarketIntelligenceData((prev: UntypedReportState) => ({ ...prev, europeGrowthRate: edit.oldValue }));
 
 
 
@@ -12059,7 +12060,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setIndustryTrendsData((prev: any) => ({ ...prev, executiveSummary: edit.oldValue }));
+        setIndustryTrendsData((prev: UntypedReportState) => ({ ...prev, executiveSummary: edit.oldValue }));
 
 
 
@@ -12071,7 +12072,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setIndustryTrendsData((prev: any) => ({ ...prev, aiAdoption: edit.oldValue }));
+        setIndustryTrendsData((prev: UntypedReportState) => ({ ...prev, aiAdoption: edit.oldValue }));
 
 
 
@@ -12083,7 +12084,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setIndustryTrendsData((prev: any) => ({ ...prev, cloudMigration: edit.oldValue }));
+        setIndustryTrendsData((prev: UntypedReportState) => ({ ...prev, cloudMigration: edit.oldValue }));
 
 
 
@@ -12095,7 +12096,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setIndustryTrendsData((prev: any) => ({ ...prev, regulatory: edit.oldValue }));
+        setIndustryTrendsData((prev: UntypedReportState) => ({ ...prev, regulatory: edit.oldValue }));
 
 
 
@@ -12115,7 +12116,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setCompetitorData((prev: any) => ({ ...prev, executiveSummary: edit.oldValue }));
+        setCompetitorData((prev: UntypedReportState) => ({ ...prev, executiveSummary: edit.oldValue }));
 
 
 
@@ -12127,7 +12128,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setCompetitorData((prev: any) => ({ ...prev, topPlayerShare: edit.oldValue }));
+        setCompetitorData((prev: UntypedReportState) => ({ ...prev, topPlayerShare: edit.oldValue }));
 
 
 
@@ -12139,7 +12140,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setCompetitorData((prev: any) => ({ ...prev, emergingPlayers: edit.oldValue }));
+        setCompetitorData((prev: UntypedReportState) => ({ ...prev, emergingPlayers: edit.oldValue }));
 
 
 
@@ -12167,7 +12168,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        setCompetitorData((prev: any) => ({ ...prev, fundingNews: fundingArray }));
+        setCompetitorData((prev: UntypedReportState) => ({ ...prev, fundingNews: fundingArray }));
 
 
 
@@ -13647,7 +13648,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-                        setMarketIntelligenceData((prev: any) => {
+                        setMarketIntelligenceData((prev: UntypedReportState) => {
 
 
 
@@ -13684,7 +13685,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-                        setMarketIntelligenceData((prev: any) => {
+                        setMarketIntelligenceData((prev: UntypedReportState) => {
 
 
 
@@ -13721,7 +13722,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-                        setMarketIntelligenceData((prev: any) => {
+                        setMarketIntelligenceData((prev: UntypedReportState) => {
 
 
 
