@@ -5,13 +5,24 @@ import ICPManager from "@/components/mission-control/ICPManager";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   Dialog,
   DialogContent,
@@ -44,7 +55,7 @@ import {
   RefreshCw,
   XCircle,
   Plus,
-  Slack
+  Slack,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -62,15 +73,23 @@ import {
 interface DataSource {
   id: string;
   name: string;
-  type: 'crm' | 'marketing' | 'social' | 'analytics' | 'communication' | 'file' | 'custom';
+  type: "crm" | "marketing" | "social" | "analytics" | "communication" | "file" | "custom";
   icon: typeof Database;
   platform: string;
-  status: 'connected' | 'disconnected' | 'error' | 'syncing' | 'warning' | 'uploaded' | 'processing' | 'empty';
+  status:
+    | "connected"
+    | "disconnected"
+    | "error"
+    | "syncing"
+    | "warning"
+    | "uploaded"
+    | "processing"
+    | "empty";
   account?: string;
   connectedDate?: string;
-  syncFrequency: 'realtime' | 'hourly' | '4hours' | 'daily' | 'weekly' | 'manual';
+  syncFrequency: "realtime" | "hourly" | "4hours" | "daily" | "weekly" | "manual";
   lastSyncTime?: string;
-  lastSyncStatus?: 'success' | 'failed' | 'partial';
+  lastSyncStatus?: "success" | "failed" | "partial";
   totalRecords: number;
   newRecordsThisWeek: number;
   updatedRecords: number;
@@ -86,13 +105,11 @@ interface DataSource {
   };
 }
 
-;
-
 // Available Connectors Catalog
 interface Connector {
   id: string;
   name: string;
-  type: DataSource['type'];
+  type: DataSource["type"];
   icon: typeof Database;
   platform: string;
   description: string;
@@ -115,101 +132,116 @@ const MissionControl = () => {
   // Data sources is unlocked if company profile exists (not dependent on customer profile)
   const isDataSourcesLocked = !isCompanyProfileSaved;
   const [isConnectorDialogOpen, setIsConnectorDialogOpen] = useState(false);
-  
+
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [sourceToDelete, setSourceToDelete] = useState<DataSource | null>(null);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
   const [sourceToConfigure, setSourceToConfigure] = useState<DataSource | null>(null);
-  const [configSyncFrequency, setConfigSyncFrequency] = useState<'realtime' | 'hourly' | '4hours' | 'daily' | 'weekly' | 'manual'>('daily');
+  const [configSyncFrequency, setConfigSyncFrequency] = useState<
+    "realtime" | "hourly" | "4hours" | "daily" | "weekly" | "manual"
+  >("daily");
   const [configObjects, setConfigObjects] = useState<string[]>([]);
   const [configFilters, setConfigFilters] = useState<string[]>([]);
-  
+
   // Salesforce Auth Modal state
   const [isSalesforceAuthModalOpen, setIsSalesforceAuthModalOpen] = useState(false);
-  const [salesforceSourceToConnect, setSalesforceSourceToConnect] = useState<DataSource | null>(null);
+  const [salesforceSourceToConnect, setSalesforceSourceToConnect] = useState<DataSource | null>(
+    null,
+  );
   const [salesforceEmail, setSalesforceEmail] = useState("");
   const [salesforcePassword, setSalesforcePassword] = useState("");
   const [isSalesforceLoggingIn, setIsSalesforceLoggingIn] = useState(false);
-  const [salesforceAuthStep, setSalesforceAuthStep] = useState<'login' | 'permissions'>('login');
-  
+  const [salesforceAuthStep, setSalesforceAuthStep] = useState<"login" | "permissions">("login");
+
   // HubSpot Auth Modal state
   const [isHubSpotAuthModalOpen, setIsHubSpotAuthModalOpen] = useState(false);
   const [hubSpotSourceToConnect, setHubSpotSourceToConnect] = useState<DataSource | null>(null);
   const [hubSpotEmail, setHubSpotEmail] = useState("");
   const [hubSpotPassword, setHubSpotPassword] = useState("");
   const [isHubSpotLoggingIn, setIsHubSpotLoggingIn] = useState(false);
-  const [hubSpotAuthStep, setHubSpotAuthStep] = useState<'login' | 'permissions'>('login');
-  
+  const [hubSpotAuthStep, setHubSpotAuthStep] = useState<"login" | "permissions">("login");
+
   // Pipedrive Auth Modal state
   const [isPipedriveAuthModalOpen, setIsPipedriveAuthModalOpen] = useState(false);
   const [pipedriveSourceToConnect, setPipedriveSourceToConnect] = useState<DataSource | null>(null);
   const [pipedriveEmail, setPipedriveEmail] = useState("");
   const [pipedrivePassword, setPipedrivePassword] = useState("");
   const [isPipedriveLoggingIn, setIsPipedriveLoggingIn] = useState(false);
-  const [pipedriveAuthStep, setPipedriveAuthStep] = useState<'login' | 'permissions'>('login');
-  
+  const [pipedriveAuthStep, setPipedriveAuthStep] = useState<"login" | "permissions">("login");
+
   // Zoho Auth Modal state
   const [isZohoAuthModalOpen, setIsZohoAuthModalOpen] = useState(false);
   const [zohoSourceToConnect, setZohoSourceToConnect] = useState<DataSource | null>(null);
   const [zohoEmail, setZohoEmail] = useState("");
   const [zohoPassword, setZohoPassword] = useState("");
   const [isZohoLoggingIn, setIsZohoLoggingIn] = useState(false);
-  const [zohoAuthStep, setZohoAuthStep] = useState<'login' | 'permissions'>('login');
-  
+  const [zohoAuthStep, setZohoAuthStep] = useState<"login" | "permissions">("login");
+
   // LinkedIn Auth Modal state
   const [isLinkedInAuthModalOpen, setIsLinkedInAuthModalOpen] = useState(false);
   const [linkedInSourceToConnect, setLinkedInSourceToConnect] = useState<DataSource | null>(null);
   const [linkedInEmail, setLinkedInEmail] = useState("");
   const [linkedInPassword, setLinkedInPassword] = useState("");
   const [isLinkedInLoggingIn, setIsLinkedInLoggingIn] = useState(false);
-  const [linkedInAuthStep, setLinkedInAuthStep] = useState<'login' | 'permissions'>('login');
-  
+  const [linkedInAuthStep, setLinkedInAuthStep] = useState<"login" | "permissions">("login");
+
   // X (Twitter) Auth Modal state
   const [isXAuthModalOpen, setIsXAuthModalOpen] = useState(false);
   const [xSourceToConnect, setXSourceToConnect] = useState<DataSource | null>(null);
   const [xEmail, setXEmail] = useState("");
   const [xPassword, setXPassword] = useState("");
   const [isXLoggingIn, setIsXLoggingIn] = useState(false);
-  const [xAuthStep, setXAuthStep] = useState<'login' | 'permissions'>('login');
-  
+  const [xAuthStep, setXAuthStep] = useState<"login" | "permissions">("login");
+
   // Google Analytics Auth Modal state
   const [isGoogleAnalyticsAuthModalOpen, setIsGoogleAnalyticsAuthModalOpen] = useState(false);
-  const [googleAnalyticsSourceToConnect, setGoogleAnalyticsSourceToConnect] = useState<DataSource | null>(null);
+  const [googleAnalyticsSourceToConnect, setGoogleAnalyticsSourceToConnect] =
+    useState<DataSource | null>(null);
   const [googleAnalyticsEmail, setGoogleAnalyticsEmail] = useState("");
   const [isGoogleAnalyticsSigningIn, setIsGoogleAnalyticsSigningIn] = useState(false);
-  const [googleAnalyticsAuthStep, setGoogleAnalyticsAuthStep] = useState<'signin' | 'permissions' | 'success'>('signin');
-  
+  const [googleAnalyticsAuthStep, setGoogleAnalyticsAuthStep] = useState<
+    "signin" | "permissions" | "success"
+  >("signin");
+
   // Mixpanel Auth Modal state
   const [isMixpanelAuthModalOpen, setIsMixpanelAuthModalOpen] = useState(false);
   const [mixpanelSourceToConnect, setMixpanelSourceToConnect] = useState<DataSource | null>(null);
   const [mixpanelEmail, setMixpanelEmail] = useState("");
   const [mixpanelPassword, setMixpanelPassword] = useState("");
   const [isMixpanelLoggingIn, setIsMixpanelLoggingIn] = useState(false);
-  const [mixpanelAuthStep, setMixpanelAuthStep] = useState<'login' | 'permissions'>('login');
-  
+  const [mixpanelAuthStep, setMixpanelAuthStep] = useState<"login" | "permissions">("login");
+
   // Form states for connector inputs
   const [selectedCrm, setSelectedCrm] = useState<string>("");
   const [linkedInUrls, setLinkedInUrls] = useState<string[]>([""]);
   const [selectedAnalytics, setSelectedAnalytics] = useState<string>("");
-  const [competitors, setCompetitors] = useState<Array<{name: string, url: string}>>([{name: "", url: ""}]);
-  const [slackConfigs, setSlackConfigs] = useState<Array<{workspace: string, channel: string}>>([{workspace: "", channel: ""}]);
-  
+  const [competitors, setCompetitors] = useState<Array<{ name: string; url: string }>>([
+    { name: "", url: "" },
+  ]);
+  const [slackConfigs, setSlackConfigs] = useState<Array<{ workspace: string; channel: string }>>([
+    { workspace: "", channel: "" },
+  ]);
+
   // File Sources state
-  const [fileSources, setFileSources] = useState<Record<string, {file: File | null, destinationUrl: string}>>({
-    "Call Transcripts": {file: null, destinationUrl: ""},
-    "Meeting Notes": {file: null, destinationUrl: ""},
-    "Case Studies": {file: null, destinationUrl: ""},
-    "Support Tickets": {file: null, destinationUrl: ""},
-    "Sales Presentations": {file: null, destinationUrl: ""},
+  const [fileSources, setFileSources] = useState<
+    Record<string, { file: File | null; destinationUrl: string }>
+  >({
+    "Call Transcripts": { file: null, destinationUrl: "" },
+    "Meeting Notes": { file: null, destinationUrl: "" },
+    "Case Studies": { file: null, destinationUrl: "" },
+    "Support Tickets": { file: null, destinationUrl: "" },
+    "Sales Presentations": { file: null, destinationUrl: "" },
   });
-  
+
   // Product Documentation supports multiple files/destinations
-  const [productDocFiles, setProductDocFiles] = useState<Array<{file: File | null, destinationUrl: string}>>([{file: null, destinationUrl: ""}]);
-  
+  const [productDocFiles, setProductDocFiles] = useState<
+    Array<{ file: File | null; destinationUrl: string }>
+  >([{ file: null, destinationUrl: "" }]);
+
   const { toast } = useToast();
   const { currentUser, orgId } = useAuth();
-  const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
+  const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
   /** Profiler accept/delete set missionControlIcpsNeedRefetch — show loading until ICPManager GET finishes. */
   const [syncingProfilerCustomerProfile, setSyncingProfilerCustomerProfile] = useState(false);
 
@@ -255,7 +287,7 @@ const MissionControl = () => {
     }
 
     setIsSaving(true);
-    
+
     try {
       // Prepare payload with profile_type as required by the API
       const payload = {
@@ -285,7 +317,7 @@ const MissionControl = () => {
       const apiUrl = `/api/profile/company?org_id=${orgIdToUse}`;
       console.log("MissionControl: POST request URL:", apiUrl);
       console.log("MissionControl: POST request payload:", payload);
-      
+
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
@@ -295,33 +327,45 @@ const MissionControl = () => {
       });
 
       console.log("MissionControl: POST response status:", response.status);
-      console.log("MissionControl: POST response headers:", Object.fromEntries(response.headers.entries()));
+      console.log(
+        "MissionControl: POST response headers:",
+        Object.fromEntries(response.headers.entries()),
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
         console.error("MissionControl: API Error:", response.status, errorText);
-        console.error("MissionControl: This could indicate database connection issues or backend problems");
+        console.error(
+          "MissionControl: This could indicate database connection issues or backend problems",
+        );
         throw new Error(`Failed to save profile: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
       console.log("MissionControl: Company profile saved successfully:", data);
       console.log("MissionControl: Saved data verification:", {
-        'saved_user_id': data?.user_id,
-        'expected_user_id': currentUser.uid,
-        'user_id_match': data?.user_id === currentUser.uid,
-        'saved_company_name': data?.company_name,
-        'payload_company_name': payload.company_name,
-        'has_data': data && Object.keys(data).length > 0
+        saved_user_id: data?.user_id,
+        expected_user_id: currentUser.uid,
+        user_id_match: data?.user_id === currentUser.uid,
+        saved_company_name: data?.company_name,
+        payload_company_name: payload.company_name,
+        has_data: data && Object.keys(data).length > 0,
       });
 
       // Use the payload company_name since we already validated it before sending
       // The API may not return the saved data in the response, so we trust what we sent
-      const savedCompanyName = (data?.company_name || data?.companyName || payload.company_name || "").trim();
-      
+      const savedCompanyName = (
+        data?.company_name ||
+        data?.companyName ||
+        payload.company_name ||
+        ""
+      ).trim();
+
       // Double-check: if somehow both response and payload are empty (shouldn't happen due to validation)
       if (!savedCompanyName) {
-        console.error("MissionControl: Unexpected - company_name is empty in both response and payload!");
+        console.error(
+          "MissionControl: Unexpected - company_name is empty in both response and payload!",
+        );
         toast({
           title: "Save failed",
           description: "An unexpected error occurred. Please try again.",
@@ -354,7 +398,7 @@ const MissionControl = () => {
           compliance: payload.compliance,
           constraints: payload.constraints,
         };
-        setUserLocalStorage('companyProfile', JSON.stringify(dataToSave), currentUser.uid);
+        setUserLocalStorage("companyProfile", JSON.stringify(dataToSave), currentUser.uid);
         console.log("MissionControl: Saved company profile to localStorage");
       } catch (e) {
         console.warn("MissionControl: Failed to save to localStorage:", e);
@@ -372,9 +416,11 @@ const MissionControl = () => {
         setIsCompanyProfileSaved(true);
         console.log("MissionControl: Company profile saved and customer profile unlocked");
       } else {
-        console.warn("MissionControl: Company profile saved but company name is empty - not unlocking customer profile");
+        console.warn(
+          "MissionControl: Company profile saved but company name is empty - not unlocking customer profile",
+        );
       }
-      
+
       // Verify data was actually saved by immediately fetching it back
       console.log("MissionControl: Verifying data persistence by fetching saved profile...");
       setTimeout(async () => {
@@ -395,18 +441,20 @@ const MissionControl = () => {
               console.error("   This indicates a database write/read issue!");
             }
           } else {
-            console.warn("⚠️ MissionControl: Could not verify data persistence - GET request failed");
+            console.warn(
+              "⚠️ MissionControl: Could not verify data persistence - GET request failed",
+            );
           }
         } catch (verifyError) {
           console.error("MissionControl: Error verifying data persistence:", verifyError);
         }
       }, 2000); // Wait 2 seconds for database to commit
-
     } catch (error) {
       console.error("Error saving company profile:", error);
       toast({
         title: "Save failed",
-        description: error instanceof Error ? error.message : "Failed to save profile. Please try again.",
+        description:
+          error instanceof Error ? error.message : "Failed to save profile. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -415,10 +463,12 @@ const MissionControl = () => {
   };
 
   // Helper function to load profile from localStorage — returns raw payload when successful
-  const loadProfileFromLocalStorage = async (userId: string): Promise<Record<string, unknown> | null> => {
+  const loadProfileFromLocalStorage = async (
+    userId: string,
+  ): Promise<Record<string, unknown> | null> => {
     try {
       const { getUserLocalStorage } = await import("@/utils/cacheUtils");
-      const localData = getUserLocalStorage('companyProfile', userId);
+      const localData = getUserLocalStorage("companyProfile", userId);
       if (localData) {
         const localProfile = JSON.parse(localData) as Record<string, unknown>;
         if (localProfile.user_id === userId) {
@@ -433,11 +483,17 @@ const MissionControl = () => {
             regionFocus: (localProfile.region_focus || localProfile.regionFocus || "") as string,
             dealSize: (localProfile.typical_deal_size || localProfile.dealSize || "") as string,
             companyUrl: (localProfile.company_url || localProfile.companyUrl || "") as string,
-            keyBuyerPersona: (localProfile.key_buyer_persona || localProfile.keyBuyerPersona || "") as string,
+            keyBuyerPersona: (localProfile.key_buyer_persona ||
+              localProfile.keyBuyerPersona ||
+              "") as string,
             goals: (localProfile.goals || "") as string,
             painPoints: (localProfile.pain_points || localProfile.painPoints || "") as string,
-            targetSegments: (localProfile.target_segments || localProfile.targetSegments || "") as string,
-            excludeSegments: (localProfile.exclude_segments || localProfile.excludeSegments || "") as string,
+            targetSegments: (localProfile.target_segments ||
+              localProfile.targetSegments ||
+              "") as string,
+            excludeSegments: (localProfile.exclude_segments ||
+              localProfile.excludeSegments ||
+              "") as string,
             compliance: (localProfile.compliance || "") as string,
             constraints: (localProfile.constraints || "") as string,
           };
@@ -462,11 +518,11 @@ const MissionControl = () => {
       isNull: data === null,
       isUndefined: data === undefined,
       keys: data ? Object.keys(data) : [],
-      userId
+      userId,
     });
-    
+
     // Check if data is empty or null
-    if (!data || (typeof data === 'object' && Object.keys(data).length === 0)) {
+    if (!data || (typeof data === "object" && Object.keys(data).length === 0)) {
       console.log("MissionControl: API returned empty data");
       return null;
     }
@@ -475,7 +531,7 @@ const MissionControl = () => {
     if (data.user_id && data.user_id !== userId) {
       console.warn("MissionControl: API returned profile for different user! Ignoring data.", {
         apiUserId: data.user_id,
-        currentUserId: userId
+        currentUserId: userId,
       });
       return null;
     }
@@ -523,7 +579,6 @@ const MissionControl = () => {
     return profileData;
   };
 
-
   const applyCompanyProfileJsonToMissionControlUi = (data: any, userId: string) => {
     if (!data || (typeof data === "object" && Object.keys(data).length === 0)) {
       return;
@@ -531,7 +586,12 @@ const MissionControl = () => {
     const profileData = mapApiDataToFormState(data, userId);
     if (profileData) {
       setCompanyProfile(profileData);
-      const companyName = (data.company_name || data.companyName || profileData.companyName || "").trim();
+      const companyName = (
+        data.company_name ||
+        data.companyName ||
+        profileData.companyName ||
+        ""
+      ).trim();
       const hasCompanyName = companyName.length > 0;
       if (hasCompanyName) {
         setIsCompanyProfileSaved(true);
@@ -539,7 +599,11 @@ const MissionControl = () => {
         setIsCompanyProfileSaved(false);
       }
     }
-    if (data.data_sources && data.data_sources.sources && Array.isArray(data.data_sources.sources)) {
+    if (
+      data.data_sources &&
+      data.data_sources.sources &&
+      Array.isArray(data.data_sources.sources)
+    ) {
       const loadedSources: DataSource[] = data.data_sources.sources.map((source: any) => ({
         id: source.id || `source-${Date.now()}-${Math.random()}`,
         name: source.name || "",
@@ -596,25 +660,26 @@ const MissionControl = () => {
   useEffect(() => {
     const onIcpLoadFinished = () => setSyncingProfilerCustomerProfile(false);
     window.addEventListener("icpManagerCustomerProfileLoadFinished", onIcpLoadFinished);
-    return () => window.removeEventListener("icpManagerCustomerProfileLoadFinished", onIcpLoadFinished);
+    return () =>
+      window.removeEventListener("icpManagerCustomerProfileLoadFinished", onIcpLoadFinished);
   }, []);
 
   // Check URL params for tab after profile loads
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const tabParam = urlParams.get('tab');
-    if (tabParam === 'customer-profile' && !isCustomerProfileLocked) {
-      setActiveTab('customer-profile');
+    const tabParam = urlParams.get("tab");
+    if (tabParam === "customer-profile" && !isCustomerProfileLocked) {
+      setActiveTab("customer-profile");
       // Clean up URL param after setting tab
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
-    } else if (tabParam === 'sources' && !isDataSourcesLocked) {
-      setActiveTab('sources');
+    } else if (tabParam === "sources" && !isDataSourcesLocked) {
+      setActiveTab("sources");
       // Clean up URL param after setting tab
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
-    } else if (tabParam === 'profile') {
-      setActiveTab('profile');
+    } else if (tabParam === "profile") {
+      setActiveTab("profile");
       // Clean up URL param after setting tab
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
@@ -648,218 +713,264 @@ const MissionControl = () => {
         const retryDelay = 1000; // 1 second
 
         while (retryCount <= maxRetries) {
-        try {
-          console.log(`MissionControl: Loading company profile for user: ${userId} (attempt ${retryCount + 1})`);
+          try {
+            console.log(
+              `MissionControl: Loading company profile for user: ${userId} (attempt ${retryCount + 1})`,
+            );
 
-          const response = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          });
+            const response = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            });
 
-          if (response.ok) {
-            const data = await response.json();
-            console.log("MissionControl: Loaded company profile data:", data);
-            console.log("MissionControl: Data keys:", Object.keys(data || {}));
-            console.log("MissionControl: company_name:", data?.company_name);
-            console.log("MissionControl: companyName:", data?.companyName);
-            console.log("MissionControl: Full data structure:", JSON.stringify(data, null, 2));
-            
-            // Database health check - verify if COMPANY PROFILE fields exist but are empty
-            // Check specifically for company profile fields, not customer_profiles or other nested data
-            const companyProfileFields = [
-              'company_name', 'companyName',
-              'headquarters',
-              'employee_size', 'employeeSize',
-              'industry',
-              'revenue_band', 'revenue',
-              'gtm_model', 'gtmModel',
-              'region_focus', 'regionFocus',
-              'typical_deal_size', 'dealSize',
-              'company_url', 'companyUrl',
-              'key_buyer_persona', 'keyBuyerPersona'
-            ];
-            
-            const hasAnyData = data && Object.keys(data).length > 0;
-            const hasCompanyProfileData = data && companyProfileFields.some(field => {
-              const value = data[field];
-              return value !== null && value !== undefined && value !== "" && 
-                     (typeof value !== 'object' || (Array.isArray(value) && value.length > 0));
-            });
-            
-            console.log("MissionControl: Database health check:", {
-              'hasAnyData': hasAnyData,
-              'hasCompanyProfileData': hasCompanyProfileData,
-              'company_name': `"${data?.company_name || ''}"`,
-              'companyName': `"${data?.companyName || ''}"`,
-              'dataKeysCount': data ? Object.keys(data).length : 0,
-              'user_id_in_response': data?.user_id,
-              'expected_user_id': userId,
-              'user_id_match': data?.user_id === userId,
-              'response_status': response.status,
-            });
-            
-            // Check if company profile fields are empty (even if customer_profiles exists)
-            if (hasAnyData && !hasCompanyProfileData) {
-              console.warn("⚠️ MissionControl: API returned profile structure but COMPANY PROFILE fields are empty!");
-              console.warn("⚠️ This could indicate:");
-              console.warn("   1. Database was reset/cleared");
-              console.warn("   2. Data was deleted");
-              console.warn("   3. Backend service restarted and lost data");
-              console.warn("   4. Database connection issue");
-              console.warn("   5. Transaction rollback occurred");
-              
-              // Try to load from localStorage as backup BEFORE processing empty API data
-              console.log("MissionControl: Attempting to load from localStorage as backup...");
-              const localRaw = await loadProfileFromLocalStorage(userId);
-              if (localRaw) {
-                console.log("✅ MissionControl: Successfully loaded from localStorage backup");
-                setIsLoadingProfile(false);
-                return; // Exit retry loop - don't process empty API data
-              } else {
-                console.warn("⚠️ MissionControl: No localStorage backup available, will proceed with empty data");
+            if (response.ok) {
+              const data = await response.json();
+              console.log("MissionControl: Loaded company profile data:", data);
+              console.log("MissionControl: Data keys:", Object.keys(data || {}));
+              console.log("MissionControl: company_name:", data?.company_name);
+              console.log("MissionControl: companyName:", data?.companyName);
+              console.log("MissionControl: Full data structure:", JSON.stringify(data, null, 2));
+
+              // Database health check - verify if COMPANY PROFILE fields exist but are empty
+              // Check specifically for company profile fields, not customer_profiles or other nested data
+              const companyProfileFields = [
+                "company_name",
+                "companyName",
+                "headquarters",
+                "employee_size",
+                "employeeSize",
+                "industry",
+                "revenue_band",
+                "revenue",
+                "gtm_model",
+                "gtmModel",
+                "region_focus",
+                "regionFocus",
+                "typical_deal_size",
+                "dealSize",
+                "company_url",
+                "companyUrl",
+                "key_buyer_persona",
+                "keyBuyerPersona",
+              ];
+
+              const hasAnyData = data && Object.keys(data).length > 0;
+              const hasCompanyProfileData =
+                data &&
+                companyProfileFields.some((field) => {
+                  const value = data[field];
+                  return (
+                    value !== null &&
+                    value !== undefined &&
+                    value !== "" &&
+                    (typeof value !== "object" || (Array.isArray(value) && value.length > 0))
+                  );
+                });
+
+              console.log("MissionControl: Database health check:", {
+                hasAnyData: hasAnyData,
+                hasCompanyProfileData: hasCompanyProfileData,
+                company_name: `"${data?.company_name || ""}"`,
+                companyName: `"${data?.companyName || ""}"`,
+                dataKeysCount: data ? Object.keys(data).length : 0,
+                user_id_in_response: data?.user_id,
+                expected_user_id: userId,
+                user_id_match: data?.user_id === userId,
+                response_status: response.status,
+              });
+
+              // Check if company profile fields are empty (even if customer_profiles exists)
+              if (hasAnyData && !hasCompanyProfileData) {
+                console.warn(
+                  "⚠️ MissionControl: API returned profile structure but COMPANY PROFILE fields are empty!",
+                );
+                console.warn("⚠️ This could indicate:");
+                console.warn("   1. Database was reset/cleared");
+                console.warn("   2. Data was deleted");
+                console.warn("   3. Backend service restarted and lost data");
+                console.warn("   4. Database connection issue");
+                console.warn("   5. Transaction rollback occurred");
+
+                // Try to load from localStorage as backup BEFORE processing empty API data
+                console.log("MissionControl: Attempting to load from localStorage as backup...");
+                const localRaw = await loadProfileFromLocalStorage(userId);
+                if (localRaw) {
+                  console.log("✅ MissionControl: Successfully loaded from localStorage backup");
+                  setIsLoadingProfile(false);
+                  return; // Exit retry loop - don't process empty API data
+                } else {
+                  console.warn(
+                    "⚠️ MissionControl: No localStorage backup available, will proceed with empty data",
+                  );
+                }
               }
-            }
-            
-            const profileData = mapApiDataToFormState(data, userId);
-            console.log("MissionControl: Mapped profile data:", profileData);
-            
-            if (profileData) {
-              applyCompanyProfileJsonToMissionControlUi(data, userId);
-              void applyCustomerProfileCompletenessFromBackend(
-                userId,
-                orgIdToUse,
-                data as Record<string, unknown>,
+
+              const profileData = mapApiDataToFormState(data, userId);
+              console.log("MissionControl: Mapped profile data:", profileData);
+
+              if (profileData) {
+                applyCompanyProfileJsonToMissionControlUi(data, userId);
+                void applyCustomerProfileCompletenessFromBackend(
+                  userId,
+                  orgIdToUse,
+                  data as Record<string, unknown>,
+                );
+
+                const companyName = (
+                  data.company_name ||
+                  data.companyName ||
+                  profileData.companyName ||
+                  ""
+                ).trim();
+                const hasCompanyName = companyName.length > 0;
+
+                if (
+                  hasCompanyName ||
+                  profileData.headquarters ||
+                  profileData.industry ||
+                  profileData.revenue
+                ) {
+                  try {
+                    const { setUserLocalStorage } = await import("@/utils/cacheUtils");
+                    const dataToSave = {
+                      ...data,
+                      ...profileData,
+                      user_id: userId,
+                      company_name: profileData.companyName || data.company_name || "",
+                      companyName: profileData.companyName || data.companyName || "",
+                    };
+                    setUserLocalStorage("companyProfile", JSON.stringify(dataToSave), userId);
+                    console.log("MissionControl: Saved company profile to localStorage");
+                  } catch (e) {
+                    console.warn("MissionControl: Failed to save to localStorage:", e);
+                  }
+                } else {
+                  console.log(
+                    "MissionControl: Skipping localStorage save - no meaningful company profile data",
+                  );
+                }
+
+                commitMissionControlCompanyProfile(
+                  userId,
+                  orgIdToUse,
+                  data as Record<string, unknown>,
+                );
+                setIsLoadingProfile(false);
+                return; // Success, exit retry loop
+              } else {
+                // Data validation failed, try localStorage
+                console.log("MissionControl: Data validation failed, trying localStorage fallback");
+                const localRaw = await loadProfileFromLocalStorage(userId);
+                if (localRaw) {
+                  setIsLoadingProfile(false);
+                  return;
+                }
+              }
+            } else {
+              // Try to get error message from response
+              let errorMessage = `HTTP ${response.status}`;
+              try {
+                const errorData = await response.text();
+                if (errorData) {
+                  try {
+                    const parsedError = JSON.parse(errorData);
+                    errorMessage = parsedError.message || parsedError.error || errorMessage;
+                  } catch {
+                    errorMessage = errorData.substring(0, 200); // First 200 chars if not JSON
+                  }
+                }
+              } catch (e) {
+                // Ignore errors reading response body
+              }
+
+              console.error(
+                `MissionControl: Profile load response not OK: ${response.status} - ${errorMessage}`,
               );
 
-              const companyName = (data.company_name || data.companyName || profileData.companyName || "").trim();
-              const hasCompanyName = companyName.length > 0;
-
-              if (hasCompanyName || profileData.headquarters || profileData.industry || profileData.revenue) {
-                try {
-                  const { setUserLocalStorage } = await import("@/utils/cacheUtils");
-                  const dataToSave = {
-                    ...data,
-                    ...profileData,
-                    user_id: userId,
-                    company_name: profileData.companyName || data.company_name || "",
-                    companyName: profileData.companyName || data.companyName || "",
-                  };
-                  setUserLocalStorage("companyProfile", JSON.stringify(dataToSave), userId);
-                  console.log("MissionControl: Saved company profile to localStorage");
-                } catch (e) {
-                  console.warn("MissionControl: Failed to save to localStorage:", e);
+              if (response.status === 404) {
+                console.log(
+                  "MissionControl: No company profile found (404) - trying localStorage fallback",
+                );
+                const localRaw = await loadProfileFromLocalStorage(userId);
+                if (localRaw) {
+                  setIsLoadingProfile(false);
+                  return;
                 }
+                // 404 is expected for new users - no profile exists yet
+                // Don't retry, just stop loading and let user create a new profile
+                console.log(
+                  "MissionControl: No company profile found (new user) - stopping load, user can create profile",
+                );
+                setIsLoadingProfile(false);
+                setIsCompanyProfileSaved(false); // Ensure customer profile tab is locked
+                return; // Exit retry loop - 404 is not an error, it's expected for new users
+              } else if (response.status >= 500 && retryCount < maxRetries) {
+                // Server error, retry
+                console.log(`MissionControl: Server error ${response.status}, will retry...`);
+                retryCount++;
+                await new Promise((resolve) => setTimeout(resolve, retryDelay * retryCount));
+                continue;
               } else {
-                console.log("MissionControl: Skipping localStorage save - no meaningful company profile data");
-              }
-
-              commitMissionControlCompanyProfile(userId, orgIdToUse, data as Record<string, unknown>);
-              setIsLoadingProfile(false);
-              return; // Success, exit retry loop
-            } else {
-              // Data validation failed, try localStorage
-              console.log("MissionControl: Data validation failed, trying localStorage fallback");
-              const localRaw = await loadProfileFromLocalStorage(userId);
-              if (localRaw) {
-                setIsLoadingProfile(false);
-                return;
-              }
-            }
-          } else {
-            // Try to get error message from response
-            let errorMessage = `HTTP ${response.status}`;
-            try {
-              const errorData = await response.text();
-              if (errorData) {
-                try {
-                  const parsedError = JSON.parse(errorData);
-                  errorMessage = parsedError.message || parsedError.error || errorMessage;
-                } catch {
-                  errorMessage = errorData.substring(0, 200); // First 200 chars if not JSON
+                // Other error status, try localStorage
+                console.log(
+                  `MissionControl: API error (${response.status}), trying localStorage fallback`,
+                );
+                const localRaw = await loadProfileFromLocalStorage(userId);
+                if (localRaw) {
+                  setIsLoadingProfile(false);
+                  return;
                 }
               }
-            } catch (e) {
-              // Ignore errors reading response body
             }
-            
-            console.error(`MissionControl: Profile load response not OK: ${response.status} - ${errorMessage}`);
-            
-            if (response.status === 404) {
-              console.log("MissionControl: No company profile found (404) - trying localStorage fallback");
-              const localRaw = await loadProfileFromLocalStorage(userId);
-              if (localRaw) {
-                setIsLoadingProfile(false);
-                return;
-              }
-              // 404 is expected for new users - no profile exists yet
-              // Don't retry, just stop loading and let user create a new profile
-              console.log("MissionControl: No company profile found (new user) - stopping load, user can create profile");
-              setIsLoadingProfile(false);
-              setIsCompanyProfileSaved(false); // Ensure customer profile tab is locked
-              return; // Exit retry loop - 404 is not an error, it's expected for new users
-            } else if (response.status >= 500 && retryCount < maxRetries) {
-              // Server error, retry
-              console.log(`MissionControl: Server error ${response.status}, will retry...`);
-              retryCount++;
-              await new Promise(resolve => setTimeout(resolve, retryDelay * retryCount));
-              continue;
-            } else {
-              // Other error status, try localStorage
-              console.log(`MissionControl: API error (${response.status}), trying localStorage fallback`);
-              const localRaw = await loadProfileFromLocalStorage(userId);
-              if (localRaw) {
-                setIsLoadingProfile(false);
-                return;
-              }
-            }
-          }
-        } catch (error: any) {
-          const errorDetails = {
-            name: error?.name,
-            message: error?.message,
-            stack: error?.stack?.substring(0, 500), // First 500 chars of stack
-            type: error?.constructor?.name,
-          };
-          console.error("MissionControl: Error loading company profile:", errorDetails);
-          console.error("MissionControl: Full error object:", error);
+          } catch (error: any) {
+            const errorDetails = {
+              name: error?.name,
+              message: error?.message,
+              stack: error?.stack?.substring(0, 500), // First 500 chars of stack
+              type: error?.constructor?.name,
+            };
+            console.error("MissionControl: Error loading company profile:", errorDetails);
+            console.error("MissionControl: Full error object:", error);
 
-          // Network error or other error, try localStorage if we haven't already
-          if (retryCount === 0) {
-            console.log("MissionControl: Network/connection error, trying localStorage fallback");
-            const localRaw = await loadProfileFromLocalStorage(userId);
-            if (localRaw) {
-              console.log("MissionControl: Successfully loaded from localStorage fallback");
+            // Network error or other error, try localStorage if we haven't already
+            if (retryCount === 0) {
+              console.log("MissionControl: Network/connection error, trying localStorage fallback");
+              const localRaw = await loadProfileFromLocalStorage(userId);
+              if (localRaw) {
+                console.log("MissionControl: Successfully loaded from localStorage fallback");
+                setIsLoadingProfile(false);
+                return;
+              }
+            }
+
+            // If we've exhausted retries, try localStorage one more time
+            if (retryCount >= maxRetries) {
+              console.log(
+                "MissionControl: All retries exhausted, trying localStorage as last resort",
+              );
+              const localRaw = await loadProfileFromLocalStorage(userId);
+              if (localRaw) {
+                console.log("MissionControl: Successfully loaded from localStorage as last resort");
+              } else {
+                console.warn("MissionControl: Failed to load from both API and localStorage");
+              }
               setIsLoadingProfile(false);
               return;
             }
-          }
-          
-          // If we've exhausted retries, try localStorage one more time
-          if (retryCount >= maxRetries) {
-            console.log("MissionControl: All retries exhausted, trying localStorage as last resort");
-            const localRaw = await loadProfileFromLocalStorage(userId);
-            if (localRaw) {
-              console.log("MissionControl: Successfully loaded from localStorage as last resort");
-            } else {
-              console.warn("MissionControl: Failed to load from both API and localStorage");
+
+            retryCount++;
+            if (retryCount <= maxRetries) {
+              console.log(`MissionControl: Retrying... (attempt ${retryCount + 1})`);
+              await new Promise((resolve) => setTimeout(resolve, retryDelay * retryCount));
             }
-            setIsLoadingProfile(false);
-            return;
           }
-          
-          retryCount++;
-          if (retryCount <= maxRetries) {
-            console.log(`MissionControl: Retrying... (attempt ${retryCount + 1})`);
-            await new Promise(resolve => setTimeout(resolve, retryDelay * retryCount));
-          }
-        }
         }
       } finally {
         setIsLoadingProfile(false);
       }
-      
+
       // If we get here, all attempts failed
       console.warn("MissionControl: Failed to load company profile after all retries");
     };
@@ -879,17 +990,19 @@ const MissionControl = () => {
   const handleSaveConfiguration = () => {
     if (!sourceToConfigure) return;
 
-    setDataSources(prev => prev.map(s => {
-      if (s.id === sourceToConfigure.id) {
-        return {
-          ...s,
-          syncFrequency: configSyncFrequency,
-          objectsSynced: configObjects,
-          filters: configFilters,
-        };
-      }
-      return s;
-    }));
+    setDataSources((prev) =>
+      prev.map((s) => {
+        if (s.id === sourceToConfigure.id) {
+          return {
+            ...s,
+            syncFrequency: configSyncFrequency,
+            objectsSynced: configObjects,
+            filters: configFilters,
+          };
+        }
+        return s;
+      }),
+    );
 
     toast({
       title: "Configuration saved",
@@ -902,7 +1015,7 @@ const MissionControl = () => {
 
   const handleSalesforceLogin = async () => {
     if (!salesforceSourceToConnect) return;
-    
+
     if (!salesforceEmail || !salesforcePassword) {
       toast({
         title: "Missing credentials",
@@ -917,7 +1030,7 @@ const MissionControl = () => {
     // Simulate login process, then show permissions screen
     setTimeout(() => {
       setIsSalesforceLoggingIn(false);
-      setSalesforceAuthStep('permissions');
+      setSalesforceAuthStep("permissions");
     }, 1500);
   };
 
@@ -925,33 +1038,35 @@ const MissionControl = () => {
     if (!salesforceSourceToConnect) return;
 
     // Update data source to connected
-    setDataSources(prev => prev.map(s => {
-      if (s.id === salesforceSourceToConnect.id) {
-        const mockData = {
-          status: 'connected' as const,
-          account: salesforceEmail,
-          connectedDate: new Date().toISOString().split('T')[0],
-          lastSyncTime: 'Just now',
-          lastSyncStatus: 'success' as const,
-          totalRecords: Math.floor(Math.random() * 5000) + 100,
-          newRecordsThisWeek: Math.floor(Math.random() * 100),
-          updatedRecords: Math.floor(Math.random() * 50),
-          dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
-          objectsSynced: ['Contacts', 'Accounts', 'Opportunities'],
-          fieldsMapped: Math.floor(Math.random() * 50) + 20,
-          filters: ['Active records only']
-        };
-        return { ...s, ...mockData };
-      }
-      return s;
-    }));
+    setDataSources((prev) =>
+      prev.map((s) => {
+        if (s.id === salesforceSourceToConnect.id) {
+          const mockData = {
+            status: "connected" as const,
+            account: salesforceEmail,
+            connectedDate: new Date().toISOString().split("T")[0],
+            lastSyncTime: "Just now",
+            lastSyncStatus: "success" as const,
+            totalRecords: Math.floor(Math.random() * 5000) + 100,
+            newRecordsThisWeek: Math.floor(Math.random() * 100),
+            updatedRecords: Math.floor(Math.random() * 50),
+            dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
+            objectsSynced: ["Contacts", "Accounts", "Opportunities"],
+            fieldsMapped: Math.floor(Math.random() * 50) + 20,
+            filters: ["Active records only"],
+          };
+          return { ...s, ...mockData };
+        }
+        return s;
+      }),
+    );
 
     // Close modal and reset form
     setIsSalesforceAuthModalOpen(false);
     setSalesforceEmail("");
     setSalesforcePassword("");
     setSalesforceSourceToConnect(null);
-    setSalesforceAuthStep('login');
+    setSalesforceAuthStep("login");
 
     toast({
       title: "Salesforce connected successfully",
@@ -965,7 +1080,7 @@ const MissionControl = () => {
     setSalesforceEmail("");
     setSalesforcePassword("");
     setSalesforceSourceToConnect(null);
-    setSalesforceAuthStep('login');
+    setSalesforceAuthStep("login");
 
     toast({
       title: "Connection not authorized",
@@ -976,7 +1091,7 @@ const MissionControl = () => {
 
   const handleHubSpotLogin = async () => {
     if (!hubSpotSourceToConnect) return;
-    
+
     if (!hubSpotEmail || !hubSpotPassword) {
       toast({
         title: "Missing credentials",
@@ -991,7 +1106,7 @@ const MissionControl = () => {
     // Simulate login process, then show permissions screen
     setTimeout(() => {
       setIsHubSpotLoggingIn(false);
-      setHubSpotAuthStep('permissions');
+      setHubSpotAuthStep("permissions");
     }, 1500);
   };
 
@@ -999,37 +1114,40 @@ const MissionControl = () => {
     if (!hubSpotSourceToConnect) return;
 
     // Update data source to connected
-    setDataSources(prev => prev.map(s => {
-      if (s.id === hubSpotSourceToConnect.id) {
-        const mockData = {
-          status: 'connected' as const,
-          account: hubSpotEmail,
-          connectedDate: new Date().toISOString().split('T')[0],
-          lastSyncTime: 'Just now',
-          lastSyncStatus: 'success' as const,
-          totalRecords: Math.floor(Math.random() * 5000) + 100,
-          newRecordsThisWeek: Math.floor(Math.random() * 100),
-          updatedRecords: Math.floor(Math.random() * 50),
-          dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
-          objectsSynced: ['Contacts', 'Companies', 'Deals', 'Tickets'],
-          fieldsMapped: Math.floor(Math.random() * 50) + 20,
-          filters: ['Active records only']
-        };
-        return { ...s, ...mockData };
-      }
-      return s;
-    }));
+    setDataSources((prev) =>
+      prev.map((s) => {
+        if (s.id === hubSpotSourceToConnect.id) {
+          const mockData = {
+            status: "connected" as const,
+            account: hubSpotEmail,
+            connectedDate: new Date().toISOString().split("T")[0],
+            lastSyncTime: "Just now",
+            lastSyncStatus: "success" as const,
+            totalRecords: Math.floor(Math.random() * 5000) + 100,
+            newRecordsThisWeek: Math.floor(Math.random() * 100),
+            updatedRecords: Math.floor(Math.random() * 50),
+            dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
+            objectsSynced: ["Contacts", "Companies", "Deals", "Tickets"],
+            fieldsMapped: Math.floor(Math.random() * 50) + 20,
+            filters: ["Active records only"],
+          };
+          return { ...s, ...mockData };
+        }
+        return s;
+      }),
+    );
 
     // Close modal and reset form
     setIsHubSpotAuthModalOpen(false);
     setHubSpotEmail("");
     setHubSpotPassword("");
     setHubSpotSourceToConnect(null);
-    setHubSpotAuthStep('login');
+    setHubSpotAuthStep("login");
 
     toast({
       title: "HubSpot connected successfully",
-      description: "Your HubSpot account is now connected and syncing. Records and sync options are now available.",
+      description:
+        "Your HubSpot account is now connected and syncing. Records and sync options are now available.",
     });
   };
 
@@ -1039,7 +1157,7 @@ const MissionControl = () => {
     setHubSpotEmail("");
     setHubSpotPassword("");
     setHubSpotSourceToConnect(null);
-    setHubSpotAuthStep('login');
+    setHubSpotAuthStep("login");
 
     toast({
       title: "Connection not authorized",
@@ -1050,7 +1168,7 @@ const MissionControl = () => {
 
   const handlePipedriveLogin = async () => {
     if (!pipedriveSourceToConnect) return;
-    
+
     if (!pipedriveEmail || !pipedrivePassword) {
       toast({
         title: "Missing credentials",
@@ -1065,7 +1183,7 @@ const MissionControl = () => {
     // Simulate login process, then show permissions screen
     setTimeout(() => {
       setIsPipedriveLoggingIn(false);
-      setPipedriveAuthStep('permissions');
+      setPipedriveAuthStep("permissions");
     }, 1500);
   };
 
@@ -1073,37 +1191,40 @@ const MissionControl = () => {
     if (!pipedriveSourceToConnect) return;
 
     // Update data source to connected
-    setDataSources(prev => prev.map(s => {
-      if (s.id === pipedriveSourceToConnect.id) {
-        const mockData = {
-          status: 'connected' as const,
-          account: pipedriveEmail,
-          connectedDate: new Date().toISOString().split('T')[0],
-          lastSyncTime: 'Just now',
-          lastSyncStatus: 'success' as const,
-          totalRecords: Math.floor(Math.random() * 5000) + 100,
-          newRecordsThisWeek: Math.floor(Math.random() * 100),
-          updatedRecords: Math.floor(Math.random() * 50),
-          dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
-          objectsSynced: ['Deals', 'Persons', 'Organizations', 'Activities'],
-          fieldsMapped: Math.floor(Math.random() * 50) + 20,
-          filters: ['Active records only']
-        };
-        return { ...s, ...mockData };
-      }
-      return s;
-    }));
+    setDataSources((prev) =>
+      prev.map((s) => {
+        if (s.id === pipedriveSourceToConnect.id) {
+          const mockData = {
+            status: "connected" as const,
+            account: pipedriveEmail,
+            connectedDate: new Date().toISOString().split("T")[0],
+            lastSyncTime: "Just now",
+            lastSyncStatus: "success" as const,
+            totalRecords: Math.floor(Math.random() * 5000) + 100,
+            newRecordsThisWeek: Math.floor(Math.random() * 100),
+            updatedRecords: Math.floor(Math.random() * 50),
+            dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
+            objectsSynced: ["Deals", "Persons", "Organizations", "Activities"],
+            fieldsMapped: Math.floor(Math.random() * 50) + 20,
+            filters: ["Active records only"],
+          };
+          return { ...s, ...mockData };
+        }
+        return s;
+      }),
+    );
 
     // Close modal and reset form
     setIsPipedriveAuthModalOpen(false);
     setPipedriveEmail("");
     setPipedrivePassword("");
     setPipedriveSourceToConnect(null);
-    setPipedriveAuthStep('login');
+    setPipedriveAuthStep("login");
 
     toast({
       title: "Pipedrive connected successfully",
-      description: "Your Pipedrive account is now connected and syncing. Records and sync options are now available.",
+      description:
+        "Your Pipedrive account is now connected and syncing. Records and sync options are now available.",
     });
   };
 
@@ -1113,7 +1234,7 @@ const MissionControl = () => {
     setPipedriveEmail("");
     setPipedrivePassword("");
     setPipedriveSourceToConnect(null);
-    setPipedriveAuthStep('login');
+    setPipedriveAuthStep("login");
 
     toast({
       title: "Connection not authorized",
@@ -1124,7 +1245,7 @@ const MissionControl = () => {
 
   const handleZohoLogin = async () => {
     if (!zohoSourceToConnect) return;
-    
+
     if (!zohoEmail || !zohoPassword) {
       toast({
         title: "Missing credentials",
@@ -1139,7 +1260,7 @@ const MissionControl = () => {
     // Simulate login process, then show permissions screen
     setTimeout(() => {
       setIsZohoLoggingIn(false);
-      setZohoAuthStep('permissions');
+      setZohoAuthStep("permissions");
     }, 1500);
   };
 
@@ -1147,37 +1268,40 @@ const MissionControl = () => {
     if (!zohoSourceToConnect) return;
 
     // Update data source to connected
-    setDataSources(prev => prev.map(s => {
-      if (s.id === zohoSourceToConnect.id) {
-        const mockData = {
-          status: 'connected' as const,
-          account: zohoEmail,
-          connectedDate: new Date().toISOString().split('T')[0],
-          lastSyncTime: 'Just now',
-          lastSyncStatus: 'success' as const,
-          totalRecords: Math.floor(Math.random() * 5000) + 100,
-          newRecordsThisWeek: Math.floor(Math.random() * 100),
-          updatedRecords: Math.floor(Math.random() * 50),
-          dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
-          objectsSynced: ['Contacts', 'Accounts', 'Deals', 'Leads'],
-          fieldsMapped: Math.floor(Math.random() * 50) + 20,
-          filters: ['Active records only']
-        };
-        return { ...s, ...mockData };
-      }
-      return s;
-    }));
+    setDataSources((prev) =>
+      prev.map((s) => {
+        if (s.id === zohoSourceToConnect.id) {
+          const mockData = {
+            status: "connected" as const,
+            account: zohoEmail,
+            connectedDate: new Date().toISOString().split("T")[0],
+            lastSyncTime: "Just now",
+            lastSyncStatus: "success" as const,
+            totalRecords: Math.floor(Math.random() * 5000) + 100,
+            newRecordsThisWeek: Math.floor(Math.random() * 100),
+            updatedRecords: Math.floor(Math.random() * 50),
+            dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
+            objectsSynced: ["Contacts", "Accounts", "Deals", "Leads"],
+            fieldsMapped: Math.floor(Math.random() * 50) + 20,
+            filters: ["Active records only"],
+          };
+          return { ...s, ...mockData };
+        }
+        return s;
+      }),
+    );
 
     // Close modal and reset form
     setIsZohoAuthModalOpen(false);
     setZohoEmail("");
     setZohoPassword("");
     setZohoSourceToConnect(null);
-    setZohoAuthStep('login');
+    setZohoAuthStep("login");
 
     toast({
       title: "Zoho CRM connected successfully",
-      description: "Your Zoho CRM account is now connected and syncing. Records and sync options are now available.",
+      description:
+        "Your Zoho CRM account is now connected and syncing. Records and sync options are now available.",
     });
   };
 
@@ -1187,7 +1311,7 @@ const MissionControl = () => {
     setZohoEmail("");
     setZohoPassword("");
     setZohoSourceToConnect(null);
-    setZohoAuthStep('login');
+    setZohoAuthStep("login");
 
     toast({
       title: "Connection not authorized",
@@ -1198,7 +1322,7 @@ const MissionControl = () => {
 
   const handleLinkedInLogin = async () => {
     if (!linkedInSourceToConnect) return;
-    
+
     if (!linkedInEmail || !linkedInPassword) {
       toast({
         title: "Missing credentials",
@@ -1213,7 +1337,7 @@ const MissionControl = () => {
     // Simulate login process, then show permissions screen
     setTimeout(() => {
       setIsLinkedInLoggingIn(false);
-      setLinkedInAuthStep('permissions');
+      setLinkedInAuthStep("permissions");
     }, 1500);
   };
 
@@ -1221,39 +1345,43 @@ const MissionControl = () => {
     if (!linkedInSourceToConnect) return;
 
     // Update data source to connected
-    setDataSources(prev => prev.map(s => {
-      if (s.id === linkedInSourceToConnect.id) {
-        const mockData = {
-          status: 'connected' as const,
-          account: linkedInEmail,
-          connectedDate: new Date().toISOString().split('T')[0],
-          lastSyncTime: 'Just now',
-          lastSyncStatus: 'success' as const,
-          totalRecords: Math.floor(Math.random() * 5000) + 100,
-          newRecordsThisWeek: Math.floor(Math.random() * 100),
-          updatedRecords: Math.floor(Math.random() * 50),
-          dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
-          objectsSynced: linkedInSourceToConnect.name === 'LinkedIn Company' 
-            ? ['Company Page', 'Posts', 'Followers'] 
-            : ['Company Pages', 'Profiles', 'Messages'],
-          fieldsMapped: Math.floor(Math.random() * 50) + 20,
-          filters: ['Active profiles only']
-        };
-        return { ...s, ...mockData };
-      }
-      return s;
-    }));
+    setDataSources((prev) =>
+      prev.map((s) => {
+        if (s.id === linkedInSourceToConnect.id) {
+          const mockData = {
+            status: "connected" as const,
+            account: linkedInEmail,
+            connectedDate: new Date().toISOString().split("T")[0],
+            lastSyncTime: "Just now",
+            lastSyncStatus: "success" as const,
+            totalRecords: Math.floor(Math.random() * 5000) + 100,
+            newRecordsThisWeek: Math.floor(Math.random() * 100),
+            updatedRecords: Math.floor(Math.random() * 50),
+            dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
+            objectsSynced:
+              linkedInSourceToConnect.name === "LinkedIn Company"
+                ? ["Company Page", "Posts", "Followers"]
+                : ["Company Pages", "Profiles", "Messages"],
+            fieldsMapped: Math.floor(Math.random() * 50) + 20,
+            filters: ["Active profiles only"],
+          };
+          return { ...s, ...mockData };
+        }
+        return s;
+      }),
+    );
 
     // Close modal and reset form
     setIsLinkedInAuthModalOpen(false);
     setLinkedInEmail("");
     setLinkedInPassword("");
     setLinkedInSourceToConnect(null);
-    setLinkedInAuthStep('login');
+    setLinkedInAuthStep("login");
 
     toast({
       title: `${linkedInSourceToConnect.name} connected successfully`,
-      description: "Your LinkedIn account is now connected and syncing. Records and sync options are now available.",
+      description:
+        "Your LinkedIn account is now connected and syncing. Records and sync options are now available.",
     });
   };
 
@@ -1263,7 +1391,7 @@ const MissionControl = () => {
     setLinkedInEmail("");
     setLinkedInPassword("");
     setLinkedInSourceToConnect(null);
-    setLinkedInAuthStep('login');
+    setLinkedInAuthStep("login");
 
     toast({
       title: "Connection not authorized",
@@ -1274,7 +1402,7 @@ const MissionControl = () => {
 
   const handleXLogin = async () => {
     if (!xSourceToConnect) return;
-    
+
     if (!xEmail || !xPassword) {
       toast({
         title: "Missing credentials",
@@ -1289,7 +1417,7 @@ const MissionControl = () => {
     // Simulate login process, then show permissions screen
     setTimeout(() => {
       setIsXLoggingIn(false);
-      setXAuthStep('permissions');
+      setXAuthStep("permissions");
     }, 1500);
   };
 
@@ -1297,37 +1425,40 @@ const MissionControl = () => {
     if (!xSourceToConnect) return;
 
     // Update data source to connected
-    setDataSources(prev => prev.map(s => {
-      if (s.id === xSourceToConnect.id) {
-        const mockData = {
-          status: 'connected' as const,
-          account: xEmail,
-          connectedDate: new Date().toISOString().split('T')[0],
-          lastSyncTime: 'Just now',
-          lastSyncStatus: 'success' as const,
-          totalRecords: Math.floor(Math.random() * 5000) + 100,
-          newRecordsThisWeek: Math.floor(Math.random() * 100),
-          updatedRecords: Math.floor(Math.random() * 50),
-          dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
-          objectsSynced: ['Profiles', 'Tweets', 'Engagements'],
-          fieldsMapped: Math.floor(Math.random() * 50) + 20,
-          filters: ['Active profiles only']
-        };
-        return { ...s, ...mockData };
-      }
-      return s;
-    }));
+    setDataSources((prev) =>
+      prev.map((s) => {
+        if (s.id === xSourceToConnect.id) {
+          const mockData = {
+            status: "connected" as const,
+            account: xEmail,
+            connectedDate: new Date().toISOString().split("T")[0],
+            lastSyncTime: "Just now",
+            lastSyncStatus: "success" as const,
+            totalRecords: Math.floor(Math.random() * 5000) + 100,
+            newRecordsThisWeek: Math.floor(Math.random() * 100),
+            updatedRecords: Math.floor(Math.random() * 50),
+            dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
+            objectsSynced: ["Profiles", "Tweets", "Engagements"],
+            fieldsMapped: Math.floor(Math.random() * 50) + 20,
+            filters: ["Active profiles only"],
+          };
+          return { ...s, ...mockData };
+        }
+        return s;
+      }),
+    );
 
     // Close modal and reset form
     setIsXAuthModalOpen(false);
     setXEmail("");
     setXPassword("");
     setXSourceToConnect(null);
-    setXAuthStep('login');
+    setXAuthStep("login");
 
     toast({
       title: "X connected successfully",
-      description: "Your X account is now connected and syncing. Records and sync options are now available.",
+      description:
+        "Your X account is now connected and syncing. Records and sync options are now available.",
     });
   };
 
@@ -1337,7 +1468,7 @@ const MissionControl = () => {
     setXEmail("");
     setXPassword("");
     setXSourceToConnect(null);
-    setXAuthStep('login');
+    setXAuthStep("login");
 
     toast({
       title: "Connection not authorized",
@@ -1354,7 +1485,7 @@ const MissionControl = () => {
     // Simulate Google OAuth sign-in process, then show consent screen
     setTimeout(() => {
       setIsGoogleAnalyticsSigningIn(false);
-      setGoogleAnalyticsAuthStep('permissions');
+      setGoogleAnalyticsAuthStep("permissions");
       // Set a mock email from Google account
       setGoogleAnalyticsEmail("user@gmail.com");
     }, 1500);
@@ -1364,33 +1495,36 @@ const MissionControl = () => {
     if (!googleAnalyticsSourceToConnect) return;
 
     // Update data source to connected
-    setDataSources(prev => prev.map(s => {
-      if (s.id === googleAnalyticsSourceToConnect.id) {
-        const mockData = {
-          status: 'connected' as const,
-          account: googleAnalyticsEmail,
-          connectedDate: new Date().toISOString().split('T')[0],
-          lastSyncTime: 'Just now',
-          lastSyncStatus: 'success' as const,
-          totalRecords: Math.floor(Math.random() * 10000) + 500,
-          newRecordsThisWeek: Math.floor(Math.random() * 500),
-          updatedRecords: Math.floor(Math.random() * 200),
-          dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
-          objectsSynced: ['Page Views', 'Events', 'User Sessions', 'Conversions'],
-          fieldsMapped: Math.floor(Math.random() * 50) + 30,
-          filters: ['Active properties only']
-        };
-        return { ...s, ...mockData };
-      }
-      return s;
-    }));
+    setDataSources((prev) =>
+      prev.map((s) => {
+        if (s.id === googleAnalyticsSourceToConnect.id) {
+          const mockData = {
+            status: "connected" as const,
+            account: googleAnalyticsEmail,
+            connectedDate: new Date().toISOString().split("T")[0],
+            lastSyncTime: "Just now",
+            lastSyncStatus: "success" as const,
+            totalRecords: Math.floor(Math.random() * 10000) + 500,
+            newRecordsThisWeek: Math.floor(Math.random() * 500),
+            updatedRecords: Math.floor(Math.random() * 200),
+            dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
+            objectsSynced: ["Page Views", "Events", "User Sessions", "Conversions"],
+            fieldsMapped: Math.floor(Math.random() * 50) + 30,
+            filters: ["Active properties only"],
+          };
+          return { ...s, ...mockData };
+        }
+        return s;
+      }),
+    );
 
     // Show success state, then close modal after a brief delay
-    setGoogleAnalyticsAuthStep('success');
-    
+    setGoogleAnalyticsAuthStep("success");
+
     toast({
       title: "Google Analytics connected successfully",
-      description: "Your Google Analytics account is now connected and syncing. Records and sync options are now available.",
+      description:
+        "Your Google Analytics account is now connected and syncing. Records and sync options are now available.",
     });
 
     // Close modal after showing success message
@@ -1398,7 +1532,7 @@ const MissionControl = () => {
       setIsGoogleAnalyticsAuthModalOpen(false);
       setGoogleAnalyticsEmail("");
       setGoogleAnalyticsSourceToConnect(null);
-      setGoogleAnalyticsAuthStep('signin');
+      setGoogleAnalyticsAuthStep("signin");
     }, 1500);
   };
 
@@ -1407,7 +1541,7 @@ const MissionControl = () => {
     setIsGoogleAnalyticsAuthModalOpen(false);
     setGoogleAnalyticsEmail("");
     setGoogleAnalyticsSourceToConnect(null);
-    setGoogleAnalyticsAuthStep('signin');
+    setGoogleAnalyticsAuthStep("signin");
 
     toast({
       title: "Connection not authorized",
@@ -1418,7 +1552,7 @@ const MissionControl = () => {
 
   const handleMixpanelLogin = async () => {
     if (!mixpanelSourceToConnect) return;
-    
+
     if (!mixpanelEmail || !mixpanelPassword) {
       toast({
         title: "Missing credentials",
@@ -1433,7 +1567,7 @@ const MissionControl = () => {
     // Simulate login process, then show permissions screen
     setTimeout(() => {
       setIsMixpanelLoggingIn(false);
-      setMixpanelAuthStep('permissions');
+      setMixpanelAuthStep("permissions");
     }, 1500);
   };
 
@@ -1444,37 +1578,40 @@ const MissionControl = () => {
     const fakeEventsCount = 124;
 
     // Update data source to connected
-    setDataSources(prev => prev.map(s => {
-      if (s.id === mixpanelSourceToConnect.id) {
-        const mockData = {
-          status: 'connected' as const,
-          account: mixpanelEmail,
-          connectedDate: new Date().toISOString().split('T')[0],
-          lastSyncTime: 'Just now',
-          lastSyncStatus: 'success' as const,
-          totalRecords: fakeEventsCount,
-          newRecordsThisWeek: Math.floor(Math.random() * 500) + 100,
-          updatedRecords: Math.floor(Math.random() * 200) + 50,
-          dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
-          objectsSynced: ['Page Viewed', 'Sign Up', 'Button Clicked', 'Form Submitted'],
-          fieldsMapped: Math.floor(Math.random() * 50) + 30,
-          filters: ['Active projects only']
-        };
-        return { ...s, ...mockData };
-      }
-      return s;
-    }));
+    setDataSources((prev) =>
+      prev.map((s) => {
+        if (s.id === mixpanelSourceToConnect.id) {
+          const mockData = {
+            status: "connected" as const,
+            account: mixpanelEmail,
+            connectedDate: new Date().toISOString().split("T")[0],
+            lastSyncTime: "Just now",
+            lastSyncStatus: "success" as const,
+            totalRecords: fakeEventsCount,
+            newRecordsThisWeek: Math.floor(Math.random() * 500) + 100,
+            updatedRecords: Math.floor(Math.random() * 200) + 50,
+            dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
+            objectsSynced: ["Page Viewed", "Sign Up", "Button Clicked", "Form Submitted"],
+            fieldsMapped: Math.floor(Math.random() * 50) + 30,
+            filters: ["Active projects only"],
+          };
+          return { ...s, ...mockData };
+        }
+        return s;
+      }),
+    );
 
     // Close modal and reset form
     setIsMixpanelAuthModalOpen(false);
     setMixpanelEmail("");
     setMixpanelPassword("");
     setMixpanelSourceToConnect(null);
-    setMixpanelAuthStep('login');
+    setMixpanelAuthStep("login");
 
     toast({
       title: "Mixpanel connected successfully",
-      description: "Your Mixpanel account is now connected and syncing. Events and analytics are now available.",
+      description:
+        "Your Mixpanel account is now connected and syncing. Events and analytics are now available.",
     });
   };
 
@@ -1484,7 +1621,7 @@ const MissionControl = () => {
     setMixpanelEmail("");
     setMixpanelPassword("");
     setMixpanelSourceToConnect(null);
-    setMixpanelAuthStep('login');
+    setMixpanelAuthStep("login");
 
     toast({
       title: "Connection not authorized",
@@ -1496,9 +1633,9 @@ const MissionControl = () => {
   // Handle Slack OAuth callback (check for code/state in URL params)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    const state = urlParams.get('state');
-    const error = urlParams.get('error');
+    const code = urlParams.get("code");
+    const state = urlParams.get("state");
+    const error = urlParams.get("error");
 
     if (error) {
       // User denied access
@@ -1509,53 +1646,60 @@ const MissionControl = () => {
       });
       // Clean up URL
       window.history.replaceState({}, document.title, window.location.pathname);
-      sessionStorage.removeItem('slackSourceToConnect');
+      sessionStorage.removeItem("slackSourceToConnect");
       return;
     }
 
     if (code && state) {
       // OAuth callback received from Slack
       try {
-        const storedSource = sessionStorage.getItem('slackSourceToConnect');
-        
+        const storedSource = sessionStorage.getItem("slackSourceToConnect");
+
         if (storedSource) {
           const sourceData = JSON.parse(storedSource);
-          
+
           // Update data source to connected
-          setDataSources(prev => prev.map(s => {
-            if (s.id === sourceData.id || s.name === sourceData.name || s.name.startsWith('Slack')) {
-              const mockData = {
-                status: 'connected' as const,
-                account: 'slack@company.com',
-                connectedDate: new Date().toISOString().split('T')[0],
-                lastSyncTime: 'Just now',
-                lastSyncStatus: 'success' as const,
-                totalRecords: Math.floor(Math.random() * 5000) + 100,
-                newRecordsThisWeek: Math.floor(Math.random() * 500) + 50,
-                updatedRecords: Math.floor(Math.random() * 200) + 20,
-                dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
-                objectsSynced: ['Messages', 'Channels', 'Conversations'],
-                fieldsMapped: Math.floor(Math.random() * 50) + 20,
-                filters: ['Active channels only']
-              };
-              return { ...s, ...mockData };
-            }
-            return s;
-          }));
+          setDataSources((prev) =>
+            prev.map((s) => {
+              if (
+                s.id === sourceData.id ||
+                s.name === sourceData.name ||
+                s.name.startsWith("Slack")
+              ) {
+                const mockData = {
+                  status: "connected" as const,
+                  account: "slack@company.com",
+                  connectedDate: new Date().toISOString().split("T")[0],
+                  lastSyncTime: "Just now",
+                  lastSyncStatus: "success" as const,
+                  totalRecords: Math.floor(Math.random() * 5000) + 100,
+                  newRecordsThisWeek: Math.floor(Math.random() * 500) + 50,
+                  updatedRecords: Math.floor(Math.random() * 200) + 20,
+                  dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
+                  objectsSynced: ["Messages", "Channels", "Conversations"],
+                  fieldsMapped: Math.floor(Math.random() * 50) + 20,
+                  filters: ["Active channels only"],
+                };
+                return { ...s, ...mockData };
+              }
+              return s;
+            }),
+          );
 
           // Clean up
-          sessionStorage.removeItem('slackSourceToConnect');
-          
+          sessionStorage.removeItem("slackSourceToConnect");
+
           // Clean up URL
           window.history.replaceState({}, document.title, window.location.pathname);
 
           toast({
             title: "Slack connected successfully",
-            description: "Your Slack workspace is now connected and syncing. Messages and channels are now available.",
+            description:
+              "Your Slack workspace is now connected and syncing. Messages and channels are now available.",
           });
         }
       } catch (err) {
-        console.error('Error processing Slack callback:', err);
+        console.error("Error processing Slack callback:", err);
         toast({
           title: "Error processing Slack callback",
           description: "There was an error processing the Slack authorization. Please try again.",
@@ -1571,9 +1715,9 @@ const MissionControl = () => {
   // New handlers for Add Source
   const handleConnectSource = (connector: Connector) => {
     // Check if source already exists (regardless of status)
-    const existingSource = dataSources.find(s => s.name === connector.name);
+    const existingSource = dataSources.find((s) => s.name === connector.name);
     if (existingSource) {
-      if (existingSource.status === 'connected' || existingSource.status === 'uploaded') {
+      if (existingSource.status === "connected" || existingSource.status === "uploaded") {
         toast({
           title: "Already connected",
           description: `${connector.name} is already connected.`,
@@ -1597,8 +1741,8 @@ const MissionControl = () => {
       type: connector.type,
       icon: connector.icon,
       platform: connector.platform,
-      status: 'disconnected',
-      syncFrequency: 'daily',
+      status: "disconnected",
+      syncFrequency: "daily",
       totalRecords: 0,
       newRecordsThisWeek: 0,
       updatedRecords: 0,
@@ -1606,35 +1750,34 @@ const MissionControl = () => {
       objectsSynced: [],
       fieldsMapped: 0,
       filters: [],
-      description: connector.description
+      description: connector.description,
     };
 
     // Add to data sources
-    setDataSources(prev => {
+    setDataSources((prev) => {
       // Double-check to prevent duplicates
-      const alreadyExists = prev.find(s => s.id === newSource.id || s.name === newSource.name);
+      const alreadyExists = prev.find((s) => s.id === newSource.id || s.name === newSource.name);
       if (alreadyExists) {
         return prev;
       }
       return [...prev, newSource];
     });
-    
+
     // Close dialog
     setIsConnectorDialogOpen(false);
-    
+
     toast({
       title: `${connector.name} added`,
       description: `Click "Connect" to set up the integration.`,
     });
   };
 
-
   // Calculate overall completeness based on completed sections
   const calculateOverallCompleteness = () => {
     // Check both local dataSources state and the hasDataSources flag
     const hasLocalDataSources = dataSources.length > 0;
     const hasAnyDataSources = hasLocalDataSources || hasDataSources;
-    
+
     if (hasAnyDataSources && isCustomerProfileSaved && isCompanyProfileSaved) {
       return 100;
     } else if (isCustomerProfileSaved && isCompanyProfileSaved) {
@@ -1653,7 +1796,8 @@ const MissionControl = () => {
       setIsCustomerProfileSaved(true);
       const uid = currentUser?.uid;
       if (!uid) return;
-      const fromProfiler = (e as CustomEvent<{ fromProfiler?: boolean }>).detail?.fromProfiler === true;
+      const fromProfiler =
+        (e as CustomEvent<{ fromProfiler?: boolean }>).detail?.fromProfiler === true;
       if (fromProfiler) {
         invalidateMissionControlCache(uid, orgIdToUse);
         invalidateProfilerCache(uid, orgIdToUse);
@@ -1676,10 +1820,10 @@ const MissionControl = () => {
       setHasDataSources(true);
     };
 
-    window.addEventListener('dataSourceAdded', handleDataSourceAdded);
-    
+    window.addEventListener("dataSourceAdded", handleDataSourceAdded);
+
     return () => {
-      window.removeEventListener('dataSourceAdded', handleDataSourceAdded);
+      window.removeEventListener("dataSourceAdded", handleDataSourceAdded);
     };
   }, [currentUser?.uid, orgIdToUse]);
 
@@ -1694,7 +1838,7 @@ const MissionControl = () => {
   useEffect(() => {
     const preloadLogo = () => {
       const img = new Image();
-      img.src = '/logo.png';
+      img.src = "/logo.png";
     };
     preloadLogo();
   }, []);
@@ -1717,14 +1861,14 @@ const MissionControl = () => {
           <div className="flex flex-col items-center justify-center gap-6 p-8 bg-background rounded-lg border border-border shadow-2xl">
             {/* Animated Brewra Logo */}
             <div className="relative w-24 h-24 flex items-center justify-center">
-              <img 
-                src="/logo.png" 
-                alt="Brewra Logo" 
+              <img
+                src="/logo.png"
+                alt="Brewra Logo"
                 className="h-20 w-20 object-contain"
                 loading="eager"
-                style={{ 
-                  animation: 'logo-reveal 2.5s ease-in-out infinite',
-                  clipPath: 'inset(0% 0% 0% 0%)'
+                style={{
+                  animation: "logo-reveal 2.5s ease-in-out infinite",
+                  clipPath: "inset(0% 0% 0% 0%)",
                 }}
               />
             </div>
@@ -1743,9 +1887,18 @@ const MissionControl = () => {
             </div>
             {/* Animated Progress Dots */}
             <div className="flex gap-2">
-              <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1.4s' }}></div>
-              <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '200ms', animationDuration: '1.4s' }}></div>
-              <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '400ms', animationDuration: '1.4s' }}></div>
+              <div
+                className="w-2 h-2 rounded-full bg-primary animate-bounce"
+                style={{ animationDelay: "0ms", animationDuration: "1.4s" }}
+              ></div>
+              <div
+                className="w-2 h-2 rounded-full bg-primary animate-bounce"
+                style={{ animationDelay: "200ms", animationDuration: "1.4s" }}
+              ></div>
+              <div
+                className="w-2 h-2 rounded-full bg-primary animate-bounce"
+                style={{ animationDelay: "400ms", animationDuration: "1.4s" }}
+              ></div>
             </div>
           </div>
         </DialogContent>
@@ -1756,49 +1909,54 @@ const MissionControl = () => {
         <div className="flex items-center justify-end gap-2">
           <span className="text-xs text-muted-foreground">Completeness:</span>
           <Progress value={overallCompleteness} className="w-32 h-1.5" />
-          <span className="text-xs font-medium min-w-[2rem] text-right">{overallCompleteness}%</span>
+          <span className="text-xs font-medium min-w-[2rem] text-right">
+            {overallCompleteness}%
+          </span>
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(value) => {
-          // Prevent switching to locked tabs
-          if (value === "customer-profile" && isCustomerProfileLocked) {
-            return;
-          }
-          if (value === "sources" && isDataSourcesLocked) {
-            return;
-          }
-          setActiveTab(value);
-        }} className="space-y-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => {
+            // Prevent switching to locked tabs
+            if (value === "customer-profile" && isCustomerProfileLocked) {
+              return;
+            }
+            if (value === "sources" && isDataSourcesLocked) {
+              return;
+            }
+            setActiveTab(value);
+          }}
+          className="space-y-6"
+        >
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 gap-1 md:gap-0">
-            <TabsTrigger value="profile" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4">
+            <TabsTrigger
+              value="profile"
+              className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4"
+            >
               <Building2 className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Company Profile</span>
               <span className="sm:hidden">Profile</span>
             </TabsTrigger>
-            <TabsTrigger 
-              value="customer-profile" 
+            <TabsTrigger
+              value="customer-profile"
               disabled={isCustomerProfileLocked}
               className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4 disabled:opacity-50 disabled:cursor-not-allowed relative"
             >
               <Users className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Customer Profile</span>
               <span className="sm:hidden">Customer</span>
-              {isCustomerProfileLocked && (
-                <span className="ml-1 text-[10px]">🔒</span>
-              )}
+              {isCustomerProfileLocked && <span className="ml-1 text-[10px]">🔒</span>}
             </TabsTrigger>
-            <TabsTrigger 
-              value="sources" 
+            <TabsTrigger
+              value="sources"
               disabled={isDataSourcesLocked}
               className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4 disabled:opacity-50 disabled:cursor-not-allowed relative"
             >
               <Database className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Data Sources</span>
               <span className="sm:hidden">Sources</span>
-              {isDataSourcesLocked && (
-                <span className="ml-1 text-[10px]">🔒</span>
-              )}
+              {isDataSourcesLocked && <span className="ml-1 text-[10px]">🔒</span>}
             </TabsTrigger>
           </TabsList>
 
@@ -1812,37 +1970,45 @@ const MissionControl = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="company-name">Company Name *</Label>
-                    <Input 
-                      id="company-name" 
+                    <Input
+                      id="company-name"
                       placeholder="Enter company name"
                       value={companyProfile.companyName}
-                      onChange={(e) => setCompanyProfile(prev => ({ ...prev, companyName: e.target.value }))}
+                      onChange={(e) =>
+                        setCompanyProfile((prev) => ({ ...prev, companyName: e.target.value }))
+                      }
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="company-url">Company URL</Label>
-                    <Input 
-                      id="company-url" 
+                    <Input
+                      id="company-url"
                       type="url"
                       placeholder="https://example.com"
                       value={companyProfile.companyUrl}
-                      onChange={(e) => setCompanyProfile(prev => ({ ...prev, companyUrl: e.target.value }))}
+                      onChange={(e) =>
+                        setCompanyProfile((prev) => ({ ...prev, companyUrl: e.target.value }))
+                      }
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="headquarters">Headquarters</Label>
-                    <Input 
-                      id="headquarters" 
+                    <Input
+                      id="headquarters"
                       placeholder="City, Country"
                       value={companyProfile.headquarters}
-                      onChange={(e) => setCompanyProfile(prev => ({ ...prev, headquarters: e.target.value }))}
+                      onChange={(e) =>
+                        setCompanyProfile((prev) => ({ ...prev, headquarters: e.target.value }))
+                      }
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="employee-size">Employee Size</Label>
-                    <Select 
+                    <Select
                       value={companyProfile.employeeSize}
-                      onValueChange={(value) => setCompanyProfile(prev => ({ ...prev, employeeSize: value }))}
+                      onValueChange={(value) =>
+                        setCompanyProfile((prev) => ({ ...prev, employeeSize: value }))
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select size" />
@@ -1859,9 +2025,11 @@ const MissionControl = () => {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="industry">Industry</Label>
-                    <Select 
+                    <Select
                       value={companyProfile.industry}
-                      onValueChange={(value) => setCompanyProfile(prev => ({ ...prev, industry: value }))}
+                      onValueChange={(value) =>
+                        setCompanyProfile((prev) => ({ ...prev, industry: value }))
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select industry" />
@@ -1877,9 +2045,11 @@ const MissionControl = () => {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="revenue">Revenue Band</Label>
-                    <Select 
+                    <Select
                       value={companyProfile.revenue}
-                      onValueChange={(value) => setCompanyProfile(prev => ({ ...prev, revenue: value }))}
+                      onValueChange={(value) =>
+                        setCompanyProfile((prev) => ({ ...prev, revenue: value }))
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select revenue range" />
@@ -1895,9 +2065,11 @@ const MissionControl = () => {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="gtm-model">GTM Model</Label>
-                    <Select 
+                    <Select
                       value={companyProfile.gtmModel}
-                      onValueChange={(value) => setCompanyProfile(prev => ({ ...prev, gtmModel: value }))}
+                      onValueChange={(value) =>
+                        setCompanyProfile((prev) => ({ ...prev, gtmModel: value }))
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select GTM model" />
@@ -1911,31 +2083,36 @@ const MissionControl = () => {
                     </Select>
                   </div>
                 </div>
-                
+
                 <Accordion type="multiple" className="space-y-4 mt-6">
                   <AccordionItem value="priorities">
-                    <AccordionTrigger className="text-lg font-medium">
-                      Goals
-                    </AccordionTrigger>
+                    <AccordionTrigger className="text-lg font-medium">Goals</AccordionTrigger>
                     <AccordionContent>
                       <Card>
                         <CardContent className="p-4 space-y-4">
                           <div className="space-y-2">
                             <Label htmlFor="business-goals">Primary Business Goals</Label>
-                            <Textarea 
-                              id="business-goals" 
+                            <Textarea
+                              id="business-goals"
                               placeholder="Be as specific as possible - clearer goals help Brewra generate more accurate insights."
                               value={companyProfile.goals}
-                              onChange={(e) => setCompanyProfile(prev => ({ ...prev, goals: e.target.value }))}
+                              onChange={(e) =>
+                                setCompanyProfile((prev) => ({ ...prev, goals: e.target.value }))
+                              }
                             />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="pain-points">Key Pain Points We Solve</Label>
-                            <Textarea 
-                              id="pain-points" 
+                            <Textarea
+                              id="pain-points"
                               placeholder="Describe the key problems you're trying to solve. More detail leads to more relevant insights."
                               value={companyProfile.painPoints}
-                              onChange={(e) => setCompanyProfile(prev => ({ ...prev, painPoints: e.target.value }))}
+                              onChange={(e) =>
+                                setCompanyProfile((prev) => ({
+                                  ...prev,
+                                  painPoints: e.target.value,
+                                }))
+                              }
                             />
                           </div>
                         </CardContent>
@@ -1953,20 +2130,30 @@ const MissionControl = () => {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label htmlFor="target-segments">Target Segments (Include)</Label>
-                              <Textarea 
-                                id="target-segments" 
+                              <Textarea
+                                id="target-segments"
                                 placeholder="e.g., Mid-market SaaS companies, Financial services..."
                                 value={companyProfile.targetSegments}
-                                onChange={(e) => setCompanyProfile(prev => ({ ...prev, targetSegments: e.target.value }))}
+                                onChange={(e) =>
+                                  setCompanyProfile((prev) => ({
+                                    ...prev,
+                                    targetSegments: e.target.value,
+                                  }))
+                                }
                               />
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="exclude-segments">Exclude Segments</Label>
-                              <Textarea 
-                                id="exclude-segments" 
+                              <Textarea
+                                id="exclude-segments"
                                 placeholder="e.g., Startups under 50 employees, Government..."
                                 value={companyProfile.excludeSegments}
-                                onChange={(e) => setCompanyProfile(prev => ({ ...prev, excludeSegments: e.target.value }))}
+                                onChange={(e) =>
+                                  setCompanyProfile((prev) => ({
+                                    ...prev,
+                                    excludeSegments: e.target.value,
+                                  }))
+                                }
                               />
                             </div>
                           </div>
@@ -1984,20 +2171,30 @@ const MissionControl = () => {
                         <CardContent className="p-4 space-y-4">
                           <div className="space-y-2">
                             <Label htmlFor="compliance-reqs">Compliance Requirements</Label>
-                            <Textarea 
-                              id="compliance-reqs" 
+                            <Textarea
+                              id="compliance-reqs"
                               placeholder="e.g., GDPR, HIPAA, SOC2..."
                               value={companyProfile.compliance}
-                              onChange={(e) => setCompanyProfile(prev => ({ ...prev, compliance: e.target.value }))}
+                              onChange={(e) =>
+                                setCompanyProfile((prev) => ({
+                                  ...prev,
+                                  compliance: e.target.value,
+                                }))
+                              }
                             />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="messaging-constraints">General Instruction</Label>
-                            <Textarea 
-                              id="messaging-constraints" 
+                            <Textarea
+                              id="messaging-constraints"
                               placeholder="e.g., Avoid certain terms, required disclaimers..."
                               value={companyProfile.constraints}
-                              onChange={(e) => setCompanyProfile(prev => ({ ...prev, constraints: e.target.value }))}
+                              onChange={(e) =>
+                                setCompanyProfile((prev) => ({
+                                  ...prev,
+                                  constraints: e.target.value,
+                                }))
+                              }
                             />
                           </div>
                         </CardContent>
@@ -2005,12 +2202,8 @@ const MissionControl = () => {
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
-                
-                <Button 
-                  onClick={handleSave} 
-                  className="w-full md:w-auto"
-                  disabled={isSaving}
-                >
+
+                <Button onClick={handleSave} className="w-full md:w-auto" disabled={isSaving}>
                   {isSaving ? "Saving..." : "Save Changes"}
                 </Button>
               </CardContent>
@@ -2037,11 +2230,9 @@ const MissionControl = () => {
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add Data Source</DialogTitle>
-              <DialogDescription>
-                Configure and connect your data sources
-              </DialogDescription>
+              <DialogDescription>Configure and connect your data sources</DialogDescription>
             </DialogHeader>
-            
+
             <div className="space-y-4">
               <Accordion type="single" collapsible className="w-full">
                 {/* CRM Section */}
@@ -2069,27 +2260,28 @@ const MissionControl = () => {
                         </Select>
                       </div>
                       {selectedCrm && (
-                        <Button 
+                        <Button
                           onClick={() => {
                             const crmNames: Record<string, string> = {
-                              salesforce: 'Salesforce',
-                              hubspot: 'HubSpot',
-                              pipedrive: 'Pipedrive',
-                              zoho: 'Zoho CRM'
+                              salesforce: "Salesforce",
+                              hubspot: "HubSpot",
+                              pipedrive: "Pipedrive",
+                              zoho: "Zoho CRM",
                             };
                             const connector: Connector = {
                               id: `conn-${selectedCrm}`,
                               name: crmNames[selectedCrm],
-                              type: 'crm',
+                              type: "crm",
                               icon: Database,
                               platform: crmNames[selectedCrm],
                               description: `Connect your ${crmNames[selectedCrm]} CRM`,
-                              category: 'CRM'
+                              category: "CRM",
                             };
                             handleConnectSource(connector);
                             toast({
                               title: `${crmNames[selectedCrm]} added`,
-                              description: "Click 'Connect' in the table to set up the integration.",
+                              description:
+                                "Click 'Connect' in the table to set up the integration.",
                             });
                             setIsConnectorDialogOpen(false);
                             setSelectedCrm("");
@@ -2152,22 +2344,23 @@ const MissionControl = () => {
                             )}
                           </div>
                         ))}
-                        {linkedInUrls.some(url => url.trim() !== "") && (
-                          <Button 
+                        {linkedInUrls.some((url) => url.trim() !== "") && (
+                          <Button
                             onClick={() => {
                               const connector: Connector = {
-                                id: 'conn-linkedin',
-                                name: 'LinkedIn Sales Navigator',
-                                type: 'social',
+                                id: "conn-linkedin",
+                                name: "LinkedIn Sales Navigator",
+                                type: "social",
                                 icon: Linkedin,
-                                platform: 'LinkedIn',
-                                description: `LinkedIn URLs: ${linkedInUrls.filter(u => u.trim()).join(', ')}`,
-                                category: 'Social'
+                                platform: "LinkedIn",
+                                description: `LinkedIn URLs: ${linkedInUrls.filter((u) => u.trim()).join(", ")}`,
+                                category: "Social",
                               };
                               handleConnectSource(connector);
                               toast({
                                 title: "LinkedIn Sales Navigator added",
-                                description: "Click 'Connect' in the table to set up the integration.",
+                                description:
+                                  "Click 'Connect' in the table to set up the integration.",
                               });
                               setIsConnectorDialogOpen(false);
                               setLinkedInUrls([""]);
@@ -2182,21 +2375,22 @@ const MissionControl = () => {
                       {/* Twitter */}
                       <div className="space-y-3 pt-4 border-t">
                         <Label>X</Label>
-                        <Button 
+                        <Button
                           onClick={() => {
                             const connector: Connector = {
-                              id: 'conn-twitter',
-                              name: 'X',
-                              type: 'social',
+                              id: "conn-twitter",
+                              name: "X",
+                              type: "social",
                               icon: Twitter,
-                              platform: 'Twitter',
-                              description: 'Connect X account',
-                              category: 'Social'
+                              platform: "Twitter",
+                              description: "Connect X account",
+                              category: "Social",
                             };
                             handleConnectSource(connector);
                             toast({
                               title: "X added",
-                              description: "Click 'Connect' in the table to set up the integration.",
+                              description:
+                                "Click 'Connect' in the table to set up the integration.",
                             });
                             setIsConnectorDialogOpen(false);
                           }}
@@ -2232,25 +2426,26 @@ const MissionControl = () => {
                         </Select>
                       </div>
                       {selectedAnalytics && (
-                        <Button 
+                        <Button
                           onClick={() => {
                             const analyticsNames: Record<string, string> = {
-                              'google-analytics': 'Google Analytics',
-                              'mixpanel': 'Mixpanel'
+                              "google-analytics": "Google Analytics",
+                              mixpanel: "Mixpanel",
                             };
                             const connector: Connector = {
                               id: `conn-${selectedAnalytics}`,
                               name: analyticsNames[selectedAnalytics],
-                              type: 'analytics',
-                              icon: selectedAnalytics === 'google-analytics' ? Globe : BarChart3,
+                              type: "analytics",
+                              icon: selectedAnalytics === "google-analytics" ? Globe : BarChart3,
                               platform: analyticsNames[selectedAnalytics],
                               description: `Connect ${analyticsNames[selectedAnalytics]}`,
-                              category: 'Analytics'
+                              category: "Analytics",
                             };
                             handleConnectSource(connector);
                             toast({
                               title: `${analyticsNames[selectedAnalytics]} added`,
-                              description: "Click 'Connect' in the table to set up the integration.",
+                              description:
+                                "Click 'Connect' in the table to set up the integration.",
                             });
                             setIsConnectorDialogOpen(false);
                             setSelectedAnalytics("");
@@ -2301,7 +2496,9 @@ const MissionControl = () => {
                               type="button"
                               variant="outline"
                               size="icon"
-                              onClick={() => setCompetitors([...competitors, {name: "", url: ""}])}
+                              onClick={() =>
+                                setCompetitors([...competitors, { name: "", url: "" }])
+                              }
                             >
                               <Plus className="h-4 w-4" />
                             </Button>
@@ -2321,28 +2518,31 @@ const MissionControl = () => {
                           )}
                         </div>
                       ))}
-                      {competitors.some(c => c.name.trim() !== "" || c.url.trim() !== "") && (
-                        <Button 
+                      {competitors.some((c) => c.name.trim() !== "" || c.url.trim() !== "") && (
+                        <Button
                           onClick={() => {
-                            const validCompetitors = competitors.filter(c => c.name.trim() !== "" && c.url.trim() !== "");
+                            const validCompetitors = competitors.filter(
+                              (c) => c.name.trim() !== "" && c.url.trim() !== "",
+                            );
                             validCompetitors.forEach((competitor, index) => {
                               const connector: Connector = {
                                 id: `conn-competitor-${index}`,
                                 name: `Competitor: ${competitor.name}`,
-                                type: 'custom',
+                                type: "custom",
                                 icon: Users,
-                                platform: 'Competitor',
+                                platform: "Competitor",
                                 description: `Competitor: ${competitor.name} - ${competitor.url}`,
-                                category: 'Competitors'
+                                category: "Competitors",
                               };
                               handleConnectSource(connector);
                             });
                             toast({
                               title: `${validCompetitors.length} competitor(s) added`,
-                              description: "Click 'Connect' in the table to set up the integration.",
+                              description:
+                                "Click 'Connect' in the table to set up the integration.",
                             });
                             setIsConnectorDialogOpen(false);
-                            setCompetitors([{name: "", url: ""}]);
+                            setCompetitors([{ name: "", url: "" }]);
                           }}
                           className="w-full"
                         >
@@ -2395,7 +2595,12 @@ const MissionControl = () => {
                                   type="button"
                                   variant="outline"
                                   size="icon"
-                                  onClick={() => setSlackConfigs([...slackConfigs, {workspace: "", channel: ""}])}
+                                  onClick={() =>
+                                    setSlackConfigs([
+                                      ...slackConfigs,
+                                      { workspace: "", channel: "" },
+                                    ])
+                                  }
                                 >
                                   <Plus className="h-4 w-4" />
                                 </Button>
@@ -2417,28 +2622,31 @@ const MissionControl = () => {
                           </div>
                         </div>
                       ))}
-                      {slackConfigs.some(c => c.workspace.trim() !== "") && (
-                        <Button 
+                      {slackConfigs.some((c) => c.workspace.trim() !== "") && (
+                        <Button
                           onClick={() => {
-                            const validConfigs = slackConfigs.filter(c => c.workspace.trim() !== "");
+                            const validConfigs = slackConfigs.filter(
+                              (c) => c.workspace.trim() !== "",
+                            );
                             validConfigs.forEach((config, index) => {
                               const connector: Connector = {
                                 id: `conn-slack-${index}`,
                                 name: `Slack: ${config.workspace}`,
-                                type: 'communication',
+                                type: "communication",
                                 icon: Slack,
-                                platform: 'Slack',
-                                description: `Slack: ${config.workspace} - ${config.channel || 'All channels'}`,
-                                category: 'Communication'
+                                platform: "Slack",
+                                description: `Slack: ${config.workspace} - ${config.channel || "All channels"}`,
+                                category: "Communication",
                               };
                               handleConnectSource(connector);
                             });
                             toast({
                               title: `${validConfigs.length} Slack workspace(s) added`,
-                              description: "Click 'Connect' in the table to set up the integration.",
+                              description:
+                                "Click 'Connect' in the table to set up the integration.",
                             });
                             setIsConnectorDialogOpen(false);
-                            setSlackConfigs([{workspace: "", channel: ""}]);
+                            setSlackConfigs([{ workspace: "", channel: "" }]);
                           }}
                           className="w-full"
                         >
@@ -2465,8 +2673,10 @@ const MissionControl = () => {
                           <FileText className="h-4 w-4 text-muted-foreground" />
                           <h4 className="font-medium">Product Documentation</h4>
                         </div>
-                        <p className="text-sm text-muted-foreground">Docs, API guides, release notes, and specs</p>
-                        
+                        <p className="text-sm text-muted-foreground">
+                          Docs, API guides, release notes, and specs
+                        </p>
+
                         {productDocFiles.map((fileData, index) => (
                           <div key={index} className="space-y-3 p-3 border rounded-md bg-muted/30">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2490,7 +2700,12 @@ const MissionControl = () => {
                                       type="button"
                                       variant="outline"
                                       size="icon"
-                                      onClick={() => setProductDocFiles([...productDocFiles, {file: null, destinationUrl: ""}])}
+                                      onClick={() =>
+                                        setProductDocFiles([
+                                          ...productDocFiles,
+                                          { file: null, destinationUrl: "" },
+                                        ])
+                                      }
                                     >
                                       <Plus className="h-4 w-4" />
                                     </Button>
@@ -2501,7 +2716,9 @@ const MissionControl = () => {
                                       variant="outline"
                                       size="icon"
                                       onClick={() => {
-                                        const newFiles = productDocFiles.filter((_, i) => i !== index);
+                                        const newFiles = productDocFiles.filter(
+                                          (_, i) => i !== index,
+                                        );
                                         setProductDocFiles(newFiles);
                                       }}
                                     >
@@ -2510,7 +2727,9 @@ const MissionControl = () => {
                                   )}
                                 </div>
                                 {fileData.file && (
-                                  <p className="text-xs text-muted-foreground">Selected: {fileData.file.name}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Selected: {fileData.file.name}
+                                  </p>
                                 )}
                               </div>
                               <div className="space-y-2">
@@ -2529,29 +2748,32 @@ const MissionControl = () => {
                             </div>
                           </div>
                         ))}
-                        
-                        {productDocFiles.some(f => f.file || f.destinationUrl.trim() !== "") && (
+
+                        {productDocFiles.some((f) => f.file || f.destinationUrl.trim() !== "") && (
                           <Button
                             onClick={() => {
-                              const validFiles = productDocFiles.filter(f => f.file || f.destinationUrl.trim() !== "");
+                              const validFiles = productDocFiles.filter(
+                                (f) => f.file || f.destinationUrl.trim() !== "",
+                              );
                               validFiles.forEach((fileData, index) => {
                                 const connector: Connector = {
                                   id: `file-product-doc-${index}`,
-                                  name: `Product Documentation${validFiles.length > 1 ? ` (${index + 1})` : ''}`,
-                                  type: 'file',
+                                  name: `Product Documentation${validFiles.length > 1 ? ` (${index + 1})` : ""}`,
+                                  type: "file",
                                   icon: FileText,
-                                  platform: 'File Upload',
-                                  description: `Docs, API guides, release notes, and specs${fileData.file ? ` - ${fileData.file.name}` : ''}`,
-                                  category: 'File Sources'
+                                  platform: "File Upload",
+                                  description: `Docs, API guides, release notes, and specs${fileData.file ? ` - ${fileData.file.name}` : ""}`,
+                                  category: "File Sources",
                                 };
                                 handleConnectSource(connector);
                               });
                               toast({
                                 title: `${validFiles.length} Product Documentation file(s) added`,
-                                description: "Click 'Connect' in the table to upload files and configure.",
+                                description:
+                                  "Click 'Connect' in the table to upload files and configure.",
                               });
                               setIsConnectorDialogOpen(false);
-                              setProductDocFiles([{file: null, destinationUrl: ""}]);
+                              setProductDocFiles([{ file: null, destinationUrl: "" }]);
                             }}
                             className="w-full"
                           >
@@ -2559,26 +2781,48 @@ const MissionControl = () => {
                           </Button>
                         )}
                       </div>
-                      
+
                       {/* Other File Sources */}
                       {[
-                        { name: "Call Transcripts", icon: MessageSquare, description: "Conversation transcripts from discovery and sales calls" },
-                        { name: "Meeting Notes", icon: FileText, description: "Structured or freeform notes from meetings" },
-                        { name: "Case Studies", icon: Users, description: "Customer stories, wins, and proof points" },
-                        { name: "Support Tickets", icon: MessageSquare, description: "Support conversations and resolutions" },
-                        { name: "Sales Presentations", icon: BarChart3, description: "Decks and one-pagers used in the sales cycle" },
+                        {
+                          name: "Call Transcripts",
+                          icon: MessageSquare,
+                          description: "Conversation transcripts from discovery and sales calls",
+                        },
+                        {
+                          name: "Meeting Notes",
+                          icon: FileText,
+                          description: "Structured or freeform notes from meetings",
+                        },
+                        {
+                          name: "Case Studies",
+                          icon: Users,
+                          description: "Customer stories, wins, and proof points",
+                        },
+                        {
+                          name: "Support Tickets",
+                          icon: MessageSquare,
+                          description: "Support conversations and resolutions",
+                        },
+                        {
+                          name: "Sales Presentations",
+                          icon: BarChart3,
+                          description: "Decks and one-pagers used in the sales cycle",
+                        },
                       ].map((fileSource) => {
                         const FileIcon = fileSource.icon;
                         const fileData = fileSources[fileSource.name];
-                        
+
                         return (
                           <div key={fileSource.name} className="space-y-3 p-4 border rounded-lg">
                             <div className="flex items-center gap-2">
                               <FileIcon className="h-4 w-4 text-muted-foreground" />
                               <h4 className="font-medium">{fileSource.name}</h4>
                             </div>
-                            <p className="text-sm text-muted-foreground">{fileSource.description}</p>
-                            
+                            <p className="text-sm text-muted-foreground">
+                              {fileSource.description}
+                            </p>
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="space-y-2">
                                 <Label>Upload File</Label>
@@ -2587,15 +2831,17 @@ const MissionControl = () => {
                                   onChange={(e) => {
                                     const file = e.target.files?.[0];
                                     if (file) {
-                                      setFileSources(prev => ({
+                                      setFileSources((prev) => ({
                                         ...prev,
-                                        [fileSource.name]: {...prev[fileSource.name], file}
+                                        [fileSource.name]: { ...prev[fileSource.name], file },
                                       }));
                                     }
                                   }}
                                 />
                                 {fileData.file && (
-                                  <p className="text-xs text-muted-foreground">Selected: {fileData.file.name}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Selected: {fileData.file.name}
+                                  </p>
                                 )}
                               </div>
                               <div className="space-y-2">
@@ -2605,31 +2851,35 @@ const MissionControl = () => {
                                   placeholder="https://example.com/destination"
                                   value={fileData.destinationUrl}
                                   onChange={(e) => {
-                                    setFileSources(prev => ({
+                                    setFileSources((prev) => ({
                                       ...prev,
-                                      [fileSource.name]: {...prev[fileSource.name], destinationUrl: e.target.value}
+                                      [fileSource.name]: {
+                                        ...prev[fileSource.name],
+                                        destinationUrl: e.target.value,
+                                      },
                                     }));
                                   }}
                                 />
                               </div>
                             </div>
-                            
+
                             {(fileData.file || fileData.destinationUrl.trim() !== "") && (
                               <Button
                                 onClick={() => {
                                   const connector: Connector = {
-                                    id: `file-${fileSource.name.toLowerCase().replace(/\s+/g, '-')}`,
+                                    id: `file-${fileSource.name.toLowerCase().replace(/\s+/g, "-")}`,
                                     name: fileSource.name,
-                                    type: 'file',
+                                    type: "file",
                                     icon: fileSource.icon,
-                                    platform: 'File Upload',
+                                    platform: "File Upload",
                                     description: fileSource.description,
-                                    category: 'File Sources'
+                                    category: "File Sources",
                                   };
                                   handleConnectSource(connector);
                                   toast({
                                     title: `${fileSource.name} added`,
-                                    description: "Click 'Connect' in the table to upload files and configure.",
+                                    description:
+                                      "Click 'Connect' in the table to upload files and configure.",
                                   });
                                   setIsConnectorDialogOpen(false);
                                 }}
@@ -2655,20 +2905,23 @@ const MissionControl = () => {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Data Source</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete <strong>{sourceToDelete?.name}</strong>? This action cannot be undone and all associated data will be removed.
+                Are you sure you want to delete <strong>{sourceToDelete?.name}</strong>? This action
+                cannot be undone and all associated data will be removed.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => {
-                setDeleteDialogOpen(false);
-                setSourceToDelete(null);
-              }}>
+              <AlertDialogCancel
+                onClick={() => {
+                  setDeleteDialogOpen(false);
+                  setSourceToDelete(null);
+                }}
+              >
                 No, Cancel
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => {
                   if (sourceToDelete) {
-                    setDataSources(prev => prev.filter(s => s.id !== sourceToDelete.id));
+                    setDataSources((prev) => prev.filter((s) => s.id !== sourceToDelete.id));
                     toast({
                       title: "Data source deleted",
                       description: `${sourceToDelete.name} has been removed.`,
@@ -2694,13 +2947,16 @@ const MissionControl = () => {
                 Manage sync settings, objects, and filters for this data source
               </DialogDescription>
             </DialogHeader>
-            
+
             {sourceToConfigure && (
               <div className="space-y-6 pt-4">
                 {/* Sync Frequency */}
                 <div className="space-y-2">
                   <Label>Sync Frequency</Label>
-                  <Select value={configSyncFrequency} onValueChange={(value: any) => setConfigSyncFrequency(value)}>
+                  <Select
+                    value={configSyncFrequency}
+                    onValueChange={(value: any) => setConfigSyncFrequency(value)}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -2719,11 +2975,18 @@ const MissionControl = () => {
                 </div>
 
                 {/* Objects to Sync */}
-                {sourceToConfigure.type === 'crm' && (
+                {sourceToConfigure.type === "crm" && (
                   <div className="space-y-2">
                     <Label>Objects to Sync</Label>
                     <div className="space-y-2 border rounded-md p-4">
-                      {['Contacts', 'Accounts', 'Opportunities', 'Leads', 'Deals', 'Activities'].map((obj) => {
+                      {[
+                        "Contacts",
+                        "Accounts",
+                        "Opportunities",
+                        "Leads",
+                        "Deals",
+                        "Activities",
+                      ].map((obj) => {
                         const isChecked = configObjects.includes(obj);
                         return (
                           <div key={obj} className="flex items-center space-x-2">
@@ -2734,7 +2997,7 @@ const MissionControl = () => {
                                 if (checked) {
                                   setConfigObjects([...configObjects, obj]);
                                 } else {
-                                  setConfigObjects(configObjects.filter(o => o !== obj));
+                                  setConfigObjects(configObjects.filter((o) => o !== obj));
                                 }
                               }}
                             />
@@ -2754,11 +3017,11 @@ const MissionControl = () => {
                   </div>
                 )}
 
-                {sourceToConfigure.type === 'social' && (
+                {sourceToConfigure.type === "social" && (
                   <div className="space-y-2">
                     <Label>Data Types to Sync</Label>
                     <div className="space-y-2 border rounded-md p-4">
-                      {['Company Pages', 'Profiles', 'Posts', 'Engagements'].map((obj) => {
+                      {["Company Pages", "Profiles", "Posts", "Engagements"].map((obj) => {
                         const isChecked = configObjects.includes(obj);
                         return (
                           <div key={obj} className="flex items-center space-x-2">
@@ -2769,7 +3032,7 @@ const MissionControl = () => {
                                 if (checked) {
                                   setConfigObjects([...configObjects, obj]);
                                 } else {
-                                  setConfigObjects(configObjects.filter(o => o !== obj));
+                                  setConfigObjects(configObjects.filter((o) => o !== obj));
                                 }
                               }}
                             />
@@ -2786,11 +3049,11 @@ const MissionControl = () => {
                   </div>
                 )}
 
-                {sourceToConfigure.type === 'analytics' && (
+                {sourceToConfigure.type === "analytics" && (
                   <div className="space-y-2">
                     <Label>Events to Sync</Label>
                     <div className="space-y-2 border rounded-md p-4">
-                      {['Page Views', 'Events', 'User Actions', 'Conversions'].map((obj) => {
+                      {["Page Views", "Events", "User Actions", "Conversions"].map((obj) => {
                         const isChecked = configObjects.includes(obj);
                         return (
                           <div key={obj} className="flex items-center space-x-2">
@@ -2801,7 +3064,7 @@ const MissionControl = () => {
                                 if (checked) {
                                   setConfigObjects([...configObjects, obj]);
                                 } else {
-                                  setConfigObjects(configObjects.filter(o => o !== obj));
+                                  setConfigObjects(configObjects.filter((o) => o !== obj));
                                 }
                               }}
                             />
@@ -2819,11 +3082,16 @@ const MissionControl = () => {
                 )}
 
                 {/* Filters */}
-                {sourceToConfigure.type === 'crm' && (
+                {sourceToConfigure.type === "crm" && (
                   <div className="space-y-2">
                     <Label>Filters</Label>
                     <div className="space-y-2 border rounded-md p-4">
-                      {['Active records only', 'Last 90 days', 'Exclude archived', 'High-value accounts only'].map((filter) => {
+                      {[
+                        "Active records only",
+                        "Last 90 days",
+                        "Exclude archived",
+                        "High-value accounts only",
+                      ].map((filter) => {
                         const isChecked = configFilters.includes(filter);
                         return (
                           <div key={filter} className="flex items-center space-x-2">
@@ -2834,7 +3102,7 @@ const MissionControl = () => {
                                 if (checked) {
                                   setConfigFilters([...configFilters, filter]);
                                 } else {
-                                  setConfigFilters(configFilters.filter(f => f !== filter));
+                                  setConfigFilters(configFilters.filter((f) => f !== filter));
                                 }
                               }}
                             />
@@ -2858,8 +3126,10 @@ const MissionControl = () => {
                 <div className="space-y-2 pt-4 border-t">
                   <Label>Current Configuration</Label>
                   <div className="text-sm text-muted-foreground space-y-1">
-                    <p>Objects Synced: {configObjects.length > 0 ? configObjects.join(', ') : 'None'}</p>
-                    <p>Filters: {configFilters.length > 0 ? configFilters.join(', ') : 'None'}</p>
+                    <p>
+                      Objects Synced: {configObjects.length > 0 ? configObjects.join(", ") : "None"}
+                    </p>
+                    <p>Filters: {configFilters.length > 0 ? configFilters.join(", ") : "None"}</p>
                     <p>Fields Mapped: {sourceToConfigure.fieldsMapped}</p>
                   </div>
                 </div>
@@ -2869,9 +3139,7 @@ const MissionControl = () => {
                   <Button variant="outline" onClick={() => setConfigDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button onClick={handleSaveConfiguration}>
-                    Save Configuration
-                  </Button>
+                  <Button onClick={handleSaveConfiguration}>Save Configuration</Button>
                 </div>
               </div>
             )}
@@ -2879,17 +3147,20 @@ const MissionControl = () => {
         </Dialog>
 
         {/* Salesforce Auth Modal */}
-        <Dialog open={isSalesforceAuthModalOpen} onOpenChange={(open) => {
-          if (!open) {
-            setIsSalesforceAuthModalOpen(false);
-            setSalesforceEmail("");
-            setSalesforcePassword("");
-            setSalesforceSourceToConnect(null);
-            setSalesforceAuthStep('login');
-          }
-        }}>
+        <Dialog
+          open={isSalesforceAuthModalOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setIsSalesforceAuthModalOpen(false);
+              setSalesforceEmail("");
+              setSalesforcePassword("");
+              setSalesforceSourceToConnect(null);
+              setSalesforceAuthStep("login");
+            }
+          }}
+        >
           <DialogContent className="max-w-md">
-            {salesforceAuthStep === 'login' ? (
+            {salesforceAuthStep === "login" ? (
               <>
                 <DialogHeader>
                   <DialogTitle>Sign in to Salesforce</DialogTitle>
@@ -2919,7 +3190,7 @@ const MissionControl = () => {
                       onChange={(e) => setSalesforcePassword(e.target.value)}
                       disabled={isSalesforceLoggingIn}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !isSalesforceLoggingIn) {
+                        if (e.key === "Enter" && !isSalesforceLoggingIn) {
                           handleSalesforceLogin();
                         }
                       }}
@@ -2938,7 +3209,7 @@ const MissionControl = () => {
                       setSalesforceEmail("");
                       setSalesforcePassword("");
                       setSalesforceSourceToConnect(null);
-                      setSalesforceAuthStep('login');
+                      setSalesforceAuthStep("login");
                     }}
                     disabled={isSalesforceLoggingIn}
                   >
@@ -2964,7 +3235,8 @@ const MissionControl = () => {
                 <DialogHeader>
                   <DialogTitle>Authorize Access</DialogTitle>
                   <DialogDescription>
-                    This application would like to access the following data from your Salesforce account:
+                    This application would like to access the following data from your Salesforce
+                    account:
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
@@ -2973,15 +3245,22 @@ const MissionControl = () => {
                     <ul className="space-y-2 text-sm">
                       <li className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span><strong>Contacts</strong> - Read contact information and details</span>
+                        <span>
+                          <strong>Contacts</strong> - Read contact information and details
+                        </span>
                       </li>
                       <li className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span><strong>Accounts</strong> - Read account information and company data</span>
+                        <span>
+                          <strong>Accounts</strong> - Read account information and company data
+                        </span>
                       </li>
                       <li className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span><strong>Opportunities</strong> - Read sales opportunities and pipeline data</span>
+                        <span>
+                          <strong>Opportunities</strong> - Read sales opportunities and pipeline
+                          data
+                        </span>
                       </li>
                     </ul>
                   </div>
@@ -2991,10 +3270,7 @@ const MissionControl = () => {
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleSalesforceDeny}
-                  >
+                  <Button variant="outline" onClick={handleSalesforceDeny}>
                     Deny
                   </Button>
                   <Button
@@ -3010,23 +3286,24 @@ const MissionControl = () => {
         </Dialog>
 
         {/* HubSpot Auth Modal */}
-        <Dialog open={isHubSpotAuthModalOpen} onOpenChange={(open) => {
-          if (!open) {
-            setIsHubSpotAuthModalOpen(false);
-            setHubSpotEmail("");
-            setHubSpotPassword("");
-            setHubSpotSourceToConnect(null);
-            setHubSpotAuthStep('login');
-          }
-        }}>
+        <Dialog
+          open={isHubSpotAuthModalOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setIsHubSpotAuthModalOpen(false);
+              setHubSpotEmail("");
+              setHubSpotPassword("");
+              setHubSpotSourceToConnect(null);
+              setHubSpotAuthStep("login");
+            }
+          }}
+        >
           <DialogContent className="max-w-md">
-            {hubSpotAuthStep === 'login' ? (
+            {hubSpotAuthStep === "login" ? (
               <>
                 <DialogHeader>
                   <DialogTitle>Sign in to HubSpot</DialogTitle>
-                  <DialogDescription>
-                    Enter your HubSpot credentials to continue.
-                  </DialogDescription>
+                  <DialogDescription>Enter your HubSpot credentials to continue.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
@@ -3050,7 +3327,7 @@ const MissionControl = () => {
                       onChange={(e) => setHubSpotPassword(e.target.value)}
                       disabled={isHubSpotLoggingIn}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !isHubSpotLoggingIn) {
+                        if (e.key === "Enter" && !isHubSpotLoggingIn) {
                           handleHubSpotLogin();
                         }
                       }}
@@ -3069,7 +3346,7 @@ const MissionControl = () => {
                       setHubSpotEmail("");
                       setHubSpotPassword("");
                       setHubSpotSourceToConnect(null);
-                      setHubSpotAuthStep('login');
+                      setHubSpotAuthStep("login");
                     }}
                     disabled={isHubSpotLoggingIn}
                   >
@@ -3095,7 +3372,8 @@ const MissionControl = () => {
                 <DialogHeader>
                   <DialogTitle>Authorize Access</DialogTitle>
                   <DialogDescription>
-                    This application would like to access the following data from your HubSpot account:
+                    This application would like to access the following data from your HubSpot
+                    account:
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
@@ -3104,19 +3382,28 @@ const MissionControl = () => {
                     <ul className="space-y-2 text-sm">
                       <li className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span><strong>Contacts</strong> - Read contact information and details</span>
+                        <span>
+                          <strong>Contacts</strong> - Read contact information and details
+                        </span>
                       </li>
                       <li className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span><strong>Companies</strong> - Read company information and organization data</span>
+                        <span>
+                          <strong>Companies</strong> - Read company information and organization
+                          data
+                        </span>
                       </li>
                       <li className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span><strong>Deals</strong> - Read deal information and pipeline data</span>
+                        <span>
+                          <strong>Deals</strong> - Read deal information and pipeline data
+                        </span>
                       </li>
                       <li className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span><strong>Tickets</strong> - Read support ticket information</span>
+                        <span>
+                          <strong>Tickets</strong> - Read support ticket information
+                        </span>
                       </li>
                     </ul>
                   </div>
@@ -3126,10 +3413,7 @@ const MissionControl = () => {
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleHubSpotDeny}
-                  >
+                  <Button variant="outline" onClick={handleHubSpotDeny}>
                     Deny
                   </Button>
                   <Button
@@ -3145,17 +3429,20 @@ const MissionControl = () => {
         </Dialog>
 
         {/* Pipedrive Auth Modal */}
-        <Dialog open={isPipedriveAuthModalOpen} onOpenChange={(open) => {
-          if (!open) {
-            setIsPipedriveAuthModalOpen(false);
-            setPipedriveEmail("");
-            setPipedrivePassword("");
-            setPipedriveSourceToConnect(null);
-            setPipedriveAuthStep('login');
-          }
-        }}>
+        <Dialog
+          open={isPipedriveAuthModalOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setIsPipedriveAuthModalOpen(false);
+              setPipedriveEmail("");
+              setPipedrivePassword("");
+              setPipedriveSourceToConnect(null);
+              setPipedriveAuthStep("login");
+            }
+          }}
+        >
           <DialogContent className="max-w-md">
-            {pipedriveAuthStep === 'login' ? (
+            {pipedriveAuthStep === "login" ? (
               <>
                 <DialogHeader>
                   <DialogTitle>Sign in to Pipedrive</DialogTitle>
@@ -3185,7 +3472,7 @@ const MissionControl = () => {
                       onChange={(e) => setPipedrivePassword(e.target.value)}
                       disabled={isPipedriveLoggingIn}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !isPipedriveLoggingIn) {
+                        if (e.key === "Enter" && !isPipedriveLoggingIn) {
                           handlePipedriveLogin();
                         }
                       }}
@@ -3204,7 +3491,7 @@ const MissionControl = () => {
                       setPipedriveEmail("");
                       setPipedrivePassword("");
                       setPipedriveSourceToConnect(null);
-                      setPipedriveAuthStep('login');
+                      setPipedriveAuthStep("login");
                     }}
                     disabled={isPipedriveLoggingIn}
                   >
@@ -3230,7 +3517,8 @@ const MissionControl = () => {
                 <DialogHeader>
                   <DialogTitle>Authorize Access</DialogTitle>
                   <DialogDescription>
-                    This application would like to access the following data from your Pipedrive account:
+                    This application would like to access the following data from your Pipedrive
+                    account:
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
@@ -3239,19 +3527,28 @@ const MissionControl = () => {
                     <ul className="space-y-2 text-sm">
                       <li className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span><strong>Deals</strong> - Read deal information and pipeline data</span>
+                        <span>
+                          <strong>Deals</strong> - Read deal information and pipeline data
+                        </span>
                       </li>
                       <li className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span><strong>Persons</strong> - Read contact information and details</span>
+                        <span>
+                          <strong>Persons</strong> - Read contact information and details
+                        </span>
                       </li>
                       <li className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span><strong>Organizations</strong> - Read company information and organization data</span>
+                        <span>
+                          <strong>Organizations</strong> - Read company information and organization
+                          data
+                        </span>
                       </li>
                       <li className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span><strong>Activities</strong> - Read activity information and timeline data</span>
+                        <span>
+                          <strong>Activities</strong> - Read activity information and timeline data
+                        </span>
                       </li>
                     </ul>
                   </div>
@@ -3261,10 +3558,7 @@ const MissionControl = () => {
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handlePipedriveDeny}
-                  >
+                  <Button variant="outline" onClick={handlePipedriveDeny}>
                     Deny
                   </Button>
                   <Button
@@ -3280,17 +3574,20 @@ const MissionControl = () => {
         </Dialog>
 
         {/* Zoho Auth Modal */}
-        <Dialog open={isZohoAuthModalOpen} onOpenChange={(open) => {
-          if (!open) {
-            setIsZohoAuthModalOpen(false);
-            setZohoEmail("");
-            setZohoPassword("");
-            setZohoSourceToConnect(null);
-            setZohoAuthStep('login');
-          }
-        }}>
+        <Dialog
+          open={isZohoAuthModalOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setIsZohoAuthModalOpen(false);
+              setZohoEmail("");
+              setZohoPassword("");
+              setZohoSourceToConnect(null);
+              setZohoAuthStep("login");
+            }
+          }}
+        >
           <DialogContent className="max-w-md">
-            {zohoAuthStep === 'login' ? (
+            {zohoAuthStep === "login" ? (
               <>
                 <DialogHeader>
                   <DialogTitle>Sign in to Zoho CRM</DialogTitle>
@@ -3320,7 +3617,7 @@ const MissionControl = () => {
                       onChange={(e) => setZohoPassword(e.target.value)}
                       disabled={isZohoLoggingIn}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !isZohoLoggingIn) {
+                        if (e.key === "Enter" && !isZohoLoggingIn) {
                           handleZohoLogin();
                         }
                       }}
@@ -3339,7 +3636,7 @@ const MissionControl = () => {
                       setZohoEmail("");
                       setZohoPassword("");
                       setZohoSourceToConnect(null);
-                      setZohoAuthStep('login');
+                      setZohoAuthStep("login");
                     }}
                     disabled={isZohoLoggingIn}
                   >
@@ -3365,7 +3662,8 @@ const MissionControl = () => {
                 <DialogHeader>
                   <DialogTitle>Authorize Access</DialogTitle>
                   <DialogDescription>
-                    This application would like to access the following data from your Zoho CRM account:
+                    This application would like to access the following data from your Zoho CRM
+                    account:
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
@@ -3374,19 +3672,27 @@ const MissionControl = () => {
                     <ul className="space-y-2 text-sm">
                       <li className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span><strong>Contacts</strong> - Read contact information and details</span>
+                        <span>
+                          <strong>Contacts</strong> - Read contact information and details
+                        </span>
                       </li>
                       <li className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span><strong>Accounts</strong> - Read account information and company data</span>
+                        <span>
+                          <strong>Accounts</strong> - Read account information and company data
+                        </span>
                       </li>
                       <li className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span><strong>Deals</strong> - Read deal information and pipeline data</span>
+                        <span>
+                          <strong>Deals</strong> - Read deal information and pipeline data
+                        </span>
                       </li>
                       <li className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span><strong>Leads</strong> - Read lead information and conversion data</span>
+                        <span>
+                          <strong>Leads</strong> - Read lead information and conversion data
+                        </span>
                       </li>
                     </ul>
                   </div>
@@ -3396,16 +3702,10 @@ const MissionControl = () => {
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleZohoDeny}
-                  >
+                  <Button variant="outline" onClick={handleZohoDeny}>
                     Deny
                   </Button>
-                  <Button
-                    onClick={handleZohoApprove}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
+                  <Button onClick={handleZohoApprove} className="bg-green-600 hover:bg-green-700">
                     Approve
                   </Button>
                 </div>
@@ -3415,17 +3715,20 @@ const MissionControl = () => {
         </Dialog>
 
         {/* LinkedIn Auth Modal */}
-        <Dialog open={isLinkedInAuthModalOpen} onOpenChange={(open) => {
-          if (!open) {
-            setIsLinkedInAuthModalOpen(false);
-            setLinkedInEmail("");
-            setLinkedInPassword("");
-            setLinkedInSourceToConnect(null);
-            setLinkedInAuthStep('login');
-          }
-        }}>
+        <Dialog
+          open={isLinkedInAuthModalOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setIsLinkedInAuthModalOpen(false);
+              setLinkedInEmail("");
+              setLinkedInPassword("");
+              setLinkedInSourceToConnect(null);
+              setLinkedInAuthStep("login");
+            }
+          }}
+        >
           <DialogContent className="max-w-md">
-            {linkedInAuthStep === 'login' ? (
+            {linkedInAuthStep === "login" ? (
               <>
                 <DialogHeader>
                   <DialogTitle>Sign in to LinkedIn</DialogTitle>
@@ -3455,7 +3758,7 @@ const MissionControl = () => {
                       onChange={(e) => setLinkedInPassword(e.target.value)}
                       disabled={isLinkedInLoggingIn}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !isLinkedInLoggingIn) {
+                        if (e.key === "Enter" && !isLinkedInLoggingIn) {
                           handleLinkedInLogin();
                         }
                       }}
@@ -3474,7 +3777,7 @@ const MissionControl = () => {
                       setLinkedInEmail("");
                       setLinkedInPassword("");
                       setLinkedInSourceToConnect(null);
-                      setLinkedInAuthStep('login');
+                      setLinkedInAuthStep("login");
                     }}
                     disabled={isLinkedInLoggingIn}
                   >
@@ -3500,41 +3803,57 @@ const MissionControl = () => {
                 <DialogHeader>
                   <DialogTitle>Authorize Access</DialogTitle>
                   <DialogDescription>
-                    This application would like to access the following data from your LinkedIn account:
+                    This application would like to access the following data from your LinkedIn
+                    account:
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="border rounded-lg p-4 space-y-3">
                     <p className="text-sm font-semibold">Requested Permissions:</p>
                     <ul className="space-y-2 text-sm">
-                      {linkedInSourceToConnect?.name === 'LinkedIn Company' ? (
+                      {linkedInSourceToConnect?.name === "LinkedIn Company" ? (
                         <>
                           <li className="flex items-start gap-2">
                             <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                            <span><strong>Company Page</strong> - Read company page information and details</span>
+                            <span>
+                              <strong>Company Page</strong> - Read company page information and
+                              details
+                            </span>
                           </li>
                           <li className="flex items-start gap-2">
                             <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                            <span><strong>Posts</strong> - Read company posts and engagement data</span>
+                            <span>
+                              <strong>Posts</strong> - Read company posts and engagement data
+                            </span>
                           </li>
                           <li className="flex items-start gap-2">
                             <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                            <span><strong>Followers</strong> - Read follower information and analytics</span>
+                            <span>
+                              <strong>Followers</strong> - Read follower information and analytics
+                            </span>
                           </li>
                         </>
                       ) : (
                         <>
                           <li className="flex items-start gap-2">
                             <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                            <span><strong>Company Pages</strong> - Read company page information and details</span>
+                            <span>
+                              <strong>Company Pages</strong> - Read company page information and
+                              details
+                            </span>
                           </li>
                           <li className="flex items-start gap-2">
                             <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                            <span><strong>Profiles</strong> - Read profile information and contact details</span>
+                            <span>
+                              <strong>Profiles</strong> - Read profile information and contact
+                              details
+                            </span>
                           </li>
                           <li className="flex items-start gap-2">
                             <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                            <span><strong>Messages</strong> - Read messages and conversation data</span>
+                            <span>
+                              <strong>Messages</strong> - Read messages and conversation data
+                            </span>
                           </li>
                         </>
                       )}
@@ -3546,10 +3865,7 @@ const MissionControl = () => {
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleLinkedInDeny}
-                  >
+                  <Button variant="outline" onClick={handleLinkedInDeny}>
                     Deny
                   </Button>
                   <Button
@@ -3565,23 +3881,24 @@ const MissionControl = () => {
         </Dialog>
 
         {/* X (Twitter) Auth Modal */}
-        <Dialog open={isXAuthModalOpen} onOpenChange={(open) => {
-          if (!open) {
-            setIsXAuthModalOpen(false);
-            setXEmail("");
-            setXPassword("");
-            setXSourceToConnect(null);
-            setXAuthStep('login');
-          }
-        }}>
+        <Dialog
+          open={isXAuthModalOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setIsXAuthModalOpen(false);
+              setXEmail("");
+              setXPassword("");
+              setXSourceToConnect(null);
+              setXAuthStep("login");
+            }
+          }}
+        >
           <DialogContent className="max-w-md">
-            {xAuthStep === 'login' ? (
+            {xAuthStep === "login" ? (
               <>
                 <DialogHeader>
                   <DialogTitle>Sign in to X</DialogTitle>
-                  <DialogDescription>
-                    Enter your X credentials to continue.
-                  </DialogDescription>
+                  <DialogDescription>Enter your X credentials to continue.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
@@ -3605,7 +3922,7 @@ const MissionControl = () => {
                       onChange={(e) => setXPassword(e.target.value)}
                       disabled={isXLoggingIn}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !isXLoggingIn) {
+                        if (e.key === "Enter" && !isXLoggingIn) {
                           handleXLogin();
                         }
                       }}
@@ -3624,16 +3941,13 @@ const MissionControl = () => {
                       setXEmail("");
                       setXPassword("");
                       setXSourceToConnect(null);
-                      setXAuthStep('login');
+                      setXAuthStep("login");
                     }}
                     disabled={isXLoggingIn}
                   >
                     Cancel
                   </Button>
-                  <Button
-                    onClick={handleXLogin}
-                    disabled={isXLoggingIn || !xEmail || !xPassword}
-                  >
+                  <Button onClick={handleXLogin} disabled={isXLoggingIn || !xEmail || !xPassword}>
                     {isXLoggingIn ? (
                       <>
                         <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -3659,15 +3973,22 @@ const MissionControl = () => {
                     <ul className="space-y-2 text-sm">
                       <li className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span><strong>Profiles</strong> - Read profile information and user data</span>
+                        <span>
+                          <strong>Profiles</strong> - Read profile information and user data
+                        </span>
                       </li>
                       <li className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span><strong>Tweets</strong> - Read tweets and post information</span>
+                        <span>
+                          <strong>Tweets</strong> - Read tweets and post information
+                        </span>
                       </li>
                       <li className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span><strong>Engagements</strong> - Read likes, retweets, and engagement metrics</span>
+                        <span>
+                          <strong>Engagements</strong> - Read likes, retweets, and engagement
+                          metrics
+                        </span>
                       </li>
                     </ul>
                   </div>
@@ -3677,16 +3998,10 @@ const MissionControl = () => {
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleXDeny}
-                  >
+                  <Button variant="outline" onClick={handleXDeny}>
                     Deny
                   </Button>
-                  <Button
-                    onClick={handleXApprove}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
+                  <Button onClick={handleXApprove} className="bg-green-600 hover:bg-green-700">
                     Approve
                   </Button>
                 </div>
@@ -3696,16 +4011,19 @@ const MissionControl = () => {
         </Dialog>
 
         {/* Google Analytics Auth Modal */}
-        <Dialog open={isGoogleAnalyticsAuthModalOpen} onOpenChange={(open) => {
-          if (!open) {
-            setIsGoogleAnalyticsAuthModalOpen(false);
-            setGoogleAnalyticsEmail("");
-            setGoogleAnalyticsSourceToConnect(null);
-            setGoogleAnalyticsAuthStep('signin');
-          }
-        }}>
+        <Dialog
+          open={isGoogleAnalyticsAuthModalOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setIsGoogleAnalyticsAuthModalOpen(false);
+              setGoogleAnalyticsEmail("");
+              setGoogleAnalyticsSourceToConnect(null);
+              setGoogleAnalyticsAuthStep("signin");
+            }
+          }}
+        >
           <DialogContent className="max-w-md">
-            {googleAnalyticsAuthStep === 'signin' ? (
+            {googleAnalyticsAuthStep === "signin" ? (
               <>
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
@@ -3735,10 +4053,22 @@ const MissionControl = () => {
                         ) : (
                           <>
                             <svg className="h-5 w-5" viewBox="0 0 24 24">
-                              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                              <path
+                                fill="#4285F4"
+                                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                              />
+                              <path
+                                fill="#34A853"
+                                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                              />
+                              <path
+                                fill="#FBBC05"
+                                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                              />
+                              <path
+                                fill="#EA4335"
+                                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                              />
                             </svg>
                             Sign in with Google
                           </>
@@ -3758,7 +4088,7 @@ const MissionControl = () => {
                       setIsGoogleAnalyticsAuthModalOpen(false);
                       setGoogleAnalyticsEmail("");
                       setGoogleAnalyticsSourceToConnect(null);
-                      setGoogleAnalyticsAuthStep('signin');
+                      setGoogleAnalyticsAuthStep("signin");
                     }}
                     disabled={isGoogleAnalyticsSigningIn}
                   >
@@ -3766,7 +4096,7 @@ const MissionControl = () => {
                   </Button>
                 </div>
               </>
-            ) : googleAnalyticsAuthStep === 'permissions' ? (
+            ) : googleAnalyticsAuthStep === "permissions" ? (
               <>
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
@@ -3795,28 +4125,37 @@ const MissionControl = () => {
                       <ul className="space-y-2 text-sm">
                         <li className="flex items-start gap-2">
                           <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                          <span><strong>View your Google Analytics data</strong> - Read analytics reports and metrics</span>
+                          <span>
+                            <strong>View your Google Analytics data</strong> - Read analytics
+                            reports and metrics
+                          </span>
                         </li>
                         <li className="flex items-start gap-2">
                           <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                          <span><strong>View your Analytics properties</strong> - Access property information and settings</span>
+                          <span>
+                            <strong>View your Analytics properties</strong> - Access property
+                            information and settings
+                          </span>
                         </li>
                         <li className="flex items-start gap-2">
                           <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                          <span><strong>View your Analytics reports</strong> - Read page views, events, and user data</span>
+                          <span>
+                            <strong>View your Analytics reports</strong> - Read page views, events,
+                            and user data
+                          </span>
                         </li>
                       </ul>
                     </div>
                     <div className="pt-3 border-t text-xs text-muted-foreground">
-                      <p>By continuing, you allow this app to access your Google Analytics data. You can revoke access at any time in your Google Account settings.</p>
+                      <p>
+                        By continuing, you allow this app to access your Google Analytics data. You
+                        can revoke access at any time in your Google Account settings.
+                      </p>
                     </div>
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleGoogleAnalyticsDeny}
-                  >
+                  <Button variant="outline" onClick={handleGoogleAnalyticsDeny}>
                     Cancel
                   </Button>
                   <Button
@@ -3834,9 +4173,7 @@ const MissionControl = () => {
                     <CheckCircle className="h-5 w-5 text-green-600" />
                     Connected Successfully
                   </DialogTitle>
-                  <DialogDescription>
-                    Google Analytics has been connected
-                  </DialogDescription>
+                  <DialogDescription>Google Analytics has been connected</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-6">
                   <div className="flex flex-col items-center justify-center space-y-4">
@@ -3857,7 +4194,7 @@ const MissionControl = () => {
                       setIsGoogleAnalyticsAuthModalOpen(false);
                       setGoogleAnalyticsEmail("");
                       setGoogleAnalyticsSourceToConnect(null);
-                      setGoogleAnalyticsAuthStep('signin');
+                      setGoogleAnalyticsAuthStep("signin");
                     }}
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
@@ -3870,17 +4207,20 @@ const MissionControl = () => {
         </Dialog>
 
         {/* Mixpanel Auth Modal */}
-        <Dialog open={isMixpanelAuthModalOpen} onOpenChange={(open) => {
-          if (!open) {
-            setIsMixpanelAuthModalOpen(false);
-            setMixpanelEmail("");
-            setMixpanelPassword("");
-            setMixpanelSourceToConnect(null);
-            setMixpanelAuthStep('login');
-          }
-        }}>
+        <Dialog
+          open={isMixpanelAuthModalOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setIsMixpanelAuthModalOpen(false);
+              setMixpanelEmail("");
+              setMixpanelPassword("");
+              setMixpanelSourceToConnect(null);
+              setMixpanelAuthStep("login");
+            }
+          }}
+        >
           <DialogContent className="max-w-md">
-            {mixpanelAuthStep === 'login' ? (
+            {mixpanelAuthStep === "login" ? (
               <>
                 <DialogHeader>
                   <DialogTitle>Sign in to Mixpanel</DialogTitle>
@@ -3910,7 +4250,7 @@ const MissionControl = () => {
                       onChange={(e) => setMixpanelPassword(e.target.value)}
                       disabled={isMixpanelLoggingIn}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !isMixpanelLoggingIn) {
+                        if (e.key === "Enter" && !isMixpanelLoggingIn) {
                           handleMixpanelLogin();
                         }
                       }}
@@ -3929,7 +4269,7 @@ const MissionControl = () => {
                       setMixpanelEmail("");
                       setMixpanelPassword("");
                       setMixpanelSourceToConnect(null);
-                      setMixpanelAuthStep('login');
+                      setMixpanelAuthStep("login");
                     }}
                     disabled={isMixpanelLoggingIn}
                   >
@@ -3954,24 +4294,31 @@ const MissionControl = () => {
               <>
                 <DialogHeader>
                   <DialogTitle>Authorize Mixpanel Access</DialogTitle>
-                  <DialogDescription>
-                    This app will be able to:
-                  </DialogDescription>
+                  <DialogDescription>This app will be able to:</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="border rounded-lg p-4 space-y-3">
                     <ul className="space-y-2 text-sm">
                       <li className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span><strong>Track user events</strong> - Record and track user interactions and events</span>
+                        <span>
+                          <strong>Track user events</strong> - Record and track user interactions
+                          and events
+                        </span>
                       </li>
                       <li className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span><strong>Analyze funnels & retention</strong> - Access funnel analysis and user retention metrics</span>
+                        <span>
+                          <strong>Analyze funnels & retention</strong> - Access funnel analysis and
+                          user retention metrics
+                        </span>
                       </li>
                       <li className="flex items-start gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span><strong>View engagement metrics</strong> - Read engagement data and analytics reports</span>
+                        <span>
+                          <strong>View engagement metrics</strong> - Read engagement data and
+                          analytics reports
+                        </span>
                       </li>
                     </ul>
                   </div>
@@ -3981,10 +4328,7 @@ const MissionControl = () => {
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleMixpanelDeny}
-                  >
+                  <Button variant="outline" onClick={handleMixpanelDeny}>
                     Cancel
                   </Button>
                   <Button
