@@ -34,23 +34,43 @@ export type LoadResult =
   | { ok: true; baseline: Baseline }
   | { ok: false; reason: string };
 
-export function baseName(_file: string): string {
-  throw new Error("not implemented");
+// Assumption: every hyphenated filename in `dist/` is Vite-hashed (the current
+// 5-file baseline satisfies this). A hand-named file like `my-component.js`
+// would over-strip to `my-*.js`. Vite's `manualChunks` could break this in
+// future; Phase 3+ revisits per spec 19 §6 Risk R1.
+export function baseName(file: string): string {
+  const name = basename(file);
+  const ext = extname(name);
+  const stem = ext ? name.slice(0, -ext.length) : name;
+  if (!stem.includes("-")) return name;
+  // Strip the trailing hash segment: -[A-Za-z0-9_-]+ at end of stem.
+  // Vite's default hash is base64url-style (alphanumeric, _, -).
+  const stripped = stem.replace(/-[A-Za-z0-9_-]+$/, "");
+  if (stripped === stem) return name;
+  return `${stripped}-*${ext}`;
 }
 
-export function formatBytes(_bytes: number): string {
-  throw new Error("not implemented");
+export function formatBytes(bytes: number): string {
+  const abs = Math.abs(bytes);
+  if (abs >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  if (abs >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${bytes} B`;
 }
 
 export function computeDelta(
-  _baseline: number,
-  _current: number,
+  baseline: number,
+  current: number,
 ): { absolute: number; percent: number } {
-  throw new Error("not implemented");
+  return {
+    absolute: current - baseline,
+    percent: baseline === 0 ? 0 : ((current - baseline) / baseline) * 100,
+  };
 }
 
-export function formatDelta(_deltaBytes: number, _basePercent: number): string {
-  throw new Error("not implemented");
+export function formatDelta(deltaBytes: number, basePercent: number): string {
+  const byteSign = deltaBytes >= 0 ? "+" : "";
+  const pctSign = basePercent >= 0 ? "+" : "";
+  return `${byteSign}${formatBytes(deltaBytes)} (${pctSign}${basePercent.toFixed(2)}%)`;
 }
 
 export async function walkDist(_distPath: string): Promise<ChunkEntry[]> {
