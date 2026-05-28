@@ -2,3 +2,21 @@
 # See https://git-scm.com/docs/git-config#Documentation/git-config.txt-blameignoreRevsFile
 # Locally: git config blame.ignoreRevsFile .git-blame-ignore-revs
 # GitHub honors this file automatically.
+
+# Phase 2b Wave A — Prettier mass-format commits (2026-05-28)
+b8b472b857094ffa55a69e86ce95c2a4d2d7498d  # style(fe): prettier format src/lib + src/hooks + src/utils + src/services + src/contexts + src/styles
+ea982f1740fccf2bc7fa9784b51851351debebfa  # style(fe): prettier format src/components/ui
+8ae8cbea321ba50cf7503c302f5cd1e650bee851  # style(fe): prettier format src/components/layout
+04448d7f779bd60578725837878cb82c8d884bf8  # style(fe): prettier format src/components/signals
+b87f162ca1467c5af554dbd7699f180ece368043  # style(fe): prettier format src/components/strategist
+dd9ec2bf1611edaeafeabc4d058f2093c076b4ac  # style(fe): prettier format src/components/settings
+6ffefe0a8becab6e1edb63bf2f955bef16349333  # style(fe): prettier format src/components/customers
+d69e17ad602d81175f40a15cfc93af5814a47177  # style(fe): prettier format src/components/market-research/lead-stream
+cd67dd033c36860be48ae5cb841adf0eebea8910  # style(fe): prettier format src/components/market-research (root files)
+60ec6b35a1aad5f9117c3b916b5ca98f983b6877  # style(fe): prettier format src/components/mission-control
+3613c58522fc1568352de69ff097f960e291d8be  # style(fe): prettier format src/pages (small pages)
+49db794b50e7a388d238416f0362bbfda2620d00  # style(fe): prettier format src/pages/Signals.tsx
+72dfaeedb44ab198ca74c563733f4d5775054a6e  # style(fe): prettier format src/pages/MissionControl.tsx
+2663e708a50494fae43d461527416b8a8642fa83  # style(fe): prettier format src/pages/MarketResearch.tsx
+2627561fd9f75cf7225c840df74bfe84eddf7f3f  # style(fe): prettier format e2e + scripts + root configs
+66fd9c21299c553fa31b40ff658e47812f6c718d  # style(fe): prettier format residual files (root markdown + misc)
