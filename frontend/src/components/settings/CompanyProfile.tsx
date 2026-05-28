@@ -225,7 +225,11 @@ export function CompanyProfile({ profileData }: CompanyProfileProps) {
       previousUserIdRef.current = currentUserId;
     };
 
-    loadProfile();
+    void loadProfile();
+    // fetchCompanyProfile + orgIdToUse intentionally omitted: profile load is
+    // keyed on user identity only; fetchCompanyProfile is an inline closure
+    // (not stable across renders) and orgIdToUse re-derives every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.uid]);
 
   // Update form data when profileData prop changes (from API)
