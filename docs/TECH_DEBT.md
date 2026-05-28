@@ -423,3 +423,37 @@ but knip now reports zero findings against the directory in either mode, simplif
 merge-gate config.
 
 Pull-forward trigger is unchanged: Phase 4 shadcn primitive consolidation.
+
+---
+
+## TD-FE-9 — Phase 2a escape-hatches threshold reached (6 entries)
+
+**Date logged:** 2026-05-28
+**Origin:** Spec 17 Phase 2a (plans/17-frontend-phase-2a-strict-ts.md), Step 3.
+
+**Current state:**
+`src/lib/types/escape-hatches.ts` accumulated 6 entries during Wave B's noImplicitAny annotation
+pass:
+- `UntypedReportState` — setState callback `prev`/`prevData` parameter across MarketResearch.tsx
+  and MarketEntrySection.tsx (all set*Data callbacks).
+- `UntypedUiComponent` — `uiComponents.find((comp) =>)` callback in MarketResearch.tsx.
+- `UntypedRegulatoryUpdate` — `keyDataPoints[]` (derived from `keyUpdates[]`) array items in
+  RegulatoryComplianceSection.tsx.
+- `UntypedVisualDataCard` — `visualDataCards[]` array items in RegulatoryComplianceSection.tsx.
+- `UntypedRegionData` — `regionalData[]` array items in RegulatoryComplianceSection.tsx.
+- `UntypedReportSection` — MarketEntry report-section arrays (executiveSummary paragraphs,
+  entryBarriers, competitiveDifferentiation, strategicRecommendations, riskAssessment) in
+  MarketEntrySection.tsx.
+
+**Pattern:** Backend response shapes consumed by FE before contract types are written. Wave B's
+annotation pass routed them through `Untyped*` aliases instead of inlining `any`, keeping the
+inline-`any` count from regressing past the 238 baseline (post-fix count: 223).
+
+**Why deferred:**
+Spec 17 §2.4 posture rule 3 — proper typing requires backend contracts which are not in Phase 2a
+scope.
+
+**Pull-forward trigger:** Phase 13's audit re-evaluates per master spec line 298. Backend contract
+typing (Phase ~10+) would unlock replacing these with proper types.
+
+**Owner:** TBD.

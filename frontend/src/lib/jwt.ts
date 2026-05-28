@@ -54,15 +54,17 @@ class JWTManager {
       }
 
       const data = await response.json();
-      this.token = data.token;
-      this.refreshToken = data.refreshToken;
-      
+      this.token = data.token ?? null;
+      this.refreshToken = data.refreshToken ?? null;
+
       // Store in localStorage
-      localStorage.setItem('jwt_token', this.token);
+      if (this.token) {
+        localStorage.setItem('jwt_token', this.token);
+      }
       if (this.refreshToken) {
         localStorage.setItem('refresh_token', this.refreshToken);
       }
-      
+
       return this.token;
     } catch (error) {
       // If it's a network error or 404, JWT is optional - don't fail the app
@@ -130,9 +132,14 @@ class JWTManager {
       }
 
       const data = await response.json();
-      this.token = data.token;
-      localStorage.setItem('jwt_token', this.token);
-      
+      this.token = data.token ?? null;
+      if (this.token) {
+        localStorage.setItem('jwt_token', this.token);
+      }
+
+      if (!this.token) {
+        throw new Error('Refresh response missing token');
+      }
       return this.token;
     } catch (error) {
       console.error('Error refreshing token:', error);

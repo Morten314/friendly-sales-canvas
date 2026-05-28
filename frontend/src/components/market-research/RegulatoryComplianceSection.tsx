@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import type { UntypedRegulatoryUpdate, UntypedVisualDataCard, UntypedRegionData } from '@/lib/types/escape-hatches';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserLocalStorage, setUserLocalStorage } from '@/utils/cacheUtils';
@@ -12,8 +13,6 @@ import {
   FileText, 
   Globe, 
   AlertTriangle,
-  CheckCircle,
-  Calendar,
   TrendingUp,
   ChevronDown,
   ChevronUp,
@@ -28,7 +27,6 @@ import {
   Building,
   Share,
   Bot,
-  MessageSquare,
   Sun,
   BarChart3,
   Factory
@@ -47,7 +45,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { EditRecord } from './types';
-import { toUTCTimestamp, isTimestampNewer, getCurrentUTCTimestamp, logTimestampComparison } from '@/lib/timestampUtils';
+
 import MiniPieChart from '../MiniPieChart';
 import MiniLineChart from '../MiniLineChart';
 import { apiFetchJson } from '@/lib/api';
@@ -94,7 +92,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   isExpanded,
   hasEdits,
   deletedSections,
-  editHistory,
+  editHistory: _editHistory,
   executiveSummary,
   euAiActDeadline,
   gdprCompliance,
@@ -125,10 +123,8 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   // Use centralized data from parent instead of local state
   const regulatoryData = propRegulatoryData;
-  const [regulatoryTimestamp, setRegulatoryTimestamp] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [regulatoryExpanded, setRegulatoryExpanded] = useState(true);
+  const [_isLoading, setIsLoading] = useState(false);
+  const [_error, setError] = useState<string | null>(null);
 
   // Normalize deletedSections to ensure it's always a Set
   const normalizedDeletedSections = React.useMemo(() => {
@@ -502,11 +498,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       };
 
       // Prepare data for API according to schema
-      const editData = {
-        original_json: originalData,
-        modified_json: modifiedData,
-        edit_type: "modification"
-      };
 
       // Store data for /ask API
       localStorage.setItem('regulatory-compliance_original_json', JSON.stringify(originalData));
@@ -531,9 +522,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
 
       const currentTime = Date.now();
       const randomId = Math.random().toString(36).substring(7);
-      
-      // Get company profile data for dynamic reports (user-specific)
-      const profile = companyProfile || JSON.parse(getUserLocalStorage('companyProfile', currentUser?.uid) || '{}');
       
       if (!currentUser?.uid) {
         console.error('User not authenticated');
@@ -744,45 +732,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   };
 
   // Create fallback key data points using local state values first, then regulatoryData properties
-  const fallbackKeyDataPoints = [
-    {
-      id: 'eu-ai-act-deadline',
-      icon: Scale,
-      title: 'EU AI Act Deadline',
-      value: localEuAiActDeadline || regulatoryData?.euAiActDeadline || euAiActDeadline || 'February 2, 2025',
-      badge: 'New',
-      badgeColor: 'bg-blue-100 text-blue-800',
-      tooltip: 'Upcoming deadline for EU AI Act compliance'
-    },
-    {
-      id: 'gdpr-compliance',
-      icon: Building,
-      title: 'GDPR Compliance',
-      value: localGdprCompliance || regulatoryData?.gdprCompliance || gdprCompliance || '68%',
-      badge: 'Update',
-      badgeColor: 'bg-yellow-100 text-yellow-800',
-      tooltip: 'Current GDPR compliance percentage'
-    },
-    {
-      id: 'potential-fines',
-      icon: Factory,
-      title: 'Potential Fines',
-      value: localPotentialFines || regulatoryData?.potentialFines || potentialFines || 'Up to 6% of annual revenue',
-      badge: 'Risk',
-      badgeColor: 'bg-red-100 text-red-800',
-      tooltip: 'Maximum regulatory fines'
-    },
-    {
-      id: 'data-localization',
-      icon: BarChart3,
-      title: 'Data Localization',
-      value: localDataLocalization || regulatoryData?.dataLocalization || dataLocalization || 'Mandatory for customer data',
-      badge: 'Support',
-      badgeColor: 'bg-green-100 text-green-800',
-      tooltip: 'Data storage requirements'
-    }
-  ];
-
 
   const keyDataPoints = (regulatoryData?.keyUpdates && Array.isArray(regulatoryData.keyUpdates)) ? regulatoryData.keyUpdates.filter((update: any) => update).map((update: any, index: number) => {
     // Parse if update is a JSON string
@@ -1131,7 +1080,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Key Regulatory Updates</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {keyDataPoints.map((point) => {
+                  {keyDataPoints.map((point: UntypedRegulatoryUpdate) => {
                     const IconComponent = point.icon;
                     return (
                       <div key={point.id} className="p-4 border border-gray-200 rounded-lg">
@@ -1157,9 +1106,9 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                                 point.id === 'data-localization' ? localDataLocalization :
                                 localKeyDataValues[point.id] || point.value
                               }
-                              onKeyDown={(e) => {
+                              onKeyDown={(_e) => {
                               }}
-                              onInput={(e) => {
+                              onInput={(_e) => {
                               }}
                               onChange={(e) => {
                                 const newValue = e.target.value;
@@ -1223,7 +1172,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Compliance Analytics</h3>
                 {(isEditing ? localVisualDataCards : visualDataCards) && (isEditing ? localVisualDataCards : visualDataCards).length > 0 ? (
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {(isEditing ? localVisualDataCards : visualDataCards).map((card: any, cardIndex: number) => {
+                    {(isEditing ? localVisualDataCards : visualDataCards).map((card: UntypedVisualDataCard, cardIndex: number) => {
                       // Find card by type dynamically
                       if (card.type === 'bar-chart') {
                         return (
@@ -1557,7 +1506,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {(isEditing ? localRegionalData : regionalData).map((region, index) => (
+                      {(isEditing ? localRegionalData : regionalData).map((region: UntypedRegionData, index: number) => (
                         <TableRow key={index}>
                           <TableCell className="font-medium">
                             {isEditing ? (
@@ -1995,16 +1944,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                     
                     // Update key data points if regulatoryData exists
                     if (regulatoryData?.keyUpdates && Array.isArray(regulatoryData.keyUpdates)) {
-                      // For key updates, we need to update the regulatoryData directly since there's no individual change handlers
-                      const updatedKeyUpdates = regulatoryData.keyUpdates.filter((update: any) => update && update?.title && typeof update.title === 'string').map((update: any) => {
-                        const id = update.title.toLowerCase().replace(/\s+/g, '-');
-                        const localValue = localKeyDataValues[id];
-                        if (localValue !== undefined) {
-                          return { ...update, description: localValue };
-                        }
-                        return update;
-                      });
-                      
                       // Update the regulatory data with new key updates
                       // Update regulatory data would be handled by parent component
                     }
@@ -2054,7 +1993,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Key Regulatory Updates</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {keyDataPoints.map((point) => {
+                {keyDataPoints.map((point: UntypedRegulatoryUpdate) => {
                   const IconComponent = point.icon;
                   return (
                     <div
@@ -2114,7 +2053,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Compliance Analytics</h3>
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {visualDataCards.map((card, cardIndex) => (
+                    {visualDataCards.map((card: UntypedVisualDataCard, cardIndex: number) => (
                       <div key={cardIndex} className="bg-white border border-gray-200 rounded-lg p-4">
                         <h5 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
                           {card.type === 'pie-chart' && <Users className="h-4 w-4 mr-2 text-blue-600" />}
@@ -2242,7 +2181,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {regionalData.map((region, index) => (
+                        {regionalData.map((region: UntypedRegionData, index: number) => (
                           <TableRow key={index}>
                             <TableCell className="font-medium">{region.region}</TableCell>
                             <TableCell>{region.framework}</TableCell>

@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Search, Bell, MessageSquare, Info, RefreshCw, History, Settings, Download, UserPlus, PlusCircle, Bookmark, Share2, Menu, Building2 } from "lucide-react";
+import { Search, MessageSquare, Info, RefreshCw, Settings, Download, UserPlus, PlusCircle, Menu, Building2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -9,7 +9,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -18,7 +17,6 @@ import { useTenant } from "@/contexts/TenantContext";
 import { cn } from "@/lib/utils";
 // import { AskBrewra } from "@/components/agent-hub/AskBrewra"; // Commented out - removed Ask button
 // import { ViewToggle } from "@/components/market-research/ViewToggle"; // Commented out - removed User/AI toggle
-import { useNavigate } from "react-router-dom";
 
 // Define our deployment data type
 export interface DeploymentData {
@@ -35,7 +33,6 @@ export function Header() {
   // const [openAsk, setOpenAsk] = useState(false); // Commented out - removed Ask button
   // const [isAIViewActive, setIsAIViewActive] = useState(false); // Commented out - removed User/AI toggle
   const [isSignalsRefreshing, setIsSignalsRefreshing] = useState(false);
-  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { setMobileOpen } = useSidebar();
   const { selectedTenant } = useTenant();

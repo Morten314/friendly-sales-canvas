@@ -12,8 +12,8 @@ import {
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Bot, ArrowRight, ArrowUpDown, Info, ChevronRight, ChevronDown, TrendingUp, AlertTriangle, Zap, Send, ChevronUp, MapPin, Building2, Users, Eye, Search, Loader2 } from "lucide-react";
-import { type Rating, type HeatmapLead, REPORT_COLUMNS, RATING_SCORE, TIER_INTELLIGENCE, heatmapLeads, getLeadSegment } from "./leadData";
+import { Bot, ArrowRight, ArrowUpDown, Info, ChevronRight, ChevronDown, TrendingUp, AlertTriangle, Zap, ChevronUp, Loader2 } from "lucide-react";
+import { type Rating, type HeatmapLead, REPORT_COLUMNS, RATING_SCORE, TIER_INTELLIGENCE, heatmapLeads } from "./leadData";
 import {
   extractMarketScoreRowsFromResponse,
   heatmapLeadFromUnknownRow,
@@ -136,7 +136,7 @@ type LeadScoreDetailState =
 
 const LeadIntelligencePanel = ({
   lead,
-  onChatWithScout,
+  onChatWithScout: _onChatWithScout,
   detail,
 }: {
   lead: HeatmapLead;
@@ -144,8 +144,6 @@ const LeadIntelligencePanel = ({
   detail?: LeadScoreDetailState;
 }) => {
   const intel = TIER_INTELLIGENCE[lead.priority];
-  const [showSegment, setShowSegment] = useState(false);
-  const segment = getLeadSegment(lead.id);
 
   const isLoadingDetail = !detail || detail.status === "loading";
   const detailError = detail?.status === "error" ? detail.message : null;
@@ -283,7 +281,7 @@ interface LeadsTableProps {
 const LeadsTable: React.FC<LeadsTableProps> = ({
   opportunityFilter,
   onClearOpportunityFilter,
-  onSendToStrategist,
+  onSendToStrategist: _onSendToStrategist,
   onChatWithScout,
   onHeatmapRowsForDashboardChange,
 }) => {

@@ -21,7 +21,7 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   
-  const { login, signup, currentUser, fetchOrgId, loading: authLoading } = useAuth();
+  const { login, signup, fetchOrgId, loading: authLoading } = useAuth();
   const { selectTenant } = useTenant();
   const { toast } = useToast();
   const navigate = useNavigate();

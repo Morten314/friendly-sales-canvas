@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
 import { MessageSquare, Send, ArrowRight, Loader2 } from "lucide-react";
 
 interface ChatMessage {
@@ -10,8 +9,17 @@ interface ChatMessage {
   timestamp: string;
 }
 
+interface ChatWithScoutResearchContext {
+  leads: { name: string; company: string; jobTitle: string }[];
+  opportunity?: string;
+  icp?: string;
+  reportTraits?: string[];
+}
+
 interface ChatWithScoutProps {
   fullPage?: boolean;
+  researchContext?: ChatWithScoutResearchContext;
+  mode?: 'selected-leads' | 'full-list';
 }
 
 export function ChatWithScout({ fullPage = false }: ChatWithScoutProps) {

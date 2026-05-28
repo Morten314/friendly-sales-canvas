@@ -1,19 +1,15 @@
 import React, { useState, useEffect, useRef, useReducer } from 'react';
-import { BarChart3, Bot, Edit, X, FileText, Save, Share, Clock, ChevronDown, ChevronUp, Zap, ArrowUp, ArrowDown, Loader2, Check } from 'lucide-react';
+import { BarChart3, Bot, Edit, X, FileText, Save, Share, Clock, ChevronDown, ChevronUp, Loader2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
-import MiniPieChart from '@/components/ui/MiniPieChart';
+
 import MiniLineChart from '@/components/ui/MiniLineChart';
-import { toUTCTimestamp, isTimestampNewer, getCurrentUTCTimestamp, logTimestampComparison } from '@/lib/timestampUtils';
-import { apiFetchJson } from '@/lib/api';
-import { executeWithRateLimit } from '@/lib/rateLimitManager';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserLocalStorage, setUserLocalStorage } from '@/utils/cacheUtils';
 
@@ -61,65 +57,22 @@ interface CompetitorLandscapeSectionProps {
   error?: string | null;
 }
 
-interface UIComponent {
-  type: string;
-  title?: string;
-  description?: string;
-  metrics?: Array<{
-    label: string;
-    value: string;
-    trend: string;
-  }>;
-  tags?: string[];
-  executiveSummary?: string;
-  dataPoints?: Array<{
-    label: string;
-    value: string;
-  }>;
-  entities?: Array<{
-    name: string;
-    strengths: string[];
-    weaknesses: string[];
-  }>;
-  headlines?: string[];
-  regions?: Array<{
-    name: string;
-    data: Record<string, string>;
-  }>;
-  features?: string[];
-  tools?: Record<string, string[]>;
-  insights?: Array<{
-    label: string;
-    description: string;
-  }>;
-  charts?: Array<{
-    name: string;
-    xAxis: string | string[];
-  }>;
-}
-
-interface CompetitorLandscapeData {
-  uiComponents: UIComponent[];
-  user_id: string;
-  component_name: string;
-  timestamp: string;
-}
 
 const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   isEditing: isCompetitorLandscapeEditing,
   isSplitView,
   isExpanded: competitorLandscapeExpanded,
   hasEdits: competitorLandscapeHasEdits,
-  deletedSections: competitorLandscapeDeletedSections,
-  editHistory: competitorLandscapeEditHistory,
+  deletedSections: _competitorLandscapeDeletedSections,
+  editHistory: _competitorLandscapeEditHistory,
   executiveSummary,
   topPlayerShare,
   emergingPlayers,
   fundingNews,
   onToggleEdit: onCompetitorLandscapeToggleEdit,
   onScoutIconClick,
-  onEditHistoryOpen: onCompetitorLandscapeEditHistoryOpen,
-  onDeleteSection: onCompetitorLandscapeDeleteSection,
+  onEditHistoryOpen: _onCompetitorLandscapeEditHistoryOpen,
+  onDeleteSection: _onCompetitorLandscapeDeleteSection,
   onSaveChanges: onCompetitorLandscapeSaveChanges,
   onCancelEdit: onCompetitorLandscapeCancelEdit,
   onExpandToggle: onCompetitorLandscapeExpandToggle,
@@ -151,11 +104,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   // Check if we're loading - show loading when local loading is true OR when parent is refreshing
   // Don't show loading if we have data from props or parent
   const hasPropData = executiveSummary || topPlayerShare || emergingPlayers || fundingNews?.length > 0;
-  
-  // Check if we're showing fallback data (the "being prepared" message)
-  const isShowingFallbackData = executiveSummary?.includes('being prepared') || 
-                                topPlayerShare?.includes('Loading market share data') ||
-                                emergingPlayers?.includes('Analyzing emerging competitors');
   
   // Show loading only when actively loading and no data available - simplified like other components
   const isLoading = localLoading && !hasPropData;
@@ -211,7 +159,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     const swotComponent = normalizedComponents.find((comp: any) => comp?.type === 'swotAnalysis');
     const entities = swotComponent?.entities || [];
     // Ensure backward compatibility by adding opportunities and threats if missing
-    return entities.map(entity => ({
+    return entities.map((entity: { name: string; strengths: string[]; weaknesses: string[]; opportunities: string[]; threats: string[] }) => ({
       ...entity,
       opportunities: entity.opportunities || [],
       threats: entity.threats || []
@@ -995,25 +943,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {(() => {
-              // Normalize uiComponents - parse any stringified components
-              const normalizeUiComponents = (components: any[]): any[] => {
-                if (!Array.isArray(components)) return [];
-                return components.map((comp: any) => {
-                  if (typeof comp === 'string') {
-                    try {
-                      return JSON.parse(comp);
-                    } catch (e) {
-                      return null;
-                    }
-                  }
-                  return comp;
-                }).filter((comp: any) => comp !== null);
-              };
-              
-              const normalizedComponents = competitorData?.uiComponents 
-                ? normalizeUiComponents(competitorData.uiComponents)
-                : [];
-              
               // Try to get metrics from API's section component first
               const apiMetrics = localMetrics;
               
@@ -1430,7 +1359,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                               placeholder="Region name"
                             />
                             <div className="space-y-2">
-                              {Object.entries(region.data).map(([company, share], companyIndex) => (
+                              {Object.entries(region.data).map(([company, share], _companyIndex) => (
                                 <div key={company} className="flex gap-2 items-center">
                                   <Input
                                     value={company}

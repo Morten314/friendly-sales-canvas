@@ -1969,6 +1969,7 @@
 // export default MarketEntrySection;
 
 import React, { useEffect, useState, useRef } from 'react';
+import type { UntypedReportState, UntypedReportSection } from '@/lib/types/escape-hatches';
 import { MapPin, Bot, Edit, Target, Clock, AlertTriangle, X, FileText, Save, Share, TrendingUp, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1977,7 +1978,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { EditRecord } from './types';
-import { toUTCTimestamp, isTimestampNewer } from '@/lib/timestampUtils';
 import { executeWithRateLimit } from '@/lib/rateLimitManager';
 import { apiFetchJson } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -2027,7 +2027,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   isExpanded,
   hasEdits,
   deletedSections,
-  editHistory,
+  editHistory: _editHistory,
   executiveSummary,
   entryBarriers,
   recommendedChannel,
@@ -2054,14 +2054,13 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   onExportPDF,
   onSaveToWorkspace,
   onGenerateShareableLink,
-  isRefreshing = false,
-  companyProfile
+  isRefreshing = false
 }) => {
   const { currentUser, orgId } = useAuth();
   const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [_error, setError] = useState<string | null>(null);
   const [marketEntryData, setMarketEntryData] = useState<any>(null);
   // Use ref to track if we have API data to prevent props from overwriting it
   const hasApiDataRef = useRef(false);
@@ -2106,9 +2105,6 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       setIsLoading(true);
       setError(null);
 
-      // Get company profile data for dynamic reports (user-specific)
-      const profile = companyProfile || JSON.parse(getUserLocalStorage('companyProfile', currentUser?.uid) || '{}');
-      
       if (!currentUser?.uid) {
         console.error('User not authenticated');
         setError('User not authenticated');
@@ -2218,7 +2214,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           apiDataTimestampRef.current = mappedApiData.timestamp;
           
           // Merge with existing marketEntryData to preserve any props data, but prioritize API data
-          setMarketEntryData(prev => {
+          setMarketEntryData((prev: UntypedReportState) => {
             const merged = {
               ...prev, // Keep existing data
               ...mappedApiData, // Overwrite with API data (which has swotAnalysis)
@@ -2279,7 +2275,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
             if (hasContent) {
               
               // Update marketEntryData with SWOT from localStorage
-              setMarketEntryData(prev => ({
+              setMarketEntryData((prev: UntypedReportState) => ({
                 ...prev,
                 swotAnalysis: swotFromStorage,
                 swot: swotFromStorage
@@ -2334,8 +2330,6 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
     const needsInitialData = !hasLocalData && (!hasPropsData || isReceivingFallbackData);
     
     if (needsInitialData || needsSwotData) {
-      const reason = needsInitialData ? 'No data found' : 'Missing SWOT data';
-      
       // Mark that we're trying to fetch SWOT if that's the reason
       if (needsSwotData) {
         hasTriedSwotFetchRef.current = true;
@@ -2483,52 +2477,6 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
     onToggleEdit();
   };
 
-  const handleMarketEntrySaveChanges = () => {
-    
-    // Apply local edits to parent state
-    onExecutiveSummaryChange(editExecutiveSummary);
-    onEntryBarriersChange(editEntryBarriers);
-    onRecommendedChannelChange(editRecommendedChannel);
-    onTimeToMarketChange(editTimeToMarket);
-    onTopBarrierChange(editTopBarrier);
-    onCompetitiveDifferentiationChange(editCompetitiveDifferentiation);
-    onStrategicRecommendationsChange(editStrategicRecommendations);
-    onRiskAssessmentChange(editRiskAssessment);
-    
-    // Log original and modified JSON for debugging
-    const originalJson = {
-      executiveSummary: displayData.executiveSummary || '',
-      entryBarriers: displayData.entryBarriers || [],
-      recommendedChannel: displayData.recommendedChannel || '',
-      timeToMarket: displayData.timeToMarket || '',
-      topBarrier: displayData.topBarrier || '',
-      competitiveDifferentiation: displayData.competitiveDifferentiation || [],
-      strategicRecommendations: displayData.strategicRecommendations || [],
-      riskAssessment: displayData.riskAssessment || [],
-      swotAnalysis: displayData.swotAnalysis || {
-        strengths: ['Strong tech platform'],
-        weaknesses: ['Limited local presence'],
-        opportunities: ['Growing market'],
-        threats: ['Regulatory changes']
-      }
-    };
-
-    const modifiedJson = {
-      executiveSummary: editExecutiveSummary,
-      entryBarriers: editEntryBarriers,
-      recommendedChannel: editRecommendedChannel,
-      timeToMarket: editTimeToMarket,
-      topBarrier: editTopBarrier,
-      competitiveDifferentiation: editCompetitiveDifferentiation,
-      strategicRecommendations: editStrategicRecommendations,
-      riskAssessment: editRiskAssessment,
-      swotAnalysis: editSwotAnalysis
-    };
-
-
-    onSaveChanges();
-  };
-
   // Handle save changes with API integration
   const handleMarketEntryFullSaveChanges = async () => {
     try {
@@ -2564,13 +2512,6 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
         strategicRecommendations: editStrategicRecommendations,
         riskAssessment: editRiskAssessment,
         swotAnalysis: editSwotAnalysis
-      };
-
-      // Prepare data for API according to schema
-      const editData = {
-        original_json: originalData,
-        modified_json: modifiedData,
-        edit_type: "modification"
       };
 
       console.log('📤 Market Entry - original_json:', originalData);
@@ -2812,10 +2753,6 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   };
   
   
-  // Check if we're showing fallback data (the "being prepared" message)
-  const isShowingFallbackData = displayData.executiveSummary?.includes('being prepared') || 
-                                displayData.executiveSummary?.includes('Market entry analysis is being prepared');
-  
   const hasData = displayData.executiveSummary || displayData.entryBarriers?.length > 0 || displayData.recommendedChannel || displayData.timeToMarket || displayData.topBarrier || displayData.competitiveDifferentiation?.length > 0 || displayData.strategicRecommendations?.length > 0 || displayData.riskAssessment?.length > 0;
 
   // Show loading state only when actively loading and have no data, not when showing fallback data
@@ -2995,7 +2932,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
               Executive Summary
             </h3>
             <div className="text-gray-700 leading-relaxed space-y-3">
-              {displayData.executiveSummary.split('\n').map((paragraph, index) => (
+              {displayData.executiveSummary.split('\n').map((paragraph: UntypedReportSection, index: number) => (
                 <p key={index}>{paragraph}</p>
               ))}
             </div>
@@ -3038,7 +2975,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
                 Entry Barriers
               </h4>
               <ul className="space-y-2">
-                {displayData.entryBarriers.map((barrier, index) => (
+                {displayData.entryBarriers.map((barrier: UntypedReportSection, index: number) => (
                   <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
                     <span className="text-orange-500 mt-1">•</span>
                     {barrier}
@@ -3053,7 +2990,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
                 Competitive Differentiation
               </h4>
               <ul className="space-y-2">
-                {displayData.competitiveDifferentiation.map((diff, index) => (
+                {displayData.competitiveDifferentiation.map((diff: UntypedReportSection, index: number) => (
                   <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
                     <span className="text-green-500 mt-1">•</span>
                     {diff}
@@ -3069,7 +3006,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
               Strategic Recommendations
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {displayData.strategicRecommendations.map((recommendation, index) => (
+              {displayData.strategicRecommendations.map((recommendation: UntypedReportSection, index: number) => (
                 <div key={index} className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                   <div className="text-sm font-medium text-blue-900">{recommendation}</div>
                 </div>
@@ -3083,7 +3020,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
               Risk Assessment
             </h4>
             <div className="space-y-2">
-              {displayData.riskAssessment.map((risk, index) => (
+              {displayData.riskAssessment.map((risk: UntypedReportSection, index: number) => (
                 <div key={index} className="bg-red-50 p-3 rounded-lg border border-red-200">
                   <div className="text-sm text-red-900">{risk}</div>
                 </div>

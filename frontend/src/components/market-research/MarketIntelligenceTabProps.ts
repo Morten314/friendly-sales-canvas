@@ -195,6 +195,7 @@ export interface MarketIntelligenceTabProps {
   onRegulatoryScoutClose?: () => void;
   onMarketEntryScoutClose?: () => void;
   
+  onViewOpportunityLeads?: (sectionContext: string) => void;
   onExportPDF: () => void;
   onSaveToWorkspace: () => void;
   onGenerateShareableLink: () => void;

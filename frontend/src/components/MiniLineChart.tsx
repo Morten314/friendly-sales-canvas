@@ -13,7 +13,7 @@ interface MiniLineChartProps {
   color: string;
 }
 
-const MiniLineChart: React.FC<MiniLineChartProps> = ({ data, title, color }) => {
+const MiniLineChart: React.FC<MiniLineChartProps> = ({ data, color }) => {
   return (
     <div className="w-full h-32">
       <ResponsiveContainer width="100%" height="100%">

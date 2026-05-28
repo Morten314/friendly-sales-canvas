@@ -13,7 +13,7 @@ interface MiniPieChartProps {
   title: string;
 }
 
-const MiniPieChart: React.FC<MiniPieChartProps> = ({ data, title }) => {
+const MiniPieChart: React.FC<MiniPieChartProps> = ({ data }) => {
   return (
     <div className="w-full h-32">
       <ResponsiveContainer width="100%" height="100%">

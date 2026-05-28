@@ -37,7 +37,6 @@ import {
   Settings,
   X,
   Check,
-  Lock,
   Building2,
   Users,
   ChevronDown,
@@ -115,9 +114,9 @@ const DataSourcesManager: React.FC = () => {
   const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [_isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Lead Stream — files + backend processing status (GET /leads/stream/status)
   const [leadStreamFiles, setLeadStreamFiles] = useState<LeadStreamFileApiRow[]>([]);
   const [leadStreamStatusLoading, setLeadStreamStatusLoading] = useState(false);
@@ -880,50 +879,6 @@ const DataSourcesManager: React.FC = () => {
     }
   };
 
-  const handleSaveSystemSource = async (crmName: string) => {
-    const nameToUse = sourceName.trim() || crmName;
-    
-    try {
-      setIsSaving(true);
-      
-      // Create a system data source entry
-      const newSystemSource: DataSource = {
-        id: `system-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        type: "system",
-        name: nameToUse,
-        description: sourceDescription.trim() || undefined,
-        tags: selectedTags,
-        status: "processing",
-        createdAt: new Date(),
-      };
-
-      // Add to local state immediately
-      setDataSources((prev) => [...prev, newSystemSource]);
-      
-      // Close the form
-      resetInlineForm();
-      setIsAddingInline(false);
-      
-      toast({
-        title: "System connection initiated",
-        description: `${nameToUse} connection has been added. Complete the login process to finish setup.`,
-      });
-      
-      // Notify MissionControl that a data source was added
-      window.dispatchEvent(new CustomEvent('dataSourceAdded'));
-      
-    } catch (error) {
-      console.error("Error saving system source:", error);
-      toast({
-        title: "Error",
-        description: "Could not save system source. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleSaveSource = async () => {
     if (!sourceName.trim()) {
       toast({
@@ -1105,7 +1060,7 @@ const DataSourcesManager: React.FC = () => {
                       });
                       return {
                         ...s,
-                        id: uploadMetadata.oldId, // Keep the old ID to maintain reference (replaces old entry)
+                        id: uploadMetadata.oldId!, // Keep the old ID to maintain reference (replaces old entry)
                         name: uploadMetadata.name,
                         description: uploadMetadata.description,
                         tags: uploadMetadata.tags,
@@ -1211,7 +1166,7 @@ const DataSourcesManager: React.FC = () => {
             const url = buildApiUrl(`data-source/${fileId}`);
             
             const updatePayload = {
-              user_id: currentUser.uid,
+              user_id: currentUser?.uid,
               org_id: orgIdToUse,
               tags: selectedTags,
               description: sourceDescription.trim() || undefined,
@@ -1388,7 +1343,7 @@ const DataSourcesManager: React.FC = () => {
             // Always use the form value, don't fall back to existing URL
             // This ensures the backend receives the updated value even if it's empty
             const updatePayload = {
-              user_id: currentUser.uid,
+              user_id: currentUser?.uid,
               org_id: orgIdToUse,
               name: sourceName.trim(),
               url: sourceUrl.trim(), // Send the form value directly, no fallback

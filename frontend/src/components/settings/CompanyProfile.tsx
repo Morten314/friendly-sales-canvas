@@ -30,7 +30,7 @@ interface CompanyProfileProps {
   profileData?: any;
 }
 
-export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileData }: CompanyProfileProps) {
+export function CompanyProfile({ profileData }: CompanyProfileProps) {
   const { currentUser, orgId } = useAuth();
   const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
   const [formData, setFormData] = useState({
@@ -49,7 +49,7 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
   const [isLoading, setIsLoading] = useState(false);
 
   // Fetch company profile from API (similar to Signals pattern)
-  const fetchCompanyProfile = async (userId: string) => {
+  const fetchCompanyProfile = async (_userId: string) => {
     try {
       const response = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
         method: "GET",
