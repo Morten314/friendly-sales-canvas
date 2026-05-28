@@ -2382,7 +2382,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       const timer = setTimeout(() => {
         // Double-check conditions haven't changed
         if (!isRefreshing && !hasFetchedRef.current && !isFetchingRef.current) {
-          fetchMarketEntryData(false);
+          void fetchMarketEntryData(false);
         }
       }, 1500);
 
@@ -2390,6 +2390,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
     } else {
       // intentional: no-op when initial mount conditions are not met
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only initial fetch guard; deps intentionally empty to prevent re-fetch loops
   }, []); // Empty dependency array - only run on mount
 
   // When parent runs cascade refresh, only show loading; parent will pass data via props (do NOT fetch here – avoids duplicate requests)
@@ -2515,6 +2516,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
         }
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- prop-sync effect; intentionally watches only incoming props (not marketEntryData/currentUser) to avoid overwriting local state with stale snapshots
   }, [
     executiveSummary,
     entryBarriers,
