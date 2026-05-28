@@ -2209,6 +2209,10 @@ const ICPManager: React.FC = () => {
     if (!currentUser?.uid) return;
     console.log("ICPManager: loading customer profile from backend for user:", currentUser.uid);
     void loadCustomerProfileFromBackend();
+    // loadCustomerProfileFromBackend intentionally omitted: it is an inline
+    // closure that re-creates every render, but the load is keyed on the
+    // identity/org/path values listed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.uid, orgIdToUse, location.pathname]);
 
   // Focus management - combobox stays closed by default
