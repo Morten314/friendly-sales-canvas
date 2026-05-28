@@ -1,0 +1,871 @@
+{
+  "generatedAt": "2026-05-28T01:24:44.851Z",
+  "date": "2026-05-28-post-wave-a",
+  "totalErrors": 116,
+  "errorsByCode": {
+    "TS2339": 4,
+    "TS7006": 83,
+    "TS2345": 8,
+    "TS18046": 7,
+    "TS18047": 5,
+    "TS2322": 6,
+    "TS6133": 1,
+    "TS18048": 2
+  },
+  "errorsByArea": {
+    "components/layout": 1,
+    "components/market-research": 25,
+    "components/mission-control": 6,
+    "lib": 3,
+    "pages": 81
+  },
+  "errorsByFile": {
+    "src/components/layout/ProfileDialog.tsx": 1,
+    "src/components/market-research/CompetitorLandscapeSection.tsx": 1,
+    "src/components/market-research/IndustryTrendsSection.tsx": 2,
+    "src/components/market-research/MarketEntrySection.tsx": 12,
+    "src/components/market-research/MarketSizeSection.tsx": 2,
+    "src/components/market-research/RegulatoryComplianceSection.tsx": 8,
+    "src/components/mission-control/DataSourcesManager.tsx": 3,
+    "src/components/mission-control/ICPManager.tsx": 3,
+    "src/lib/jwt.ts": 3,
+    "src/pages/MarketResearch.tsx": 80,
+    "src/pages/MissionControl.tsx": 1
+  },
+  "detailsByFile": {
+    "src/components/layout/ProfileDialog.tsx": [
+      {
+        "file": "src/components/layout/ProfileDialog.tsx",
+        "line": 17,
+        "col": 11,
+        "code": "TS2339",
+        "message": "Property 'currentTenant' does not exist on type 'TenantContextType'."
+      }
+    ],
+    "src/components/market-research/CompetitorLandscapeSection.tsx": [
+      {
+        "file": "src/components/market-research/CompetitorLandscapeSection.tsx",
+        "line": 162,
+        "col": 25,
+        "code": "TS7006",
+        "message": "Parameter 'entity' implicitly has an 'any' type."
+      }
+    ],
+    "src/components/market-research/IndustryTrendsSection.tsx": [
+      {
+        "file": "src/components/market-research/IndustryTrendsSection.tsx",
+        "line": 250,
+        "col": 29,
+        "code": "TS2345",
+        "message": "Argument of type '{ [key: string]: string; }' is not assignable to parameter of type 'SetStateAction<{ APAC: string; Europe: string; \"North America\": string; }>'."
+      },
+      {
+        "file": "src/components/market-research/IndustryTrendsSection.tsx",
+        "line": 271,
+        "col": 25,
+        "code": "TS2345",
+        "message": "Argument of type '{ aiAdoptionTrends: string[]; technologyBudgetAllocation: { [key: string]: string; }; }' is not assignable to parameter of type 'SetStateAction<{ aiAdoptionTrends: string[]; technologyBudgetAllocation: { \"AI/ML\": string; Cloud: string; Security: string; }; }>'."
+      }
+    ],
+    "src/components/market-research/MarketEntrySection.tsx": [
+      {
+        "file": "src/components/market-research/MarketEntrySection.tsx",
+        "line": 2216,
+        "col": 30,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/components/market-research/MarketEntrySection.tsx",
+        "line": 2277,
+        "col": 34,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/components/market-research/MarketEntrySection.tsx",
+        "line": 2934,
+        "col": 62,
+        "code": "TS7006",
+        "message": "Parameter 'paragraph' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/components/market-research/MarketEntrySection.tsx",
+        "line": 2934,
+        "col": 73,
+        "code": "TS7006",
+        "message": "Parameter 'index' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/components/market-research/MarketEntrySection.tsx",
+        "line": 2977,
+        "col": 49,
+        "code": "TS7006",
+        "message": "Parameter 'barrier' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/components/market-research/MarketEntrySection.tsx",
+        "line": 2977,
+        "col": 58,
+        "code": "TS7006",
+        "message": "Parameter 'index' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/components/market-research/MarketEntrySection.tsx",
+        "line": 2992,
+        "col": 62,
+        "code": "TS7006",
+        "message": "Parameter 'diff' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/components/market-research/MarketEntrySection.tsx",
+        "line": 2992,
+        "col": 68,
+        "code": "TS7006",
+        "message": "Parameter 'index' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/components/market-research/MarketEntrySection.tsx",
+        "line": 3008,
+        "col": 58,
+        "code": "TS7006",
+        "message": "Parameter 'recommendation' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/components/market-research/MarketEntrySection.tsx",
+        "line": 3008,
+        "col": 74,
+        "code": "TS7006",
+        "message": "Parameter 'index' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/components/market-research/MarketEntrySection.tsx",
+        "line": 3022,
+        "col": 48,
+        "code": "TS7006",
+        "message": "Parameter 'risk' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/components/market-research/MarketEntrySection.tsx",
+        "line": 3022,
+        "col": 54,
+        "code": "TS7006",
+        "message": "Parameter 'index' implicitly has an 'any' type."
+      }
+    ],
+    "src/components/market-research/MarketSizeSection.tsx": [
+      {
+        "file": "src/components/market-research/MarketSizeSection.tsx",
+        "line": 1317,
+        "col": 52,
+        "code": "TS18046",
+        "message": "'value' is of type 'unknown'."
+      },
+      {
+        "file": "src/components/market-research/MarketSizeSection.tsx",
+        "line": 1367,
+        "col": 69,
+        "code": "TS18046",
+        "message": "'value' is of type 'unknown'."
+      }
+    ],
+    "src/components/market-research/RegulatoryComplianceSection.tsx": [
+      {
+        "file": "src/components/market-research/RegulatoryComplianceSection.tsx",
+        "line": 1082,
+        "col": 39,
+        "code": "TS7006",
+        "message": "Parameter 'point' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/components/market-research/RegulatoryComplianceSection.tsx",
+        "line": 1508,
+        "col": 76,
+        "code": "TS7006",
+        "message": "Parameter 'region' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/components/market-research/RegulatoryComplianceSection.tsx",
+        "line": 1508,
+        "col": 84,
+        "code": "TS7006",
+        "message": "Parameter 'index' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/components/market-research/RegulatoryComplianceSection.tsx",
+        "line": 1995,
+        "col": 37,
+        "code": "TS7006",
+        "message": "Parameter 'point' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/components/market-research/RegulatoryComplianceSection.tsx",
+        "line": 2055,
+        "col": 43,
+        "code": "TS7006",
+        "message": "Parameter 'card' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/components/market-research/RegulatoryComplianceSection.tsx",
+        "line": 2055,
+        "col": 49,
+        "code": "TS7006",
+        "message": "Parameter 'cardIndex' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/components/market-research/RegulatoryComplianceSection.tsx",
+        "line": 2183,
+        "col": 44,
+        "code": "TS7006",
+        "message": "Parameter 'region' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/components/market-research/RegulatoryComplianceSection.tsx",
+        "line": 2183,
+        "col": 52,
+        "code": "TS7006",
+        "message": "Parameter 'index' implicitly has an 'any' type."
+      }
+    ],
+    "src/components/mission-control/DataSourcesManager.tsx": [
+      {
+        "file": "src/components/mission-control/DataSourcesManager.tsx",
+        "line": 1019,
+        "col": 30,
+        "code": "TS2345",
+        "message": "Argument of type '(prev: DataSource[]) => (DataSource | { id: string | null; name: string; description: string | undefined; tags: string[]; fileId?: string | undefined; type: SourceType; url?: string | undefined; fileName?: string | undefined; status: SourceStatus; createdAt: Date; })[]' is not assignable to parameter of type 'SetStateAction<DataSource[]>'."
+      },
+      {
+        "file": "src/components/mission-control/DataSourcesManager.tsx",
+        "line": 1169,
+        "col": 24,
+        "code": "TS18047",
+        "message": "'currentUser' is possibly 'null'."
+      },
+      {
+        "file": "src/components/mission-control/DataSourcesManager.tsx",
+        "line": 1346,
+        "col": 24,
+        "code": "TS18047",
+        "message": "'currentUser' is possibly 'null'."
+      }
+    ],
+    "src/components/mission-control/ICPManager.tsx": [
+      {
+        "file": "src/components/mission-control/ICPManager.tsx",
+        "line": 2031,
+        "col": 42,
+        "code": "TS2339",
+        "message": "Property 'icps' does not exist on type '{}'."
+      },
+      {
+        "file": "src/components/mission-control/ICPManager.tsx",
+        "line": 2032,
+        "col": 55,
+        "code": "TS2339",
+        "message": "Property 'customer_profiles' does not exist on type '{}'."
+      },
+      {
+        "file": "src/components/mission-control/ICPManager.tsx",
+        "line": 2033,
+        "col": 60,
+        "code": "TS2339",
+        "message": "Property 'customer_profiles' does not exist on type '{}'."
+      }
+    ],
+    "src/lib/jwt.ts": [
+      {
+        "file": "src/lib/jwt.ts",
+        "line": 61,
+        "col": 41,
+        "code": "TS2345",
+        "message": "Argument of type 'string | null' is not assignable to parameter of type 'string'."
+      },
+      {
+        "file": "src/lib/jwt.ts",
+        "line": 134,
+        "col": 41,
+        "code": "TS2345",
+        "message": "Argument of type 'string | null' is not assignable to parameter of type 'string'."
+      },
+      {
+        "file": "src/lib/jwt.ts",
+        "line": 136,
+        "col": 7,
+        "code": "TS2322",
+        "message": "Type 'string | null' is not assignable to type 'string'."
+      }
+    ],
+    "src/pages/MarketResearch.tsx": [
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 1912,
+        "col": 58,
+        "code": "TS18047",
+        "message": "'currentUser' is possibly 'null'."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 1913,
+        "col": 60,
+        "code": "TS18047",
+        "message": "'currentUser' is possibly 'null'."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 3489,
+        "col": 9,
+        "code": "TS6133",
+        "message": "'handleHistoricalReportSelected' is declared but its value is never read."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 3881,
+        "col": 39,
+        "code": "TS18048",
+        "message": "'transformedData.strategicRecommendations.length' is possibly 'undefined'."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 3884,
+        "col": 28,
+        "code": "TS18048",
+        "message": "'transformedData.marketDrivers.length' is possibly 'undefined'."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 4472,
+        "col": 35,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 4888,
+        "col": 62,
+        "code": "TS18047",
+        "message": "'currentUser' is possibly 'null'."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 5384,
+        "col": 35,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 5512,
+        "col": 23,
+        "code": "TS2345",
+        "message": "Argument of type '(prev: MarketIntelligenceData | null) => { executiveSummary: any; tamValue: any; samValue: any; GrowthRate: any; strategicRecommendations: any; marketEntry: any; ... 10 more ...; technology_drivers?: TechnologyDriver[] | undefined; }' is not assignable to parameter of type 'SetStateAction<MarketIntelligenceData | null>'."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 6439,
+        "col": 46,
+        "code": "TS18046",
+        "message": "'error' is of type 'unknown'."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 6443,
+        "col": 47,
+        "code": "TS18046",
+        "message": "'error' is of type 'unknown'."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 6443,
+        "col": 82,
+        "code": "TS18046",
+        "message": "'error' is of type 'unknown'."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 6447,
+        "col": 47,
+        "code": "TS18046",
+        "message": "'error' is of type 'unknown'."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 6778,
+        "col": 61,
+        "code": "TS7006",
+        "message": "Parameter 'comp' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 7019,
+        "col": 29,
+        "code": "TS7006",
+        "message": "Parameter 'prevData' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 7220,
+        "col": 43,
+        "code": "TS18046",
+        "message": "'error' is of type 'unknown'."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 7268,
+        "col": 27,
+        "code": "TS7006",
+        "message": "Parameter 'prevData' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 7814,
+        "col": 29,
+        "code": "TS2345",
+        "message": "Argument of type '(prev: MarketIntelligenceData | null) => { executiveSummary: any; tamValue: any; samValue: any; GrowthRate: any; strategicRecommendations: any; marketEntry: any; ... 10 more ...; technology_drivers?: TechnologyDriver[] | undefined; }' is not assignable to parameter of type 'SetStateAction<MarketIntelligenceData | null>'."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 9225,
+        "col": 27,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 9305,
+        "col": 27,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 9357,
+        "col": 27,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 9409,
+        "col": 27,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 9465,
+        "col": 27,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 9839,
+        "col": 23,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 9883,
+        "col": 23,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 9927,
+        "col": 23,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 9971,
+        "col": 23,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 10019,
+        "col": 31,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 10080,
+        "col": 31,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 10141,
+        "col": 31,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 10202,
+        "col": 31,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 10555,
+        "col": 23,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 10599,
+        "col": 23,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 10643,
+        "col": 23,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 10687,
+        "col": 23,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 10731,
+        "col": 23,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 10965,
+        "col": 28,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 10977,
+        "col": 28,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 10989,
+        "col": 28,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 11001,
+        "col": 28,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 11013,
+        "col": 28,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 11025,
+        "col": 28,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 11037,
+        "col": 28,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 11049,
+        "col": 28,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 11184,
+        "col": 24,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 11268,
+        "col": 24,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 11348,
+        "col": 24,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 11428,
+        "col": 24,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 11508,
+        "col": 24,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 11592,
+        "col": 24,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 11676,
+        "col": 24,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 11752,
+        "col": 24,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 11902,
+        "col": 27,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 11914,
+        "col": 27,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 11926,
+        "col": 27,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 11938,
+        "col": 27,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 11950,
+        "col": 27,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 11970,
+        "col": 35,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 11982,
+        "col": 35,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 11994,
+        "col": 35,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 12006,
+        "col": 35,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 12018,
+        "col": 35,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 12030,
+        "col": 35,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 12042,
+        "col": 35,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 12062,
+        "col": 31,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 12074,
+        "col": 31,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 12086,
+        "col": 31,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 12098,
+        "col": 31,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 12118,
+        "col": 27,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 12130,
+        "col": 27,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 12142,
+        "col": 27,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 12170,
+        "col": 27,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 13195,
+        "col": 41,
+        "code": "TS2322",
+        "message": "Type '{ fullPage: true; researchContext: { leads: { name: string; company: string; jobTitle: string; }[]; opportunity?: string | undefined; icp?: string | undefined; reportTraits?: string[] | undefined; }; mode: \"selected-leads\" | \"full-list\"; }' is not assignable to type 'IntrinsicAttributes & ChatWithScoutProps'."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 13594,
+        "col": 23,
+        "code": "TS2322",
+        "message": "Type '(_context?: \"market-size\" | \"industry-trends\" | \"competitor-landscape\", hasEdits?: boolean, customMessage?: string) => Promise<void>' is not assignable to type '(context?: \"market-size\" | \"industry-trends\" | \"competitor-landscape\" | \"regulatory-compliance\" | \"market-entry\" | undefined, hasEdits?: boolean | undefined, lastEditedField?: string | undefined) => void | Promise<...>'."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 13598,
+        "col": 23,
+        "code": "TS2322",
+        "message": "Type '(_context?: \"market-size\" | \"industry-trends\" | \"competitor-landscape\", hasEdits?: boolean, customMessage?: string) => Promise<void>' is not assignable to type '(context?: \"market-size\" | \"industry-trends\" | \"competitor-landscape\" | \"regulatory-compliance\" | \"market-entry\" | undefined, hasEdits?: boolean | undefined, lastEditedField?: string | undefined) => void | Promise<...>'."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 13602,
+        "col": 23,
+        "code": "TS2322",
+        "message": "Type '(_context?: \"market-size\" | \"industry-trends\" | \"competitor-landscape\", hasEdits?: boolean, customMessage?: string) => Promise<void>' is not assignable to type '(context?: \"market-size\" | \"industry-trends\" | \"competitor-landscape\" | \"regulatory-compliance\" | \"market-entry\" | undefined, hasEdits?: boolean | undefined, lastEditedField?: string | undefined) => void | Promise<...>'."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 13650,
+        "col": 51,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 13687,
+        "col": 51,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 13724,
+        "col": 51,
+        "code": "TS7006",
+        "message": "Parameter 'prev' implicitly has an 'any' type."
+      },
+      {
+        "file": "src/pages/MarketResearch.tsx",
+        "line": 13897,
+        "col": 23,
+        "code": "TS2322",
+        "message": "Type '(_context?: \"market-size\" | \"industry-trends\" | \"competitor-landscape\" | \"regulatory-compliance\", _hasEdits?: boolean, customMessage?: string) => Promise<void>' is not assignable to type '(context?: \"market-size\" | \"industry-trends\" | \"competitor-landscape\" | \"regulatory-compliance\" | \"market-entry\" | undefined, hasEdits?: boolean | undefined, lastEditedField?: string | undefined) => void | Promise<...>'."
+      }
+    ],
+    "src/pages/MissionControl.tsx": [
+      {
+        "file": "src/pages/MissionControl.tsx",
+        "line": 438,
+        "col": 29,
+        "code": "TS2345",
+        "message": "Argument of type '{ companyName: string; headquarters: string; employeeSize: string; industry: string; revenue: string; gtmModel: string; regionFocus: string; dealSize: string; companyUrl: string; keyBuyerPersona: string; }' is not assignable to parameter of type 'SetStateAction<{ companyName: string; headquarters: string; employeeSize: string; industry: string; revenue: string; gtmModel: string; regionFocus: string; dealSize: string; companyUrl: string; keyBuyerPersona: string; ... 5 more ...; constraints: string; }>'."
+      }
+    ]
+  }
+}
