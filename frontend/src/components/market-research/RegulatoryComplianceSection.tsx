@@ -305,6 +305,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         setLocalDataLocalization(regulatoryData.dataLocalization);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- snapshot effect: reads props/locals as one-shot initializer when entering edit mode; adding all deps would cause constant re-syncing
   }, [isEditing]); // Removed dependencies that cause constant re-syncing
 
   // Disabled: Also sync when regulatoryData changes (causes local state to be overwritten)
@@ -698,9 +699,10 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     setIsLoading(true);
     setError(null);
     const timer = setTimeout(() => {
-      if (!isRefreshing) fetchRegulatoryComplianceData(false);
+      if (!isRefreshing) void fetchRegulatoryComplianceData(false);
     }, 1000);
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only initial fetch; intentionally empty deps to prevent re-fetch loops (cascade refresh handled by separate effect)
   }, []);
 
   // When parent runs cascade refresh, only show loading; parent will pass data via props (do NOT fetch here – avoids duplicate requests and multiple responses)
@@ -714,7 +716,8 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
 
   // Listen for company profile updates from settings
   useEffect(() => {
-    const handleCompanyProfileUpdate = async () => {
+    const handleCompanyProfileUpdate = () => {
+      void (async () => {
       setError(null);
       setIsLoading(true);
 
@@ -747,7 +750,8 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         // intentional: ignore cache-write failures and proceed to refetch
       }
 
-      fetchRegulatoryComplianceData(true); // refresh = true for company profile changes
+      await fetchRegulatoryComplianceData(true); // refresh = true for company profile changes
+      })();
     };
 
     window.addEventListener("companyProfileUpdated", handleCompanyProfileUpdate);
@@ -755,6 +759,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     return () => {
       window.removeEventListener("companyProfileUpdated", handleCompanyProfileUpdate);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only listener subscription; handler reads currentUser?.uid + orgIdToUse at fire time intentionally
   }, []);
 
   // Also listen for companyProfile prop changes (skip if parent is refreshing – parent cascade will provide data).
@@ -763,7 +768,8 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     if (isRefreshing || !companyProfile) return;
     setError(null);
     setIsLoading(true);
-    fetchRegulatoryComplianceData(true);
+    void fetchRegulatoryComplianceData(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally watches only companyProfile to avoid overwriting fresh cascade data when isRefreshing flips to false
   }, [companyProfile]);
 
   if (normalizedDeletedSections.has("regulatory-compliance")) {
@@ -2298,7 +2304,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                     }
 
                     // Then call the API save function
-                    handleRegulatoryComplianceSaveChanges();
+                    void handleRegulatoryComplianceSaveChanges();
                   }}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
