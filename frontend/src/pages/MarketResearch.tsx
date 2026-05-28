@@ -274,6 +274,7 @@ const validateApiResponseUserId = (
 
   // If no user_id in response, log warning but allow (backend should handle this)
   if (!responseUserId) {
+    // intentional: backend defends; FE allows through
   }
 
   return true;
@@ -1885,6 +1886,7 @@ const MarketResearch = React.memo(() => {
       // Log each component's response body
       result.results.forEach((componentResult, _index) => {
         if (componentResult.success) {
+          // intentional: no-op on success; only errors are logged
         } else {
           console.error("❌ Error:", componentResult.error);
           console.error("Status:", componentResult.status);
@@ -2227,6 +2229,7 @@ const MarketResearch = React.memo(() => {
         if (!regulatoryData?.timestamp) {
           setRegulatoryData(getDefaultRegulatoryData());
         } else {
+          // intentional: preserve fresh regulatory data with timestamp
         }
 
         setIndustryTrendsData(null);
@@ -2354,6 +2357,7 @@ const MarketResearch = React.memo(() => {
       if (!regulatoryData?.timestamp) {
         setRegulatoryData(getDefaultRegulatoryData());
       } else {
+        // intentional: preserve fresh regulatory data with timestamp
       }
       setIndustryTrendsData(null);
       setMarketEntryData(null);
@@ -2421,8 +2425,11 @@ const MarketResearch = React.memo(() => {
             if (companyProfileData.user_id && companyProfileData.user_id !== currentUser.uid) {
               companyProfileData = null;
             } else {
+              // intentional: profile belongs to current user; keep it
             }
-          } catch (_error) {}
+          } catch (_error) {
+            // intentional: ignore corrupt cached profile
+          }
         }
       }
 
@@ -2452,7 +2459,9 @@ const MarketResearch = React.memo(() => {
               );
             }
           }
-        } catch (_error) {}
+        } catch (_error) {
+          // intentional: best-effort cache write; ignore failures
+        }
       }
 
       // Only use companyProfileData if it belongs to the current user
@@ -2855,9 +2864,12 @@ const MarketResearch = React.memo(() => {
           if (companyData.user_id && currentUser && companyData.user_id !== currentUser.uid) {
             companyData = null;
           } else {
+            // intentional: profile belongs to current user; keep it
           }
         }
-      } catch (_error) {}
+      } catch (_error) {
+        // intentional: ignore corrupt cached profile
+      }
 
       // Ensure user is authenticated before making API call
       if (!currentUser?.uid) {
@@ -2945,8 +2957,11 @@ const MarketResearch = React.memo(() => {
                   break;
                 }
               } else {
+                // intentional: alt response not ok; fall through to next strategy
               }
-            } catch (_altError) {}
+            } catch (_altError) {
+              // intentional: alt strategy failed; continue to throw below
+            }
           }
         }
 
@@ -3359,6 +3374,7 @@ const MarketResearch = React.memo(() => {
         }
       } else {
         if (refresh) {
+          // intentional: refresh-mode branch reserved for future telemetry
         }
       }
 
@@ -3385,6 +3401,7 @@ const MarketResearch = React.memo(() => {
     previousContext: any = {},
   ) => {
     if (Object.keys(previousContext).length > 0) {
+      // intentional: context-present branch reserved for future telemetry
     }
 
     try {
@@ -3600,8 +3617,10 @@ const MarketResearch = React.memo(() => {
 
           setTimeout(() => {}, 100);
         } else {
+          // intentional: validation skipped when shouldUpdate is false
         }
       } else {
+        // intentional: no apiData payload to merge
       }
 
       // Return full API response so parent cascade can add to context for next component
@@ -3839,6 +3858,7 @@ const MarketResearch = React.memo(() => {
         // Force update on refresh regardless of timestamp validation
 
         if (refresh) {
+          // intentional: refresh-mode branch reserved for future telemetry
         }
 
         if (shouldUpdate) {
@@ -3975,6 +3995,7 @@ const MarketResearch = React.memo(() => {
     previousContext: any = {},
   ) => {
     if (Object.keys(previousContext).length > 0) {
+      // intentional: context-present branch reserved for future telemetry
     }
 
     // Force clear cache for fresh data
@@ -4088,8 +4109,10 @@ const MarketResearch = React.memo(() => {
                 : apiData.swot || marketEntryData?.swot || null; // Fallback to simple check
 
           if (apiData.swot) {
+            // intentional: presence check only; swot already merged above
           }
           if (swotData) {
+            // intentional: presence check only; data already wired into updatedData
           }
 
           const updatedData = {
@@ -4131,6 +4154,7 @@ const MarketResearch = React.memo(() => {
 
           saveMarketEntryDataToLocalStorage(updatedData);
         } else {
+          // intentional: skip persistence when shouldUpdate is false
         }
       }
 
@@ -4229,6 +4253,7 @@ const MarketResearch = React.memo(() => {
       if (!storedMarketEntry || !JSON.parse(storedMarketEntry).timestamp) {
         await fetchMarketEntryData(false, true); // Don't refresh, but show loading
       } else {
+        // intentional: cached fresh market-entry data is sufficient
       }
 
       if (!isMounted) return;
@@ -4249,6 +4274,7 @@ const MarketResearch = React.memo(() => {
       if (!regulatoryData?.timestamp) {
         await fetchRegulatoryData(false, true);
       } else {
+        // intentional: cached fresh regulatory data is sufficient
       }
 
       // Log all 5 Scout component request bodies on page load
@@ -4277,7 +4303,9 @@ const MarketResearch = React.memo(() => {
         if (profileData) {
           setCompanyProfile(JSON.parse(profileData));
         }
-      } catch (_error) {}
+      } catch (_error) {
+        // intentional: ignore corrupt cached profile
+      }
     };
 
     loadCompanyProfile();
@@ -5881,7 +5909,7 @@ const MarketResearch = React.memo(() => {
 
         break;
 
-      case "Funding News":
+      case "Funding News": {
         // Parse the old value back to array if it was stringified
 
         const fundingArray =
@@ -5892,6 +5920,7 @@ const MarketResearch = React.memo(() => {
         setCompetitorData((prev: UntypedReportState) => ({ ...prev, fundingNews: fundingArray }));
 
         break;
+      }
 
       // Section deletions - restore section
 
