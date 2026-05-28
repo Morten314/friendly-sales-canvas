@@ -120,7 +120,7 @@ Must be green for merge.
 
 1. **Step 0 re-baseline numbers (§7.1):** captured at execution start by Task 1 — the plan describes the procedure, not the numbers.
 2. **Wave A split decisions per area (§7.2):** ascending file-count within an area; if `prettier --write <area>` produces a diff >250 line-changes, split by sub-folder (next directory level down) or by file group (≤30 files per sub-commit). See Task 3.prep.
-3. **Wave B batching decisions (§7.3):** auto-fix sweeps ship as **one combined commit each per rule** unless the rule's `--fix` output exceeds 300 line-changes across the tree, in which case split by area following Wave A's order. Manual mechanical residue commits **group by area** (not by rule) following Wave A's order. See Task 4.prep.
+3. **Wave B batching decisions (§7.3):** auto-fix runs as **one combined `eslint --fix` sweep** producing a single commit, *unless* the total diff exceeds 500 line-changes (`insertions + deletions`), in which case the executor splits per-rule by reverting and re-applying with `--rule '<rule>: error'` per rule. Default is combined; split is the exception. This sidesteps ESLint v9 flat-config `--rule` flag uncertainty for the common case. Manual mechanical residue commits **group by area** (not by rule) following Wave A's order. See Task 4.prep.
 4. **Wave C within-pages ordering (§7.4):** ascending error count from the Step 0 probe JSON; alphabetical tiebreak. See Task 5.prep.
 5. **Wave D `checksVoidReturn` decision (§7.5):** **defer to Step 0 probe count**. If Step 0 surfaces ≥10 `no-misused-promises` violations in JSX-attribute contexts (counted as violations where the diagnostic message mentions `JSX attribute` or the location is a JSX attribute), Wave D's first commit (`Task 6.JSX-decision`) edits the `eslint.config.js` to add `"@typescript-eslint/no-misused-promises": ["error", { checksVoidReturn: { attributes: false } }]`. Otherwise the rule stays at default. Decision is recorded in the Step 6 scorecard.
 6. **`build-lint-probe.ts` location (§7.6):** **sibling script** under `frontend/scripts/build-lint-probe.ts` (not an extension of `build-strict-probe.ts`). Reason: distinct responsibility — the lint probe invokes `eslint`, `prettier`, and `find`, parses JSON output, writes 4 artifacts. Mixing surfaces with the strict-TS probe increases maintenance drag. The probe is implemented from scratch (no shared utilities needed beyond Node `fs`/`path`/`child_process`). Lifecycle: **kept permanently** as project tooling (re-runnable for future ESLint config audits), same precedent as Phase 2a's `build-strict-probe.ts`.
@@ -132,6 +132,8 @@ Must be green for merge.
 ---
 
 ## File Structure
+
+**Date convention for artifact filenames:** every `2026-05-28` reference in this plan anchors to the plan-writing date. If execution starts on a later date, the executor keeps the original `2026-05-28` anchor for all probe and re-probe artifacts (so cross-referencing during waves stays consistent). Only the final Step 6 scorecard file is renamed to the merge date via `git mv` (see Task 7.2).
 
 **Created:**
 - `frontend/scripts/build-lint-probe.ts` — new helper that creates a throwaway `eslint.probe.config.js`, runs `eslint . --max-warnings 0 --format json/text` + `prettier --check .` + `find` for area-tree, captures 4 artifacts, deletes the throwaway. Committed in Step 0 commit 0b. **Lifecycle: kept permanently as project tooling** (re-runnable for future ESLint config audits).
@@ -222,7 +224,18 @@ If `origin/master` has advanced and the new commits touch Phase 2b target files,
 
 **Files:** none (verification only).
 
-- [ ] **Step 1: Run preflight on the current branch state**
+- [ ] **Step 1: Verify required CLI tools resolve**
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence/frontend
+node --version          # expected: v22.x or v21.2+
+npm --version           # expected: 10.x
+npx tsx --version       # expected: 4.x.x (tsx 4.22.3+ per package.json)
+```
+
+Expected: all three print version strings. `tsx` is required for `build-lint-probe.ts` and any other helper scripts; if missing, `npm install` resolves it (it's a devDependency at `^4.22.3`).
+
+- [ ] **Step 2: Run preflight on the current branch state**
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
@@ -235,7 +248,7 @@ Note: `npm run lint` is `eslint .` (no `--max-warnings 0` yet), so it would surf
 
 If preflight is red on the unmodified branch: STOP — the baseline already fails. Diagnose before any Phase 2b work; the Step 6 binding gate requires preflight green at merge time.
 
-- [ ] **Step 2: Confirm the design-time lint/prettier baseline**
+- [ ] **Step 3: Confirm the design-time lint/prettier baseline**
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
@@ -251,7 +264,7 @@ npx prettier --check . 2>&1 | head -5 || echo "Expected: prettier not installed 
 
 Expected: `command not found` or `Cannot find module 'prettier'` — Prettier installs in Step 0 commit 0a.
 
-- [ ] **Step 3: Record the file/LOC baseline (anchor for scorecard's "before" column)**
+- [ ] **Step 4: Record the file/LOC baseline (anchor for scorecard's "before" column)**
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
@@ -261,7 +274,7 @@ find src -type f \( -name '*.ts' -o -name '*.tsx' \) -exec cat {} + | wc -l   # 
 
 Note actual numbers for the Step 6 scorecard. Significant drift (>5% delta from 142 / 59,651) is noted in scorecard's "Delta vs spec baseline" line; proceed.
 
-- [ ] **Step 4: Confirm the inline `any` and `@ts-*` baselines**
+- [ ] **Step 5: Confirm the inline `any` and `@ts-*` baselines**
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
@@ -271,7 +284,7 @@ rg -n '@ts-(ignore|expect-error|nocheck)' -g '*.ts' -g '*.tsx' src/ | wc -l    #
 
 These are the design-time non-regression baselines for Step 6 done-when items 7 and 9. Post-merge `@ts-*` count must be ≤5; post-merge inline `any` count is expected near zero in production paths (some allowed in test files per §3.3 override zone).
 
-- [ ] **Step 5: Confirm the existing escape-hatches state**
+- [ ] **Step 6: Confirm the existing escape-hatches state**
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
@@ -488,6 +501,8 @@ function classifyArea(absPath: string): string {
       if (!sub) return "components (loose)";
       return `components/${sub}`;
     }
+    // Fallback: return raw top-level dir name (e.g., src/types, src/constants).
+    // Probe is informational, not gate-enforcing, so an unknown sub-tree is fine.
     return top;
   }
   if (rel.startsWith("e2e/")) return "e2e";
@@ -1300,7 +1315,7 @@ git diff --shortstat src/components/mission-control/
 git checkout -- src/components/mission-control/
 ```
 
-Expected: diff stat shows e.g. `12 files changed, 234 insertions(+), 198 deletions(-)`. If line-change total (insertions + deletions) > 250, the area splits in Step 4 below. **Note:** `git diff --shortstat` shows lines, not "line-changes" — interpret the spec's 250-line threshold as `min(insertions, deletions) * 2` or `(insertions + deletions) / 2` (modified lines counted once). For simplicity: split if `insertions + deletions > 500` (roughly 250 modified lines + 250 added/removed).
+Expected: diff stat shows e.g. `12 files changed, 234 insertions(+), 198 deletions(-)`. Apply the spec's 250-line threshold directly to `insertions + deletions`: if the sum exceeds **250**, split into sub-area commits. Example: `234 + 198 = 432` → split. The spec's threshold is intentional (low enough to preserve commit-level bisection granularity across Wave A's mechanical reformat).
 
 For each area that needs splitting, the executor records the sub-area boundary decision in working notes (committed in Step 6 scorecard as the §7.2 plan-stage resolution).
 
@@ -1322,7 +1337,7 @@ git status -sb
 git diff --shortstat src/lib/ src/hooks/ src/utils/ src/services/ src/contexts/ src/styles/
 ```
 
-If diff exceeds the split threshold (>500 lines total), split into per-subfolder commits (one per: lib, hooks, utils, services, contexts, styles). Otherwise one combined commit.
+If diff exceeds the split threshold (>250 lines total per spec §4 Step 2), split into per-subfolder commits (one per: lib, hooks, utils, services, contexts, styles). Otherwise one combined commit.
 
 - [ ] **Step 2: Verify no non-formatting changes were introduced**
 
@@ -1421,7 +1436,7 @@ for area in layout signals strategist settings customers; do
 done
 ```
 
-Expected: each subfolder's diff is moderate (50–300 lines). If any single subfolder exceeds 500 lines, split that subfolder into per-file or per-component commits. Otherwise bundle into a single Group 3 commit.
+Expected: each subfolder's diff is moderate (50–250 lines). If any single subfolder exceeds 250 lines (spec §4 Step 2 threshold), split that subfolder into per-file or per-component commits. Otherwise bundle into a single Group 3 commit.
 
 - [ ] **Step 2: Run gate checks**
 
@@ -1462,7 +1477,7 @@ npx prettier --write src/components/market-research/
 git diff --shortstat src/components/market-research/
 ```
 
-Expected: large diff (likely >500 lines). Split by sub-folder if `market-research/` has structured subfolders (e.g., `sections/`, `cards/`); otherwise split by file groups of ≤30 files each.
+Expected: large diff (likely >250 lines, the spec §4 Step 2 split threshold). Split by sub-folder if `market-research/` has structured subfolders (e.g., `sections/`, `cards/`); otherwise split by file groups of ≤30 files each.
 
 ```bash
 # If sub-folders exist:
@@ -1603,17 +1618,28 @@ EOF
 
 **Files:** `e2e/**/*.ts`, `scripts/**/*.ts`, `vite.config.ts`, `tailwind.config.ts`, `postcss.config.js`, `playwright.config.ts`, `vitest.config.ts`.
 
-- [ ] **Step 1: Apply Prettier**
+- [ ] **Step 1: Enumerate existing config files (root-config existence pre-check)**
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
-npx prettier --write e2e/ scripts/ vite.config.ts tailwind.config.ts postcss.config.js playwright.config.ts vitest.config.ts
+ls *.config.* 2>/dev/null
+```
+
+Expected: a subset of `vite.config.ts`, `tailwind.config.ts`, `postcss.config.js`, `playwright.config.ts`, `vitest.config.ts`. Capture the actual list — that's what gets fed to `prettier --write`. If any expected file is missing or has a different extension (e.g., `.js` instead of `.ts`), use the actual filename in Step 2.
+
+- [ ] **Step 2: Apply Prettier**
+
+Substitute the actual config file list from Step 1 into the command:
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence/frontend
+# Replace <config-files> with the actual list from Step 1, e.g.:
+#   vite.config.ts tailwind.config.ts postcss.config.js playwright.config.ts vitest.config.ts
+npx prettier --write e2e/ scripts/ <config-files>
 git diff --shortstat
 ```
 
-Note: if any of the root config files don't exist (e.g., the project uses `vite.config.js` instead of `.ts`), drop them from the command. Run `ls *.config.* 2>/dev/null` first to see what's there.
-
-- [ ] **Step 2: Gate checks + commit**
+- [ ] **Step 3: Gate checks + commit**
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
@@ -1796,89 +1822,55 @@ PY
 
 Expected: counts close to Spec 18 §1.3 (e.g., `ban-types` ~11, `no-empty` ~46, `no-useless-escape` ~16). Wave B's commit count should be: 5 auto-fix sweeps + ~3–5 per-area manual residue + 1 unused-directives commit = ~9–11 commits.
 
-- [ ] **Step 2: Decide auto-fix batching per rule**
+- [ ] **Step 2: Measure the combined `eslint --fix` diff size (decides combined vs split)**
 
-For each auto-fix rule, estimate diff size by running a dry-run:
-
-```bash
-cd /projects/Brewra/brewra-gtm-intelligence/frontend
-for RULE in "@typescript-eslint/consistent-type-imports" "import-x/order" "@typescript-eslint/ban-types" "@typescript-eslint/no-empty-object-type"; do
-  echo "=== $RULE ==="
-  # Dry-run: apply, measure, reset
-  npx eslint . --fix --rule "{\"$RULE\":\"error\"}" --no-config-lookup --no-eslintrc 2>/dev/null || true
-  # The above doesn't quite work with v9 flat config; instead use the production config and grep:
-  # ...actually the simpler approach is to just apply --fix and check stat:
-  npx eslint . --fix --rule "$RULE: error" 2>&1 | tail -2
-  git diff --shortstat
-  git checkout -- .
-done
-```
-
-If any rule's diff exceeds 300 lines, split that rule's fix into per-area sub-commits following Wave A's order. Otherwise one commit per rule.
-
-Note: ESLint v9 flat config + `--rule` flag interaction can be finicky. The simpler approach is to just run `npx eslint . --fix` (which uses the full production config and fixes all auto-fixable violations across rules), then split the resulting diff into per-rule commits by inspecting which files changed and grouping. The alternative approach below uses staged-restore to isolate per-rule:
-
-```bash
-# Full --fix sweep, then per-rule selective staging:
-cd /projects/Brewra/brewra-gtm-intelligence/frontend
-npx eslint . --fix 2>&1 | tail -5
-# At this point all auto-fixes have been applied. Inspect by rule via diff:
-git diff --stat | head -20
-# To split into per-rule commits, the executor uses `git add -p` and selects hunks
-# matching each rule's known transformation pattern (e.g., consistent-type-imports
-# adds `import type` keywords; import-x/order rearranges import blocks). This is
-# tedious; in practice the simpler path is "one combined auto-fix commit" if the
-# total diff is moderate.
-```
-
-**Recommended path:** if total `eslint --fix` diff is <500 lines, ship one combined commit `refactor(fe): apply eslint --fix (consistent-type-imports + import-x/order + ban-types + no-empty-object-type)`. If >500 lines, isolate per-rule by reverting then re-applying with `--rule` flag per rule (the `--rule` flag does work in v9; the alternative-syntax dry-run above just needs the correct invocation).
-
-### Task 4.1 — Auto-fix sweep: `@typescript-eslint/consistent-type-imports`
-
-**Files:** Variable; all files importing types.
-
-- [ ] **Step 1: Reset working tree to clean state (drop the dry-run from Task 4.prep)**
+Per the header's plan-stage decision #3, the binding default is **one combined `eslint --fix` sweep**, with per-rule split only when the combined diff exceeds 500 line-changes.
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
-git checkout -- .
-git status
-```
-
-Expected: clean working tree.
-
-- [ ] **Step 2: Apply the rule's auto-fix**
-
-```bash
-cd /projects/Brewra/brewra-gtm-intelligence/frontend
-# v9 flat config supports --rule with this syntax (object form);
-# the rule must already be defined in the active config (it is, post-Step-1).
-# The simplest way to constrain --fix to one rule is to disable everything else,
-# but that requires a temporary config. Instead, run --fix once and isolate per
-# rule via diff inspection IF the per-rule path is required. Default path here:
-# combined --fix.
-npx eslint . --fix --rule '@typescript-eslint/consistent-type-imports: error' 2>&1 | tail -3
-git diff --shortstat
-```
-
-Expected: diff is moderate (50–200 lines). The rule transforms `import { Foo } from 'bar'` (where `Foo` is type-only) into `import type { Foo } from 'bar'`.
-
-If running per-rule `--fix` doesn't work cleanly in v9 flat config, fall back to combined approach:
-
-```bash
-# Fallback: combined --fix, then isolate by manual diff inspection
 npx eslint . --fix 2>&1 | tail -3
 git diff --shortstat
-# Stage just the type-import changes:
-git diff --name-only | while read f; do
-  if git diff "$f" | grep -qE '^[-+]\s*import (type )?'; then
-    git add "$f"
-  fi
-done
-git status -sb  # confirm staged-vs-unstaged split
 ```
 
-The simplest robust path is: apply combined `--fix`, then ship a single combined auto-fix commit. Per-rule splitting only matters if the diff is huge.
+Read the `insertions + deletions` total from `--shortstat`.
+
+- **If sum ≤ 500:** ship as one combined commit (Task 4.1 below). Skip Tasks 4.2 and 4.3 (per-rule fallback paths).
+- **If sum > 500:** reset, then execute Tasks 4.1, 4.2, 4.3 individually with `--rule '<rule>: error'`. The `--rule` flag does work in ESLint v9 flat config when the rule is already declared in the active config (verified by the post-Step-1 state).
+
+After measuring, reset the working tree before Task 4.1 applies it for real:
+
+```bash
+git checkout -- .
+git status   # expected: clean
+```
+
+**Wave B / Prettier whitespace interaction note (Spec 18 §2.4 posture rule 9):** Wave B's `--fix` output may include trivial whitespace deltas on lines Prettier (Wave A) already moved. This is benign and expected — `import-x/order`'s sort can re-arrange blocks whose individual lines are Prettier-formatted, producing diffs where unchanged lines appear because their line numbers shifted. The posture-rule-9 purity check is "no non-rule-targeted code changes," not "no whitespace changes." Do not treat these as posture violations.
+
+### Task 4.1 — Combined `eslint --fix` sweep (default path)
+
+This is the binding default per header plan-stage decision #3. Tasks 4.2 and 4.3 are the per-rule fallback paths, executed only if Task 4.prep Step 2 measured >500 line-changes.
+
+**Files:** Variable; all files with auto-fixable lint violations.
+
+- [ ] **Step 1: Apply combined `eslint --fix`**
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence/frontend
+npx eslint . --fix 2>&1 | tail -5
+git diff --shortstat
+```
+
+Expected: violations from `consistent-type-imports`, `import-x/order`, `ban-types`, `no-empty-object-type`, and any other auto-fixable rules are all resolved in one sweep. The shortstat shows the total diff (which Task 4.prep already measured ≤500 if this default path applies).
+
+- [ ] **Step 2: Spot-check the diff is rule-targeted (no logic edits)**
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence/frontend
+git diff --stat | head -20
+git diff src/lib/ | head -50   # sample area; verify changes are import/type-syntax only
+```
+
+Expected: changes are `import X` → `import type X`, import-block reorderings, `{}` → `object` substitutions, and similar mechanical transforms. No identifier renames, no expression edits, no JSX changes. If logic edits appear, abort the commit and reset (`git checkout -- .`) — `eslint --fix` should never change semantics.
 
 - [ ] **Step 3: Gate checks**
 
@@ -1889,20 +1881,24 @@ npx vitest run
 npm run typecheck
 ```
 
-Expected: all green. Auto-fixes are import-syntax-only.
+Expected: all green. Auto-fixes are import/type-syntax-only.
 
-- [ ] **Step 4: Commit**
-
-If per-rule commit:
+- [ ] **Step 4: Commit (combined)**
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
-git add -A  # all staged changes from Step 2
+git add -A
 git commit -m "$(cat <<'EOF'
-refactor(fe): apply consistent-type-imports --fix
+refactor(fe): apply eslint --fix (Wave B auto-fix sweep)
 
-Wave B auto-fix sweep: @typescript-eslint/consistent-type-imports.
-Converts type-only imports from `import { Foo }` to `import type { Foo }`.
+Combined Wave B auto-fix sweep, covering all auto-fixable rules in
+one commit (default path per plan stage decision #3):
+- @typescript-eslint/consistent-type-imports: import → import type
+- import-x/order: import-block reordering and grouping
+- @typescript-eslint/ban-types (~11): {} → object, Function → specific
+  per context, Boolean/Number/String/Object → lowercase primitives
+- @typescript-eslint/no-empty-object-type (~3 auto-fixable; manual
+  residue handled by Task 4.4)
 
 Pure mechanical transform (ESLint --fix output verbatim, no manual
 edits — Spec 18 §2.4 posture rule 9). No runtime change.
@@ -1910,55 +1906,55 @@ edits — Spec 18 §2.4 posture rule 9). No runtime change.
 Spec 18 §4 Step 3 Wave B.
 EOF
 )"
+git log --oneline -1
 ```
 
-If combined commit (with multiple rules' auto-fixes batched):
+**If Task 4.prep Step 2 measured >500 lines (split path):** skip this combined-commit Step 4 and execute Tasks 4.2 + 4.3 individually instead. Reset (`git checkout -- .`) before starting Task 4.2.
 
-```bash
-git commit -m "$(cat <<'EOF'
-refactor(fe): apply eslint --fix (Wave B auto-fix sweep)
+Split-path per-rule sequence (in order, one commit each):
+1. `consistent-type-imports` (covered as Task 4.2 Step 1's first command — see Task 4.2 note below; this rule runs first because it often resolves downstream `import-x/order` flags as side effect)
+2. `import-x/order` (Task 4.2's main sweep)
+3. `ban-types` (Task 4.3)
+4. `no-empty-object-type` auto-fix (covered by Task 4.4 Step 1's recheck)
 
-Combined Wave B auto-fix output covering:
-- @typescript-eslint/consistent-type-imports (~N): import → import type
-- import-x/order (~N): import-block reordering and grouping
-- @typescript-eslint/ban-types (~11): {} → object, Function → specific
-- @typescript-eslint/no-empty-object-type (~3): {} → object/unknown
+Each `--rule '<name>: error'` per-rule sweep uses the production config's rule definition (no temporary config needed in ESLint v9 flat config when the rule is already declared, as it is post-Step-1).
 
-Pure mechanical transform (ESLint --fix output verbatim — Spec 18
-§2.4 posture rule 9). No runtime change.
+### Task 4.2 — Split-path: `consistent-type-imports` + `import-x/order` (skip in default path)
 
-Spec 18 §4 Step 3 Wave B.
-EOF
-)"
-```
-
-### Task 4.2 — Auto-fix sweep: `import-x/order` (if separate from Task 4.1)
-
-If Task 4.1 was a combined commit, **skip this task**. Otherwise:
+**Only run this task if Task 4.prep Step 2 chose the split path.** If Task 4.1 was a combined commit, **skip this task**. Otherwise two commits (one per rule), in this order:
 
 **Files:** Variable; most files with import blocks.
 
-- [ ] **Step 1: Apply per-rule fix**
+- [ ] **Step 1: Apply `consistent-type-imports --fix` first**
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence/frontend
+npx eslint . --fix --rule '@typescript-eslint/consistent-type-imports: error' 2>&1 | tail -3
+git diff --shortstat
+npx vite build && npx vitest run && npm run typecheck
+cd ..
+git add -A
+git commit -m "refactor(fe): apply consistent-type-imports --fix"
+cd frontend
+```
+
+Run first because the rule's transform (`import { Foo }` → `import type { Foo }`) can affect which import lines `import-x/order` re-positions.
+
+- [ ] **Step 2: Apply `import-x/order --fix` second**
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
 npx eslint . --fix --rule 'import-x/order: error' 2>&1 | tail -3
 git diff --shortstat
-```
-
-- [ ] **Step 2: Gate checks + commit**
-
-```bash
-cd /projects/Brewra/brewra-gtm-intelligence/frontend
 npx vite build && npx vitest run && npm run typecheck
 cd ..
 git add -A
 git commit -m "refactor(fe): apply import-x/order --fix"
 ```
 
-### Task 4.3 — Auto-fix sweep: `@typescript-eslint/ban-types` (if separate)
+### Task 4.3 — Split-path: `@typescript-eslint/ban-types` (skip in default path)
 
-If Task 4.1 was combined, **skip**. Otherwise:
+**Only run this task if Task 4.prep Step 2 chose the split path.** If Task 4.1 was combined, **skip**. Otherwise:
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
@@ -2195,10 +2191,12 @@ Expected: all green.
 
 - [ ] **Step 2: Verify residual error categories match Wave C/D rules only**
 
+ESLint emits the JSON report to stdout and diagnostic messages (config errors, parser failures) to stderr. The pipe below captures stderr to `/tmp/eslint-stderr.log` so a config error doesn't silently corrupt the JSON parse. If the python script fails with `json.JSONDecodeError`, inspect `/tmp/eslint-stderr.log` for the root cause before re-running.
+
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
 npx eslint . 2>&1 | tail -3
-npx eslint . --format json 2>/dev/null | python3 -c '
+npx eslint . --format json 2>/tmp/eslint-stderr.log | python3 -c '
 import json, sys
 data = json.load(sys.stdin)
 from collections import defaultdict
@@ -2641,7 +2639,7 @@ cd /projects/Brewra/brewra-gtm-intelligence/frontend
 # no-misused-promises messages mentioning JSX attribute contexts:
 npx eslint . 2>&1 | grep "no-misused-promises" | head -20
 # More precisely:
-npx eslint . --format json 2>/dev/null | python3 -c '
+npx eslint . --format json 2>/tmp/eslint-stderr.log | python3 -c '
 import json, sys
 data = json.load(sys.stdin)
 jsx_attr_count = 0
@@ -2787,6 +2785,8 @@ EOF
 Approximate cadence: 5–10 minutes per file (semantic fixes need more thought than Wave C's mechanical type annotations).
 
 ### Task 6.rules-of-hooks — Fix the single `rules-of-hooks` violation
+
+**Order:** runs **last in Wave D**, after Task 6.loop's per-file fixes complete. Reason: this is the highest-risk Wave D edit because hooks restructuring can change rendering behavior (a hook moved out of a conditional now runs every render); finishing the lower-risk per-site fixes first ensures the runtime is otherwise stable when this commit lands, isolating any regression to the rules-of-hooks restructure.
 
 **Files:** Variable; the one component with the `rules-of-hooks` violation.
 
@@ -3007,17 +3007,70 @@ print(f"  By rule (warnings): {b['warningsByRule']}")
 PY
 cat /tmp/phase-2b-notes/scorecard-data.txt
 
-# Diff stats per wave:
-WAVE_A_START=$(git log --reverse --format='%H %s' master..HEAD | grep -m1 "style(fe): prettier format" | awk '{print $1}')
-WAVE_A_END_SHA=$(git log --format='%H %s' master..HEAD | grep -m1 "chore(fe): add Wave A prettier commits" | awk '{print $1}')
+# Diff stats per wave — explicit commit-range identification per wave by
+# matching commit subjects, then aggregating with `git diff --stat`.
 
-echo "=== Per-wave diff stats ==="
-echo "Step 0:"
-git diff --stat $(git rev-list master..HEAD --reverse | head -2 | tail -1)~..$(git rev-list master..HEAD --reverse | head -2 | tail -1)
-echo "Step 1:"
-# ... iterate per wave's commit range
-echo "Full Phase 2b diff:"
-git diff --stat master..HEAD | tail -1
+range_stats () {
+  # $1 = start ref (exclusive), $2 = end ref (inclusive), $3 = label
+  if [ -z "$1" ] || [ -z "$2" ]; then echo "$3: (no commits in range)"; return; fi
+  echo "=== $3 ==="
+  git diff --shortstat "$1".."$2"
+}
+
+first_sha_matching () {
+  # First commit on master..HEAD whose subject matches the pattern
+  git log --reverse --format='%H %s' master..HEAD | grep -m1 -E "$1" | awk '{print $1}'
+}
+last_sha_matching () {
+  git log --format='%H %s' master..HEAD | grep -m1 -E "$1" | awk '{print $1}'
+}
+
+# Step 0: install + probe (two commits, identified by their subjects)
+STEP0_START=$(first_sha_matching "^[a-f0-9]+ chore\(fe\): install prettier")
+STEP0_END=$(first_sha_matching "^[a-f0-9]+ chore\(audits\): phase 2b lint\+prettier re-baseline")
+range_stats "$STEP0_START~" "$STEP0_END" "Step 0"
+
+# Step 1: single commit
+STEP1=$(first_sha_matching "^[a-f0-9]+ chore\(fe\): wire eslint type-aware rules \+ prettier config")
+range_stats "$STEP1~" "$STEP1" "Step 1"
+
+# Wave A: first 'style(fe): prettier format' through the '.git-blame-ignore-revs' aggregation commit
+WAVE_A_START=$(first_sha_matching "^[a-f0-9]+ style\(fe\): prettier format")
+WAVE_A_END=$(first_sha_matching "^[a-f0-9]+ chore\(fe\): add Wave A prettier commits to git blame ignore-revs")
+range_stats "$WAVE_A_START~" "$WAVE_A_END" "Wave A"
+
+# Wave A re-probe: post-Wave-A audits commit
+WAVE_A_PROBE=$(first_sha_matching "^[a-f0-9]+ chore\(audits\): phase 2b post-Wave-A lint re-probe")
+range_stats "$WAVE_A_PROBE~" "$WAVE_A_PROBE" "Wave A re-probe"
+
+# Wave B: first refactor(fe) commit after Wave A probe; spans through post-Wave-B re-probe
+WAVE_B_END=$(first_sha_matching "^[a-f0-9]+ chore\(audits\): phase 2b post-Wave-B lint re-probe")
+WAVE_B_START=$(git log --reverse --format='%H %s' "$WAVE_A_PROBE..$WAVE_B_END" | head -1 | awk '{print $1}')
+range_stats "$WAVE_B_START~" "$WAVE_B_END" "Wave B (incl. post-Wave-B probe)"
+
+# Wave C: from after Wave B probe through post-Wave-C re-probe
+WAVE_C_END=$(first_sha_matching "^[a-f0-9]+ chore\(audits\): phase 2b post-Wave-C lint re-probe")
+WAVE_C_START=$(git log --reverse --format='%H %s' "$WAVE_B_END..$WAVE_C_END" | head -1 | awk '{print $1}')
+range_stats "$WAVE_C_START~" "$WAVE_C_END" "Wave C (incl. post-Wave-C probe)"
+
+# Wave D: from after Wave C probe up to (but not including) Step 6's scorecard commit
+SCORECARD=$(last_sha_matching "^[a-f0-9]+ docs\(audits\): phase 2b eslint\+prettier scorecard")
+# If scorecard not yet committed (we're in the middle of writing it), use HEAD
+if [ -z "$SCORECARD" ]; then SCORECARD=HEAD; fi
+WAVE_D_START=$(git log --reverse --format='%H %s' "$WAVE_C_END..$SCORECARD" | head -1 | awk '{print $1}')
+# Wave D ends just before any residual-fix or scorecard commit
+WAVE_D_END=$(git log --reverse --format='%H %s' "$WAVE_C_END..HEAD" | grep -v -E "(residual phase 2b|eslint\+prettier scorecard)" | tail -1 | awk '{print $1}')
+range_stats "$WAVE_D_START~" "$WAVE_D_END" "Wave D"
+
+# Step 6: residual fixes (if any) + scorecard
+STEP6_START=$(first_sha_matching "^[a-f0-9]+ (fix\(fe\): residual phase 2b|docs\(audits\): phase 2b eslint\+prettier scorecard)")
+if [ -n "$STEP6_START" ]; then
+  range_stats "$STEP6_START~" "$SCORECARD" "Step 6"
+fi
+
+# Full Phase 2b diff:
+echo "=== Full Phase 2b ==="
+git diff --shortstat master..HEAD
 
 # Escape-hatches delta:
 PRE=$(git show master:frontend/src/lib/types/escape-hatches.ts 2>/dev/null | grep -c '^export type Untyped' || echo 0)
@@ -3193,20 +3246,3 @@ git log --oneline master..HEAD | head -20
 ```
 
 Note the total commit count and recent commits — input for the impl-review and the eventual merge ceremony.
-
----
-
-## Self-Review Notes
-
-This plan implements all sections of Spec 18:
-
-- **Spec §1 (Goal/context):** Plan header restates Goal; Architecture explains the 4-wave / 6-step approach; Baseline anchors numbers.
-- **Spec §2 (Scope):** Task 2 lands all in-scope config; Wave B/C/D loops drive lint-green; out-of-scope items (Phase 3/4/13) are not touched.
-- **Spec §3 (Configuration target):** Task 2 (Step 1) creates eslint.config.js + .prettierrc + .prettierignore + .git-blame-ignore-revs with the exact §3 content.
-- **Spec §4 (Methodology):** Steps 0–6 map 1:1 to the plan's Tasks 1.0a/1.0b, 2, 3.x, 4.x, 5.x, 6.x, 7.x.
-- **Spec §5 (Done-when):** Task 7.1 verifies each of the 11 items individually.
-- **Spec §6 (Risks):** Inherited in the plan's wave-specific gate procedures and cascade-recovery section in the header.
-- **Spec §7 (Open questions):** All 8 questions resolved with plan-stage decisions in the header.
-- **Spec §8 (Companion documents):** Referenced throughout the plan as relevant.
-
-The plan assumes Spec 18 reviews (rounds 1 and 2) have been incorporated — verified by the spec's `Status: Design — round 3` header.
