@@ -967,8 +967,9 @@ export const DataHistoryDialog = ({ onReportSelected }: DataHistoryDialogProps) 
 
   useEffect(() => {
     if (isOpen && reportHistory.length === 0) {
-      fetchHistoryData();
+      void fetchHistoryData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchHistoryData stable; reportHistory.length intentionally read as a one-shot guard to avoid refetch loops
   }, [isOpen]);
 
   const parseTimestamp = (timestamp: string): Date => {
@@ -1210,7 +1211,7 @@ export const DataHistoryDialog = ({ onReportSelected }: DataHistoryDialogProps) 
                           className="text-xs h-7 px-3 hover:bg-blue-50"
                           onClick={(e) => {
                             e.stopPropagation();
-                            fetchSpecificReport(timestamp);
+                            void fetchSpecificReport(timestamp);
                           }}
                         >
                           <TrendingUp className="h-3 w-3 mr-1" />
