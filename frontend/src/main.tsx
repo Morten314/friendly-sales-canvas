@@ -21,8 +21,10 @@ if (import.meta.env.PROD) {
   // If a service worker was registered previously, it can keep serving old bundles.
   // Unregister in dev to ensure the preview always reflects the latest code.
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.getRegistrations().then((regs) => {
-      regs.forEach((r) => r.unregister());
+    void navigator.serviceWorker.getRegistrations().then((regs) => {
+      regs.forEach((r) => {
+        void r.unregister();
+      });
     });
   }
 }

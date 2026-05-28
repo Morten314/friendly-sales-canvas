@@ -32,7 +32,7 @@ export const useAuth = () => {
       }
     };
 
-    generateToken();
+    void generateToken();
   }, [firebaseAuth.currentUser, selectedTenant, jwtToken]);
 
   // Clear JWT token when user logs out or tenant changes

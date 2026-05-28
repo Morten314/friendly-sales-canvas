@@ -312,7 +312,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         } else {
           // Fetch org data if not in localStorage
-          fetchOrgId(user.uid);
+          void fetchOrgId(user.uid);
         }
       } else {
         setOrgId(null);

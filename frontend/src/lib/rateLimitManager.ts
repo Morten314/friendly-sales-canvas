@@ -114,7 +114,7 @@ class RateLimitManager {
 
           setTimeout(() => {
             this.requestQueue.unshift(request);
-            this.processQueue();
+            void this.processQueue();
           }, delay);
         } else {
           // Max retries reached or non-rate-limit error
