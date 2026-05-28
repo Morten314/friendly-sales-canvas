@@ -434,6 +434,12 @@ const MissionControl = () => {
             dealSize: (localProfile.typical_deal_size || localProfile.dealSize || "") as string,
             companyUrl: (localProfile.company_url || localProfile.companyUrl || "") as string,
             keyBuyerPersona: (localProfile.key_buyer_persona || localProfile.keyBuyerPersona || "") as string,
+            goals: (localProfile.goals || "") as string,
+            painPoints: (localProfile.pain_points || localProfile.painPoints || "") as string,
+            targetSegments: (localProfile.target_segments || localProfile.targetSegments || "") as string,
+            excludeSegments: (localProfile.exclude_segments || localProfile.excludeSegments || "") as string,
+            compliance: (localProfile.compliance || "") as string,
+            constraints: (localProfile.constraints || "") as string,
           };
           setCompanyProfile(profileData);
           if (localProfile.company_name || localProfile.companyName) {
