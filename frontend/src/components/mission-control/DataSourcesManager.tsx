@@ -398,15 +398,17 @@ const DataSourcesManager: React.FC = () => {
       );
 
       // Check status for each processing file using file_key
-      processingFiles.forEach(async (file) => {
-        try {
-          const statusPayload = await checkDocumentStatus(file.id);
-          setDataSources((prev) =>
-            prev.map((s) => (s.id === file.id ? { ...s, status: statusPayload.status } : s)),
-          );
-        } catch (err) {
-          console.error(`Error checking status for file ${file.id}:`, err);
-        }
+      processingFiles.forEach((file) => {
+        void (async () => {
+          try {
+            const statusPayload = await checkDocumentStatus(file.id);
+            setDataSources((prev) =>
+              prev.map((s) => (s.id === file.id ? { ...s, status: statusPayload.status } : s)),
+            );
+          } catch (err) {
+            console.error(`Error checking status for file ${file.id}:`, err);
+          }
+        })();
       });
 
       return currentSources;
@@ -831,8 +833,9 @@ const DataSourcesManager: React.FC = () => {
   // Load data sources on mount
   useEffect(() => {
     if (currentUser?.uid) {
-      loadDataSourcesFromBackend();
+      void loadDataSourcesFromBackend();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadDataSourcesFromBackend is stable within scope; intentionally watches only user identity edge
   }, [currentUser?.uid]);
 
   // Form state
@@ -1077,7 +1080,8 @@ const DataSourcesManager: React.FC = () => {
 
           // Reload documents from backend to get the new file_key
           // Then apply the custom name, tags, and description to the newly uploaded file
-          setTimeout(async () => {
+          setTimeout(() => {
+            void (async () => {
             try {
               console.log(
                 "🔄 DataSourcesManager - Reloading after upload, applying metadata:",
@@ -1197,11 +1201,12 @@ const DataSourcesManager: React.FC = () => {
 
               // Poll status for processing files after a delay
               setTimeout(() => {
-                checkProcessingFilesStatus();
+                void checkProcessingFilesStatus();
               }, 2000);
             } catch (err) {
               console.error("Error reloading documents after upload:", err);
             }
+            })();
           }, 1000);
         } else if (editingId) {
           // Editing existing file source - update metadata via PUT API
@@ -1356,14 +1361,16 @@ const DataSourcesManager: React.FC = () => {
 
             // Reload from backend after a short delay to ensure state is synced
             // This ensures that after refresh, the updated data is properly matched
-            setTimeout(async () => {
-              try {
-                console.log("🔄 DataSourcesManager - Reloading after PUT update to sync state");
-                await loadDataSourcesFromBackend();
-              } catch (err) {
-                console.error("Error reloading after update:", err);
-                // Don't show error to user - local state is already updated
-              }
+            setTimeout(() => {
+              void (async () => {
+                try {
+                  console.log("🔄 DataSourcesManager - Reloading after PUT update to sync state");
+                  await loadDataSourcesFromBackend();
+                } catch (err) {
+                  console.error("Error reloading after update:", err);
+                  // Don't show error to user - local state is already updated
+                }
+              })();
             }, 500);
           } catch (error) {
             console.error("Error updating data source:", error);
@@ -1637,14 +1644,16 @@ const DataSourcesManager: React.FC = () => {
             updateSuccess = true;
 
             // Reload from backend after a short delay to ensure state is synced
-            setTimeout(async () => {
-              try {
-                console.log("🔄 DataSourcesManager - Reloading after PUT update to sync state");
-                await loadDataSourcesFromBackend();
-              } catch (err) {
-                console.error("Error reloading after URL update:", err);
-                // Don't show error to user - local state is already updated
-              }
+            setTimeout(() => {
+              void (async () => {
+                try {
+                  console.log("🔄 DataSourcesManager - Reloading after PUT update to sync state");
+                  await loadDataSourcesFromBackend();
+                } catch (err) {
+                  console.error("Error reloading after URL update:", err);
+                  // Don't show error to user - local state is already updated
+                }
+              })();
             }, 500);
           } catch (error) {
             console.error("Error updating URL data source:", error);
@@ -1694,7 +1703,8 @@ const DataSourcesManager: React.FC = () => {
 
           // Reload documents from backend to get the new URL entry
           // Then apply the custom name, tags, and description to the newly uploaded URL
-          setTimeout(async () => {
+          setTimeout(() => {
+            void (async () => {
             try {
               console.log(
                 "🔄 DataSourcesManager - Reloading after URL upload, applying metadata:",
@@ -1774,6 +1784,7 @@ const DataSourcesManager: React.FC = () => {
             } catch (err) {
               console.error("Error reloading documents after URL upload:", err);
             }
+            })();
           }, 1000);
         }
       } else {
@@ -2693,6 +2704,7 @@ const DataSourcesManager: React.FC = () => {
         }
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- filterVisibleLeadStreamFiles is a non-memoized helper reading only refs; including it would defeat useCallback memoization without behavior change
     [currentUser?.uid, orgIdToUse],
   );
 
