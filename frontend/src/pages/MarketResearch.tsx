@@ -14,10 +14,20 @@ import { useNavigate, useLocation } from "react-router-dom";
 import type { DeploymentData } from "@/components/layout/Header";
 import { Layout } from "@/components/layout/Layout";
 import { ChatWithScout } from "@/components/market-research/ChatWithScout";
+import EditHistoryPanel from "@/components/market-research/EditHistoryPanel";
 import { MarketDetailDrawer } from "@/components/market-research/MarketDetailDrawer";
+import SafeMarketIntelligenceTab from "@/components/market-research/SafeMarketIntelligenceTab";
+import { ScoutDeploymentDetails } from "@/components/market-research/ScoutDeploymentDetails";
 import ScoutLeadStream from "@/components/market-research/ScoutLeadStream";
+import { ScoutSettingsForm } from "@/components/market-research/ScoutSettingsForm";
+import { ScoutChatWithHistory } from "@/components/signals/ScoutChatWithHistory";
+import type { SignalsChatContext } from "@/components/signals/SignalsContextChat";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import type { UntypedReportState, UntypedUiComponent } from "@/lib/types/escape-hatches";
 import {
@@ -26,14 +36,6 @@ import {
   removeUserLocalStorage,
 } from "@/utils/cacheUtils";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { ScoutDeploymentDetails } from "@/components/market-research/ScoutDeploymentDetails";
-import { ScoutSettingsForm } from "@/components/market-research/ScoutSettingsForm";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import SafeMarketIntelligenceTab from "@/components/market-research/SafeMarketIntelligenceTab";
-import EditHistoryPanel from "@/components/market-research/EditHistoryPanel";
 import { toUTCTimestamp, isTimestampNewer, logTimestampComparison } from "@/lib/timestampUtils";
 import { buildApiUrl } from "@/lib/api";
 import { logApiCallResult } from "@/utils/apiUtils";
@@ -41,8 +43,6 @@ import {
   buildLeadStreamChatContext,
   LEAD_STREAM_CHAT_CONTEXT_KEY,
 } from "@/utils/leadStreamChatContext";
-import type { SignalsChatContext } from "@/components/signals/SignalsContextChat";
-import { ScoutChatWithHistory } from "@/components/signals/ScoutChatWithHistory";
 import { useToast } from "@/hooks/use-toast";
 
 // Define types for the API response

@@ -24,10 +24,12 @@ import {
 } from "lucide-react";
 import React, { useState, useEffect } from "react";
 
-import { EditRecord } from "./types";
-
-import MiniPieChart from "../MiniPieChart";
 import MiniLineChart from "../MiniLineChart";
+import MiniPieChart from "../MiniPieChart";
+
+import type { EditRecord } from "./types";
+
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
