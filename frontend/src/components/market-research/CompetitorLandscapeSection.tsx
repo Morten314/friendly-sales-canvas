@@ -513,6 +513,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       if (trendsComponent?.charts) setLocalCharts(trendsComponent.charts);
       if (sectionComponent?.metrics) setLocalMetrics(sectionComponent.metrics);
     }
+    // localExecutiveSummary/localTopPlayerShare/localEmergingPlayers
+    // intentionally omitted: this effect is the writer for them; including
+    // them as deps would create a write-then-read loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     executiveSummary,
     topPlayerShare,
@@ -896,6 +900,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     if (emergingPlayers && emergingPlayers !== localEmergingPlayers) {
       setLocalEmergingPlayers(emergingPlayers);
     }
+    // localExecutiveSummary/localTopPlayerShare/localEmergingPlayers
+    // intentionally omitted: this effect compares props vs locals and
+    // writes locals; including them as deps would create a re-sync loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [executiveSummary, topPlayerShare, emergingPlayers]);
 
   // Check if we have any data to show (competitorData, local state, or props)
@@ -2592,7 +2600,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                       onFundingNewsChange(localHeadlines);
 
                       // Then call the API save function
-                      handleCompetitorLandscapeSaveChanges();
+                      void handleCompetitorLandscapeSaveChanges();
                     }}
                     className="bg-blue-600 hover:bg-blue-700"
                   >
