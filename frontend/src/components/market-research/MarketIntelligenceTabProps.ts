@@ -1,13 +1,18 @@
 import type { EditRecord, TrendSnapshot, IndustryTrendsRecommendations } from "./types";
 
+import type {
+  UntypedBackendProfile,
+  UntypedReportState,
+} from "@/lib/types/escape-hatches";
+
 export interface MarketIntelligenceTabProps {
   // General refresh state for all components
   isRefreshing?: boolean;
-  companyProfile?: any;
+  companyProfile?: UntypedBackendProfile;
 
   // Add centralized data props
-  competitorData?: any;
-  regulatoryData?: any;
+  competitorData?: UntypedReportState;
+  regulatoryData?: UntypedReportState;
 
   // Market Size Section
   isEditing: boolean;

@@ -29,6 +29,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetchJson } from "@/lib/api";
 import { executeWithRateLimit } from "@/lib/rateLimitManager";
+import type { UntypedBackendProfile, UntypedReportState } from "@/lib/types/escape-hatches";
 import { setUserLocalStorage } from "@/utils/cacheUtils";
 
 interface MarketSizeSectionProps {
@@ -76,7 +77,7 @@ interface MarketSizeSectionProps {
   error?: string | null;
   onRefresh?: () => void;
   isRefreshing?: boolean;
-  companyProfile?: any;
+  companyProfile?: UntypedBackendProfile;
 }
 
 const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
@@ -129,7 +130,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   // API data fetching state
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [_errorData, setErrorData] = useState<string | null>(null);
-  const [_marketSizeData, setMarketSizeData] = useState<any>(null);
+  const [_marketSizeData, setMarketSizeData] = useState<UntypedReportState>(null);
 
   // Local editing state for inline editing - initialize once and keep values
   const [localExecutiveSummary, setLocalExecutiveSummary] = useState(executiveSummary || "");

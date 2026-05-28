@@ -1997,7 +1997,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetchJson } from "@/lib/api";
 import { executeWithRateLimit } from "@/lib/rateLimitManager";
-import type { UntypedReportState, UntypedReportSection } from "@/lib/types/escape-hatches";
+import type {
+  UntypedReportState,
+  UntypedReportSection,
+  UntypedBackendProfile,
+} from "@/lib/types/escape-hatches";
 import { getUserLocalStorage } from "@/utils/cacheUtils";
 
 interface MarketEntrySectionProps {
@@ -2035,7 +2039,7 @@ interface MarketEntrySectionProps {
   onGenerateShareableLink: () => void;
   // Add refresh props
   isRefreshing?: boolean;
-  companyProfile?: any;
+  companyProfile?: UntypedBackendProfile;
 }
 
 const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
@@ -2078,7 +2082,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [_error, setError] = useState<string | null>(null);
-  const [marketEntryData, setMarketEntryData] = useState<any>(null);
+  const [marketEntryData, setMarketEntryData] = useState<UntypedReportState>(null);
   // Use ref to track if we have API data to prevent props from overwriting it
   const hasApiDataRef = useRef(false);
   const apiDataTimestampRef = useRef<number | null>(null);
@@ -2483,7 +2487,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           }
 
           // Only include swotAnalysis in update if it actually exists (don't set undefined)
-          const updateData: any = {
+          const updateData: Record<string, unknown> = {
             executiveSummary,
             entryBarriers,
             recommendedChannel,

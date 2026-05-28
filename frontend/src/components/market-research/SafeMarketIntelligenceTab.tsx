@@ -7,25 +7,31 @@ import type { MarketIntelligenceTabProps } from "./MarketIntelligenceTabProps";
 
 const SafeMarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) => {
   // Check for problematic objects before rendering
-  const checkForObjects = (obj: any, path = "") => {
+  const checkForObjects = (obj: unknown, path = "") => {
     // Skip regionalHotspots - it's correctly an object from backend with region keys
     if (path === "industryTrendsRegionalHotspots") {
       return; // This is expected to be an object, don't flag it
     }
 
-    if (obj && typeof obj === "object" && !React.isValidElement(obj) && !Array.isArray(obj)) {
-      if (obj.channel || obj.channelMix || obj.trigger || obj.description) {
+    if (
+      obj &&
+      typeof obj === "object" &&
+      !React.isValidElement(obj) &&
+      !Array.isArray(obj)
+    ) {
+      const r = obj as Record<string, unknown>;
+      if (r.channel || r.channelMix || r.trigger || r.description) {
         console.error("🚨 FOUND PROBLEMATIC OBJECT:", path, obj);
       }
       // Check for targetMarkets object that might be rendered directly
       if (
-        obj["North America"] ||
-        obj["Europe"] ||
-        obj["Asia Pacific"] ||
-        obj["Latin America"] ||
-        obj["US"] ||
-        obj["Canada"] ||
-        obj["Australia"]
+        r["North America"] ||
+        r["Europe"] ||
+        r["Asia Pacific"] ||
+        r["Latin America"] ||
+        r["US"] ||
+        r["Canada"] ||
+        r["Australia"]
       ) {
         // Only flag if it's not regionalHotspots (which we already skipped above)
         if (path !== "industryTrendsRegionalHotspots") {
@@ -52,18 +58,24 @@ const SafeMarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) 
   }
 
   // Additional safety check: Ensure no objects are being passed that could be rendered directly
-  const sanitizeProps = (obj: any, key?: string): any => {
-    if (obj && typeof obj === "object" && !React.isValidElement(obj) && !Array.isArray(obj)) {
+  const sanitizeProps = (obj: unknown, key?: string): unknown => {
+    if (
+      obj &&
+      typeof obj === "object" &&
+      !React.isValidElement(obj) &&
+      !Array.isArray(obj)
+    ) {
       // Preserve regionalHotspots as it's correctly an object from backend
       if (key === "industryTrendsRegionalHotspots") {
         return obj; // Keep as-is, it's meant to be an object
       }
+      const r = obj as Record<string, unknown>;
       // If it's an object with region keys, convert to array (but not regionalHotspots)
-      if (obj["North America"] || obj["Europe"] || obj["Asia Pacific"] || obj["Latin America"]) {
-        return Object.keys(obj);
+      if (r["North America"] || r["Europe"] || r["Asia Pacific"] || r["Latin America"]) {
+        return Object.keys(r);
       }
       // If it's an object that might be rendered, convert to string representation
-      if (obj.channel || obj.channelMix || obj.trigger || obj.description) {
+      if (r.channel || r.channelMix || r.trigger || r.description) {
         // Sanitizing: Converting problematic object to string
         return JSON.stringify(obj);
       }
@@ -72,7 +84,7 @@ const SafeMarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) 
   };
 
   // Preserve function props before sanitization
-  const functionProps: Record<string, any> = {};
+  const functionProps: Record<string, unknown> = {};
   Object.entries(fixedProps).forEach(([key, value]) => {
     if (typeof value === "function") {
       functionProps[key] = value;

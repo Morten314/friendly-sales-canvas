@@ -19,9 +19,9 @@ interface ScoutLeadStreamProps {
     selectedRegion: string;
   }) => void;
   onClearOpportunityFilter?: () => void;
-  onChatWithScout?: (leads: any[], reportFilter?: string) => void;
+  onChatWithScout?: (leads: HeatmapLead[], reportFilter?: string) => void;
   onChatAboutCoverage?: () => void;
-  onSendToStrategist?: (lead: any) => void;
+  onSendToStrategist?: (lead: HeatmapLead) => void;
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────

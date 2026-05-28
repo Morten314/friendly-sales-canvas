@@ -174,7 +174,7 @@ const LeadIntelligencePanel = ({
   detail,
 }: {
   lead: HeatmapLead;
-  onChatWithScout?: (leads: any[], reportFilter?: string) => void;
+  onChatWithScout?: (leads: HeatmapLead[], reportFilter?: string) => void;
   detail?: LeadScoreDetailState;
 }) => {
   const intel = TIER_INTELLIGENCE[lead.priority];
@@ -306,8 +306,8 @@ const LeadIntelligencePanel = ({
 interface LeadsTableProps {
   opportunityFilter?: string | null;
   onClearOpportunityFilter?: () => void;
-  onSendToStrategist?: (lead: any) => void;
-  onChatWithScout?: (leads: any[], reportFilter?: string) => void;
+  onSendToStrategist?: (lead: HeatmapLead) => void;
+  onChatWithScout?: (leads: HeatmapLead[], reportFilter?: string) => void;
   /** Fires when POST/session heatmap rows change; parent charts use null → demo data, array → live counts. */
   onHeatmapRowsForDashboardChange?: (rows: HeatmapLead[] | null) => void;
 }
