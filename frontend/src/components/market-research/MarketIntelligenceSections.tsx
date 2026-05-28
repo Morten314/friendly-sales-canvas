@@ -8,7 +8,7 @@ import MarketSizeSection from "./MarketSizeSection";
 import RegulatoryComplianceSection from "./RegulatoryComplianceSection";
 import ScoutChatPanel from "./ScoutChatPanel";
 
-interface MarketIntelligenceSectionsProps extends MarketIntelligenceTabProps {}
+type MarketIntelligenceSectionsProps = MarketIntelligenceTabProps;
 
 const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (props) => {
   // Scout Market Intelligence refresh is driven only by MarketResearch.smartRefresh (single
