@@ -41,11 +41,13 @@ npm run preview
 ## Troubleshooting
 
 If you see "Failed to resolve import 'virtual:pwa-register'":
+
 1. Make sure you ran `npm install`
 2. Check that `vite-plugin-pwa` is in `package.json`
 3. Restart the dev server: `npm run dev`
 
 If the install button doesn't appear:
+
 - Make sure you're accessing via `localhost` or HTTPS
 - Check browser console for service worker registration messages
 - The button appears automatically in development mode after a few seconds
@@ -57,5 +59,3 @@ If the install button doesn't appear:
 ✅ Install button added to login page
 ✅ Manifest configured
 ✅ Workbox caching configured
-
-

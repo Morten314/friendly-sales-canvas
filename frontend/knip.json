@@ -8,15 +8,7 @@
     "e2e/**/*.spec.ts",
     "scripts/*.ts"
   ],
-  "project": [
-    "src/**/*.{ts,tsx}",
-    "e2e/**/*.ts"
-  ],
-  "ignore": [
-    "src/components/ui/**"
-  ],
-  "ignoreDependencies": [
-    "tailwindcss-animate",
-    "tsx"
-  ]
+  "project": ["src/**/*.{ts,tsx}", "e2e/**/*.ts"],
+  "ignore": ["src/components/ui/**"],
+  "ignoreDependencies": ["tailwindcss-animate", "tsx"]
 }

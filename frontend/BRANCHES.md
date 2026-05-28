@@ -20,12 +20,12 @@ git subtree split --prefix=development/friendly-sales-canvas/ -b develop
 
 Branches in this repo, for orientation:
 
-| Branch | Role |
-|---|---|
-| `master` | Historical reference. Has both canvas folders nested. Do not commit. |
-| `refactor` | Pre-split fallback. Same layout as master. Do not commit. Will be deleted later. |
-| **`develop` (this branch)** | Dev canvas at root. Integration branch. |
-| `production` | Prod canvas at root. Will become Vercel's deploy source after cutover. |
+| Branch                      | Role                                                                             |
+| --------------------------- | -------------------------------------------------------------------------------- |
+| `master`                    | Historical reference. Has both canvas folders nested. Do not commit.             |
+| `refactor`                  | Pre-split fallback. Same layout as master. Do not commit. Will be deleted later. |
+| **`develop` (this branch)** | Dev canvas at root. Integration branch.                                          |
+| `production`                | Prod canvas at root. Will become Vercel's deploy source after cutover.           |
 
 ## What this branch is NOT
 

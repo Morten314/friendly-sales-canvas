@@ -3,6 +3,7 @@
 ## What Happens When You Click Refresh
 
 ### Step 1: User Clicks Refresh Button
+
 - `handleRefresh()` is called (line 9819 in MarketResearch.tsx)
 - This calls `smartRefresh(true)` which:
   - Sets `isRefreshing = true`
@@ -11,6 +12,7 @@
   - Starts fetching data for all components
 
 ### Step 2: Child Components React to Refresh
+
 - All child components have a `useEffect` that watches `isRefreshing`
 - When `isRefreshing` becomes `true`, each component:
   - Resets its internal flags (`hasFetchedRef`, `hasTriedSwotFetchRef`)
@@ -18,17 +20,20 @@
   - Fetches fresh data from the API
 
 ### Step 3: Data Comes Back
+
 - API responses update component state
 - Parent component also updates its state
 - Components merge API data with existing data
 
 ### Step 4: Refresh Completes
+
 - `smartRefresh` sets `isRefreshing = false`
 - This triggers ALL useEffects that depend on `isRefreshing` to run again
 
 ## THE PROBLEM: Infinite Refresh Loop
 
 ### Issue 1: Double useEffect Dependencies
+
 The MarketEntrySection component has TWO useEffects watching `isRefreshing`:
 
 1. **Lines 348-400**: Auto-fetch useEffect
@@ -42,6 +47,7 @@ The MarketEntrySection component has TWO useEffects watching `isRefreshing`:
    - Problem: Also runs when `isRefreshing` changes from `true` → `false`
 
 ### Issue 2: The Loop
+
 When refresh completes (`isRefreshing` becomes `false`):
 
 1. First useEffect (348-400) runs
@@ -77,17 +83,20 @@ When refresh completes (`isRefreshing` becomes `false`):
 ## The Fix
 
 ### Fix 1: Prevent Auto-Fetch After Refresh
+
 The auto-fetch useEffect should NOT run when refresh completes. It should only:
+
 - Run on initial mount
 - Run when data is truly missing (not after a refresh)
 
 ### Fix 2: Better State Management
+
 - Child component should trust parent's data during refresh
 - Don't fetch independently if parent is refreshing
 - Only fetch if parent data is missing
 
 ### Fix 3: Preserve SWOT Data
+
 - Don't clear SWOT when props sync
 - Only update SWOT if new valid SWOT data exists
 - Preserve existing SWOT during state updates
-

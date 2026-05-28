@@ -33,9 +33,10 @@ If the PWA install button is not working consistently, you likely have a stale s
 ## Method 4: Programmatic Unregister (Temporary Fix)
 
 Open browser console and run:
+
 ```javascript
-navigator.serviceWorker.getRegistrations().then(function(registrations) {
-  for(let registration of registrations) {
+navigator.serviceWorker.getRegistrations().then(function (registrations) {
+  for (let registration of registrations) {
     registration.unregister();
   }
 });
@@ -54,10 +55,7 @@ Then hard refresh the page.
 ## Verify Service Worker Status
 
 In DevTools → Application → Service Workers, you should see:
+
 - ✅ Service worker is registered
 - ✅ Status: activated and is running
 - ✅ No errors in the console
-
-
-
-

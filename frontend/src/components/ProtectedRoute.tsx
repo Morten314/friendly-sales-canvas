@@ -1,17 +1,14 @@
-import React, { useEffect } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { useTenant } from '../contexts/TenantContext';
+import React, { useEffect } from "react";
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { useTenant } from "../contexts/TenantContext";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireTenant?: boolean;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
-  requireTenant = false 
-}) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireTenant = false }) => {
   const { currentUser, loading: authLoading } = useAuth();
   const { selectedTenant, loading: tenantLoading, selectTenant } = useTenant();
   const location = useLocation();
@@ -20,9 +17,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   useEffect(() => {
     if (!authLoading && !tenantLoading && currentUser && requireTenant && !selectedTenant) {
       selectTenant({
-        id: 'brewra',
-        name: 'Brewra',
-        domain: 'brewra.com'
+        id: "brewra",
+        name: "Brewra",
+        domain: "brewra.com",
       });
     }
   }, [authLoading, tenantLoading, currentUser, requireTenant, selectedTenant, selectTenant]);
@@ -54,4 +51,3 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 };
 
 export default ProtectedRoute;
-

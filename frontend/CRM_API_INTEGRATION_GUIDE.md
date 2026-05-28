@@ -9,12 +9,14 @@ Yes! You can connect CRM platforms like **HubSpot**, **Salesforce**, **Pipedrive
 ## Two Ways to Connect CRM Platforms
 
 ### Option 1: Pre-Built Connectors (Current Implementation)
+
 - **Location**: Mission Control → Data Sources → "Add Source" → Quick Add
 - **Method**: Email/Password authentication (simplified UI)
 - **Platforms**: Salesforce, HubSpot, Pipedrive, Zoho (already in your app)
 - **Status**: Uses custom auth modals
 
 ### Option 2: API Integration (Recommended for Production)
+
 - **Location**: Mission Control → Data Sources → "Add Source" → "API Integration" mode
 - **Method**: OAuth2 or API Key authentication (direct API access)
 - **Platforms**: Any CRM with REST API
@@ -28,7 +30,7 @@ Yes! You can connect CRM platforms like **HubSpot**, **Salesforce**, **Pipedrive
 ✅ **OAuth2 Support**: Secure token-based authentication  
 ✅ **Custom Endpoints**: Use specific API endpoints for your needs  
 ✅ **Production Ready**: Uses actual CRM APIs, not simplified flows  
-✅ **Flexible**: Works with any CRM that has a REST API  
+✅ **Flexible**: Works with any CRM that has a REST API
 
 ---
 
@@ -50,6 +52,7 @@ Yes! You can connect CRM platforms like **HubSpot**, **Salesforce**, **Pipedrive
 **In Mission Control → Data Sources → Add Source → API Integration:**
 
 #### For HubSpot Contacts API:
+
 ```
 Source Name: HubSpot Contacts API
 Source Type: CRM
@@ -65,6 +68,7 @@ Request Body: (leave empty for GET)
 ```
 
 #### For HubSpot Companies API:
+
 ```
 Source Name: HubSpot Companies API
 API Endpoint URL: https://api.hubapi.com/crm/v3/objects/companies
@@ -74,6 +78,7 @@ Bearer Token: pat-your-hubspot-api-key-here
 ```
 
 #### For HubSpot Deals API:
+
 ```
 Source Name: HubSpot Deals API
 API Endpoint URL: https://api.hubapi.com/crm/v3/objects/deals
@@ -109,6 +114,7 @@ Bearer Token: pat-your-hubspot-api-key-here
 **In Mission Control → Data Sources → Add Source → API Integration:**
 
 #### For Salesforce REST API (OAuth2):
+
 ```
 Source Name: Salesforce REST API
 Source Type: CRM
@@ -117,7 +123,7 @@ HTTP Method: GET
 Authentication Type: OAuth2
 Client ID: your-consumer-key
 Client Secret: your-consumer-secret
-OAuth Scopes: 
+OAuth Scopes:
   - full
   - refresh_token
   - offline_access
@@ -131,6 +137,7 @@ Request Body: (leave empty for GET)
 **Note**: For OAuth2, your backend will handle the token exchange automatically.
 
 #### For Salesforce with Access Token (Bearer):
+
 If you already have an access token:
 
 ```
@@ -172,6 +179,7 @@ Request Body: (leave empty)
 ```
 
 **Alternative (Token in Header):**
+
 ```
 Source Name: Pipedrive Contacts API
 API Endpoint URL: https://api.pipedrive.com/v1/persons
@@ -223,24 +231,28 @@ Request Body: (leave empty for GET)
 ## Quick Reference: Common CRM API Endpoints
 
 ### HubSpot
+
 - **Contacts**: `https://api.hubapi.com/crm/v3/objects/contacts`
 - **Companies**: `https://api.hubapi.com/crm/v3/objects/companies`
 - **Deals**: `https://api.hubapi.com/crm/v3/objects/deals`
 - **Auth**: Bearer Token (Private App API Key)
 
 ### Salesforce
+
 - **Query**: `https://your-instance.salesforce.com/services/data/v58.0/query?q=SELECT+Id,Name+FROM+Contact`
 - **Contacts**: `https://your-instance.salesforce.com/services/data/v58.0/sobjects/Contact`
 - **Accounts**: `https://your-instance.salesforce.com/services/data/v58.0/sobjects/Account`
 - **Auth**: OAuth2 (Client Credentials or Bearer Token)
 
 ### Pipedrive
+
 - **Deals**: `https://api.pipedrive.com/v1/deals`
 - **Persons**: `https://api.pipedrive.com/v1/persons`
 - **Organizations**: `https://api.pipedrive.com/v1/organizations`
 - **Auth**: API Token (in URL or header)
 
 ### Zoho CRM
+
 - **Contacts**: `https://www.zohoapis.com/crm/v2/Contacts`
 - **Accounts**: `https://www.zohoapis.com/crm/v2/Accounts`
 - **Deals**: `https://www.zohoapis.com/crm/v2/Deals`
@@ -251,25 +263,30 @@ Request Body: (leave empty for GET)
 ## Authentication Types Explained
 
 ### 1. **None** (No Authentication)
+
 - Use for: Public APIs, APIs with token in URL
 - Example: Pipedrive with token in URL
 
 ### 2. **API Key**
+
 - Use for: Simple API key authentication
 - Example: Some HubSpot endpoints
 
 ### 3. **Bearer Token**
+
 - Use for: Token-based authentication
 - Example: HubSpot Private Apps, Salesforce with access token
 - Format: Token goes in `Authorization: Bearer <token>` header
 
 ### 4. **OAuth2** (Recommended for CRM)
+
 - Use for: Secure, token-based authentication with refresh
 - Example: Salesforce, Zoho CRM
 - Your backend handles token exchange automatically
 - Requires: Client ID, Client Secret, Scopes
 
 ### 5. **Basic Auth**
+
 - Use for: Username/password authentication
 - Example: Some legacy APIs
 
@@ -288,6 +305,7 @@ Request Body: (leave empty for GET)
    - Select **"API Integration"** mode
 
 3. **Fill Form**:
+
    ```
    Source Name: HubSpot Contacts
    Source Type: CRM
@@ -315,39 +333,47 @@ Request Body: (leave empty for GET)
 
 ## Comparison: Pre-Built vs API Integration
 
-| Feature | Pre-Built Connectors | API Integration |
-|---------|---------------------|-----------------|
-| **Setup** | Simple (email/password) | Requires API credentials |
-| **Flexibility** | Limited to pre-configured | Full control over endpoints |
-| **Authentication** | Custom modals | OAuth2, Bearer, API Key |
-| **Production Ready** | Demo mode | Real API calls |
-| **Customization** | Limited | Full endpoint control |
-| **Best For** | Quick demos | Production use |
+| Feature              | Pre-Built Connectors      | API Integration             |
+| -------------------- | ------------------------- | --------------------------- |
+| **Setup**            | Simple (email/password)   | Requires API credentials    |
+| **Flexibility**      | Limited to pre-configured | Full control over endpoints |
+| **Authentication**   | Custom modals             | OAuth2, Bearer, API Key     |
+| **Production Ready** | Demo mode                 | Real API calls              |
+| **Customization**    | Limited                   | Full endpoint control       |
+| **Best For**         | Quick demos               | Production use              |
 
 ---
 
 ## Troubleshooting
 
 ### Issue: "401 Unauthorized"
-**Solution**: 
+
+**Solution**:
+
 - Check API key/token is correct
 - Verify token hasn't expired
 - Ensure correct authentication type selected
 
 ### Issue: "404 Not Found"
+
 **Solution**:
+
 - Verify endpoint URL is correct
 - Check API version in URL (v3, v58.0, etc.)
 - Ensure instance URL is correct (for Salesforce)
 
 ### Issue: "403 Forbidden"
+
 **Solution**:
+
 - Check API key has required permissions/scopes
 - Verify OAuth scopes are correct
 - Ensure Private App has necessary access
 
 ### Issue: OAuth2 Not Working
+
 **Solution**:
+
 - Verify Client ID and Secret are correct
 - Check Redirect URI matches in CRM settings
 - Ensure backend OAuth2 endpoint is implemented
@@ -407,6 +433,7 @@ Request Body: (leave empty for GET)
 ✅ **Yes, you can connect CRM platforms via API Integration!**
 
 **Recommended Approach**:
+
 1. Use **API Integration** mode (not pre-built connectors)
 2. Get **API credentials** from CRM platform
 3. Configure with **OAuth2** or **Bearer Token**
@@ -417,19 +444,3 @@ Request Body: (leave empty for GET)
 **Quick Test**: Pipedrive (API Token in URL)
 
 Your backend will handle token exchange, storage, and data syncing automatically once the endpoints are implemented!
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

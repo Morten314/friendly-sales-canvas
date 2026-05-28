@@ -5,6 +5,7 @@ This document outlines the JSON structure and keys for each of the 5 Scout compo
 ## General API Response Wrapper
 
 All components return responses in this format:
+
 ```json
 {
   "status": "success",
@@ -23,6 +24,7 @@ All components return responses in this format:
 **Component Name:** `"market size & opportunity"`
 
 ### JSON Structure:
+
 ```json
 {
   "status": "success",
@@ -31,15 +33,9 @@ All components return responses in this format:
     "tamValue": "string",
     "samValue": "string",
     "GrowthRate": "string",
-    "strategicRecommendations": [
-      "string",
-      "string"
-    ],
+    "strategicRecommendations": ["string", "string"],
     "marketEntry": "string",
-    "marketDrivers": [
-      "string",
-      "string"
-    ],
+    "marketDrivers": ["string", "string"],
     "marketSizeBySegment": {
       "segment1": "value1",
       "segment2": "value2"
@@ -55,6 +51,7 @@ All components return responses in this format:
 ```
 
 ### Key Fields:
+
 - `executiveSummary` (string): Executive summary of market size analysis
 - `tamValue` (string): Total Addressable Market value
 - `samValue` (string): Serviceable Addressable Market value
@@ -74,6 +71,7 @@ All components return responses in this format:
 **Component Name:** `"industry trends report"`
 
 ### JSON Structure:
+
 ```json
 {
   "status": "success",
@@ -122,6 +120,7 @@ All components return responses in this format:
 ```
 
 ### Key Fields:
+
 - `executiveSummary` (string): Executive summary of industry trends
 - `aiAdoption` (string): AI adoption percentage/rate
 - `cloudMigration` (string): Cloud migration percentage/rate
@@ -148,6 +147,7 @@ All components return responses in this format:
 **Component Name:** `"regulatory & compliance highlights"`
 
 ### JSON Structure:
+
 ```json
 {
   "status": "success",
@@ -208,6 +208,7 @@ All components return responses in this format:
 ```
 
 ### Key Fields:
+
 - `executiveSummary` (string): Executive summary
 - `euAiActDeadline` (string): EU AI Act deadline information
 - `gdprCompliance` (string): GDPR compliance status
@@ -231,6 +232,7 @@ All components return responses in this format:
 **Component Name:** `"competitor landscape"`
 
 ### JSON Structure:
+
 ```json
 {
   "status": "success",
@@ -251,9 +253,7 @@ All components return responses in this format:
       "emergingPlayers": "string",
       "recentMoves": []
     },
-    "strategicRecommendations": [
-      "string"
-    ],
+    "strategicRecommendations": ["string"],
     "uiComponents": [
       {
         "type": "report",
@@ -270,6 +270,7 @@ All components return responses in this format:
 ```
 
 ### Key Fields:
+
 - `executiveSummary` (string): Executive summary of competitor landscape
 - `topPlayerShare` (string): Top player market share information
 - `emergingPlayers` (string): Emerging players information
@@ -285,6 +286,7 @@ All components return responses in this format:
 - `user_id` (string): User ID
 
 **Note:** The API may return data in multiple formats:
+
 1. Direct fields: `executiveSummary`, `topPlayerShare`, etc.
 2. Nested: `competitorLandscape.executiveSummary`
 3. UI Components: `uiComponents[].executiveSummary` (where type === "report")
@@ -296,6 +298,7 @@ All components return responses in this format:
 **Component Name:** `"market entry & growth strategy"`
 
 ### JSON Structure:
+
 ```json
 {
   "status": "success",
@@ -306,9 +309,7 @@ All components return responses in this format:
     "timeToMarket": "string",
     "topBarrier": "string",
     "competitiveDifferentiation": "string",
-    "strategicRecommendations": [
-      "string"
-    ],
+    "strategicRecommendations": ["string"],
     "riskAssessment": "string",
     "swot": {
       "strengths": ["string"],
@@ -338,6 +339,7 @@ All components return responses in this format:
 ```
 
 ### Key Fields:
+
 - `executiveSummary` (string): Executive summary
 - `entryBarriers` (string): Market entry barriers description
 - `recommendedChannel` (string): Recommended entry channel
@@ -365,6 +367,7 @@ All components return responses in this format:
 ## Common Fields Across All Components
 
 All components include:
+
 - `status`: "success" or error status
 - `data.timestamp`: ISO timestamp string
 - `data.user_id`: User ID for multi-tenancy validation
@@ -380,4 +383,3 @@ All components include:
 4. **Arrays**: Empty arrays `[]` are used when no data is available
 5. **Objects**: Empty objects `{}` are used when no data is available
 6. **Data Validation**: The frontend validates that `user_id` matches the current user before processing
-

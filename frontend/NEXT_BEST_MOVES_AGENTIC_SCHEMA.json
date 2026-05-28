@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Next Best Moves Agentic Interaction API Schema",
   "description": "Schema for agentic interaction when user accepts a Next Best Move from a signal",
-  
+
   "definitions": {
     "NextBestMoveAction": {
       "type": "object",
@@ -111,7 +111,7 @@
         }
       }
     },
-    
+
     "AgenticResponse": {
       "type": "object",
       "required": ["status", "response_message"],
@@ -186,7 +186,7 @@
         }
       }
     },
-    
+
     "AgenticMessage": {
       "type": "object",
       "description": "Schema for sending additional messages in the agentic conversation",
@@ -210,7 +210,7 @@
       }
     }
   },
-  
+
   "endpoints": {
     "accept_next_best_move": {
       "method": "POST",
@@ -290,7 +290,7 @@
         }
       }
     },
-    
+
     "send_agentic_message": {
       "method": "POST",
       "path": "/api/next-best-move/message",
@@ -327,7 +327,7 @@
       }
     }
   },
-  
+
   "field_descriptions": {
     "next_best_move_index": "The index (0-based) of which next best move in the array the user accepted. This allows the backend to know exactly which question the user wants answered.",
     "next_best_move_text": "The full text of the next best move question. This is sent to ensure the backend knows exactly what question to answer, even if the array order changes.",
@@ -338,7 +338,7 @@
     "follow_up_questions": "Suggested follow-up questions to continue the conversation and provide more value.",
     "interaction_id": "Unique ID for this conversation thread. Used for subsequent messages in the same interaction."
   },
-  
+
   "agentic_interaction_flow": {
     "step_1": {
       "description": "User clicks 'Accept' on a Next Best Move",
@@ -367,7 +367,7 @@
       "backend_action": "Continues conversation with context from previous messages"
     }
   },
-  
+
   "requirements": {
     "response_message": {
       "guidelines": [
@@ -378,7 +378,7 @@
         "Should be actionable and specific"
       ],
       "example_good": "Hi Alex, Noted. I'll check your pipeline and identify how many target ICPs fall under the SMB segment (50-200 employees) that could be influenced by Company X's pricing move. Based on your company profile, I'll analyze your current deals in North America and Europe.",
-      "example_bad": "Processing request." 
+      "example_bad": "Processing request."
     },
     "action_items": {
       "guidelines": [
@@ -398,6 +398,3 @@
     }
   }
 }
-
-
-

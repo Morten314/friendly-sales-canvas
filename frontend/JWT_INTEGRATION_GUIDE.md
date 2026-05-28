@@ -5,6 +5,7 @@ This guide explains how to work with JWT tokens in your multi-tenant application
 ## Overview
 
 Your application now has a complete JWT authentication system that:
+
 - ✅ Generates JWT tokens from Firebase authentication
 - ✅ Automatically includes JWT tokens in API requests
 - ✅ Handles token refresh automatically
@@ -14,17 +15,20 @@ Your application now has a complete JWT authentication system that:
 ## Key Components
 
 ### 1. JWT Manager (`src/lib/jwt.ts`)
+
 - Handles JWT token generation, storage, and refresh
 - Integrates with Firebase authentication
 - Provides tenant context in tokens
 
 ### 2. Authenticated API Client (`src/lib/authenticatedApi.ts`)
+
 - Wrapper around your existing API clients
 - Automatically includes JWT tokens in requests
 - Handles token refresh on authentication failures
 - Provides convenient methods for GET, POST, PUT, DELETE
 
 ### 3. React Hook (`src/hooks/useAuthenticatedApi.ts`)
+
 - Easy-to-use React hook for components
 - Provides loading states and error handling
 - Automatically manages authentication status
@@ -34,21 +38,23 @@ Your application now has a complete JWT authentication system that:
 ### Basic Usage in Components
 
 ```tsx
-import { useAuthenticatedApi } from '@/hooks/useAuthenticatedApi';
+import { useAuthenticatedApi } from "@/hooks/useAuthenticatedApi";
 
 const MyComponent = () => {
   const { post, get, isLoading, error, isAuthenticated, userInfo } = useAuthenticatedApi();
 
   const fetchData = async () => {
     try {
-      const response = await post('market-research', {
+      const response = await post("market-research", {
         user_id: userInfo?.userId,
-        component_name: 'my-component',
-        data: { /* your data */ }
+        component_name: "my-component",
+        data: {
+          /* your data */
+        },
       });
-      console.log('Response:', response);
+      console.log("Response:", response);
     } catch (error) {
-      console.error('Error:', error);
+      console.error("Error:", error);
     }
   };
 
@@ -56,7 +62,7 @@ const MyComponent = () => {
     <div>
       {isAuthenticated ? (
         <button onClick={fetchData} disabled={isLoading}>
-          {isLoading ? 'Loading...' : 'Fetch Data'}
+          {isLoading ? "Loading..." : "Fetch Data"}
         </button>
       ) : (
         <p>Please log in to continue</p>
@@ -69,10 +75,10 @@ const MyComponent = () => {
 ### Direct API Usage
 
 ```tsx
-import { authenticatedApi } from '@/lib/authenticatedApi';
+import { authenticatedApi } from "@/lib/authenticatedApi";
 
 // Make authenticated requests
-const data = await authenticatedApi.post('endpoint', payload);
+const data = await authenticatedApi.post("endpoint", payload);
 const userInfo = authenticatedApi.getUserInfo();
 const isAuth = await authenticatedApi.isAuthenticated();
 ```
@@ -80,7 +86,7 @@ const isAuth = await authenticatedApi.isAuthenticated();
 ### Manual JWT Management
 
 ```tsx
-import jwtManager from '@/lib/jwt';
+import jwtManager from "@/lib/jwt";
 
 // Get current token
 const token = jwtManager.getToken();
@@ -109,6 +115,7 @@ See `backend-jwt-example.js` for reference implementation.
 ### JWT Token Structure
 
 Your JWT tokens contain:
+
 ```json
 {
   "userId": "firebase-user-id",
@@ -126,14 +133,14 @@ Use JWT verification middleware on protected routes:
 
 ```javascript
 const verifyJWT = (req, res, next) => {
-  const token = req.headers.authorization?.split('Bearer ')[1];
+  const token = req.headers.authorization?.split("Bearer ")[1];
   const decoded = jwt.verify(token, JWT_SECRET);
   req.user = decoded;
   next();
 };
 
 // Apply to protected routes
-router.post('/market-research', verifyJWT, (req, res) => {
+router.post("/market-research", verifyJWT, (req, res) => {
   const { userId, tenantId } = req.user;
   // Your logic here
 });
@@ -144,21 +151,23 @@ router.post('/market-research', verifyJWT, (req, res) => {
 ### Updating Existing Components
 
 1. **Replace direct API calls:**
+
    ```tsx
    // Before
-   import { apiFetchJson } from '@/lib/api';
-   const response = await apiFetchJson('endpoint', { method: 'POST', body: data });
+   import { apiFetchJson } from "@/lib/api";
+   const response = await apiFetchJson("endpoint", { method: "POST", body: data });
 
    // After
-   import { useAuthenticatedApi } from '@/hooks/useAuthenticatedApi';
+   import { useAuthenticatedApi } from "@/hooks/useAuthenticatedApi";
    const { post } = useAuthenticatedApi();
-   const response = await post('endpoint', data);
+   const response = await post("endpoint", data);
    ```
 
 2. **Add authentication checks:**
+
    ```tsx
    const { isAuthenticated, userInfo } = useAuthenticatedApi();
-   
+
    if (!isAuthenticated) {
      return <div>Please log in</div>;
    }
@@ -176,12 +185,14 @@ router.post('/market-research', verifyJWT, (req, res) => {
 ## Error Handling
 
 The system automatically handles:
+
 - ✅ Token expiration and refresh
 - ✅ Authentication failures
 - ✅ Network errors
 - ✅ Invalid tokens
 
 Common error scenarios:
+
 - **401 Unauthorized**: Token expired or invalid
 - **Authentication required**: User not logged in
 - **Token refresh failed**: User needs to re-authenticate
@@ -198,6 +209,7 @@ Common error scenarios:
 ## Testing
 
 Use the updated `ApiTest` component to test JWT integration:
+
 1. Log in to your application
 2. Select a tenant
 3. Navigate to the API Test component
@@ -226,11 +238,12 @@ Use the updated `ApiTest` component to test JWT integration:
 ### Debug Information
 
 Enable debug logging:
+
 ```tsx
 // In your component
-console.log('User info:', userInfo);
-console.log('Is authenticated:', isAuthenticated);
-console.log('JWT token:', jwtManager.getToken());
+console.log("User info:", userInfo);
+console.log("Is authenticated:", isAuthenticated);
+console.log("JWT token:", jwtManager.getToken());
 ```
 
 ## Next Steps
@@ -252,6 +265,3 @@ console.log('JWT token:', jwtManager.getToken());
 - ✅ `JWT_INTEGRATION_GUIDE.md` - This guide
 
 Your JWT integration is now complete and ready to use! 🎉
-
-
-

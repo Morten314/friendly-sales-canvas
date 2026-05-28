@@ -5,9 +5,11 @@ This document contains the request body schemas sent to `/api/market-research` f
 **Note:** Company profile data is fetched by the backend using the `user_id`. The frontend only sends `user_id`, `component_name`, and refresh-related flags. The `data` key is kept but must be empty.
 
 ## API Endpoint
+
 **POST** `/api/market-research`
 
 **Headers:**
+
 ```json
 {
   "Content-Type": "application/json"
@@ -21,6 +23,7 @@ This document contains the request body schemas sent to `/api/market-research` f
 **Component Name:** `"market size & opportunity"`
 
 ### Request Body Schema (from MarketResearch.tsx):
+
 ```json
 {
   "user_id": "string (Firebase UID)",
@@ -31,6 +34,7 @@ This document contains the request body schemas sent to `/api/market-research` f
 ```
 
 ### Request Body Schema (from MarketSizeSection.tsx - Alternative):
+
 ```json
 {
   "user_id": "string (Firebase UID)",
@@ -52,6 +56,7 @@ This document contains the request body schemas sent to `/api/market-research` f
 **Component Name:** `"industry trends report"`
 
 ### Request Body Schema (from MarketResearch.tsx):
+
 ```json
 {
   "user_id": "string (Firebase UID)",
@@ -65,6 +70,7 @@ This document contains the request body schemas sent to `/api/market-research` f
 ```
 
 ### Request Body Schema (from IndustryTrendsSection.tsx - Alternative):
+
 ```json
 {
   "user_id": "string (Firebase UID)",
@@ -86,6 +92,7 @@ This document contains the request body schemas sent to `/api/market-research` f
 **Component Name:** `"regulatory & compliance highlights"`
 
 ### Request Body Schema (from MarketResearch.tsx):
+
 ```json
 {
   "user_id": "string (Firebase UID)",
@@ -96,6 +103,7 @@ This document contains the request body schemas sent to `/api/market-research` f
 ```
 
 ### Request Body Schema (from RegulatoryComplianceSection.tsx - Alternative):
+
 ```json
 {
   "user_id": "string (Firebase UID)",
@@ -117,6 +125,7 @@ This document contains the request body schemas sent to `/api/market-research` f
 **Component Name:** `"competitor landscape"`
 
 ### Request Body Schema (from MarketResearch.tsx):
+
 ```json
 {
   "user_id": "string (Firebase UID)",
@@ -137,6 +146,7 @@ This document contains the request body schemas sent to `/api/market-research` f
 **Component Name:** `"market entry & growth strategy"`
 
 ### Request Body Schema (from MarketResearch.tsx):
+
 ```json
 {
   "user_id": "string (Firebase UID)",
@@ -150,6 +160,7 @@ This document contains the request body schemas sent to `/api/market-research` f
 ```
 
 ### Request Body Schema (from MarketEntrySection.tsx - Alternative):
+
 ```json
 {
   "user_id": "string (Firebase UID)",
@@ -169,11 +180,13 @@ This document contains the request body schemas sent to `/api/market-research` f
 ## Common Fields Summary
 
 ### Required Fields (All Components):
+
 - `user_id`: Firebase user UID (string)
 - `component_name`: One of the 5 component names (string)
 - `data`: Object containing component-specific data
 
 ### Optional Fields (Varies by Component):
+
 - `refresh`: Boolean to force refresh
 - `force_refresh`: Boolean to force refresh (alternative naming)
 - `cache_bypass`: Boolean to bypass cache
@@ -185,24 +198,24 @@ This document contains the request body schemas sent to `/api/market-research` f
 - `_forceRefresh`: Boolean to force refresh (alternative naming)
 
 ### Data Object:
+
 - `data`: Must always be an empty object `{}`. Company profile data is fetched by the backend using `user_id`.
 
 ---
 
 ## Notes
 
-1. **Component Name Variations**: 
+1. **Component Name Variations**:
    - Market Entry uses `"Market Entry & Growth Strategy"` (with capital letters) in MarketEntrySection.tsx, but `"market entry & growth strategy"` (lowercase) in MarketResearch.tsx
 
-2. **Company Profile Handling**: 
+2. **Company Profile Handling**:
    - Company profile data is fetched by the backend using the `user_id`
    - Frontend should NOT send any company profile data in the request
    - The `data` key must always be an empty object `{}`
 
-3. **Payload Variations**: 
+3. **Payload Variations**:
    - The main MarketResearch.tsx page uses a simpler structure
    - The individual component files (MarketSizeSection.tsx, MarketEntrySection.tsx, etc.) may include additional cache-busting fields
 
-4. **Cache Busting**: 
+4. **Cache Busting**:
    - Various components use different cache-busting mechanisms (`_timestamp`, `_cacheBust`, `_cache_bust`, `request_timestamp`, `request_id`)
-
