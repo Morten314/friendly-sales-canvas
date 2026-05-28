@@ -1,9 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useTenant } from "@/contexts/TenantContext";
-import {
-  Popover,
-  PopoverContent,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent } from "@/components/ui/popover";
 
 interface ProfileDialogProps {
   open: boolean;
@@ -17,15 +14,15 @@ export function ProfileDialog({ open, onOpenChange, fullName, children }: Profil
   const { selectedTenant } = useTenant();
 
   // Get user's email
-  const userEmail = currentUser?.email || '';
+  const userEmail = currentUser?.email || "";
 
   // Get organization domain or default to Brewra.com
-  const organizationDomain = selectedTenant?.domain || 'brewra.com';
+  const organizationDomain = selectedTenant?.domain || "brewra.com";
 
   // Get initials for profile picture
   const getInitials = (name: string): string => {
-    if (!name) return 'U';
-    const parts = name.trim().split(' ');
+    if (!name) return "U";
+    const parts = name.trim().split(" ");
     if (parts.length >= 2) {
       return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     }
@@ -35,9 +32,9 @@ export function ProfileDialog({ open, onOpenChange, fullName, children }: Profil
   return (
     <Popover open={open} onOpenChange={onOpenChange} modal={false}>
       {children}
-      <PopoverContent 
-        side="top" 
-        align="start" 
+      <PopoverContent
+        side="top"
+        align="start"
         sideOffset={8}
         className="w-80 p-4 bg-white border border-gray-200 shadow-lg"
       >
@@ -53,7 +50,7 @@ export function ProfileDialog({ open, onOpenChange, fullName, children }: Profil
               </a>
             </div>
             <div className="text-sm text-gray-700">
-              Managed by{' '}
+              Managed by{" "}
               <a
                 href={`https://${organizationDomain}`}
                 target="_blank"
@@ -78,20 +75,15 @@ export function ProfileDialog({ open, onOpenChange, fullName, children }: Profil
 
           {/* Greeting */}
           <div className="text-center">
-            <h3 className="text-xl font-medium text-gray-900">
-              Hi {fullName || 'User'}!
-            </h3>
+            <h3 className="text-xl font-medium text-gray-900">Hi {fullName || "User"}!</h3>
           </div>
 
           {/* Manage Profile Text */}
           <div className="flex justify-center pt-2">
-            <p className="text-sm text-gray-700">
-              Manage your Profile
-            </p>
+            <p className="text-sm text-gray-700">Manage your Profile</p>
           </div>
         </div>
       </PopoverContent>
     </Popover>
   );
 }
-
