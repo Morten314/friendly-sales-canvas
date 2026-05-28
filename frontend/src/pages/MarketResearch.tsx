@@ -3483,58 +3483,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-  // Handle historical report selection
-
-
-
-  const handleHistoricalReportSelected = (reportData: any) => {
-
-
-
-
-
-
-    
-
-
-
-    const transformedData = transformReportData(reportData);
-
-
-
-    
-
-
-
-    // Set the market data to the historical data
-
-
-
-    setMarketData(transformedData);
-
-
-
-    setIsShowingHistoricalData(true);
-
-
-
-    setHistoricalDataTimestamp(reportData.timestamp);
-
-
-
-    
-
-
-
-    // Clear any existing errors
-
-
-
-    setError(null);
-
-
-
-  };
 
 
 
