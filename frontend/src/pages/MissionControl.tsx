@@ -425,7 +425,8 @@ const MissionControl = () => {
 
       // Verify data was actually saved by immediately fetching it back
       console.log("MissionControl: Verifying data persistence by fetching saved profile...");
-      setTimeout(async () => {
+      setTimeout(() => {
+        void (async () => {
         try {
           const verifyResponse = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
             method: "GET",
@@ -450,6 +451,7 @@ const MissionControl = () => {
         } catch (verifyError) {
           console.error("MissionControl: Error verifying data persistence:", verifyError);
         }
+        })();
       }, 2000); // Wait 2 seconds for database to commit
     } catch (error) {
       console.error("Error saving company profile:", error);
@@ -984,10 +986,11 @@ const MissionControl = () => {
 
     // Add a small delay to ensure user is fully initialized
     const timeoutId = setTimeout(() => {
-      loadProfileData();
+      void loadProfileData();
     }, 100);
 
     return () => clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- applyCompanyProfileJsonToMissionControlUi is a stable helper closure; intentionally omitted to keep effect scoped to user/org identity changes
   }, [currentUser?.uid, orgIdToUse]);
 
   const handleSaveConfiguration = () => {
@@ -1710,6 +1713,7 @@ const MissionControl = () => {
         });
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only OAuth callback handler; toast is stable
   }, []);
 
   // Helper function to upload file to backend
@@ -3194,7 +3198,7 @@ const MissionControl = () => {
                       disabled={isSalesforceLoggingIn}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !isSalesforceLoggingIn) {
-                          handleSalesforceLogin();
+                          void handleSalesforceLogin();
                         }
                       }}
                     />
@@ -3331,7 +3335,7 @@ const MissionControl = () => {
                       disabled={isHubSpotLoggingIn}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !isHubSpotLoggingIn) {
-                          handleHubSpotLogin();
+                          void handleHubSpotLogin();
                         }
                       }}
                     />
@@ -3476,7 +3480,7 @@ const MissionControl = () => {
                       disabled={isPipedriveLoggingIn}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !isPipedriveLoggingIn) {
-                          handlePipedriveLogin();
+                          void handlePipedriveLogin();
                         }
                       }}
                     />
@@ -3621,7 +3625,7 @@ const MissionControl = () => {
                       disabled={isZohoLoggingIn}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !isZohoLoggingIn) {
-                          handleZohoLogin();
+                          void handleZohoLogin();
                         }
                       }}
                     />
@@ -3762,7 +3766,7 @@ const MissionControl = () => {
                       disabled={isLinkedInLoggingIn}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !isLinkedInLoggingIn) {
-                          handleLinkedInLogin();
+                          void handleLinkedInLogin();
                         }
                       }}
                     />
@@ -3926,7 +3930,7 @@ const MissionControl = () => {
                       disabled={isXLoggingIn}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !isXLoggingIn) {
-                          handleXLogin();
+                          void handleXLogin();
                         }
                       }}
                     />
@@ -4254,7 +4258,7 @@ const MissionControl = () => {
                       disabled={isMixpanelLoggingIn}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !isMixpanelLoggingIn) {
-                          handleMixpanelLogin();
+                          void handleMixpanelLogin();
                         }
                       }}
                     />
