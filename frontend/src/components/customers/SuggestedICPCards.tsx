@@ -55,6 +55,7 @@ import {
   getProfilerSnapshot,
   commitProfilerSnapshot,
 } from "@/lib/missionProfilerSessionCache";
+import type { UntypedProfilerIcpRecord } from "@/lib/types/escape-hatches";
 import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
 import { fetchIcpsRowsForOrg } from "@/utils/profileIcpsExtract";
 import {
@@ -204,7 +205,9 @@ async function persistAcceptedSuggestedIcpToBackend(options: {
     const icpsData = extractIcpsArrayFromCustomerProfileResponse(profileData);
     if (!icpsData.length) return false;
 
-    const idx = icpsData.findIndex((row: any) => String(row.id) === String(targetIcpId));
+    const idx = icpsData.findIndex(
+      (row: UntypedProfilerIcpRecord) => String(row.id) === String(targetIcpId),
+    );
     if (idx < 0) return false;
 
     const merged = mergeSuggestedIntoCustomerProfileApiRow(icpsData[idx], suggested);
@@ -337,7 +340,10 @@ const confidenceColor = (c: string) => {
 };
 
 // Map customer profile ICP (Mission Control) to ExistingICP format
-const mapCustomerProfileICPToExisting = (icp: any, index: number): ExistingICP => {
+const mapCustomerProfileICPToExisting = (
+  icp: UntypedProfilerIcpRecord,
+  index: number,
+): ExistingICP => {
   const merged = mergeProfilerAcceptedIcpDisplay(icp);
   const industryArr = Array.isArray(merged.industry)
     ? merged.industry
@@ -403,7 +409,9 @@ const REPORT_FIELD_KEYS = [
   "competitors",
 ] as const;
 
-const buildFullReportFromRoot = (item: any): Record<string, unknown> | undefined => {
+const buildFullReportFromRoot = (
+  item: UntypedProfilerIcpRecord,
+): Record<string, unknown> | undefined => {
   if (item == null || typeof item !== "object") return undefined;
   const out: Record<string, unknown> = {};
   for (const k of REPORT_FIELD_KEYS) {
@@ -413,7 +421,9 @@ const buildFullReportFromRoot = (item: any): Record<string, unknown> | undefined
 };
 
 /** Nested report object from GET /icp (aliases + optional `data` wrapper), or report fields at root. */
-const extractFullReportFromApiItem = (item: any): Record<string, unknown> | undefined => {
+const extractFullReportFromApiItem = (
+  item: UntypedProfilerIcpRecord,
+): Record<string, unknown> | undefined => {
   const raw =
     item?.report ??
     item?.fullReport ??
@@ -438,7 +448,9 @@ const extractFullReportFromApiItem = (item: any): Record<string, unknown> | unde
  * Normalizes GET /icp JSON to an array of ICP items. Backend may return:
  * - an array; suggestedICPs / icps / results / items; { data: [...] }; { data: { single ICP } }; or a single root object.
  */
-const normalizeIcpGetResponse = (icpData: any): any[] => {
+const normalizeIcpGetResponse = (
+  icpData: UntypedProfilerIcpRecord,
+): UntypedProfilerIcpRecord[] => {
   if (icpData == null) return [];
   if (Array.isArray(icpData)) return icpData;
 
@@ -456,7 +468,8 @@ const normalizeIcpGetResponse = (icpData: any): any[] => {
     if (unwrapped && typeof unwrapped === "object" && !Array.isArray(unwrapped)) {
       const u = unwrapped as Record<string, unknown>;
       const nestedList = u.icps ?? u.suggestedICPs ?? u.results ?? u.items;
-      if (Array.isArray(nestedList) && nestedList.length > 0) return nestedList as any[];
+      if (Array.isArray(nestedList) && nestedList.length > 0)
+        return nestedList as UntypedProfilerIcpRecord[];
       const looksLikeIcp =
         u.id != null ||
         u.title != null ||
@@ -503,7 +516,7 @@ const hasBackendFullReport = (icp: SuggestedICP) =>
 // growthIndicator, whySuggested, confidenceScore, marketSize, growth, topPainPoint, buyingTriggers, competitors,
 // and optionally nested report payload (fullReport) for View Full Report
 const mapApiICPToSuggested = (
-  item: any,
+  item: UntypedProfilerIcpRecord,
   index: number,
   type: "refined" | "new" = "new",
 ): SuggestedICP => {
@@ -653,7 +666,9 @@ async function loadProfilerPagePayload(options: {
     if (uid) {
       const rows = await fetchIcpsRowsForOrg(uid, orgIdToUse);
       if (rows.length > 0) {
-        icps = rows.map((icp: any, i: number) => mapCustomerProfileICPToExisting(icp, i));
+        icps = rows.map((icp: UntypedProfilerIcpRecord, i: number) =>
+          mapCustomerProfileICPToExisting(icp, i),
+        );
       }
     }
   } catch {
@@ -665,7 +680,9 @@ async function loadProfilerPagePayload(options: {
       if (customerProfileData) {
         const parsed = JSON.parse(customerProfileData);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          icps = parsed.map((icp: any, i: number) => mapCustomerProfileICPToExisting(icp, i));
+          icps = parsed.map((icp: UntypedProfilerIcpRecord, i: number) =>
+            mapCustomerProfileICPToExisting(icp, i),
+          );
         }
       }
     } catch {
@@ -755,7 +772,7 @@ async function loadProfilerPagePayload(options: {
         const icpArray = normalizeIcpGetResponse(icpData);
         profilerIcpDebug("GET /icp — normalized array length", icpArray.length);
         if (icpArray.length > 0) {
-          const mapped = icpArray.map((item: any, i: number) =>
+          const mapped = icpArray.map((item: UntypedProfilerIcpRecord, i: number) =>
             mapApiICPToSuggested(item, i, "new"),
           );
           const filteredGet = filterDismissedFromSuggested(uid, [], mapped);
@@ -1020,17 +1037,23 @@ export const SuggestedICPCards = ({
         setExistingICPs([]);
         return [];
       }
-      setExistingICPs(rows.map((icp: any, i: number) => mapCustomerProfileICPToExisting(icp, i)));
+      setExistingICPs(
+        rows.map((icp: UntypedProfilerIcpRecord, i: number) =>
+          mapCustomerProfileICPToExisting(icp, i),
+        ),
+      );
       try {
         setUserLocalStorage(
           "customerProfile",
-          JSON.stringify(mapCustomerProfileApiRowsToStoredIcps(rows as any[])),
+          JSON.stringify(mapCustomerProfileApiRowsToStoredIcps(rows as UntypedProfilerIcpRecord[])),
           uid,
         );
       } catch {
         /* ignore */
       }
-      return rows.map((row: any) => String(row.id ?? row.icp_id ?? "").trim()).filter(Boolean);
+      return rows
+        .map((row: UntypedProfilerIcpRecord) => String(row.id ?? row.icp_id ?? "").trim())
+        .filter(Boolean);
     } catch {
       /* keep existing rows */
     }

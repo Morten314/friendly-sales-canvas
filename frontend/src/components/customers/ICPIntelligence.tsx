@@ -4,11 +4,13 @@ import { SuggestedICPCards } from "./SuggestedICPCards";
 
 import { useAuth } from "@/contexts/AuthContext";
 
+// Structural subset of the full SuggestedICP shape defined in `SuggestedICPCards.tsx`.
+// Only the fields this passthrough handler reads are listed; the full shape (extra
+// fields like industry/segment/companySize) flows through opaquely via CustomEvent detail.
 interface SuggestedICP {
   id: string;
   name: string;
   type: "refined" | "new";
-  [key: string]: any;
 }
 
 export const ICPIntelligence = () => {
