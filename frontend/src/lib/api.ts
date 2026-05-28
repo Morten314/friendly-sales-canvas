@@ -27,7 +27,7 @@ export const buildIcpUrl = (params: string): string => `${ICP_BACKEND_URL}/icp?$
 
 // Extended options type that allows object body (will be JSON stringified)
 export interface ApiFetchOptions extends Omit<RequestInit, "body"> {
-  body?: BodyInit | Record<string, any> | null;
+  body?: BodyInit | Record<string, unknown> | null;
 }
 
 // Helper function for fetch with common configuration

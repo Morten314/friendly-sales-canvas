@@ -8,9 +8,9 @@ interface RateLimitConfig {
 
 interface QueuedRequest {
   id: string;
-  apiCall: () => Promise<any>;
-  resolve: (value: any) => void;
-  reject: (error: any) => void;
+  apiCall: () => Promise<unknown>;
+  resolve: (value: unknown) => void;
+  reject: (error: unknown) => void;
   timestamp: number;
   retryCount: number;
 }
@@ -126,10 +126,11 @@ class RateLimitManager {
     this.isProcessing = false;
   }
 
-  private isRateLimitError(error: any): boolean {
+  private isRateLimitError(error: unknown): boolean {
     if (!error) return false;
 
-    const errorMessage = error.message || error.toString();
+    const errorMessage =
+      error instanceof Error ? error.message : String(error);
     const errorString = errorMessage.toLowerCase();
 
     return (
@@ -152,18 +153,18 @@ class RateLimitManager {
     apiCall: () => Promise<T>,
     componentName: string = "Unknown",
   ): Promise<T> {
-    return new Promise((resolve, reject) => {
+    return new Promise<T>((resolve, reject) => {
       const request: QueuedRequest = {
         id: `${componentName}-${Date.now()}-${Math.random()}`,
-        apiCall,
-        resolve,
+        apiCall: apiCall as () => Promise<unknown>,
+        resolve: resolve as (value: unknown) => void,
         reject,
         timestamp: Date.now(),
         retryCount: 0,
       };
 
       this.requestQueue.push(request);
-      this.processQueue();
+      void this.processQueue();
     });
   }
 

@@ -10,7 +10,12 @@
  *  4. Use the `Untyped*` type-name prefix.
  *
  * Spec 17 §3 Step 3 escape-hatches policy.
+ *
+ * The file itself disables `no-explicit-any` because every entry here is
+ * intentionally an `any` alias — the audit signal is the `Untyped*` name plus
+ * the `TODO(phase-13)` marker, not the rule fire.
  */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 // TODO(phase-13): replace with the report data union once backend contracts are typed.
 // src/pages/MarketResearch.tsx:4472, :5384, :7019, :7268, :9225, :9305, :9357, :9409,
