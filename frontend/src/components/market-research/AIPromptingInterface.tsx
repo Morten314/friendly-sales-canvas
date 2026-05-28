@@ -72,21 +72,21 @@ export const AIPromptingInterface = ({
         .replace(/\\n/g, "\n")
         // Handle n- patterns (convert to newlines with bullets) - only when clearly formatting
         // Match "n-" only when preceded by space, start of line, or punctuation
-        .replace(/(^|[\.:!?\s])n-\s*/g, "$1\n• ")
+        .replace(/(^|[.:!?\s])n-\s*/g, "$1\n• ")
         // Handle n n patterns (convert to paragraph breaks) - only when clearly two separate formatting n's
-        .replace(/(^|[\.:!?\s])n\s+n(\s|$|[\.:!?])/g, "$1\n\n$2")
+        .replace(/(^|[.:!?\s])n\s+n(\s|$|[.:!?])/g, "$1\n\n$2")
         // Handle n followed by actual newline character - only standalone formatting n
-        .replace(/(^|[\.:!?\s])n\s*\n/g, "$1\n")
+        .replace(/(^|[.:!?\s])n\s*\n/g, "$1\n")
         // Handle n followed by whitespace and capital letter (new paragraph) - only when clearly formatting
         // Must be preceded by space/punctuation to avoid matching "in APAC" -> "i APAC"
-        .replace(/(^|[\.:!?\s])n\s+([A-Z])/g, "$1\n\n$2")
+        .replace(/(^|[.:!?\s])n\s+([A-Z])/g, "$1\n\n$2")
         // Handle n followed by bullet character - only when clearly formatting
         .replace(
-          /(^|[\.:!?\s])n\s*([•\-\u2022\u25E6\u25AA\u25AB\u25A0\u25A1\u2B24\u25CB])/g,
+          /(^|[.:!?\s])n\s*([•\-\u2022\u25E6\u25AA\u25AB\u25A0\u25A1\u2B24\u25CB])/g,
           "$1\n$2",
         )
         // Handle standalone n at end of sentence - convert to newline
-        .replace(/([\.:!?])\s+n(\s|$)/g, "$1\n$2")
+        .replace(/([.:!?])\s+n(\s|$)/g, "$1\n$2")
         // Handle r character used as line break (convert to newline)
         .replace(/\s+r\s+/g, "\n")
         .replace(/\s+r$/gm, "\n")
@@ -113,7 +113,7 @@ export const AIPromptingInterface = ({
         .replace(/\*/g, "")
         .replace(/#{1,6}\s/g, "")
         .replace(/`{1,3}/g, "")
-        .replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1") // Remove markdown links but keep text
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // Remove markdown links but keep text
         // Normalize bullet points to standard bullet
         // FIRST: Replace literal "u2022" text with actual bullet character
         .replace(/u2022/gi, "•")

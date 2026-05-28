@@ -542,8 +542,10 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
             }
           }
         } else {
+          // intentional: drivers payload absent; skip update
         }
       } else {
+        // intentional: no fetched data to merge
       }
     } catch (error) {
       console.error("❌ Market Size - Error fetching data:", error);
@@ -1447,6 +1449,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                           <h4 className="font-medium text-gray-900 mb-3">Market Size by Segment</h4>
                           {(() => {
                             if (typeof marketSizeBySegment === "string") {
+                              // intentional: string form not rendered here
                             }
                             return null;
                           })()}
@@ -1479,7 +1482,9 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                                       }),
                                     );
                                   }
-                                } catch (_parseError) {}
+                                } catch (_parseError) {
+                                  // intentional: fall through to fallback below
+                                }
 
                                 // Only use fallback data if parsing fails
                                 return [
@@ -1503,6 +1508,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                           <h4 className="font-medium text-gray-900 mb-3">Growth Projections</h4>
                           {(() => {
                             if (typeof growthProjections === "string") {
+                              // intentional: string form not rendered here
                             }
                             return null;
                           })()}
@@ -1536,7 +1542,9 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                                       },
                                     );
                                   }
-                                } catch (_parseError) {}
+                                } catch (_parseError) {
+                                  // intentional: fall through to fallback below
+                                }
 
                                 // Only use fallback data if parsing fails
                                 return [

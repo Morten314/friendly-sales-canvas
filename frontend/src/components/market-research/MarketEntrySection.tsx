@@ -2180,6 +2180,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           // Handle both swot and swotAnalysis from API, and ensure proper structure
           const swotData = apiData.swot || apiData.swotAnalysis;
           if (swotData) {
+            // intentional: presence check only; validation happens below
           }
 
           // Validate SWOT data structure - check structure, not content length
@@ -2208,6 +2209,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
               // Invalid SWOT structure – validSwotData stays null
             }
           } else {
+            // intentional: no swotData present; validSwotData stays null
           }
 
           // Create mapped data with swotAnalysis - set if we have valid SWOT structure
@@ -2259,6 +2261,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           });
           hasFetchedRef.current = true;
         } else {
+          // intentional: skip merge when no API data returned
         }
       }
     } catch (error) {
@@ -2381,6 +2384,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
 
       return () => clearTimeout(timer);
     } else {
+      // intentional: no-op when initial mount conditions are not met
     }
   }, []); // Empty dependency array - only run on mount
 
@@ -2498,10 +2502,12 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
             updateData.swotAnalysis = existingSwot;
             updateData.swot = existingSwot; // Also set swot for backward compatibility
           } else {
+            // intentional: nothing to preserve when existingSwot is missing/invalid
           }
 
           setMarketEntryData(updateData);
         } else {
+          // intentional: skip when no update payload was produced
         }
       }
     }
@@ -2674,6 +2680,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
     };
   }) => {
     if (swotData) {
+      // intentional: presence check only; normalization happens below
     }
 
     // Use swotData if it exists and is an object, otherwise try editSwotAnalysis
@@ -2706,6 +2713,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
     }
 
     if (swotToUse) {
+      // intentional: presence check only; arrays extracted below
     }
 
     // Use normalized data or empty arrays

@@ -672,6 +672,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         // If we got a redirect (307), the fetch should have followed it
         // If the final response is still not ok, log it but don't throw (we'll preserve local state anyway)
         if (!response.ok) {
+          // intentional: preserve local state, no further action
         }
       } catch (_fetchError) {
         // Network errors or other fetch errors - log but don't throw
@@ -695,9 +696,13 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           if (getResponse.ok) {
             getData = await getResponse.json();
           } else {
+            // intentional: preserve local state, no further action
           }
-        } catch (_getError) {}
+        } catch (_getError) {
+          // intentional: preserve local state on GET failure
+        }
       } else {
+        // intentional: skip GET when first call failed; local state preserved
       }
 
       // Update component with fresh data from API response (if available)

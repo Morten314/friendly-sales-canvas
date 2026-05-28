@@ -645,6 +645,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
           setLocalKeyDataValues(initialValues);
         }
       } else {
+        // intentional: no payload to seed initial values from
       }
     } catch (error) {
       console.error("❌ RegulatoryComplianceSection: Error fetching data:", error);
@@ -735,9 +736,12 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
               currentUser?.uid,
             );
           } else {
+            // intentional: skip refresh-cache write when latestProfile is missing
           }
         }
-      } catch (_error) {}
+      } catch (_error) {
+        // intentional: ignore cache-write failures and proceed to refetch
+      }
 
       fetchRegulatoryComplianceData(true); // refresh = true for company profile changes
     };
