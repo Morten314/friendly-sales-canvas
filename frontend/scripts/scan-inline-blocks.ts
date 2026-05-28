@@ -19,6 +19,7 @@
 import { createHash } from "node:crypto";
 import { readFile, readdir, writeFile, mkdir } from "node:fs/promises";
 import { join, relative, resolve, dirname } from "node:path";
+
 import * as ts from "typescript";
 
 const FRONTEND_DIR = resolve(import.meta.dirname, "..");

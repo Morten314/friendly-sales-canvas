@@ -1,8 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { loginAsTestUser } from "../helpers/login";
+
 import { installApiMocks } from "../fixtures/api-mocks";
-import { maskDynamic } from "../helpers/mask-dynamic";
 import { leadList } from "../fixtures/seed-data";
+import { loginAsTestUser } from "../helpers/login";
+import { maskDynamic } from "../helpers/mask-dynamic";
 
 /**
  * The CSV upload UI lives in DataSourcesManager (rendered in the Data Sources

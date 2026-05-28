@@ -1,7 +1,7 @@
-import { readFile, readdir, writeFile, mkdir } from "node:fs/promises";
 import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { readFile, readdir, writeFile, mkdir } from "node:fs/promises";
 import { join, relative, resolve, dirname, basename } from "node:path";
+import { promisify } from "node:util";
 
 const execFileP = promisify(execFile);
 
@@ -142,7 +142,9 @@ async function loadKnip(): Promise<{ deadFiles: Set<string>; deadExports: Set<st
       if (hasExports) deadExports.add(file);
     }
   } else if (issuesField && typeof issuesField === "object") {
-    for (const [file, payload] of Object.entries(issuesField as Record<string, any>)) {
+    for (const [file, payload] of Object.entries(
+      issuesField as Record<string, { exports?: unknown[]; types?: unknown[] }>,
+    )) {
       const f = normalize(file);
       const hasExports =
         (Array.isArray(payload.exports) && payload.exports.length > 0) ||

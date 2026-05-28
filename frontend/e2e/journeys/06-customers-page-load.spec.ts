@@ -9,6 +9,7 @@
 // (`installCatchAllApiMock` is itself marked @deprecated as a no-op in
 // api-mocks.ts). These new journeys deliberately drop the redundant calls.
 import { expect, test } from "@playwright/test";
+
 import { loginAsTestUser } from "../helpers/login";
 import { maskDynamic } from "../helpers/mask-dynamic";
 

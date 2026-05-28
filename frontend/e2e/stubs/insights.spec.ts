@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
-import { loginAsTestUser } from "../helpers/login";
+
 import { installApiMocks, installCatchAllApiMock } from "../fixtures/api-mocks";
+import { loginAsTestUser } from "../helpers/login";
 import { maskDynamic } from "../helpers/mask-dynamic";
 
 test("insights page loads with static hardcoded percentages", async ({ page }) => {

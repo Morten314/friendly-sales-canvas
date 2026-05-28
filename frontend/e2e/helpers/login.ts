@@ -1,6 +1,7 @@
-import { Page } from "@playwright/test";
-import { firebaseSignInResponse, seededAuthEntries } from "../fixtures/auth";
+import type { Page } from "@playwright/test";
+
 import { installApiMocks } from "../fixtures/api-mocks";
+import { firebaseSignInResponse, seededAuthEntries } from "../fixtures/auth";
 
 /**
  * Install Firebase REST mocks. Use this for tests that drive the login form

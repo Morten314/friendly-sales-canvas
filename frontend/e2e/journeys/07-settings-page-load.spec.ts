@@ -2,6 +2,7 @@
 // Same shape as 06-customers-page-load.spec.ts (see that file's header for the
 // loginAsTestUser-handles-everything pattern note).
 import { expect, test } from "@playwright/test";
+
 import { loginAsTestUser } from "../helpers/login";
 import { maskDynamic } from "../helpers/mask-dynamic";
 

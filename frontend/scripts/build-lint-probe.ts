@@ -29,8 +29,8 @@
  */
 
 import { execFileSync, execSync } from "node:child_process";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 const FRONTEND_DIR = resolve(import.meta.dirname, "..");
 const REPO_DIR = resolve(FRONTEND_DIR, "..");

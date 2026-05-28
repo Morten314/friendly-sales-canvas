@@ -76,6 +76,18 @@ export default tseslint.config(
       "@typescript-eslint/no-floating-promises": "off",
     },
   },
+  // Override zone: React contexts intentionally co-export their hooks alongside
+  // the Provider component (`useAuth` with `AuthProvider`, etc.). Fast-refresh
+  // limitation does not apply to context modules — splitting them creates
+  // gratuitous file churn for no DX win. LeadStream.tsx exports a helper
+  // (`getLeadCountForICP`) alongside its panel for the same single-call-site
+  // reason.
+  {
+    files: ["src/contexts/**", "src/components/customers/LeadStream.tsx"],
+    rules: {
+      "react-refresh/only-export-components": "off",
+    },
+  },
   // eslint-config-prettier MUST come last to disable conflicting stylistic rules.
   eslintConfigPrettier,
 );

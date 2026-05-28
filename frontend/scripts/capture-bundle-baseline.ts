@@ -1,5 +1,6 @@
 import { readFile, readdir, stat, writeFile, mkdir } from "node:fs/promises";
 import { join, relative, resolve, dirname } from "node:path";
+
 import { gzipSize } from "gzip-size";
 
 const FRONTEND_DIR = resolve(import.meta.dirname, "..");

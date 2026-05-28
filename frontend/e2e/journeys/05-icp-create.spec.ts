@@ -1,8 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { loginAsTestUser } from "../helpers/login";
+
 import { installApiMocks, installCatchAllApiMock } from "../fixtures/api-mocks";
-import { maskDynamic } from "../helpers/mask-dynamic";
 import { icp } from "../fixtures/seed-data";
+import { loginAsTestUser } from "../helpers/login";
+import { maskDynamic } from "../helpers/mask-dynamic";
 
 test("ICP create via Mission Control → appears in saved list", async ({ page }) => {
   await loginAsTestUser(page);

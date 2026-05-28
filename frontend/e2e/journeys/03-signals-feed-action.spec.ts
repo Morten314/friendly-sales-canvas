@@ -1,9 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { loginAsTestUser } from "../helpers/login";
+
 import { installApiMocks, installCatchAllApiMock } from "../fixtures/api-mocks";
-import { maskDynamic } from "../helpers/mask-dynamic";
-import { signalList } from "../fixtures/seed-data";
 import { TEST_ORG_ID } from "../fixtures/identities";
+import { signalList } from "../fixtures/seed-data";
+import { loginAsTestUser } from "../helpers/login";
+import { maskDynamic } from "../helpers/mask-dynamic";
 
 test("signals feed loads, accept persists, snapshot stable", async ({ page }) => {
   await loginAsTestUser(page);

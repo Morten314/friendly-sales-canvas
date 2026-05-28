@@ -1,6 +1,6 @@
-import { Page } from "@playwright/test";
-import { lead, leadList, signal, signalList, icp, orgProfile, orgList } from "./seed-data";
-import { TEST_ORG_ID } from "./identities";
+import type { Page } from "@playwright/test";
+
+import { leadList, signalList, icp, orgProfile, orgList } from "./seed-data";
 
 const apiMocks: Record<string, unknown> = {
   "/api/org": { orgs: orgList },
