@@ -599,6 +599,7 @@ const MarketResearch = React.memo(() => {
     }, 150); // Slightly longer delay to ensure clear completes
 
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchMarketSizeData is a stable helper; intentionally watches only user identity edge to avoid re-fetch loops
   }, [currentUser?.uid]);
 
   // Show loading when either initially loading OR refreshing
@@ -1289,7 +1290,7 @@ const MarketResearch = React.memo(() => {
     } catch (error) {
       console.error("❌ Failed to save Market Intelligence data to localStorage:", error);
     }
-  }, []);
+  }, [currentUser?.uid]);
 
   // Helper function to save competitor data to localStorage
 
@@ -1311,7 +1312,7 @@ const MarketResearch = React.memo(() => {
     } catch (error) {
       console.error("❌ Failed to save Competitor data to localStorage:", error);
     }
-  }, []);
+  }, [currentUser?.uid]);
 
   // Helper function to save regulatory data to localStorage
 
@@ -1327,7 +1328,7 @@ const MarketResearch = React.memo(() => {
     } catch (error) {
       console.error("❌ Failed to save Regulatory data to localStorage:", error);
     }
-  }, []);
+  }, [currentUser?.uid]);
 
   // Helper function to save industry trends data to localStorage
 
@@ -1348,7 +1349,7 @@ const MarketResearch = React.memo(() => {
     } catch (error) {
       console.error("❌ Failed to save Industry Trends data to localStorage:", error);
     }
-  }, []);
+  }, [currentUser?.uid]);
 
   // Helper function to save market entry data to localStorage
 
@@ -1369,7 +1370,7 @@ const MarketResearch = React.memo(() => {
     } catch (error) {
       console.error("❌ Failed to save Market Entry data to localStorage:", error);
     }
-  }, []);
+  }, [currentUser?.uid]);
 
   // Market Size API state
 
@@ -1864,6 +1865,7 @@ const MarketResearch = React.memo(() => {
     if (newActiveTab !== activeTab) {
       setActiveTab(newActiveTab);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getActiveTabFromPath is a stable in-component helper that reads location.pathname (already a dep)
   }, [location.pathname, activeTab]);
 
   // Listen for custom events from header buttons (scout Refresh → Lead Stream vs full Scout: see handleRefreshRef below)
@@ -2210,7 +2212,7 @@ const MarketResearch = React.memo(() => {
 
         setTimeout(() => {
           if (!competitorData) {
-            fetchCompetitorData(true, false);
+            void fetchCompetitorData(true, false);
           }
         }, 100); // Reduced to 100ms for fastest response
       } catch (error) {
@@ -2218,7 +2220,8 @@ const MarketResearch = React.memo(() => {
       }
     };
 
-    loadInitialData();
+    void loadInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only initial-load effect; competitorData and fetchCompetitorData intentionally read at call-time to avoid re-fetch loops
   }, []); // Only run on mount
 
   // NOTE: Auto-refresh removed to prevent automatic refreshes
@@ -2286,6 +2289,7 @@ const MarketResearch = React.memo(() => {
         handleCompanyProfileUpdate as EventListener,
       );
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only event-listener subscription; handler reads regulatoryData?.timestamp at event-fire time intentionally
   }, []);
 
   // Smart refresh function that tracks component status and only retries failed ones
@@ -4305,11 +4309,12 @@ const MarketResearch = React.memo(() => {
       }
     };
 
-    setupInitialData();
+    void setupInitialData();
 
     return () => {
       isMounted = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only setup; intentionally captures stable references and avoids re-running on user/state changes (user switching is handled by separate useEffect below)
   }, []); // Only run once on initial mount - user switching is handled by separate useEffect
 
   // Load company profile data on mount and listen for updates
@@ -4341,6 +4346,7 @@ const MarketResearch = React.memo(() => {
     return () => {
       window.removeEventListener("companyProfileUpdated", handleCompanyProfileUpdate);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only listener; loadCompanyProfile reads currentUser?.uid at fire time intentionally
   }, []);
 
   // Listen for AI view changes from header
@@ -4371,10 +4377,10 @@ const MarketResearch = React.memo(() => {
     if (isShowingHistoricalData) {
       // If showing historical data, return to current data
 
-      returnToCurrentData();
+      void returnToCurrentData();
     } else {
       // Always trigger full refresh to ensure all components get fresh data
-      triggerScoutAndRefresh();
+      void triggerScoutAndRefresh();
     }
   };
 
@@ -4686,7 +4692,7 @@ const MarketResearch = React.memo(() => {
     setIndustryTrendsCustomMessage(customMessage);
 
     setTimeout(() => {
-      handleIndustryTrendsScoutClick("industry-trends", false, customMessage);
+      void handleIndustryTrendsScoutClick("industry-trends", false, customMessage);
     }, 300);
   };
 
@@ -4891,7 +4897,7 @@ const MarketResearch = React.memo(() => {
     setCompetitorCustomMessage(customMessage);
 
     setTimeout(() => {
-      handleCompetitorScoutClick("competitor-landscape", false, customMessage);
+      void handleCompetitorScoutClick("competitor-landscape", false, customMessage);
     }, 300);
   };
 
@@ -4921,7 +4927,7 @@ const MarketResearch = React.memo(() => {
     setMarketSizeCustomMessage(customMessage);
 
     setTimeout(() => {
-      handleMarketSizeScoutClick("market-size", false, customMessage);
+      void handleMarketSizeScoutClick("market-size", false, customMessage);
     }, 300);
   };
 
@@ -5330,7 +5336,7 @@ const MarketResearch = React.memo(() => {
 
     setIsMarketEntryPostSave(true);
 
-    handleMarketEntryScoutClick("market-entry", true);
+    void handleMarketEntryScoutClick("market-entry", true);
   };
 
   const handleMarketEntryCancelEdit = () => setIsMarketEntryEditing(false);
@@ -5344,7 +5350,7 @@ const MarketResearch = React.memo(() => {
       "I noticed you removed the Market Entry & Growth Strategy section. Want me to help refine or replace it?",
     );
 
-    handleMarketEntryScoutClick("market-entry");
+    void handleMarketEntryScoutClick("market-entry");
   };
 
   const handleMarketEntryEditHistoryOpen = () => {
