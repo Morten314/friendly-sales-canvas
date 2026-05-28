@@ -364,7 +364,7 @@ export const AIPromptingInterface = ({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSendPrompt();
+      void handleSendPrompt();
     }
   };
 

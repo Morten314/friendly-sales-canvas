@@ -646,7 +646,7 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                handleSendMessage();
+                void handleSendMessage();
               }
             }}
             disabled={isLoading}

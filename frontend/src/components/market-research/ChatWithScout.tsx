@@ -160,7 +160,7 @@ export function ChatWithScout({ fullPage = false }: ChatWithScoutProps) {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage();
+      void handleSendMessage();
     }
   };
 
