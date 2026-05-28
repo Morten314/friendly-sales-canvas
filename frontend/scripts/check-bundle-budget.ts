@@ -99,8 +99,43 @@ export async function walkDist(distPath: string): Promise<ChunkEntry[]> {
   return out;
 }
 
-export async function loadBaseline(_path: string): Promise<LoadResult> {
-  throw new Error("not implemented");
+export async function loadBaseline(path: string): Promise<LoadResult> {
+  if (!existsSync(path)) {
+    return {
+      ok: false,
+      reason: `baseline not found at ${path}; run npm run bundle:rebaseline to create one`,
+    };
+  }
+  let raw: string;
+  try {
+    raw = await readFile(path, "utf8");
+  } catch (e) {
+    return {
+      ok: false,
+      reason: `baseline at ${path} could not be read: ${(e as Error).message}`,
+    };
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return {
+      ok: false,
+      reason: `baseline JSON malformed at ${path}; expected shape from capture-bundle-baseline.ts`,
+    };
+  }
+  if (
+    !parsed ||
+    typeof parsed !== "object" ||
+    typeof (parsed as Baseline).total_size_bytes !== "number" ||
+    !Array.isArray((parsed as Baseline).chunks)
+  ) {
+    return {
+      ok: false,
+      reason: `baseline JSON at ${path} missing expected fields (total_size_bytes, chunks)`,
+    };
+  }
+  return { ok: true, baseline: parsed as Baseline };
 }
 
 export function compareAndPrint(

@@ -1,6 +1,16 @@
+import { resolve } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
-import { baseName, computeDelta, formatBytes, formatDelta } from "./check-bundle-budget";
+import {
+  baseName,
+  computeDelta,
+  formatBytes,
+  formatDelta,
+  loadBaseline,
+} from "./check-bundle-budget";
+
+const FIXTURE_DIR = resolve(import.meta.dirname, "__fixtures__");
 
 describe("baseName", () => {
   it("strips Vite hash from index-DoZK05uc.js", () => {
@@ -87,5 +97,49 @@ describe("formatDelta", () => {
 
   it("renders zero as +0", () => {
     expect(formatDelta(0, 0)).toBe("+0 B (+0.00%)");
+  });
+});
+
+describe("loadBaseline", () => {
+  it("returns ok with parsed baseline for a valid file", async () => {
+    const result = await loadBaseline(
+      resolve(FIXTURE_DIR, "baseline-valid.json"),
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.baseline.total_size_bytes).toBe(2092063);
+      expect(result.baseline.chunks).toHaveLength(2);
+    }
+  });
+
+  it("returns not-ok with actionable reason when file missing", async () => {
+    const result = await loadBaseline(
+      resolve(FIXTURE_DIR, "does-not-exist.json"),
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toContain("baseline not found");
+      expect(result.reason).toContain("npm run bundle:rebaseline");
+    }
+  });
+
+  it("returns not-ok when JSON is malformed", async () => {
+    const result = await loadBaseline(
+      resolve(FIXTURE_DIR, "baseline-malformed.json"),
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toContain("malformed");
+    }
+  });
+
+  it("returns not-ok when required fields are missing", async () => {
+    const result = await loadBaseline(
+      resolve(FIXTURE_DIR, "baseline-missing-fields.json"),
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toContain("missing expected fields");
+    }
   });
 });
