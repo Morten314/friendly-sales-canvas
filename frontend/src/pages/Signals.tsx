@@ -655,7 +655,7 @@ const Index = () => {
   // Listen for refresh event from header
   useEffect(() => {
     const handleSignalsRefresh = () => {
-      handleRefresh();
+      void handleRefresh();
     };
     const handleSignalsStateChanged = () => {
       if (currentUser?.uid) {
@@ -998,7 +998,8 @@ const Index = () => {
     }
 
     // Set up 5-second timer to call API
-    const timer = setTimeout(async () => {
+    const timer = setTimeout(() => {
+      void (async () => {
       // Remove from pending rejections
       setPendingRejections((prev) => {
         const updated = new Map(prev);
@@ -1040,6 +1041,7 @@ const Index = () => {
           variant: "destructive",
         });
       }
+      })();
     }, 5000); // 5 seconds delay
 
     // Store pending rejection for undo
@@ -1195,7 +1197,7 @@ const Index = () => {
                             }`}
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleAcceptSignal(signal.id);
+                              void handleAcceptSignal(signal.id);
                             }}
                           >
                             <ThumbsUp className="h-4 w-4" />
@@ -1450,7 +1452,7 @@ const Index = () => {
                                                                     }`}
                                                                     onClick={(e) => {
                                                                       e.stopPropagation();
-                                                                      handleAcceptSignal(signal.id);
+                                                                      void handleAcceptSignal(signal.id);
                                                                     }}
                                                                     title={
                                                                       isAccepted

@@ -94,7 +94,7 @@ const TenantSelection: React.FC = () => {
                   disabled={loading}
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleTenantSelect(tenant);
+                    void handleTenantSelect(tenant);
                   }}
                 >
                   {loading ? "Loading..." : "Select Organization"}

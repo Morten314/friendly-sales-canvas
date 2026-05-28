@@ -178,7 +178,7 @@ const Settings = () => {
       setSelectedProfile("");
     } else if (selectedProfile) {
       // If user changes and a profile is already selected, refetch the data
-      fetchProfileData(selectedProfile);
+      void fetchProfileData(selectedProfile);
     }
 
     previousUserIdRef.current = currentUserId;
@@ -190,7 +190,7 @@ const Settings = () => {
     setSelectedProfile(value);
     setIsEditMode(false);
     if (value) {
-      fetchProfileData(value);
+      void fetchProfileData(value);
     }
   };
 
