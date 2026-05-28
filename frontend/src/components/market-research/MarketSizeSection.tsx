@@ -194,6 +194,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       setLocalMarketSizeBySegment(marketSizeBySegment || {});
       setLocalGrowthProjections(growthProjections || {});
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- snapshot effect: re-initializes local edit buffer only when entering edit mode; intentionally ignores prop changes
   }, [isEditing]);
 
   // Sync local state with props when they change (but only when not editing and not just saved)
@@ -268,6 +269,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         setLocalMarketDrivers([]);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- prop-sync effect: reads local* state for comparison only; including locals would cause infinite re-sync loops
   }, [
     executiveSummary,
     tamValue,
@@ -613,11 +615,12 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
 
     if (!hasData && !isLoadingData) {
       const timer = setTimeout(() => {
-        fetchMarketSizeData(false);
+        void fetchMarketSizeData(false);
       }, 1000);
 
       return () => clearTimeout(timer);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- conditional fetch effect: fetchMarketSizeData and isLoadingData read directly to avoid stale-closure refetch loops
   }, [
     currentUser?.uid,
     executiveSummary,
@@ -636,8 +639,9 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       setMarketSizeData(null);
       setErrorData(null);
       setIsLoadingData(true);
-      fetchMarketSizeData(true);
+      void fetchMarketSizeData(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh-trigger effect: fetchMarketSizeData stable, intentionally watches only isRefreshing edge
   }, [isRefreshing]);
 
   // Check if we have any meaningful data
