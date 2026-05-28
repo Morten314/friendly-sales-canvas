@@ -73,8 +73,30 @@ export function formatDelta(deltaBytes: number, basePercent: number): string {
   return `${byteSign}${formatBytes(deltaBytes)} (${pctSign}${basePercent.toFixed(2)}%)`;
 }
 
-export async function walkDist(_distPath: string): Promise<ChunkEntry[]> {
-  throw new Error("not implemented");
+export async function walkDist(distPath: string): Promise<ChunkEntry[]> {
+  if (!existsSync(distPath)) return [];
+  const out: ChunkEntry[] = [];
+  const walk = async (dir: string): Promise<void> => {
+    const entries = await readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        await walk(full);
+      } else if (entry.isFile() && /\.(js|css)$/.test(entry.name)) {
+        const contents = await readFile(full);
+        const sizeBytes = (await stat(full)).size;
+        const gz = await gzipSize(contents);
+        out.push({
+          file: relative(distPath, full).split("\\").join("/"),
+          size_bytes: sizeBytes,
+          gzip_bytes: gz,
+        });
+      }
+    }
+  };
+  await walk(distPath);
+  out.sort((a, b) => b.size_bytes - a.size_bytes);
+  return out;
 }
 
 export async function loadBaseline(_path: string): Promise<LoadResult> {
