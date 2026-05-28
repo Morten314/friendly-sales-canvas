@@ -68,8 +68,8 @@ import {
   invalidateMissionControlCache,
   invalidateProfilerCache,
 } from "@/lib/missionProfilerSessionCache";
-import { extractIcpsDataFromFlexibleApiResponse } from "@/utils/profileIcpsExtract";
 import type { UntypedBackendApiResponse } from "@/lib/types/escape-hatches";
+import { extractIcpsDataFromFlexibleApiResponse } from "@/utils/profileIcpsExtract";
 
 // Data Source Interface
 interface DataSource {

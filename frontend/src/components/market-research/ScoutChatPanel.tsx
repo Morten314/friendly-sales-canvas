@@ -1,13 +1,13 @@
 import { Bot, X, Send, Loader2, User } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 
+import type { EditRecord } from "./types";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { getUserLocalStorage } from "@/utils/cacheUtils";
-
-import type { EditRecord } from "./types";
 
 interface ScoutChatPanelProps {
   showScoutChat: boolean;
