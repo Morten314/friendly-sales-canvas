@@ -935,30 +935,34 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import type {
+  UntypedBackendApiResponse,
+  UntypedReportState,
+} from "@/lib/types/escape-hatches";
 
 interface MarketIntelligenceResponse {
   report: {
     timestamp: string;
-    data: any;
-    [key: string]: any;
+    data: UntypedReportState;
+    [key: string]: UntypedBackendApiResponse;
   };
   report_history: string[]; // Array of timestamp strings
-  [key: string]: any;
+  [key: string]: UntypedBackendApiResponse;
 }
 
 const API_BASE_URL = "https://backend-11kr.onrender.com";
 
 interface DataHistoryDialogProps {
-  onReportSelected?: (reportData: any) => void;
+  onReportSelected?: (reportData: UntypedReportState) => void;
 }
 
 export const DataHistoryDialog = ({ onReportSelected }: DataHistoryDialogProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [reportHistory, setReportHistory] = useState<string[]>([]);
-  const [currentReport, setCurrentReport] = useState<any>(null);
+  const [currentReport, setCurrentReport] = useState<UntypedReportState>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedReport, setSelectedReport] = useState<any>(null);
+  const [selectedReport, setSelectedReport] = useState<UntypedReportState>(null);
   const [loadingTimestamp, setLoadingTimestamp] = useState<string | null>(null);
 
   useEffect(() => {
