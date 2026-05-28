@@ -81,7 +81,7 @@ const PWAInstallPrompt = ({ variant = "header" }: PWAInstallPromptProps) => {
       }
     };
 
-    checkInstallability();
+    void checkInstallability();
   }, []);
 
   useEffect(() => {
