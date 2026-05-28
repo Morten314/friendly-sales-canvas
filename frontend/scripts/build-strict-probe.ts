@@ -109,10 +109,15 @@ function main(): void {
   );
 
   // 1) Write the throwaway probe config.
+  // noImplicitAny is set explicitly even though strict:true enables it umbrellally,
+  // because tsconfig.app.json's own explicit noImplicitAny:<value> would otherwise
+  // win over the strict umbrella per TS option precedence — which made the
+  // pre-Step-1b probe under-count TS7006.
   const probeConfig = {
     extends: "./tsconfig.app.json",
     compilerOptions: {
       strict: true,
+      noImplicitAny: true,
       noUnusedLocals: true,
       noUnusedParameters: true,
       noFallthroughCasesInSwitch: true,
