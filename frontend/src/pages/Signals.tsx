@@ -1,11 +1,9 @@
-import { Filter, Check, X, Bookmark, MessageCircle, Info, Share2, Download, Bot, Send, RefreshCw, ThumbsUp, ThumbsDown, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Bookmark, MessageCircle, Info, Share2, Bot, Send, ThumbsUp, ThumbsDown, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { useState, useEffect } from 'react';
@@ -430,7 +428,7 @@ function getFallbackSampleSignals(): SignalCard[] {
 const Index = () => {
   const { currentUser, orgId } = useAuth();
   const navigate = useNavigate();
-  const [currentTab, setCurrentTab] = useState('signals');
+  const [currentTab] = useState('signals');
   const [signals, setSignals] = useState<SignalCard[]>([]);
   const [savedInsights, setSavedInsights] = useState<SignalCard[]>([]);
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
@@ -452,12 +450,12 @@ const Index = () => {
     }
   }, [expandedRecommendation]);
   /** True when current signals (and recommendations) came from GET /api/fetch-signals; false when using sample fallback */
-  const [signalsFromApi, setSignalsFromApi] = useState(false);
-  const [savedInsightsFilter, setSavedInsightsFilter] = useState('all');
+  const [, setSignalsFromApi] = useState(false);
+  const [savedInsightsFilter] = useState('all');
   const [acceptedSignals, setAcceptedSignals] = useState<Set<string>>(new Set());
   const [rejectedSignalHashes, setRejectedSignalHashes] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [, setIsRefreshing] = useState(false);
   const [expandedDescriptions, setExpandedDescriptions] = useState<Set<string>>(new Set());
   // Track pending rejections for undo functionality
   const [pendingRejections, setPendingRejections] = useState<Map<string, {
@@ -672,22 +670,6 @@ const Index = () => {
     console.log(`Action ${action} on card ${cardId}`);
   };
 
-  /** Strip markdown and special characters from agent response for plain display */
-  const formatAgentResponse = (text: string) => {
-    if (!text || typeof text !== 'string') return null;
-    let out = text
-      .replace(/\*\*\*/g, '')
-      .replace(/\*\*/g, '')
-      .replace(/\*([^*]+)\*/g, '$1')
-      .replace(/\*$/gm, '')
-      .replace(/^#+\s*/gm, '')
-      .replace(/—/g, ' - ')
-      .replace(/[\u2013\u2014]/g, ' - ')
-      .replace(/[^\S\n]+/g, ' ')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim();
-    return <span className="whitespace-pre-wrap">{out}</span>;
-  };
 
   const getAgentBadge = (agent: Agent) => {
     if (agent === 'scout') {
@@ -731,7 +713,7 @@ const Index = () => {
     const answer = first ? recommendationAnswers[`${signal.id}-0`] : undefined;
     handleNavigateToAgentChat(signal, recommendation, prompt, answer);
   };
-  const getContextualGreeting = (signal: SignalCard) => {
+  const getContextualGreeting = (_signal: SignalCard) => {
     const name = "Alex"; // This would come from user context in real app
     return `Hi ${name} 👋, I'm ready to delegate this insight for you. Please instruct.`;
   };
@@ -785,21 +767,6 @@ const Index = () => {
       { icon: '📈', text: 'Monitor for similar signals' },
       { icon: '📝', text: 'Create summary for weekly digest' }
     ];
-  };
-  const getNextBestMoves = (signal: SignalCard) => {
-    if (signal.headline.toLowerCase().includes('competitor') && signal.headline.toLowerCase().includes('pricing')) {
-      return ["Would you like me to check how many of your target ICPs fall under the SMB segment and could be influenced by this move?", "Do you want me to model a competitive bundle or ROI-driven value pitch against this pricing shift?", "Should I track customer sentiment on LinkedIn, G2 reviews, or forums to see if it's gaining traction?"];
-    }
-    if (signal.headline.toLowerCase().includes('funding') || signal.headline.toLowerCase().includes('competitor')) {
-      return ["Want me to analyze how this affects your competitive positioning in the market?", "Should I identify which of your prospects might be considering this competitor now?", "Do you want me to draft messaging that highlights your differentiators against this move?"];
-    }
-    if (signal.headline.toLowerCase().includes('icp') || signal.headline.toLowerCase().includes('hiring')) {
-      return ["Should I prioritize outreach to decision makers in this new segment?", "Want me to create a tailored value proposition for this ICP profile?", "Do you want me to identify similar companies that match this profile?"];
-    }
-    if (signal.sourceLabel.toLowerCase().includes('linkedin')) {
-      return ["Should I draft a contextual comment or connection request for this post?", "Want me to identify other prospects posting about similar challenges?", "Do you want me to create a follow-up sequence based on this signal?"];
-    }
-    return ["Should I analyze the broader implications of this development for your market?", "Want me to identify opportunities this creates for your sales approach?", "Do you want me to monitor for similar signals in your industry?"];
   };
   const handleAcceptSignal = async (signalId: string) => {
     if (!currentUser?.uid || !orgId) return;

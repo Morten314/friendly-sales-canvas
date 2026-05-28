@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { FileText, TrendingUp, Users, Target, BarChart, Clock, AlertCircle, CheckCircle, Lightbulb, Download, Bot, Edit, Trash2, FolderOpen, ChevronRight, Mail, Satellite, Compass } from 'lucide-react';
+import { FileText, TrendingUp, Users, Target, BarChart, Clock, AlertCircle, CheckCircle, Lightbulb, Bot, Edit, Trash2, FolderOpen, ChevronRight, Mail, Satellite } from 'lucide-react';
 
 interface ArtefactItem {
   id: string;

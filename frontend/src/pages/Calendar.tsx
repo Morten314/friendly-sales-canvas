@@ -4,13 +4,13 @@ import { Layout } from "@/components/layout/Layout";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, PlusCircle, MessageSquare, Send, Zap, Settings, Play, CheckSquare } from "lucide-react";
+import { MessageSquare, Send, Settings, Play, CheckSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Calendar = () => {
   usePageTitle("⚡ Activator - Brewra");
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isChatOpen] = useState(false);
   const [messages, setMessages] = useState([
     { role: "ai", content: "Hello! I'm Activator. How can I help with your tasks and campaigns today?" }
   ]);

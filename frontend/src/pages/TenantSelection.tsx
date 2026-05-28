@@ -4,11 +4,10 @@ import { useTenant } from '../contexts/TenantContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
-import { Building2, Users, ArrowRight, LogOut } from 'lucide-react';
+import { ArrowRight, LogOut } from 'lucide-react';
 
 const TenantSelection: React.FC = () => {
-  const { selectedTenant, availableTenants, selectTenant, setAvailableTenants, clearTenant } = useTenant();
+  const { availableTenants, selectTenant, setAvailableTenants, clearTenant } = useTenant();
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);

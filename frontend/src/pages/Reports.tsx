@@ -4,7 +4,7 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { BarChart, PlusCircle, ArrowRight, Download, MessageSquare, Send } from "lucide-react";
+import { BarChart, ArrowRight, Download, MessageSquare, Send } from "lucide-react";
 
 const Reports = () => {
   usePageTitle("📊 Presenter - Brewra");
