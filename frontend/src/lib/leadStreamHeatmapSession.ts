@@ -6,10 +6,7 @@ export function leadStreamHeatmapCacheKey(userId: string, orgId: string): string
   return `${PREFIX}:${userId}:${orgId}`;
 }
 
-function readFromStorage(
-  storage: Storage | undefined,
-  key: string
-): HeatmapLead[] | null {
+function readFromStorage(storage: Storage | undefined, key: string): HeatmapLead[] | null {
   if (!storage) return null;
   try {
     const raw = storage.getItem(key);
@@ -39,7 +36,7 @@ function readFromStorage(
  */
 export function readLeadStreamHeatmapFromSession(
   userId: string,
-  orgId: string
+  orgId: string,
 ): HeatmapLead[] | null {
   if (typeof window === "undefined") return null;
   const key = leadStreamHeatmapCacheKey(userId, orgId);
@@ -49,7 +46,7 @@ export function readLeadStreamHeatmapFromSession(
 
   const fromSession = readFromStorage(
     typeof sessionStorage !== "undefined" ? sessionStorage : undefined,
-    key
+    key,
   );
   if (fromSession !== null) {
     writeLeadStreamHeatmapToSession(userId, orgId, fromSession);
@@ -67,7 +64,7 @@ export function readLeadStreamHeatmapFromSession(
 export function writeLeadStreamHeatmapToSession(
   userId: string,
   orgId: string,
-  leads: HeatmapLead[]
+  leads: HeatmapLead[],
 ): void {
   if (typeof window === "undefined") return;
   const key = leadStreamHeatmapCacheKey(userId, orgId);

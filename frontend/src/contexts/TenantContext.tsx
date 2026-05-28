@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { useAuth } from './AuthContext';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import { useAuth } from "./AuthContext";
 
 interface Tenant {
   id: string;
@@ -22,7 +22,7 @@ const TenantContext = createContext<TenantContextType | undefined>(undefined);
 export const useTenant = () => {
   const context = useContext(TenantContext);
   if (context === undefined) {
-    throw new Error('useTenant must be used within a TenantProvider');
+    throw new Error("useTenant must be used within a TenantProvider");
   }
   return context;
 };
@@ -52,7 +52,7 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
       localStorage.removeItem(`selectedTenant_${currentUser.uid}`);
     }
     // Also clear old format for backward compatibility
-    localStorage.removeItem('selectedTenant');
+    localStorage.removeItem("selectedTenant");
   };
 
   // Load tenant from localStorage on mount or when user changes
@@ -63,7 +63,7 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
     }
 
     setLoading(true);
-    
+
     if (currentUser?.uid) {
       const storedTenant = localStorage.getItem(`selectedTenant_${currentUser.uid}`);
       if (storedTenant) {
@@ -79,7 +79,7 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
             setSelectedTenant(parsedTenant);
           }
         } catch (error) {
-          console.error('Error parsing stored tenant:', error);
+          console.error("Error parsing stored tenant:", error);
           localStorage.removeItem(`selectedTenant_${currentUser.uid}`);
           setSelectedTenant(null);
         }
@@ -88,7 +88,7 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
         const tenant = {
           id: orgId,
           name: orgName,
-          domain: `${orgId}.com`
+          domain: `${orgId}.com`,
         };
         setSelectedTenant(tenant);
         localStorage.setItem(`selectedTenant_${currentUser.uid}`, JSON.stringify(tenant));
@@ -100,7 +100,7 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
       // Clear tenant when user logs out
       setSelectedTenant(null);
     }
-    
+
     setLoading(false);
   }, [currentUser?.uid, authLoading, orgId, orgName]);
 
@@ -110,13 +110,8 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
     selectTenant,
     clearTenant,
     setAvailableTenants,
-    loading
+    loading,
   };
 
-  return (
-    <TenantContext.Provider value={value}>
-      {children}
-    </TenantContext.Provider>
-  );
+  return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>;
 };
-

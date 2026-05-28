@@ -3,7 +3,7 @@
  * Consumed by ScoutChatWithHistory on mount.
  */
 
-export const LEAD_STREAM_CHAT_CONTEXT_KEY = 'leadStreamChatContext';
+export const LEAD_STREAM_CHAT_CONTEXT_KEY = "leadStreamChatContext";
 
 export interface LeadStreamChatContext {
   /** Primary contact when single lead */
@@ -23,42 +23,44 @@ export interface LeadStreamChatContext {
 }
 
 const SUGGESTED_SINGLE_LEAD: string[] = [
-  'Is this prospect a decision maker?',
-  'Best person to contact, or reach someone else?',
-  'How long in their current role?',
-  'Recently promoted or newly hired?',
-  'What roles before this position?',
-  'Summarize recent LinkedIn activity',
-  'Signals company needs our solution?',
+  "Is this prospect a decision maker?",
+  "Best person to contact, or reach someone else?",
+  "How long in their current role?",
+  "Recently promoted or newly hired?",
+  "What roles before this position?",
+  "Summarize recent LinkedIn activity",
+  "Signals company needs our solution?",
 ];
 
 const SUGGESTED_MULTI_LEAD: string[] = [
-  'Which leads should we prioritize first?',
-  'What patterns do you see across these accounts?',
-  'Any risks or red flags in this set?',
-  'Suggest an outreach sequence for the top fits',
-  'How do these align with our ICP?',
+  "Which leads should we prioritize first?",
+  "What patterns do you see across these accounts?",
+  "Any risks or red flags in this set?",
+  "Suggest an outreach sequence for the top fits",
+  "How do these align with our ICP?",
 ];
 
-export function buildLeadStreamChatContext(leads: any[], reportFilter?: string): LeadStreamChatContext {
+export function buildLeadStreamChatContext(
+  leads: any[],
+  reportFilter?: string,
+): LeadStreamChatContext {
   const segmentPrompt =
-    reportFilter && reportFilter.startsWith('Find more accounts') ? reportFilter : undefined;
+    reportFilter && reportFilter.startsWith("Find more accounts") ? reportFilter : undefined;
 
   if (!leads?.length) {
     return {
-      sessionTitle: 'Ask Scout about leads',
-      customMessage:
-        "I'm ready to discuss your lead stream. What would you like to know?",
+      sessionTitle: "Ask Scout about leads",
+      customMessage: "I'm ready to discuss your lead stream. What would you like to know?",
       suggestedQuestions: SUGGESTED_MULTI_LEAD,
-      workspaceLine: 'Lead stream overview',
+      workspaceLine: "Lead stream overview",
     };
   }
 
   if (leads.length === 1) {
     const l = leads[0];
-    const personName = l.name ?? 'Contact';
-    const company = l.company ?? 'Company';
-    const source = typeof l.source === 'string' ? l.source : undefined;
+    const personName = l.name ?? "Contact";
+    const company = l.company ?? "Company";
+    const source = typeof l.source === "string" ? l.source : undefined;
     let custom = `I've loaded full context on ${personName}. What would you like to know?`;
     if (segmentPrompt) {
       custom = `${custom} You also asked: ${segmentPrompt}`;
@@ -67,7 +69,7 @@ export function buildLeadStreamChatContext(leads: any[], reportFilter?: string):
       personName,
       company,
       source,
-      industry: typeof l.industry === 'string' ? l.industry : undefined,
+      industry: typeof l.industry === "string" ? l.industry : undefined,
       sessionTitle: `Research: ${personName}`,
       workspaceLine: `Researching ${personName} — ${company}`,
       customMessage: custom,
@@ -76,9 +78,9 @@ export function buildLeadStreamChatContext(leads: any[], reportFilter?: string):
   }
 
   const leadSummaries = leads.slice(0, 24).map((l) => ({
-    name: l.name ?? 'Contact',
-    company: l.company ?? '—',
-    source: typeof l.source === 'string' ? l.source : undefined,
+    name: l.name ?? "Contact",
+    company: l.company ?? "—",
+    source: typeof l.source === "string" ? l.source : undefined,
   }));
 
   let custom = `I've loaded context on ${leads.length} leads. What would you like to explore?`;

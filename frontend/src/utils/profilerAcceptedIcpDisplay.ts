@@ -80,7 +80,10 @@ export function extractPersistedIcpIdFromSuggestedProfileResponse(res: any): str
   return undefined;
 }
 
-export function saveProfilerAcceptedIcpDisplayMeta(icpId: string, meta: ProfilerAcceptedIcpDisplayMeta): void {
+export function saveProfilerAcceptedIcpDisplayMeta(
+  icpId: string,
+  meta: ProfilerAcceptedIcpDisplayMeta,
+): void {
   try {
     localStorage.setItem(PROFILER_ICP_DISPLAY_KEY(icpId), JSON.stringify(meta));
   } catch {
@@ -97,7 +100,10 @@ export function removeProfilerAcceptedIcpDisplayMeta(icpId: string): void {
 }
 
 /** Copy saved accept-time meta from suggested ICP id to persisted customer_profile id (often a new UUID). */
-export function copyProfilerDisplayMetaToProfileId(suggestedIcpId: string, profileIcpId: string): void {
+export function copyProfilerDisplayMetaToProfileId(
+  suggestedIcpId: string,
+  profileIcpId: string,
+): void {
   if (!suggestedIcpId || !profileIcpId || suggestedIcpId === profileIcpId) return;
   try {
     const raw = localStorage.getItem(PROFILER_ICP_DISPLAY_KEY(suggestedIcpId));
@@ -110,10 +116,11 @@ export function copyProfilerDisplayMetaToProfileId(suggestedIcpId: string, profi
 
 /** True when API stored Profiler placeholders (global + unknown industry). */
 export function isProfilerPlaceholderIcp(icp: any): boolean {
-  const pr = String(icp?.primary_region ?? icp?.primaryRegion ?? "").trim().toLowerCase();
+  const pr = String(icp?.primary_region ?? icp?.primaryRegion ?? "")
+    .trim()
+    .toLowerCase();
   const ind = Array.isArray(icp?.industry) ? icp.industry : [];
-  const singleUnknown =
-    ind.length === 1 && String(ind[0]).trim().toLowerCase() === "unknown";
+  const singleUnknown = ind.length === 1 && String(ind[0]).trim().toLowerCase() === "unknown";
   return pr === "global" && singleUnknown;
 }
 
@@ -169,20 +176,25 @@ export function mergeProfilerAcceptedIcpDisplay(icp: any): any {
       : [];
 
   const existingName = pickIcpNameFromRecord(icpWithId);
-  if (
-    meta.displayName &&
-    (!existingName || isUnknownPlaceholder(existingName))
-  ) {
+  if (meta.displayName && (!existingName || isUnknownPlaceholder(existingName))) {
     out.name = meta.displayName;
   }
 
   // Location: fill from suggested regions when API left it empty or stored "unknown"
-  if (locationNeedsMetaRegions(location) && Array.isArray(meta.regions) && meta.regions.length > 0) {
+  if (
+    locationNeedsMetaRegions(location) &&
+    Array.isArray(meta.regions) &&
+    meta.regions.length > 0
+  ) {
     location = [...meta.regions];
   }
 
   // Primary region: replace global / unknown / empty with the first suggested region
-  if (isWeakRegionPlaceholder(primaryRegion) && Array.isArray(meta.regions) && meta.regions.length > 0) {
+  if (
+    isWeakRegionPlaceholder(primaryRegion) &&
+    Array.isArray(meta.regions) &&
+    meta.regions.length > 0
+  ) {
     primaryRegion = meta.regions[0];
   }
 
@@ -192,8 +204,7 @@ export function mergeProfilerAcceptedIcpDisplay(icp: any): any {
 
   if (meta.industry) {
     const industryEmptyOrUnknown =
-      industry.length === 0 ||
-      (industry.length === 1 && isUnknownPlaceholder(String(industry[0])));
+      industry.length === 0 || (industry.length === 1 && isUnknownPlaceholder(String(industry[0])));
     if (industryEmptyOrUnknown) {
       industry = [meta.industry];
     }
@@ -253,7 +264,7 @@ export function extractIcpsArrayFromCustomerProfileResponse(profileData: any): a
  */
 export function mergeSuggestedIntoCustomerProfileApiRow(
   existing: any,
-  suggested: SuggestedIcpCardFields
+  suggested: SuggestedIcpCardFields,
 ): any {
   const regions = Array.isArray(suggested.regions) ? suggested.regions : [];
   const primary = regions[0] || existing.primary_region || existing.primaryRegion || "";
@@ -263,7 +274,9 @@ export function mergeSuggestedIntoCustomerProfileApiRow(
       : suggested.confidenceScore === "Low"
         ? "low"
         : "medium";
-  const existingCtx = String(existing.additional_context ?? existing.additionalContext ?? "").trim();
+  const existingCtx = String(
+    existing.additional_context ?? existing.additionalContext ?? "",
+  ).trim();
   const segmentLine = suggested.segment ? `Segment: ${suggested.segment}` : "";
   const additional_context = [existingCtx, segmentLine].filter(Boolean).join("\n");
 
@@ -377,7 +390,7 @@ export function resolveAcceptedPersistedIcpId(
   persistedFromResponse: string | undefined,
   idsBefore: Set<string>,
   idsAfter: string[],
-  suggestedId: string
+  suggestedId: string,
 ): string | undefined {
   if (persistedFromResponse?.trim()) return persistedFromResponse.trim();
   const newOnes = idsAfter.filter((id) => !idsBefore.has(id));

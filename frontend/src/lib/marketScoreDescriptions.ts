@@ -21,7 +21,7 @@ export const REPORT_KEY_TO_DESCRIPTION_LABEL: Record<string, string> = {
  */
 export function getDescriptionTextForColumn(
   response: MarketScoreDescriptionsResponse | undefined,
-  reportColumnKey: string
+  reportColumnKey: string,
 ): string | undefined {
   if (!response?.descriptions) return undefined;
   const canonical = REPORT_KEY_TO_DESCRIPTION_LABEL[reportColumnKey];
