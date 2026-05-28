@@ -130,13 +130,13 @@
 //   { value: "low", label: "Low - exploratory" },
 // ];
 
-// type InlineStep = 
-//   | "primaryRegion" 
-//   | "industry" 
-//   | "companySize" 
-//   | "buyerRole" 
+// type InlineStep =
+//   | "primaryRegion"
+//   | "industry"
+//   | "companySize"
+//   | "buyerRole"
 //   | "accountsOnWatchlist"
-//   | "accountsToAvoid" 
+//   | "accountsToAvoid"
 //   | "fitConfidence"
 //   | "additionalContext";
 
@@ -147,7 +147,7 @@
 //   const [icps, setIcps] = useState<ICP[]>([]);
 //   const [isSaving, setIsSaving] = useState(false);
 //   const [isLoading, setIsLoading] = useState(false);
-  
+
 //   // Inline editing state
 //   const [isAddingInline, setIsAddingInline] = useState(false);
 //   const [inlineStep, setInlineStep] = useState<InlineStep>("primaryRegion");
@@ -168,7 +168,7 @@
 //   const [avoidInput, setAvoidInput] = useState("");
 //   const [fitConfidence, setFitConfidence] = useState<FitConfidence | "">("");
 //   const [additionalContext, setAdditionalContext] = useState("");
-  
+
 //   // Validation errors
 //   const [validationErrors, setValidationErrors] = useState<{
 //     primaryRegion?: string;
@@ -177,10 +177,10 @@
 //     buyerRole?: string;
 //     fitConfidence?: string;
 //   }>({});
-  
+
 //   // Edit state
 //   const [editingId, setEditingId] = useState<string | null>(null);
-  
+
 //   const industryRef = useRef<HTMLInputElement>(null);
 //   const buyerRoleRef = useRef<HTMLInputElement>(null);
 
@@ -247,21 +247,21 @@
 //       if (!response.ok) {
 //         const errorText = await response.text();
 //         console.error("API Error:", response.status, errorText);
-        
+
 //         // Retry for 500 errors (server/database issues) up to 2 times
 //         if (response.status === 500 && retryCount < 2) {
 //           console.log(`Retrying save (attempt ${retryCount + 1}/2)...`);
 //           await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
 //           return saveCustomerProfileToBackend(icpsToSave, retryCount + 1);
 //         }
-        
+
 //         throw new Error(`Failed to save customer profile: ${response.status} - ${errorText}`);
 //       }
 
 //       const data = await response.json();
 //       console.log("✅ Customer profile saved successfully to backend");
 //       console.log("Response data:", JSON.stringify(data, null, 2));
-      
+
 //       // Save to localStorage for offline access and refresh persistence
 //       try {
 //         setUserLocalStorage('customerProfile', JSON.stringify(icpsToSave), currentUser.uid);
@@ -269,7 +269,7 @@
 //       } catch (e) {
 //         console.warn("Failed to save to localStorage:", e);
 //       }
-      
+
 //       // Clear pending flag on success
 //       try {
 //         removeUserLocalStorage('customerProfile_pending', currentUser.uid);
@@ -278,11 +278,11 @@
 //       }
 //     } catch (error) {
 //       console.error("Error saving customer profile:", error);
-      
+
 //       // Determine error message based on error type
 //       const isNetworkError = error instanceof TypeError && error.message.includes('fetch');
 //       const isServerError = error instanceof Error && error.message.includes('500');
-      
+
 //       if (isServerError || isNetworkError) {
 //         toast({
 //           title: "Backend temporarily unavailable",
@@ -320,7 +320,7 @@
 //           "Content-Type": "application/json",
 //         },
 //       });
-      
+
 //       console.log("ICPManager: API response status:", response.status, response.statusText);
 
 //       if (!response.ok) {
@@ -354,10 +354,10 @@
 //         'data.customer_profiles.icps': responseData?.data?.customer_profiles?.icps,
 //         'directIcps': responseData?.icps,
 //       });
-      
+
 //       // Handle wrapped API response structure: {success: true, data: {...}}
 //       const data = responseData.data || responseData;
-      
+
 //       // Verify user_id matches (multi-tenancy safety)
 //       const responseUserId = data.user_id || responseData.user_id;
 //       if (responseUserId && responseUserId !== currentUser.uid) {
@@ -381,7 +381,7 @@
 //         }
 //         return;
 //       }
-      
+
 //       // Check if icps exists in the response (handle multiple possible structures)
 //       // Structure 1: {success: true, data: {icps: [...]}} - Wrapped response
 //       // Structure 2: {success: true, data: {customer_profiles: {icps: [...]}}} - Nested in customer_profiles
@@ -389,7 +389,7 @@
 //       // Structure 4: {customer_profiles: {icps: [...]}} - Nested in customer_profiles
 //       // Structure 5: {customer_profile: {icps: [...]}} - Alternative nesting
 //       let icpsData = null;
-      
+
 //       // Try all possible paths
 //       if (responseData.data) {
 //         // Wrapped response: {success: true, data: {...}}
@@ -404,7 +404,7 @@
 //           console.log("ICPManager: Found icps in responseData.data.customer_profile.icps");
 //         }
 //       }
-      
+
 //       // If not found in wrapped response, try direct data object
 //       if (!icpsData) {
 //         if (Array.isArray(data.icps)) {
@@ -418,13 +418,13 @@
 //           console.log("ICPManager: Found icps in data.customer_profile.icps");
 //         }
 //       }
-      
+
 //       // Default to empty array if nothing found
 //       if (!icpsData) {
 //         icpsData = [];
 //         console.warn("ICPManager: No icps found in any expected location in API response");
 //       }
-      
+
 //       console.log("ICPManager: Extracted icpsData:", {
 //         'icpsData': icpsData,
 //         'isArray': Array.isArray(icpsData),
@@ -436,7 +436,7 @@
 //           industry: icp.industry
 //         })) : []
 //       });
-      
+
 //       if (Array.isArray(icpsData) && icpsData.length > 0) {
 //         const loadedICPs: ICP[] = icpsData.map((icp: any) => ({
 //           id: icp.id || `icp-${Date.now()}-${Math.random()}`,
@@ -457,14 +457,14 @@
 //         console.log("✅ Customer profile loaded from backend successfully");
 //         console.log("Loaded ICPs count:", loadedICPs.length);
 //         console.log("Loaded ICPs data:", JSON.stringify(loadedICPs, null, 2));
-        
+
 //         // Save to localStorage for offline access
 //         try {
 //           setUserLocalStorage('customerProfile', JSON.stringify(loadedICPs), currentUser.uid);
 //         } catch (e) {
 //           console.warn("Failed to save to localStorage:", e);
 //         }
-        
+
 //         // Dispatch event to notify MissionControl that customer profile is loaded
 //         if (loadedICPs.length > 0) {
 //           window.dispatchEvent(new CustomEvent('customerProfileSaved'));
@@ -479,10 +479,10 @@
 //             // Verify localStorage data belongs to current user
 //             if (Array.isArray(localICPs) && localICPs.length > 0) {
 //               // Check if any ICP has a user_id that doesn't match
-//               const hasMismatch = localICPs.some((icp: any) => 
+//               const hasMismatch = localICPs.some((icp: any) =>
 //                 icp.user_id && icp.user_id !== currentUser.uid
 //               );
-              
+
 //               if (hasMismatch) {
 //                 console.warn("⚠️ ICPManager: localStorage contains ICPs from different user! Clearing localStorage.");
 //                 // Clear localStorage for this user
@@ -532,7 +532,7 @@
 //     if (currentUser?.uid) {
 //       console.log("ICPManager: useEffect triggered, loading customer profile for user:", currentUser.uid);
 //       loadCustomerProfileFromBackend();
-      
+
 //       // Check for pending saves and retry them
 //       const retryPendingSave = async () => {
 //         try {
@@ -565,7 +565,7 @@
 //           console.error("Error retrying pending save:", error);
 //         }
 //       };
-      
+
 //       // Retry after a short delay to allow backend to recover
 //       const retryTimer = setTimeout(retryPendingSave, 5000);
 //       return () => clearTimeout(retryTimer);
@@ -618,7 +618,6 @@
 //       setValidationErrors(prev => ({ ...prev, fitConfidence: undefined }));
 //     }
 //   };
-
 
 //   const handleIndustryToggle = (industry: string) => {
 //     if (!selectedIndustries.includes(industry)) {
@@ -760,7 +759,6 @@
 //     setAccountsToAvoid(prev => prev.filter(company => company !== companyToRemove));
 //   };
 
-
 //   const handleSaveICP = async () => {
 //     const errors: typeof validationErrors = {};
 //     let hasErrors = false;
@@ -865,10 +863,10 @@
 //   const handleDeleteICP = async (id: string) => {
 //     const updatedICPs = icps.filter(icp => icp.id !== id);
 //     setIcps(updatedICPs);
-    
+
 //     // Save to backend
 //     await saveCustomerProfileToBackend(updatedICPs);
-    
+
 //     toast({
 //       title: "ICP deleted",
 //       description: "The ICP has been removed.",
@@ -898,13 +896,12 @@
 //     }
 //   };
 
-//   const canSave = 
-//     primaryRegion.trim() && 
-//     selectedIndustries.length > 0 && 
-//     selectedCompanySizes.length > 0 && 
-//     selectedBuyerRoles.length > 0 && 
+//   const canSave =
+//     primaryRegion.trim() &&
+//     selectedIndustries.length > 0 &&
+//     selectedCompanySizes.length > 0 &&
+//     selectedBuyerRoles.length > 0 &&
 //     fitConfidence;
-
 
 //   // Render the inline editing row
 //   const renderInlineEditRow = () => {
@@ -926,8 +923,8 @@
 //           {/* Regions - Single Select Dropdown */}
 //           <div className="space-y-1.5">
 //             <Label>Regions</Label>
-//             <Select 
-//               value={primaryRegion} 
+//             <Select
+//               value={primaryRegion}
 //               onValueChange={(value) => {
 //                 setPrimaryRegion(value);
 //                 if (validationErrors.primaryRegion) {
@@ -985,9 +982,9 @@
 //             {locations.length > 0 && (
 //               <div className="flex flex-wrap gap-1 mt-1">
 //                 {locations.map(location => (
-//                   <Badge 
-//                     key={location} 
-//                     variant="default" 
+//                   <Badge
+//                     key={location}
+//                     variant="default"
 //                     className="text-xs cursor-pointer"
 //                     onClick={() => handleRemoveLocation(location)}
 //                   >
@@ -1041,9 +1038,9 @@
 //                 </PopoverTrigger>
 //                 <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 shrink-0 opacity-50 pointer-events-none z-10" />
 //               </div>
-//               <PopoverContent 
-//                 className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]" 
-//                 side="bottom" 
+//               <PopoverContent
+//                 className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]"
+//                 side="bottom"
 //                 align="start"
 //                 sideOffset={4}
 //                 avoidCollisions={false}
@@ -1065,7 +1062,7 @@
 //                       )}
 //                     </CommandEmpty>
 //                     <CommandGroup>
-//                       {INDUSTRY_SUGGESTIONS.filter(industry => 
+//                       {INDUSTRY_SUGGESTIONS.filter(industry =>
 //                         !selectedIndustries.includes(industry) &&
 //                         industry.toLowerCase().includes(industryInput.toLowerCase())
 //                       ).map((industry) => (
@@ -1093,9 +1090,9 @@
 //             {selectedIndustries.length > 0 && (
 //               <div className="flex flex-wrap gap-1 mt-1">
 //                 {selectedIndustries.map(ind => (
-//                   <Badge 
-//                     key={ind} 
-//                     variant="default" 
+//                   <Badge
+//                     key={ind}
+//                     variant="default"
 //                     className="text-xs cursor-pointer"
 //                     onClick={() => {
 //                       setSelectedIndustries(prev => {
@@ -1128,15 +1125,15 @@
 //                   className={cn("w-full justify-between h-9 text-sm font-normal", validationErrors.companySize && "border-destructive")}
 //                   onClick={() => setIsCompanySizePopoverOpen(!isCompanySizePopoverOpen)}
 //                 >
-//                   {selectedCompanySizes.length > 0 
+//                   {selectedCompanySizes.length > 0
 //                     ? `${selectedCompanySizes.length} selected`
 //                     : "Select company size..."}
 //                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 //                 </Button>
 //               </PopoverTrigger>
-//               <PopoverContent 
-//                 className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]" 
-//                 side="bottom" 
+//               <PopoverContent
+//                 className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]"
+//                 side="bottom"
 //                 align="start"
 //                 sideOffset={4}
 //               >
@@ -1144,7 +1141,7 @@
 //                   <CommandList>
 //                     <CommandEmpty>No company size found.</CommandEmpty>
 //                     <CommandGroup>
-//                       {COMPANY_SIZE_OPTIONS.filter(size => 
+//                       {COMPANY_SIZE_OPTIONS.filter(size =>
 //                         !selectedCompanySizes.includes(size)
 //                       ).map((size) => (
 //                         <CommandItem
@@ -1170,9 +1167,9 @@
 //             {selectedCompanySizes.length > 0 && (
 //               <div className="flex flex-wrap gap-1 mt-1">
 //                 {selectedCompanySizes.map(size => (
-//                   <Badge 
-//                     key={size} 
-//                     variant="default" 
+//                   <Badge
+//                     key={size}
+//                     variant="default"
 //                     className="text-xs cursor-pointer"
 //                     onClick={() => {
 //                       setSelectedCompanySizes(prev => {
@@ -1238,9 +1235,9 @@
 //                 </PopoverTrigger>
 //                 <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 shrink-0 opacity-50 pointer-events-none z-10" />
 //               </div>
-//               <PopoverContent 
-//                 className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]" 
-//                 side="bottom" 
+//               <PopoverContent
+//                 className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]"
+//                 side="bottom"
 //                 align="start"
 //                 sideOffset={4}
 //                 avoidCollisions={false}
@@ -1262,7 +1259,7 @@
 //                       )}
 //                     </CommandEmpty>
 //                     <CommandGroup>
-//                       {BUYER_ROLE_SUGGESTIONS.filter(role => 
+//                       {BUYER_ROLE_SUGGESTIONS.filter(role =>
 //                         !selectedBuyerRoles.includes(role) &&
 //                         role.toLowerCase().includes(buyerRoleInput.toLowerCase())
 //                       ).map((role) => (
@@ -1290,9 +1287,9 @@
 //             {selectedBuyerRoles.length > 0 && (
 //               <div className="flex flex-wrap gap-1 mt-1">
 //                 {selectedBuyerRoles.map(role => (
-//                   <Badge 
-//                     key={role} 
-//                     variant="default" 
+//                   <Badge
+//                     key={role}
+//                     variant="default"
 //                     className="text-xs cursor-pointer"
 //                     onClick={() => {
 //                       setSelectedBuyerRoles(prev => {
@@ -1364,9 +1361,9 @@
 //             {accountsOnWatchlist.length > 0 && (
 //               <div className="flex flex-wrap gap-1 mt-1">
 //                 {accountsOnWatchlist.map(company => (
-//                   <Badge 
-//                     key={company} 
-//                     variant="default" 
+//                   <Badge
+//                     key={company}
+//                     variant="default"
 //                     className="text-xs cursor-pointer"
 //                     onClick={() => handleRemoveWatchlist(company)}
 //                   >
@@ -1404,9 +1401,9 @@
 //             {accountsToAvoid.length > 0 && (
 //               <div className="flex flex-wrap gap-1 mt-1">
 //                 {accountsToAvoid.map(company => (
-//                   <Badge 
-//                     key={company} 
-//                     variant="default" 
+//                   <Badge
+//                     key={company}
+//                     variant="default"
 //                     className="text-xs cursor-pointer"
 //                     onClick={() => handleRemoveAvoid(company)}
 //                   >
@@ -1434,8 +1431,8 @@
 //           <Button variant="outline" size="sm" onClick={handleCancelInline}>
 //             Cancel
 //           </Button>
-//           <Button 
-//             size="sm" 
+//           <Button
+//             size="sm"
 //             onClick={handleSaveICP}
 //             className="gap-1"
 //           >
@@ -1455,12 +1452,12 @@
 //           <div className="flex flex-col items-center justify-center gap-6 p-8 bg-background rounded-lg border border-border shadow-2xl">
 //             {/* Animated Brewra Logo */}
 //             <div className="relative w-24 h-24 flex items-center justify-center">
-//               <img 
-//                 src="/logo.png" 
-//                 alt="Brewra Logo" 
+//               <img
+//                 src="/logo.png"
+//                 alt="Brewra Logo"
 //                 className="h-20 w-20 object-contain"
 //                 loading="eager"
-//                 style={{ 
+//                 style={{
 //                   animation: 'logo-reveal 2.5s ease-in-out infinite',
 //                   clipPath: 'inset(0% 0% 0% 0%)'
 //                 }}
@@ -1635,7 +1632,6 @@
 
 // export default ICPManager;
 
-
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1655,17 +1651,8 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -1674,20 +1661,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Plus,
-  Trash2,
-  Edit,
-  X,
-  Check,
-  Target,
-  Eye,
-  ChevronsUpDown,
-} from "lucide-react";
+import { Plus, Trash2, Edit, X, Check, Target, Eye, ChevronsUpDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "react-router-dom";
-import { setUserLocalStorage, getUserLocalStorage, removeUserLocalStorage } from "@/utils/cacheUtils";
+import {
+  setUserLocalStorage,
+  getUserLocalStorage,
+  removeUserLocalStorage,
+} from "@/utils/cacheUtils";
 import {
   mergeProfilerAcceptedIcpDisplay,
   removeProfilerAcceptedIcpDisplayMeta,
@@ -1737,14 +1719,7 @@ const INDUSTRY_SUGGESTIONS = [
   "Consulting",
 ];
 
-const COMPANY_SIZE_OPTIONS = [
-  "1–10",
-  "11–50",
-  "51–200",
-  "201–500",
-  "501–1000",
-  "1000+",
-];
+const COMPANY_SIZE_OPTIONS = ["1–10", "11–50", "51–200", "201–500", "501–1000", "1000+"];
 
 const BUYER_ROLE_SUGGESTIONS = [
   "VP of Sales",
@@ -1765,13 +1740,13 @@ const FIT_CONFIDENCE_OPTIONS: { value: FitConfidence; label: string }[] = [
   { value: "low", label: "Low - exploratory" },
 ];
 
-type InlineStep = 
-  | "primaryRegion" 
-  | "industry" 
-  | "companySize" 
-  | "buyerRole" 
+type InlineStep =
+  | "primaryRegion"
+  | "industry"
+  | "companySize"
+  | "buyerRole"
   | "accountsOnWatchlist"
-  | "accountsToAvoid" 
+  | "accountsToAvoid"
   | "fitConfidence"
   | "additionalContext";
 
@@ -1779,7 +1754,7 @@ const ICPManager: React.FC = () => {
   const { toast } = useToast();
   const { currentUser, orgId } = useAuth();
   const location = useLocation();
-  const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
+  const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
   const [icps, setIcps] = useState<ICP[]>([]);
   const [_isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -1804,7 +1779,7 @@ const ICPManager: React.FC = () => {
   const [avoidInput, setAvoidInput] = useState("");
   const [fitConfidence, setFitConfidence] = useState<FitConfidence | "">("");
   const [additionalContext, setAdditionalContext] = useState("");
-  
+
   // Validation errors
   const [validationErrors, setValidationErrors] = useState<{
     primaryRegion?: string;
@@ -1813,10 +1788,10 @@ const ICPManager: React.FC = () => {
     buyerRole?: string;
     fitConfidence?: string;
   }>({});
-  
+
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
-  
+
   const industryRef = useRef<HTMLInputElement>(null);
   const buyerRoleRef = useRef<HTMLInputElement>(null);
 
@@ -1826,7 +1801,7 @@ const ICPManager: React.FC = () => {
       console.warn("Cannot save customer profile: User not authenticated");
       // Save to localStorage as fallback
       try {
-        setUserLocalStorage('customerProfile', JSON.stringify(icpsToSave), currentUser?.uid);
+        setUserLocalStorage("customerProfile", JSON.stringify(icpsToSave), currentUser?.uid);
       } catch (e) {
         console.error("Failed to save to localStorage:", e);
       }
@@ -1838,14 +1813,16 @@ const ICPManager: React.FC = () => {
       // Prepare payload with customer profile data
       const payload = {
         org_id: orgIdToUse,
-        icps: icpsToSave.map(icp => ({
+        icps: icpsToSave.map((icp) => ({
           id: icp.id,
           primary_region: icp.primaryRegion,
           location: Array.isArray(icp.location) ? icp.location : [],
           industry: Array.isArray(icp.industry) ? icp.industry : [],
           company_size: Array.isArray(icp.companySize) ? icp.companySize : [],
           buyer_role: Array.isArray(icp.buyerRole) ? icp.buyerRole : [],
-          accounts_on_watchlist: Array.isArray(icp.accountsOnWatchlist) ? icp.accountsOnWatchlist : [],
+          accounts_on_watchlist: Array.isArray(icp.accountsOnWatchlist)
+            ? icp.accountsOnWatchlist
+            : [],
           accounts_to_avoid: Array.isArray(icp.accountsToAvoid) ? icp.accountsToAvoid : [],
           fit_confidence: icp.fitConfidence || "medium",
           additional_context: icp.additionalContext || "",
@@ -1860,13 +1837,20 @@ const ICPManager: React.FC = () => {
       console.log("Payload:", JSON.stringify(payload, null, 2));
       // Debug: Check location field specifically
       payload.icps.forEach((icp, index) => {
-        console.log(`ICP ${index} location field:`, icp.location, "Type:", typeof icp.location, "IsArray:", Array.isArray(icp.location));
+        console.log(
+          `ICP ${index} location field:`,
+          icp.location,
+          "Type:",
+          typeof icp.location,
+          "IsArray:",
+          Array.isArray(icp.location),
+        );
       });
 
       // Always save to localStorage first as backup
       try {
-        setUserLocalStorage('customerProfile', JSON.stringify(icpsToSave), currentUser.uid);
-        setUserLocalStorage('customerProfile_pending', JSON.stringify(payload), currentUser.uid);
+        setUserLocalStorage("customerProfile", JSON.stringify(icpsToSave), currentUser.uid);
+        setUserLocalStorage("customerProfile_pending", JSON.stringify(payload), currentUser.uid);
       } catch (e) {
         console.warn("Failed to save to localStorage:", e);
       }
@@ -1883,14 +1867,14 @@ const ICPManager: React.FC = () => {
       if (!response.ok) {
         const errorText = await response.text();
         console.error("API Error:", response.status, errorText);
-        
+
         // Retry for 500 errors (server/database issues) up to 2 times
         if (response.status === 500 && retryCount < 2) {
           console.log(`Retrying save (attempt ${retryCount + 1}/2)...`);
-          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
+          await new Promise((resolve) => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
           return saveCustomerProfileToBackend(icpsToSave, retryCount + 1);
         }
-        
+
         throw new Error(`Failed to save customer profile: ${response.status} - ${errorText}`);
       }
 
@@ -1900,7 +1884,7 @@ const ICPManager: React.FC = () => {
 
       // Save to localStorage for offline access and refresh persistence
       try {
-        setUserLocalStorage('customerProfile', JSON.stringify(icpsToSave), currentUser.uid);
+        setUserLocalStorage("customerProfile", JSON.stringify(icpsToSave), currentUser.uid);
         console.log("ICPManager: Saved customer profile to localStorage");
       } catch (e) {
         console.warn("Failed to save to localStorage:", e);
@@ -1908,7 +1892,7 @@ const ICPManager: React.FC = () => {
 
       // Clear pending flag on success
       try {
-        removeUserLocalStorage('customerProfile_pending', currentUser.uid);
+        removeUserLocalStorage("customerProfile_pending", currentUser.uid);
       } catch (e) {
         console.warn("Failed to clear pending flag:", e);
       }
@@ -1916,19 +1900,21 @@ const ICPManager: React.FC = () => {
       console.error("Error saving customer profile:", error);
 
       // Determine error message based on error type
-      const isNetworkError = error instanceof TypeError && error.message.includes('fetch');
-      const isServerError = error instanceof Error && error.message.includes('500');
+      const isNetworkError = error instanceof TypeError && error.message.includes("fetch");
+      const isServerError = error instanceof Error && error.message.includes("500");
 
       if (isServerError || isNetworkError) {
         toast({
           title: "Backend temporarily unavailable",
-          description: "Your customer profile has been saved locally and will sync automatically when the backend is available.",
+          description:
+            "Your customer profile has been saved locally and will sync automatically when the backend is available.",
           variant: "default",
         });
       } else {
         toast({
           title: "Save warning",
-          description: "Customer profile saved locally but failed to sync with backend. Please try again later.",
+          description:
+            "Customer profile saved locally but failed to sync with backend. Please try again later.",
           variant: "destructive",
         });
       }
@@ -1970,7 +1956,10 @@ const ICPManager: React.FC = () => {
       let icpsData = responseData ? extractIcpsDataFromFlexibleApiResponse(responseData) : [];
 
       if (icpsData.length === 0) {
-        console.log("ICPManager: No ICPs on company profile (or request failed); trying GET customer_profile:", legacyUrl);
+        console.log(
+          "ICPManager: No ICPs on company profile (or request failed); trying GET customer_profile:",
+          legacyUrl,
+        );
         legacyRes = await fetch(legacyUrl, {
           method: "GET",
           headers: {
@@ -1988,20 +1977,20 @@ const ICPManager: React.FC = () => {
         "ICPManager: GET profile/company",
         companyRes.status,
         "GET customer_profile",
-        legacyRes ? legacyRes.status : "skipped"
+        legacyRes ? legacyRes.status : "skipped",
       );
 
       if (!anyOk) {
         console.log("No existing customer profile found in API, trying localStorage fallback");
         // Try loading from localStorage as fallback
         try {
-          const localData = getUserLocalStorage('customerProfile', currentUser.uid);
+          const localData = getUserLocalStorage("customerProfile", currentUser.uid);
           if (localData) {
             const localICPs = JSON.parse(localData);
             if (Array.isArray(localICPs) && localICPs.length > 0) {
               console.log("Loading customer profile from localStorage fallback");
               setIcps(localICPs);
-              window.dispatchEvent(new CustomEvent('customerProfileSaved'));
+              window.dispatchEvent(new CustomEvent("customerProfileSaved"));
             }
           }
         } catch (e) {
@@ -2024,16 +2013,19 @@ const ICPManager: React.FC = () => {
 
       console.log("ICPManager: Full API response:", JSON.stringify(responseData, null, 2));
       console.log("ICPManager: Response structure:", {
-        'hasSuccess': 'success' in responseData,
-        'hasData': 'data' in responseData,
-        'responseDataKeys': Object.keys(responseData || {}),
-        'dataKeys': responseData?.data ? Object.keys(responseData.data) : [],
-        'data.icps': (responseData?.data as Record<string, unknown>)?.icps,
-        'data.customer_profiles': (responseData?.data as Record<string, unknown>)?.customer_profiles,
-        'data.customer_profiles.icps': (responseData?.data as Record<string, Record<string, unknown>>)?.customer_profiles?.icps,
-        'directIcps': responseData?.icps,
+        hasSuccess: "success" in responseData,
+        hasData: "data" in responseData,
+        responseDataKeys: Object.keys(responseData || {}),
+        dataKeys: responseData?.data ? Object.keys(responseData.data) : [],
+        "data.icps": (responseData?.data as Record<string, unknown>)?.icps,
+        "data.customer_profiles": (responseData?.data as Record<string, unknown>)
+          ?.customer_profiles,
+        "data.customer_profiles.icps": (
+          responseData?.data as Record<string, Record<string, unknown>>
+        )?.customer_profiles?.icps,
+        directIcps: responseData?.icps,
       });
-      
+
       const data =
         typeof responseData.data === "object" && responseData.data !== null
           ? (responseData.data as Record<string, unknown>)
@@ -2042,19 +2034,22 @@ const ICPManager: React.FC = () => {
       // Verify user_id matches (multi-tenancy safety)
       const responseUserId = data.user_id ?? responseData.user_id;
       if (responseUserId && responseUserId !== currentUser.uid) {
-        console.warn("ICPManager: API returned customer profile for different user! Ignoring data.", {
-          'apiUserId': responseUserId,
-          'currentUserId': currentUser.uid
-        });
+        console.warn(
+          "ICPManager: API returned customer profile for different user! Ignoring data.",
+          {
+            apiUserId: responseUserId,
+            currentUserId: currentUser.uid,
+          },
+        );
         // Try loading from localStorage as fallback
         try {
-          const localData = getUserLocalStorage('customerProfile', currentUser.uid);
+          const localData = getUserLocalStorage("customerProfile", currentUser.uid);
           if (localData) {
             const localICPs = JSON.parse(localData);
             if (Array.isArray(localICPs) && localICPs.length > 0) {
               console.log("ICPManager: Loading from localStorage fallback (user mismatch)");
               setIcps(localICPs);
-              window.dispatchEvent(new CustomEvent('customerProfileSaved'));
+              window.dispatchEvent(new CustomEvent("customerProfileSaved"));
             }
           }
         } catch (e) {
@@ -2064,17 +2059,19 @@ const ICPManager: React.FC = () => {
       }
 
       console.log("ICPManager: Extracted icpsData:", {
-        'icpsData': icpsData,
-        'isArray': Array.isArray(icpsData),
-        'length': Array.isArray(icpsData) ? icpsData.length : 0,
-        'firstItem': Array.isArray(icpsData) && icpsData.length > 0 ? icpsData[0] : null,
-        'allItems': Array.isArray(icpsData) ? icpsData.map((icp: any) => ({
-          id: icp.id,
-          primary_region: icp.primary_region || icp.primaryRegion,
-          industry: icp.industry
-        })) : []
+        icpsData: icpsData,
+        isArray: Array.isArray(icpsData),
+        length: Array.isArray(icpsData) ? icpsData.length : 0,
+        firstItem: Array.isArray(icpsData) && icpsData.length > 0 ? icpsData[0] : null,
+        allItems: Array.isArray(icpsData)
+          ? icpsData.map((icp: any) => ({
+              id: icp.id,
+              primary_region: icp.primary_region || icp.primaryRegion,
+              industry: icp.industry,
+            }))
+          : [],
       });
-      
+
       if (Array.isArray(icpsData) && icpsData.length > 0) {
         const loadedICPs: ICP[] = icpsData.map((icp: any) => {
           const merged = mergeProfilerAcceptedIcpDisplay(icp);
@@ -2083,14 +2080,16 @@ const ICPManager: React.FC = () => {
             primaryRegion: merged.primary_region || merged.primaryRegion || "",
             location: Array.isArray(merged.location) ? merged.location : [],
             industry: Array.isArray(merged.industry) ? merged.industry : [],
-            companySize:
-              Array.isArray(merged.company_size)
-                ? merged.company_size
-                : Array.isArray(merged.companySize)
-                  ? merged.companySize
-                  : [],
-            buyerRole:
-              Array.isArray(merged.buyer_role) ? merged.buyer_role : Array.isArray(merged.buyerRole) ? merged.buyerRole : [],
+            companySize: Array.isArray(merged.company_size)
+              ? merged.company_size
+              : Array.isArray(merged.companySize)
+                ? merged.companySize
+                : [],
+            buyerRole: Array.isArray(merged.buyer_role)
+              ? merged.buyer_role
+              : Array.isArray(merged.buyerRole)
+                ? merged.buyerRole
+                : [],
             accountsOnWatchlist: Array.isArray(merged.accounts_on_watchlist)
               ? merged.accounts_on_watchlist
               : Array.isArray(merged.accountsOnWatchlist)
@@ -2101,10 +2100,16 @@ const ICPManager: React.FC = () => {
               : Array.isArray(merged.accountsToAvoid)
                 ? merged.accountsToAvoid
                 : [],
-            fitConfidence: (merged.fit_confidence || merged.fitConfidence || "medium") as FitConfidence,
+            fitConfidence: (merged.fit_confidence ||
+              merged.fitConfidence ||
+              "medium") as FitConfidence,
             additionalContext: merged.additional_context || merged.additionalContext || "",
             status: merged.status || "saved",
-            createdAt: merged.created_at ? new Date(merged.created_at) : merged.createdAt ? new Date(merged.createdAt) : new Date(),
+            createdAt: merged.created_at
+              ? new Date(merged.created_at)
+              : merged.createdAt
+                ? new Date(merged.createdAt)
+                : new Date(),
           };
         });
 
@@ -2114,48 +2119,50 @@ const ICPManager: React.FC = () => {
         }
         const dedupedICPs = Array.from(uniqueById.values());
         if (dedupedICPs.length !== loadedICPs.length) {
-          console.warn(
-            "ICPManager: Dropped duplicate ICP rows (same id) from API response.",
-            { before: loadedICPs.length, after: dedupedICPs.length }
-          );
+          console.warn("ICPManager: Dropped duplicate ICP rows (same id) from API response.", {
+            before: loadedICPs.length,
+            after: dedupedICPs.length,
+          });
         }
 
         setIcps(dedupedICPs);
         console.log("✅ Customer profile loaded from backend successfully");
         console.log("Loaded ICPs count:", dedupedICPs.length);
         console.log("Loaded ICPs data:", JSON.stringify(dedupedICPs, null, 2));
-        
+
         // Save to localStorage for offline access
         try {
-          setUserLocalStorage('customerProfile', JSON.stringify(dedupedICPs), currentUser.uid);
+          setUserLocalStorage("customerProfile", JSON.stringify(dedupedICPs), currentUser.uid);
         } catch (e) {
           console.warn("Failed to save to localStorage:", e);
         }
-        
+
         // Dispatch event to notify MissionControl that customer profile is loaded
         if (dedupedICPs.length > 0) {
-          window.dispatchEvent(new CustomEvent('customerProfileSaved'));
+          window.dispatchEvent(new CustomEvent("customerProfileSaved"));
         }
       } else {
         console.log("ICPManager: No icps found in API response, checking localStorage");
         // Try loading from localStorage as fallback
         try {
-          const localData = getUserLocalStorage('customerProfile', currentUser.uid);
+          const localData = getUserLocalStorage("customerProfile", currentUser.uid);
           if (localData) {
             const localICPs = JSON.parse(localData);
             // Verify localStorage data belongs to current user
             if (Array.isArray(localICPs) && localICPs.length > 0) {
               // Check if any ICP has a user_id that doesn't match
-              const hasMismatch = localICPs.some((icp: any) => 
-                icp.user_id && icp.user_id !== currentUser.uid
+              const hasMismatch = localICPs.some(
+                (icp: any) => icp.user_id && icp.user_id !== currentUser.uid,
               );
-              
+
               if (hasMismatch) {
-                console.warn("⚠️ ICPManager: localStorage contains ICPs from different user! Clearing localStorage.");
+                console.warn(
+                  "⚠️ ICPManager: localStorage contains ICPs from different user! Clearing localStorage.",
+                );
                 // Clear localStorage for this user
                 try {
                   const { removeUserLocalStorage } = await import("@/utils/cacheUtils");
-                  removeUserLocalStorage('customerProfile', currentUser.uid);
+                  removeUserLocalStorage("customerProfile", currentUser.uid);
                   console.log("✅ ICPManager: Cleared mismatched localStorage data");
                 } catch (e) {
                   console.error("Error clearing localStorage:", e);
@@ -2165,7 +2172,7 @@ const ICPManager: React.FC = () => {
               } else {
                 console.log("Loading customer profile from localStorage fallback");
                 setIcps(localICPs);
-                window.dispatchEvent(new CustomEvent('customerProfileSaved'));
+                window.dispatchEvent(new CustomEvent("customerProfileSaved"));
               }
             }
           }
@@ -2177,13 +2184,13 @@ const ICPManager: React.FC = () => {
       console.error("Error loading customer profile:", error);
       // Try loading from localStorage as fallback on error
       try {
-        const localData = getUserLocalStorage('customerProfile', currentUser.uid);
+        const localData = getUserLocalStorage("customerProfile", currentUser.uid);
         if (localData) {
           const localICPs = JSON.parse(localData);
           if (Array.isArray(localICPs) && localICPs.length > 0) {
             console.log("Loading customer profile from localStorage fallback (error case)");
             setIcps(localICPs);
-            window.dispatchEvent(new CustomEvent('customerProfileSaved'));
+            window.dispatchEvent(new CustomEvent("customerProfileSaved"));
           }
         }
       } catch (e) {
@@ -2238,17 +2245,16 @@ const ICPManager: React.FC = () => {
   const handleFitConfidenceSelect = (value: FitConfidence) => {
     setFitConfidence(value);
     if (validationErrors.fitConfidence) {
-      setValidationErrors(prev => ({ ...prev, fitConfidence: undefined }));
+      setValidationErrors((prev) => ({ ...prev, fitConfidence: undefined }));
     }
   };
 
-
   const handleIndustryToggle = (industry: string) => {
     if (!selectedIndustries.includes(industry)) {
-      setSelectedIndustries(prev => {
+      setSelectedIndustries((prev) => {
         const updated = [...prev, industry];
         if (validationErrors.industry && updated.length > 0) {
-          setValidationErrors(prev => ({ ...prev, industry: undefined }));
+          setValidationErrors((prev) => ({ ...prev, industry: undefined }));
         }
         return updated;
       });
@@ -2262,10 +2268,10 @@ const ICPManager: React.FC = () => {
       e.preventDefault();
       const trimmedInput = industryInput.trim();
       if (!selectedIndustries.includes(trimmedInput)) {
-        setSelectedIndustries(prev => {
+        setSelectedIndustries((prev) => {
           const updated = [...prev, trimmedInput];
           if (validationErrors.industry && updated.length > 0) {
-            setValidationErrors(prev => ({ ...prev, industry: undefined }));
+            setValidationErrors((prev) => ({ ...prev, industry: undefined }));
           }
           return updated;
         });
@@ -2277,10 +2283,10 @@ const ICPManager: React.FC = () => {
 
   const handleCompanySizeToggle = (size: string) => {
     if (!selectedCompanySizes.includes(size)) {
-      setSelectedCompanySizes(prev => {
+      setSelectedCompanySizes((prev) => {
         const updated = [...prev, size];
         if (validationErrors.companySize && updated.length > 0) {
-          setValidationErrors(prev => ({ ...prev, companySize: undefined }));
+          setValidationErrors((prev) => ({ ...prev, companySize: undefined }));
         }
         return updated;
       });
@@ -2290,10 +2296,10 @@ const ICPManager: React.FC = () => {
 
   const handleBuyerRoleToggle = (role: string) => {
     if (!selectedBuyerRoles.includes(role)) {
-      setSelectedBuyerRoles(prev => {
+      setSelectedBuyerRoles((prev) => {
         const updated = [...prev, role];
         if (validationErrors.buyerRole && updated.length > 0) {
-          setValidationErrors(prev => ({ ...prev, buyerRole: undefined }));
+          setValidationErrors((prev) => ({ ...prev, buyerRole: undefined }));
         }
         return updated;
       });
@@ -2307,10 +2313,10 @@ const ICPManager: React.FC = () => {
       e.preventDefault();
       const trimmedInput = buyerRoleInput.trim();
       if (!selectedBuyerRoles.includes(trimmedInput)) {
-        setSelectedBuyerRoles(prev => {
+        setSelectedBuyerRoles((prev) => {
           const updated = [...prev, trimmedInput];
           if (validationErrors.buyerRole && updated.length > 0) {
-            setValidationErrors(prev => ({ ...prev, buyerRole: undefined }));
+            setValidationErrors((prev) => ({ ...prev, buyerRole: undefined }));
           }
           return updated;
         });
@@ -2324,7 +2330,7 @@ const ICPManager: React.FC = () => {
     if (locationInput.trim()) {
       const trimmedLocation = locationInput.trim();
       if (!locations.includes(trimmedLocation)) {
-        setLocations(prev => [...prev, trimmedLocation]);
+        setLocations((prev) => [...prev, trimmedLocation]);
       }
       setLocationInput("");
     }
@@ -2338,14 +2344,14 @@ const ICPManager: React.FC = () => {
   };
 
   const handleRemoveLocation = (locationToRemove: string) => {
-    setLocations(prev => prev.filter(loc => loc !== locationToRemove));
+    setLocations((prev) => prev.filter((loc) => loc !== locationToRemove));
   };
 
   const handleAddWatchlist = () => {
     if (watchlistInput.trim()) {
       const trimmedCompany = watchlistInput.trim();
       if (!accountsOnWatchlist.includes(trimmedCompany)) {
-        setAccountsOnWatchlist(prev => [...prev, trimmedCompany]);
+        setAccountsOnWatchlist((prev) => [...prev, trimmedCompany]);
       }
       setWatchlistInput("");
     }
@@ -2359,14 +2365,14 @@ const ICPManager: React.FC = () => {
   };
 
   const handleRemoveWatchlist = (companyToRemove: string) => {
-    setAccountsOnWatchlist(prev => prev.filter(company => company !== companyToRemove));
+    setAccountsOnWatchlist((prev) => prev.filter((company) => company !== companyToRemove));
   };
 
   const handleAddAvoid = () => {
     if (avoidInput.trim()) {
       const trimmedCompany = avoidInput.trim();
       if (!accountsToAvoid.includes(trimmedCompany)) {
-        setAccountsToAvoid(prev => [...prev, trimmedCompany]);
+        setAccountsToAvoid((prev) => [...prev, trimmedCompany]);
       }
       setAvoidInput("");
     }
@@ -2380,9 +2386,8 @@ const ICPManager: React.FC = () => {
   };
 
   const handleRemoveAvoid = (companyToRemove: string) => {
-    setAccountsToAvoid(prev => prev.filter(company => company !== companyToRemove));
+    setAccountsToAvoid((prev) => prev.filter((company) => company !== companyToRemove));
   };
-
 
   const handleSaveICP = async () => {
     const errors: typeof validationErrors = {};
@@ -2450,7 +2455,7 @@ const ICPManager: React.FC = () => {
 
     let updatedICPs: ICP[];
     if (editingId) {
-      updatedICPs = icps.map(icp => (icp.id === editingId ? newICP : icp));
+      updatedICPs = icps.map((icp) => (icp.id === editingId ? newICP : icp));
       setIcps(updatedICPs);
       toast({
         title: "ICP updated",
@@ -2469,7 +2474,7 @@ const ICPManager: React.FC = () => {
     await saveCustomerProfileToBackend(updatedICPs);
 
     // Dispatch event to notify MissionControl that customer profile is saved
-    window.dispatchEvent(new CustomEvent('customerProfileSaved'));
+    window.dispatchEvent(new CustomEvent("customerProfileSaved"));
 
     resetInlineForm();
   };
@@ -2509,10 +2514,18 @@ const ICPManager: React.FC = () => {
       const deleteBody = await deleteRes.json();
       console.log("[ICPManager] DELETE customer_profile/icp: response body", deleteBody);
       if (deleteBody?.success && deleteBody?.data) {
-        console.log("[ICPManager] DELETE customer_profile/icp: deleted_icp_id=", deleteBody.data.deleted_icp_id, "remaining_count=", deleteBody.data.remaining_count);
+        console.log(
+          "[ICPManager] DELETE customer_profile/icp: deleted_icp_id=",
+          deleteBody.data.deleted_icp_id,
+          "remaining_count=",
+          deleteBody.data.remaining_count,
+        );
       }
     } catch (e) {
-      console.warn("[ICPManager] DELETE customer_profile/icp: failed (local state already updated)", e);
+      console.warn(
+        "[ICPManager] DELETE customer_profile/icp: failed (local state already updated)",
+        e,
+      );
     }
 
     await saveCustomerProfileToBackend(updatedICPs);
@@ -2529,27 +2542,33 @@ const ICPManager: React.FC = () => {
     switch (confidence) {
       case "high":
         return (
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800">
+          <Badge
+            variant="outline"
+            className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800"
+          >
             High
           </Badge>
         );
       case "medium":
         return (
-          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-400 dark:border-yellow-800">
+          <Badge
+            variant="outline"
+            className="bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-400 dark:border-yellow-800"
+          >
             Medium
           </Badge>
         );
       case "low":
         return (
-          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800">
+          <Badge
+            variant="outline"
+            className="bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800"
+          >
             Low
           </Badge>
         );
     }
   };
-
-
-
 
   // Render the inline editing row
   const renderInlineEditRow = () => {
@@ -2571,16 +2590,21 @@ const ICPManager: React.FC = () => {
           {/* Regions - Single Select Dropdown */}
           <div className="space-y-1.5">
             <Label>Regions</Label>
-            <Select 
-              value={primaryRegion} 
+            <Select
+              value={primaryRegion}
               onValueChange={(value) => {
                 setPrimaryRegion(value);
                 if (validationErrors.primaryRegion) {
-                  setValidationErrors(prev => ({ ...prev, primaryRegion: undefined }));
+                  setValidationErrors((prev) => ({ ...prev, primaryRegion: undefined }));
                 }
               }}
             >
-              <SelectTrigger className={cn("h-9 text-sm font-normal", validationErrors.primaryRegion && "border-destructive")}>
+              <SelectTrigger
+                className={cn(
+                  "h-9 text-sm font-normal",
+                  validationErrors.primaryRegion && "border-destructive",
+                )}
+              >
                 <SelectValue placeholder="Select region..." />
               </SelectTrigger>
               <SelectContent>
@@ -2629,10 +2653,10 @@ const ICPManager: React.FC = () => {
             </div>
             {locations.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
-                {locations.map(location => (
-                  <Badge 
-                    key={location} 
-                    variant="default" 
+                {locations.map((location) => (
+                  <Badge
+                    key={location}
+                    variant="default"
                     className="text-xs cursor-pointer"
                     onClick={() => handleRemoveLocation(location)}
                   >
@@ -2645,7 +2669,11 @@ const ICPManager: React.FC = () => {
 
           <div className="space-y-1.5">
             <Label>Industry</Label>
-            <Popover open={isIndustryPopoverOpen} onOpenChange={setIsIndustryPopoverOpen} modal={false}>
+            <Popover
+              open={isIndustryPopoverOpen}
+              onOpenChange={setIsIndustryPopoverOpen}
+              modal={false}
+            >
               <div className="relative">
                 <Input
                   ref={industryRef}
@@ -2663,13 +2691,19 @@ const ICPManager: React.FC = () => {
                     setTimeout(() => {
                       const activeElement = document.activeElement;
                       const popoverContent = document.querySelector('[role="dialog"]');
-                      if (!popoverContent?.contains(activeElement) && activeElement !== industryRef.current) {
+                      if (
+                        !popoverContent?.contains(activeElement) &&
+                        activeElement !== industryRef.current
+                      ) {
                         setIsIndustryPopoverOpen(false);
                       }
                     }, 200);
                   }}
                   onKeyDown={handleIndustryInputKeyDown}
-                  className={cn("h-9 text-sm pr-8", validationErrors.industry && "border-destructive")}
+                  className={cn(
+                    "h-9 text-sm pr-8",
+                    validationErrors.industry && "border-destructive",
+                  )}
                 />
                 <PopoverTrigger asChild>
                   <Button
@@ -2686,9 +2720,9 @@ const ICPManager: React.FC = () => {
                 </PopoverTrigger>
                 <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 shrink-0 opacity-50 pointer-events-none z-10" />
               </div>
-              <PopoverContent 
-                className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]" 
-                side="bottom" 
+              <PopoverContent
+                className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]"
+                side="bottom"
                 align="start"
                 sideOffset={4}
                 avoidCollisions={false}
@@ -2710,9 +2744,10 @@ const ICPManager: React.FC = () => {
                       )}
                     </CommandEmpty>
                     <CommandGroup>
-                      {INDUSTRY_SUGGESTIONS.filter(industry => 
-                        !selectedIndustries.includes(industry) &&
-                        industry.toLowerCase().includes(industryInput.toLowerCase())
+                      {INDUSTRY_SUGGESTIONS.filter(
+                        (industry) =>
+                          !selectedIndustries.includes(industry) &&
+                          industry.toLowerCase().includes(industryInput.toLowerCase()),
                       ).map((industry) => (
                         <CommandItem
                           key={industry}
@@ -2722,11 +2757,7 @@ const ICPManager: React.FC = () => {
                             setIsIndustryPopoverOpen(false);
                           }}
                         >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4 opacity-0"
-                            )}
-                          />
+                          <Check className={cn("mr-2 h-4 w-4 opacity-0")} />
                           {industry}
                         </CommandItem>
                       ))}
@@ -2737,16 +2768,19 @@ const ICPManager: React.FC = () => {
             </Popover>
             {selectedIndustries.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
-                {selectedIndustries.map(ind => (
-                  <Badge 
-                    key={ind} 
-                    variant="default" 
+                {selectedIndustries.map((ind) => (
+                  <Badge
+                    key={ind}
+                    variant="default"
                     className="text-xs cursor-pointer"
                     onClick={() => {
-                      setSelectedIndustries(prev => {
-                        const updated = prev.filter(i => i !== ind);
+                      setSelectedIndustries((prev) => {
+                        const updated = prev.filter((i) => i !== ind);
                         if (updated.length === 0 && !validationErrors.industry) {
-                          setValidationErrors(prev => ({ ...prev, industry: "Please select at least one industry" }));
+                          setValidationErrors((prev) => ({
+                            ...prev,
+                            industry: "Please select at least one industry",
+                          }));
                         }
                         return updated;
                       });
@@ -2770,18 +2804,21 @@ const ICPManager: React.FC = () => {
                 <Button
                   variant="outline"
                   role="combobox"
-                  className={cn("w-full justify-between h-9 text-sm font-normal", validationErrors.companySize && "border-destructive")}
+                  className={cn(
+                    "w-full justify-between h-9 text-sm font-normal",
+                    validationErrors.companySize && "border-destructive",
+                  )}
                   onClick={() => setIsCompanySizePopoverOpen(!isCompanySizePopoverOpen)}
                 >
-                  {selectedCompanySizes.length > 0 
+                  {selectedCompanySizes.length > 0
                     ? `${selectedCompanySizes.length} selected`
                     : "Select company size..."}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent 
-                className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]" 
-                side="bottom" 
+              <PopoverContent
+                className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]"
+                side="bottom"
                 align="start"
                 sideOffset={4}
               >
@@ -2789,8 +2826,8 @@ const ICPManager: React.FC = () => {
                   <CommandList>
                     <CommandEmpty>No company size found.</CommandEmpty>
                     <CommandGroup>
-                      {COMPANY_SIZE_OPTIONS.filter(size => 
-                        !selectedCompanySizes.includes(size)
+                      {COMPANY_SIZE_OPTIONS.filter(
+                        (size) => !selectedCompanySizes.includes(size),
                       ).map((size) => (
                         <CommandItem
                           key={size}
@@ -2799,11 +2836,7 @@ const ICPManager: React.FC = () => {
                             handleCompanySizeToggle(size);
                           }}
                         >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4 opacity-0"
-                            )}
-                          />
+                          <Check className={cn("mr-2 h-4 w-4 opacity-0")} />
                           {size}
                         </CommandItem>
                       ))}
@@ -2814,16 +2847,19 @@ const ICPManager: React.FC = () => {
             </Popover>
             {selectedCompanySizes.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
-                {selectedCompanySizes.map(size => (
-                  <Badge 
-                    key={size} 
-                    variant="default" 
+                {selectedCompanySizes.map((size) => (
+                  <Badge
+                    key={size}
+                    variant="default"
                     className="text-xs cursor-pointer"
                     onClick={() => {
-                      setSelectedCompanySizes(prev => {
-                        const updated = prev.filter(s => s !== size);
+                      setSelectedCompanySizes((prev) => {
+                        const updated = prev.filter((s) => s !== size);
                         if (updated.length === 0 && !validationErrors.companySize) {
-                          setValidationErrors(prev => ({ ...prev, companySize: "Please select at least one company size" }));
+                          setValidationErrors((prev) => ({
+                            ...prev,
+                            companySize: "Please select at least one company size",
+                          }));
                         }
                         return updated;
                       });
@@ -2842,7 +2878,11 @@ const ICPManager: React.FC = () => {
           {/* Job Title - Input with Tags */}
           <div className="space-y-1.5">
             <Label>Job Title</Label>
-            <Popover open={isBuyerRolePopoverOpen} onOpenChange={setIsBuyerRolePopoverOpen} modal={false}>
+            <Popover
+              open={isBuyerRolePopoverOpen}
+              onOpenChange={setIsBuyerRolePopoverOpen}
+              modal={false}
+            >
               <div className="relative">
                 <Input
                   ref={buyerRoleRef}
@@ -2860,13 +2900,19 @@ const ICPManager: React.FC = () => {
                     setTimeout(() => {
                       const activeElement = document.activeElement;
                       const popoverContent = document.querySelector('[role="dialog"]');
-                      if (!popoverContent?.contains(activeElement) && activeElement !== buyerRoleRef.current) {
+                      if (
+                        !popoverContent?.contains(activeElement) &&
+                        activeElement !== buyerRoleRef.current
+                      ) {
                         setIsBuyerRolePopoverOpen(false);
                       }
                     }, 200);
                   }}
                   onKeyDown={handleBuyerRoleInputKeyDown}
-                  className={cn("h-9 text-sm pr-8", validationErrors.buyerRole && "border-destructive")}
+                  className={cn(
+                    "h-9 text-sm pr-8",
+                    validationErrors.buyerRole && "border-destructive",
+                  )}
                 />
                 <PopoverTrigger asChild>
                   <Button
@@ -2883,9 +2929,9 @@ const ICPManager: React.FC = () => {
                 </PopoverTrigger>
                 <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 shrink-0 opacity-50 pointer-events-none z-10" />
               </div>
-              <PopoverContent 
-                className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]" 
-                side="bottom" 
+              <PopoverContent
+                className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]"
+                side="bottom"
                 align="start"
                 sideOffset={4}
                 avoidCollisions={false}
@@ -2907,9 +2953,10 @@ const ICPManager: React.FC = () => {
                       )}
                     </CommandEmpty>
                     <CommandGroup>
-                      {BUYER_ROLE_SUGGESTIONS.filter(role => 
-                        !selectedBuyerRoles.includes(role) &&
-                        role.toLowerCase().includes(buyerRoleInput.toLowerCase())
+                      {BUYER_ROLE_SUGGESTIONS.filter(
+                        (role) =>
+                          !selectedBuyerRoles.includes(role) &&
+                          role.toLowerCase().includes(buyerRoleInput.toLowerCase()),
                       ).map((role) => (
                         <CommandItem
                           key={role}
@@ -2919,11 +2966,7 @@ const ICPManager: React.FC = () => {
                             setIsBuyerRolePopoverOpen(false);
                           }}
                         >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4 opacity-0"
-                            )}
-                          />
+                          <Check className={cn("mr-2 h-4 w-4 opacity-0")} />
                           {role}
                         </CommandItem>
                       ))}
@@ -2934,16 +2977,19 @@ const ICPManager: React.FC = () => {
             </Popover>
             {selectedBuyerRoles.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
-                {selectedBuyerRoles.map(role => (
-                  <Badge 
-                    key={role} 
-                    variant="default" 
+                {selectedBuyerRoles.map((role) => (
+                  <Badge
+                    key={role}
+                    variant="default"
                     className="text-xs cursor-pointer"
                     onClick={() => {
-                      setSelectedBuyerRoles(prev => {
-                        const updated = prev.filter(r => r !== role);
+                      setSelectedBuyerRoles((prev) => {
+                        const updated = prev.filter((r) => r !== role);
                         if (updated.length === 0 && !validationErrors.buyerRole) {
-                          setValidationErrors(prev => ({ ...prev, buyerRole: "Please select at least one job title" }));
+                          setValidationErrors((prev) => ({
+                            ...prev,
+                            buyerRole: "Please select at least one job title",
+                          }));
                         }
                         return updated;
                       });
@@ -2962,8 +3008,16 @@ const ICPManager: React.FC = () => {
           {/* ICP Fit - Simple Dropdown */}
           <div className="space-y-1.5">
             <Label>ICP Fit</Label>
-            <Select value={fitConfidence} onValueChange={(value) => handleFitConfidenceSelect(value as FitConfidence)}>
-              <SelectTrigger className={cn("h-9 text-sm font-normal", validationErrors.fitConfidence && "border-destructive")}>
+            <Select
+              value={fitConfidence}
+              onValueChange={(value) => handleFitConfidenceSelect(value as FitConfidence)}
+            >
+              <SelectTrigger
+                className={cn(
+                  "h-9 text-sm font-normal",
+                  validationErrors.fitConfidence && "border-destructive",
+                )}
+              >
                 <SelectValue placeholder="Select ICP fit..." />
               </SelectTrigger>
               <SelectContent>
@@ -3008,10 +3062,10 @@ const ICPManager: React.FC = () => {
             </div>
             {accountsOnWatchlist.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
-                {accountsOnWatchlist.map(company => (
-                  <Badge 
-                    key={company} 
-                    variant="default" 
+                {accountsOnWatchlist.map((company) => (
+                  <Badge
+                    key={company}
+                    variant="default"
                     className="text-xs cursor-pointer"
                     onClick={() => handleRemoveWatchlist(company)}
                   >
@@ -3048,10 +3102,10 @@ const ICPManager: React.FC = () => {
             </div>
             {accountsToAvoid.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
-                {accountsToAvoid.map(company => (
-                  <Badge 
-                    key={company} 
-                    variant="default" 
+                {accountsToAvoid.map((company) => (
+                  <Badge
+                    key={company}
+                    variant="default"
                     className="text-xs cursor-pointer"
                     onClick={() => handleRemoveAvoid(company)}
                   >
@@ -3079,11 +3133,7 @@ const ICPManager: React.FC = () => {
           <Button variant="outline" size="sm" onClick={handleCancelInline}>
             Cancel
           </Button>
-          <Button 
-            size="sm" 
-            onClick={handleSaveICP}
-            className="gap-1"
-          >
+          <Button size="sm" onClick={handleSaveICP} className="gap-1">
             <Check className="h-4 w-4" />
             Save
           </Button>
@@ -3098,9 +3148,18 @@ const ICPManager: React.FC = () => {
       {isLoading && (
         <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="flex gap-2">
-            <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1.4s' }}></div>
-            <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '200ms', animationDuration: '1.4s' }}></div>
-            <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '400ms', animationDuration: '1.4s' }}></div>
+            <div
+              className="w-2 h-2 rounded-full bg-primary animate-bounce"
+              style={{ animationDelay: "0ms", animationDuration: "1.4s" }}
+            ></div>
+            <div
+              className="w-2 h-2 rounded-full bg-primary animate-bounce"
+              style={{ animationDelay: "200ms", animationDuration: "1.4s" }}
+            ></div>
+            <div
+              className="w-2 h-2 rounded-full bg-primary animate-bounce"
+              style={{ animationDelay: "400ms", animationDuration: "1.4s" }}
+            ></div>
           </div>
         </div>
       )}
@@ -3176,7 +3235,7 @@ const ICPManager: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {icp.industry.slice(0, 2).map(ind => (
+                      {icp.industry.slice(0, 2).map((ind) => (
                         <Badge key={ind} variant="outline" className="text-xs">
                           {ind}
                         </Badge>
@@ -3190,7 +3249,7 @@ const ICPManager: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {icp.companySize.map(size => (
+                      {icp.companySize.map((size) => (
                         <Badge key={size} variant="secondary" className="text-xs">
                           {size}
                         </Badge>
@@ -3199,7 +3258,7 @@ const ICPManager: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {icp.buyerRole.slice(0, 2).map(role => (
+                      {icp.buyerRole.slice(0, 2).map((role) => (
                         <Badge key={role} variant="outline" className="text-xs">
                           {role}
                         </Badge>
@@ -3213,7 +3272,10 @@ const ICPManager: React.FC = () => {
                   </TableCell>
                   <TableCell>{getFitConfidenceBadge(icp.fitConfidence)}</TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800">
+                    <Badge
+                      variant="outline"
+                      className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800"
+                    >
                       Saved
                     </Badge>
                   </TableCell>
@@ -3245,7 +3307,6 @@ const ICPManager: React.FC = () => {
       )}
 
       {/* Add Another ICP */}
-      
     </div>
   );
 };
