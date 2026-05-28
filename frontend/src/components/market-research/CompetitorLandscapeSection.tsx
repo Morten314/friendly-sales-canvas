@@ -30,10 +30,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import type {
-  UntypedBackendApiResponse,
-  UntypedBackendProfile,
-} from "@/lib/types/escape-hatches";
+import type { UntypedBackendApiResponse, UntypedBackendProfile } from "@/lib/types/escape-hatches";
 import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
 
 interface EditRecord {
@@ -290,8 +287,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           return insight;
         })
         .filter(
-          (insight: UntypedBackendApiResponse) =>
-            insight && (insight.label || insight.description),
+          (insight: UntypedBackendApiResponse) => insight && (insight.label || insight.description),
         );
     },
   );

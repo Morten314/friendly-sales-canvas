@@ -935,10 +935,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type {
-  UntypedBackendApiResponse,
-  UntypedReportState,
-} from "@/lib/types/escape-hatches";
+import type { UntypedBackendApiResponse, UntypedReportState } from "@/lib/types/escape-hatches";
 
 interface MarketIntelligenceResponse {
   report: {

@@ -427,30 +427,32 @@ const MissionControl = () => {
       console.log("MissionControl: Verifying data persistence by fetching saved profile...");
       setTimeout(() => {
         void (async () => {
-        try {
-          const verifyResponse = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-          });
-          if (verifyResponse.ok) {
-            const verifyData = await verifyResponse.json();
-            const savedCompanyName = verifyData?.company_name || verifyData?.companyName || "";
-            if (savedCompanyName.trim() === payload.company_name.trim()) {
-              console.log("✅ MissionControl: Data persistence verified - company name matches");
+          try {
+            const verifyResponse = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
+              method: "GET",
+              headers: { "Content-Type": "application/json" },
+            });
+            if (verifyResponse.ok) {
+              const verifyData = await verifyResponse.json();
+              const savedCompanyName = verifyData?.company_name || verifyData?.companyName || "";
+              if (savedCompanyName.trim() === payload.company_name.trim()) {
+                console.log("✅ MissionControl: Data persistence verified - company name matches");
+              } else {
+                console.error(
+                  "❌ MissionControl: Data persistence FAILED - company name mismatch!",
+                );
+                console.error("   Expected:", payload.company_name);
+                console.error("   Got:", savedCompanyName);
+                console.error("   This indicates a database write/read issue!");
+              }
             } else {
-              console.error("❌ MissionControl: Data persistence FAILED - company name mismatch!");
-              console.error("   Expected:", payload.company_name);
-              console.error("   Got:", savedCompanyName);
-              console.error("   This indicates a database write/read issue!");
+              console.warn(
+                "⚠️ MissionControl: Could not verify data persistence - GET request failed",
+              );
             }
-          } else {
-            console.warn(
-              "⚠️ MissionControl: Could not verify data persistence - GET request failed",
-            );
+          } catch (verifyError) {
+            console.error("MissionControl: Error verifying data persistence:", verifyError);
           }
-        } catch (verifyError) {
-          console.error("MissionControl: Error verifying data persistence:", verifyError);
-        }
         })();
       }, 2000); // Wait 2 seconds for database to commit
     } catch (error) {
@@ -583,7 +585,10 @@ const MissionControl = () => {
     return profileData;
   };
 
-  const applyCompanyProfileJsonToMissionControlUi = (data: UntypedBackendApiResponse, userId: string) => {
+  const applyCompanyProfileJsonToMissionControlUi = (
+    data: UntypedBackendApiResponse,
+    userId: string,
+  ) => {
     if (!data || (typeof data === "object" && Object.keys(data).length === 0)) {
       return;
     }
@@ -608,24 +613,26 @@ const MissionControl = () => {
       data.data_sources.sources &&
       Array.isArray(data.data_sources.sources)
     ) {
-      const loadedSources: DataSource[] = data.data_sources.sources.map((source: UntypedBackendApiResponse) => ({
-        id: source.id || `source-${Date.now()}-${Math.random()}`,
-        name: source.name || "",
-        type: (source.type || "custom") as DataSource["type"],
-        icon: Database,
-        platform: source.platform || "Custom",
-        status: (source.status || "disconnected") as DataSource["status"],
-        syncFrequency: (source.sync_frequency || "daily") as DataSource["syncFrequency"],
-        totalRecords: source.total_records || 0,
-        newRecordsThisWeek: source.new_records_this_week || 0,
-        updatedRecords: source.updated_records || 0,
-        dataQualityScore: source.data_quality_score || 0,
-        objectsSynced: [],
-        fieldsMapped: 0,
-        filters: [],
-        description: source.description || "",
-        account: source.account,
-      }));
+      const loadedSources: DataSource[] = data.data_sources.sources.map(
+        (source: UntypedBackendApiResponse) => ({
+          id: source.id || `source-${Date.now()}-${Math.random()}`,
+          name: source.name || "",
+          type: (source.type || "custom") as DataSource["type"],
+          icon: Database,
+          platform: source.platform || "Custom",
+          status: (source.status || "disconnected") as DataSource["status"],
+          syncFrequency: (source.sync_frequency || "daily") as DataSource["syncFrequency"],
+          totalRecords: source.total_records || 0,
+          newRecordsThisWeek: source.new_records_this_week || 0,
+          updatedRecords: source.updated_records || 0,
+          dataQualityScore: source.data_quality_score || 0,
+          objectsSynced: [],
+          fieldsMapped: 0,
+          filters: [],
+          description: source.description || "",
+          account: source.account,
+        }),
+      );
       setDataSources(loadedSources);
       if (loadedSources.length > 0) {
         setHasDataSources(true);
@@ -929,7 +936,12 @@ const MissionControl = () => {
               }
             }
           } catch (error: unknown) {
-            const err = error as { name?: string; message?: string; stack?: string; constructor?: { name?: string } } | null;
+            const err = error as {
+              name?: string;
+              message?: string;
+              stack?: string;
+              constructor?: { name?: string };
+            } | null;
             const errorDetails = {
               name: err?.name,
               message: err?.message,
@@ -2962,7 +2974,9 @@ const MissionControl = () => {
                   <Label>Sync Frequency</Label>
                   <Select
                     value={configSyncFrequency}
-                    onValueChange={(value: string) => setConfigSyncFrequency(value as DataSource["syncFrequency"])}
+                    onValueChange={(value: string) =>
+                      setConfigSyncFrequency(value as DataSource["syncFrequency"])
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />

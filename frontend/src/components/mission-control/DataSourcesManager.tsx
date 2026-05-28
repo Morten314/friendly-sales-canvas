@@ -1082,109 +1082,66 @@ const DataSourcesManager: React.FC = () => {
           // Then apply the custom name, tags, and description to the newly uploaded file
           setTimeout(() => {
             void (async () => {
-            try {
-              console.log(
-                "🔄 DataSourcesManager - Reloading after upload, applying metadata:",
-                uploadMetadata,
-              );
-              await loadDataSourcesFromBackend();
-
-              // Apply metadata to the newly uploaded file
-              setDataSources((prev) => {
+              try {
                 console.log(
-                  "📋 DataSourcesManager - Current data sources before metadata application:",
-                  prev.length,
+                  "🔄 DataSourcesManager - Reloading after upload, applying metadata:",
+                  uploadMetadata,
                 );
-                console.log("📋 DataSourcesManager - File IDs before reload:", fileIdsBeforeReload);
+                await loadDataSourcesFromBackend();
 
-                if (isEditing && uploadMetadata.oldId) {
-                  // If editing, remove the old entry by both ID and fileId (in case old file still exists in backend)
-                  // Get old fileId from the closure (captured before state changes)
-                  const oldFileIdToExclude = oldFileId;
-
-                  const withoutOldEntry = prev.filter((s) => {
-                    // Exclude by ID
-                    if (s.id === uploadMetadata.oldId) return false;
-                    // Also exclude by fileId if it matches the old file's fileId
-                    if (oldFileIdToExclude && s.fileId === oldFileIdToExclude) {
-                      console.log("🗑️ DataSourcesManager - Excluding old file by fileId:", {
-                        oldFileId: oldFileIdToExclude,
-                        excludedId: s.id,
-                      });
-                      return false;
-                    }
-                    return true;
-                  });
-
-                  // Find the new file (the one that wasn't in the list before) and apply metadata
-                  // Match by both ID and fileId to be sure
-                  const updated = withoutOldEntry.map((s) => {
-                    const isNewFile =
-                      s.type === "file" &&
-                      !fileIdsBeforeReload.includes(s.id) &&
-                      (!s.fileId || !fileFileIdsBeforeReload.includes(s.fileId));
-
-                    if (isNewFile) {
-                      // This is the newly uploaded file - apply all metadata and update the ID to match old entry
-                      console.log("✅ DataSourcesManager - Applying metadata to edited file:", {
-                        newId: s.id,
-                        oldId: uploadMetadata.oldId,
-                        oldName: s.name,
-                        newName: uploadMetadata.name,
-                        oldTags: s.tags,
-                        newTags: uploadMetadata.tags,
-                        oldDescription: s.description,
-                        newDescription: uploadMetadata.description,
-                      });
-                      return {
-                        ...s,
-                        id: uploadMetadata.oldId!, // Keep the old ID to maintain reference (replaces old entry)
-                        name: uploadMetadata.name,
-                        description: uploadMetadata.description,
-                        tags: uploadMetadata.tags,
-                      };
-                    }
-                    return s;
-                  });
-
+                // Apply metadata to the newly uploaded file
+                setDataSources((prev) => {
                   console.log(
-                    "✅ DataSourcesManager - Metadata applied to edited file, old entry replaced",
+                    "📋 DataSourcesManager - Current data sources before metadata application:",
+                    prev.length,
                   );
-                  return updated;
-                } else {
-                  // For new uploads, find the file that wasn't in the list before
-                  // Match by file name to identify the newly uploaded file
-                  const newFiles = prev.filter(
-                    (s) =>
-                      s.type === "file" &&
-                      !fileIdsBeforeReload.includes(s.id) &&
-                      (s.fileName === uploadMetadata.fileName ||
-                        s.name === uploadMetadata.fileName),
-                  );
-
                   console.log(
-                    "🔍 DataSourcesManager - New files found:",
-                    newFiles.length,
-                    newFiles.map((f) => ({ id: f.id, fileName: f.fileName, name: f.name })),
+                    "📋 DataSourcesManager - File IDs before reload:",
+                    fileIdsBeforeReload,
                   );
 
-                  if (newFiles.length > 0) {
-                    // Apply metadata to the most recently uploaded file (should be the last one)
-                    const fileToUpdate = newFiles[newFiles.length - 1];
-                    console.log("✅ DataSourcesManager - Applying metadata to new file:", {
-                      id: fileToUpdate.id,
-                      fileName: fileToUpdate.fileName,
-                      oldName: fileToUpdate.name,
-                      newName: uploadMetadata.name,
-                      oldTags: fileToUpdate.tags,
-                      newTags: uploadMetadata.tags,
-                      oldDescription: fileToUpdate.description,
-                      newDescription: uploadMetadata.description,
+                  if (isEditing && uploadMetadata.oldId) {
+                    // If editing, remove the old entry by both ID and fileId (in case old file still exists in backend)
+                    // Get old fileId from the closure (captured before state changes)
+                    const oldFileIdToExclude = oldFileId;
+
+                    const withoutOldEntry = prev.filter((s) => {
+                      // Exclude by ID
+                      if (s.id === uploadMetadata.oldId) return false;
+                      // Also exclude by fileId if it matches the old file's fileId
+                      if (oldFileIdToExclude && s.fileId === oldFileIdToExclude) {
+                        console.log("🗑️ DataSourcesManager - Excluding old file by fileId:", {
+                          oldFileId: oldFileIdToExclude,
+                          excludedId: s.id,
+                        });
+                        return false;
+                      }
+                      return true;
                     });
-                    return prev.map((s) => {
-                      if (s.id === fileToUpdate.id) {
+
+                    // Find the new file (the one that wasn't in the list before) and apply metadata
+                    // Match by both ID and fileId to be sure
+                    const updated = withoutOldEntry.map((s) => {
+                      const isNewFile =
+                        s.type === "file" &&
+                        !fileIdsBeforeReload.includes(s.id) &&
+                        (!s.fileId || !fileFileIdsBeforeReload.includes(s.fileId));
+
+                      if (isNewFile) {
+                        // This is the newly uploaded file - apply all metadata and update the ID to match old entry
+                        console.log("✅ DataSourcesManager - Applying metadata to edited file:", {
+                          newId: s.id,
+                          oldId: uploadMetadata.oldId,
+                          oldName: s.name,
+                          newName: uploadMetadata.name,
+                          oldTags: s.tags,
+                          newTags: uploadMetadata.tags,
+                          oldDescription: s.description,
+                          newDescription: uploadMetadata.description,
+                        });
                         return {
                           ...s,
+                          id: uploadMetadata.oldId!, // Keep the old ID to maintain reference (replaces old entry)
                           name: uploadMetadata.name,
                           description: uploadMetadata.description,
                           tags: uploadMetadata.tags,
@@ -1192,20 +1149,68 @@ const DataSourcesManager: React.FC = () => {
                       }
                       return s;
                     });
-                  } else {
-                    console.warn("⚠️ DataSourcesManager - No new file found to apply metadata to");
-                  }
-                }
-                return prev;
-              });
 
-              // Poll status for processing files after a delay
-              setTimeout(() => {
-                void checkProcessingFilesStatus();
-              }, 2000);
-            } catch (err) {
-              console.error("Error reloading documents after upload:", err);
-            }
+                    console.log(
+                      "✅ DataSourcesManager - Metadata applied to edited file, old entry replaced",
+                    );
+                    return updated;
+                  } else {
+                    // For new uploads, find the file that wasn't in the list before
+                    // Match by file name to identify the newly uploaded file
+                    const newFiles = prev.filter(
+                      (s) =>
+                        s.type === "file" &&
+                        !fileIdsBeforeReload.includes(s.id) &&
+                        (s.fileName === uploadMetadata.fileName ||
+                          s.name === uploadMetadata.fileName),
+                    );
+
+                    console.log(
+                      "🔍 DataSourcesManager - New files found:",
+                      newFiles.length,
+                      newFiles.map((f) => ({ id: f.id, fileName: f.fileName, name: f.name })),
+                    );
+
+                    if (newFiles.length > 0) {
+                      // Apply metadata to the most recently uploaded file (should be the last one)
+                      const fileToUpdate = newFiles[newFiles.length - 1];
+                      console.log("✅ DataSourcesManager - Applying metadata to new file:", {
+                        id: fileToUpdate.id,
+                        fileName: fileToUpdate.fileName,
+                        oldName: fileToUpdate.name,
+                        newName: uploadMetadata.name,
+                        oldTags: fileToUpdate.tags,
+                        newTags: uploadMetadata.tags,
+                        oldDescription: fileToUpdate.description,
+                        newDescription: uploadMetadata.description,
+                      });
+                      return prev.map((s) => {
+                        if (s.id === fileToUpdate.id) {
+                          return {
+                            ...s,
+                            name: uploadMetadata.name,
+                            description: uploadMetadata.description,
+                            tags: uploadMetadata.tags,
+                          };
+                        }
+                        return s;
+                      });
+                    } else {
+                      console.warn(
+                        "⚠️ DataSourcesManager - No new file found to apply metadata to",
+                      );
+                    }
+                  }
+                  return prev;
+                });
+
+                // Poll status for processing files after a delay
+                setTimeout(() => {
+                  void checkProcessingFilesStatus();
+                }, 2000);
+              } catch (err) {
+                console.error("Error reloading documents after upload:", err);
+              }
             })();
           }, 1000);
         } else if (editingId) {
@@ -1705,85 +1710,85 @@ const DataSourcesManager: React.FC = () => {
           // Then apply the custom name, tags, and description to the newly uploaded URL
           setTimeout(() => {
             void (async () => {
-            try {
-              console.log(
-                "🔄 DataSourcesManager - Reloading after URL upload, applying metadata:",
-                uploadMetadata,
-              );
-              await loadDataSourcesFromBackend();
-
-              // Apply metadata to the newly uploaded URL
-              setDataSources((prev) => {
+              try {
                 console.log(
-                  "📋 DataSourcesManager - Current data sources before URL metadata application:",
-                  prev.length,
+                  "🔄 DataSourcesManager - Reloading after URL upload, applying metadata:",
+                  uploadMetadata,
                 );
-                console.log("📋 DataSourcesManager - URL IDs before reload:", urlIdsBeforeReload);
-                console.log(
-                  "📋 DataSourcesManager - All URLs in current state:",
-                  prev
-                    .filter((s) => s.type === "url")
-                    .map((u) => ({ id: u.id, fileId: u.fileId, name: u.name, url: u.url })),
-                );
+                await loadDataSourcesFromBackend();
 
-                // For new uploads, find the URL that wasn't in the list before
-                // Match by fileId first (most reliable), then by URL if available, then by name
-                const newUrls = prev.filter((s) => {
-                  if (s.type !== "url") return false;
+                // Apply metadata to the newly uploaded URL
+                setDataSources((prev) => {
+                  console.log(
+                    "📋 DataSourcesManager - Current data sources before URL metadata application:",
+                    prev.length,
+                  );
+                  console.log("📋 DataSourcesManager - URL IDs before reload:", urlIdsBeforeReload);
+                  console.log(
+                    "📋 DataSourcesManager - All URLs in current state:",
+                    prev
+                      .filter((s) => s.type === "url")
+                      .map((u) => ({ id: u.id, fileId: u.fileId, name: u.name, url: u.url })),
+                  );
 
-                  // Check if it's a new URL by ID
-                  const isNewById = !urlIdsBeforeReload.includes(s.id);
+                  // For new uploads, find the URL that wasn't in the list before
+                  // Match by fileId first (most reliable), then by URL if available, then by name
+                  const newUrls = prev.filter((s) => {
+                    if (s.type !== "url") return false;
 
-                  // Check if it's a new URL by fileId
-                  const isNewByFileId = !s.fileId || !urlFileIdsBeforeReload.includes(s.fileId);
+                    // Check if it's a new URL by ID
+                    const isNewById = !urlIdsBeforeReload.includes(s.id);
 
-                  // Match by URL if available, otherwise match by name (since backend might not return URL)
-                  const urlMatches = s.url ? s.url === uploadMetadata.url : true;
-                  const nameMatches =
-                    s.name === uploadMetadata.name || !s.name || s.name === "URL Source";
+                    // Check if it's a new URL by fileId
+                    const isNewByFileId = !s.fileId || !urlFileIdsBeforeReload.includes(s.fileId);
 
-                  return isNewById && isNewByFileId && (urlMatches || nameMatches);
+                    // Match by URL if available, otherwise match by name (since backend might not return URL)
+                    const urlMatches = s.url ? s.url === uploadMetadata.url : true;
+                    const nameMatches =
+                      s.name === uploadMetadata.name || !s.name || s.name === "URL Source";
+
+                    return isNewById && isNewByFileId && (urlMatches || nameMatches);
+                  });
+
+                  console.log(
+                    "🔍 DataSourcesManager - New URLs found:",
+                    newUrls.length,
+                    newUrls.map((u) => ({ id: u.id, fileId: u.fileId, url: u.url, name: u.name })),
+                  );
+
+                  if (newUrls.length > 0) {
+                    // Apply metadata to the most recently uploaded URL (should be the last one)
+                    const urlToUpdate = newUrls[newUrls.length - 1];
+                    console.log("✅ DataSourcesManager - Applying metadata to new URL:", {
+                      id: urlToUpdate.id,
+                      url: urlToUpdate.url,
+                      oldName: urlToUpdate.name,
+                      newName: uploadMetadata.name,
+                      oldTags: urlToUpdate.tags,
+                      newTags: uploadMetadata.tags,
+                      oldDescription: urlToUpdate.description,
+                      newDescription: uploadMetadata.description,
+                    });
+                    return prev.map((s) => {
+                      if (s.id === urlToUpdate.id) {
+                        return {
+                          ...s,
+                          name: uploadMetadata.name,
+                          url: uploadMetadata.url || s.url || "",
+                          description: uploadMetadata.description,
+                          tags: uploadMetadata.tags,
+                        };
+                      }
+                      return s;
+                    });
+                  } else {
+                    console.warn("⚠️ DataSourcesManager - No new URL found to apply metadata to");
+                  }
+                  return prev;
                 });
-
-                console.log(
-                  "🔍 DataSourcesManager - New URLs found:",
-                  newUrls.length,
-                  newUrls.map((u) => ({ id: u.id, fileId: u.fileId, url: u.url, name: u.name })),
-                );
-
-                if (newUrls.length > 0) {
-                  // Apply metadata to the most recently uploaded URL (should be the last one)
-                  const urlToUpdate = newUrls[newUrls.length - 1];
-                  console.log("✅ DataSourcesManager - Applying metadata to new URL:", {
-                    id: urlToUpdate.id,
-                    url: urlToUpdate.url,
-                    oldName: urlToUpdate.name,
-                    newName: uploadMetadata.name,
-                    oldTags: urlToUpdate.tags,
-                    newTags: uploadMetadata.tags,
-                    oldDescription: urlToUpdate.description,
-                    newDescription: uploadMetadata.description,
-                  });
-                  return prev.map((s) => {
-                    if (s.id === urlToUpdate.id) {
-                      return {
-                        ...s,
-                        name: uploadMetadata.name,
-                        url: uploadMetadata.url || s.url || "",
-                        description: uploadMetadata.description,
-                        tags: uploadMetadata.tags,
-                      };
-                    }
-                    return s;
-                  });
-                } else {
-                  console.warn("⚠️ DataSourcesManager - No new URL found to apply metadata to");
-                }
-                return prev;
-              });
-            } catch (err) {
-              console.error("Error reloading documents after URL upload:", err);
-            }
+              } catch (err) {
+                console.error("Error reloading documents after URL upload:", err);
+              }
             })();
           }, 1000);
         }

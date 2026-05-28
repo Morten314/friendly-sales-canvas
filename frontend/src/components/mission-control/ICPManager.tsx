@@ -2154,8 +2154,7 @@ const ICPManager: React.FC = () => {
             if (Array.isArray(localICPs) && localICPs.length > 0) {
               // Check if any ICP has a user_id that doesn't match
               const hasMismatch = localICPs.some(
-                (icp: UntypedProfilerIcpRecord) =>
-                  icp.user_id && icp.user_id !== currentUser.uid,
+                (icp: UntypedProfilerIcpRecord) => icp.user_id && icp.user_id !== currentUser.uid,
               );
 
               if (hasMismatch) {

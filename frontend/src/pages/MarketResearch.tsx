@@ -1271,106 +1271,125 @@ const MarketResearch = React.memo(() => {
 
   // Helper function to save market intelligence data to localStorage (debounced)
 
-  const saveMarketIntelligenceToLocalStorage = React.useCallback((data: UntypedBackendApiResponse) => {
-    try {
-      // CRITICAL: Always use current user's ID - check first
-      if (!currentUser?.uid) {
-        return;
+  const saveMarketIntelligenceToLocalStorage = React.useCallback(
+    (data: UntypedBackendApiResponse) => {
+      try {
+        // CRITICAL: Always use current user's ID - check first
+        if (!currentUser?.uid) {
+          return;
+        }
+        // Ensure user_id is included in the data for verification
+        const dataWithUserId = {
+          ...data,
+          user_id: currentUser.uid, // Always use current user's ID
+        };
+        setUserLocalStorage(
+          "marketIntelligenceData",
+          JSON.stringify(dataWithUserId),
+          currentUser.uid,
+        );
+      } catch (error) {
+        console.error("❌ Failed to save Market Intelligence data to localStorage:", error);
       }
-      // Ensure user_id is included in the data for verification
-      const dataWithUserId = {
-        ...data,
-        user_id: currentUser.uid, // Always use current user's ID
-      };
-      setUserLocalStorage(
-        "marketIntelligenceData",
-        JSON.stringify(dataWithUserId),
-        currentUser.uid,
-      );
-    } catch (error) {
-      console.error("❌ Failed to save Market Intelligence data to localStorage:", error);
-    }
-  }, [currentUser?.uid]);
+    },
+    [currentUser?.uid],
+  );
 
   // Helper function to save competitor data to localStorage
 
-  const saveCompetitorDataToLocalStorage = React.useCallback((data: UntypedBackendApiResponse) => {
-    try {
-      const payloadToPersist = {
-        ...data,
+  const saveCompetitorDataToLocalStorage = React.useCallback(
+    (data: UntypedBackendApiResponse) => {
+      try {
+        const payloadToPersist = {
+          ...data,
 
-        // Guarantee a timestamp so loaders treat it as valid fresh data
+          // Guarantee a timestamp so loaders treat it as valid fresh data
 
-        timestamp: data?.timestamp ?? Date.now(),
+          timestamp: data?.timestamp ?? Date.now(),
 
-        // Ensure user_id is included for verification
+          // Ensure user_id is included for verification
 
-        user_id: currentUser?.uid || data.user_id,
-      };
+          user_id: currentUser?.uid || data.user_id,
+        };
 
-      setUserLocalStorage("competitorData", JSON.stringify(payloadToPersist), currentUser?.uid);
-    } catch (error) {
-      console.error("❌ Failed to save Competitor data to localStorage:", error);
-    }
-  }, [currentUser?.uid]);
+        setUserLocalStorage("competitorData", JSON.stringify(payloadToPersist), currentUser?.uid);
+      } catch (error) {
+        console.error("❌ Failed to save Competitor data to localStorage:", error);
+      }
+    },
+    [currentUser?.uid],
+  );
 
   // Helper function to save regulatory data to localStorage
 
-  const saveRegulatoryDataToLocalStorage = React.useCallback((data: UntypedBackendApiResponse) => {
-    try {
-      // CRITICAL: Always include user_id for multi-tenancy
-      const dataWithUserId = {
-        ...data,
-        user_id: currentUser?.uid || data.user_id,
-      };
+  const saveRegulatoryDataToLocalStorage = React.useCallback(
+    (data: UntypedBackendApiResponse) => {
+      try {
+        // CRITICAL: Always include user_id for multi-tenancy
+        const dataWithUserId = {
+          ...data,
+          user_id: currentUser?.uid || data.user_id,
+        };
 
-      setUserLocalStorage("regulatoryData", JSON.stringify(dataWithUserId), currentUser?.uid);
-    } catch (error) {
-      console.error("❌ Failed to save Regulatory data to localStorage:", error);
-    }
-  }, [currentUser?.uid]);
+        setUserLocalStorage("regulatoryData", JSON.stringify(dataWithUserId), currentUser?.uid);
+      } catch (error) {
+        console.error("❌ Failed to save Regulatory data to localStorage:", error);
+      }
+    },
+    [currentUser?.uid],
+  );
 
   // Helper function to save industry trends data to localStorage
 
-  const saveIndustryTrendsDataToLocalStorage = React.useCallback((data: UntypedBackendApiResponse) => {
-    try {
-      const payloadToPersist = {
-        ...data,
+  const saveIndustryTrendsDataToLocalStorage = React.useCallback(
+    (data: UntypedBackendApiResponse) => {
+      try {
+        const payloadToPersist = {
+          ...data,
 
-        // Ensure a timestamp so subsequent loads treat it as persisted API data
+          // Ensure a timestamp so subsequent loads treat it as persisted API data
 
-        timestamp: data?.timestamp ?? Date.now(),
+          timestamp: data?.timestamp ?? Date.now(),
 
-        // CRITICAL: Always include user_id for multi-tenancy
-        user_id: currentUser?.uid || data.user_id,
-      };
+          // CRITICAL: Always include user_id for multi-tenancy
+          user_id: currentUser?.uid || data.user_id,
+        };
 
-      setUserLocalStorage("industryTrendsData", JSON.stringify(payloadToPersist), currentUser?.uid);
-    } catch (error) {
-      console.error("❌ Failed to save Industry Trends data to localStorage:", error);
-    }
-  }, [currentUser?.uid]);
+        setUserLocalStorage(
+          "industryTrendsData",
+          JSON.stringify(payloadToPersist),
+          currentUser?.uid,
+        );
+      } catch (error) {
+        console.error("❌ Failed to save Industry Trends data to localStorage:", error);
+      }
+    },
+    [currentUser?.uid],
+  );
 
   // Helper function to save market entry data to localStorage
 
-  const saveMarketEntryDataToLocalStorage = React.useCallback((data: UntypedBackendApiResponse) => {
-    try {
-      const payloadToPersist = {
-        ...data,
+  const saveMarketEntryDataToLocalStorage = React.useCallback(
+    (data: UntypedBackendApiResponse) => {
+      try {
+        const payloadToPersist = {
+          ...data,
 
-        // Ensure a timestamp is always present so loader prefers persisted data
+          // Ensure a timestamp is always present so loader prefers persisted data
 
-        timestamp: data?.timestamp ?? Date.now(),
+          timestamp: data?.timestamp ?? Date.now(),
 
-        // CRITICAL: Always include user_id for multi-tenancy
-        user_id: currentUser?.uid || data.user_id,
-      };
+          // CRITICAL: Always include user_id for multi-tenancy
+          user_id: currentUser?.uid || data.user_id,
+        };
 
-      setUserLocalStorage("marketEntryData", JSON.stringify(payloadToPersist), currentUser?.uid);
-    } catch (error) {
-      console.error("❌ Failed to save Market Entry data to localStorage:", error);
-    }
-  }, [currentUser?.uid]);
+        setUserLocalStorage("marketEntryData", JSON.stringify(payloadToPersist), currentUser?.uid);
+      } catch (error) {
+        console.error("❌ Failed to save Market Entry data to localStorage:", error);
+      }
+    },
+    [currentUser?.uid],
+  );
 
   // Market Size API state
 
@@ -1549,7 +1568,9 @@ const MarketResearch = React.memo(() => {
 
   const handleSendToStrategist = (lead: UntypedLead) => {
     // Persist lead to strategist lead stream
-    const existing = JSON.parse(localStorage.getItem("strategistLeadStream") || "[]") as UntypedLead[];
+    const existing = JSON.parse(
+      localStorage.getItem("strategistLeadStream") || "[]",
+    ) as UntypedLead[];
     const alreadyExists = existing.some((l: UntypedLead) => l.id === lead.id);
     if (!alreadyExists) {
       existing.push({ ...lead, sentAt: new Date().toISOString() });

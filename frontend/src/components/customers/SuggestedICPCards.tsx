@@ -448,9 +448,7 @@ const extractFullReportFromApiItem = (
  * Normalizes GET /icp JSON to an array of ICP items. Backend may return:
  * - an array; suggestedICPs / icps / results / items; { data: [...] }; { data: { single ICP } }; or a single root object.
  */
-const normalizeIcpGetResponse = (
-  icpData: UntypedProfilerIcpRecord,
-): UntypedProfilerIcpRecord[] => {
+const normalizeIcpGetResponse = (icpData: UntypedProfilerIcpRecord): UntypedProfilerIcpRecord[] => {
   if (icpData == null) return [];
   if (Array.isArray(icpData)) return icpData;
 

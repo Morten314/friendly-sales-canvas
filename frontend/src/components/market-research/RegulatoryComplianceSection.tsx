@@ -718,39 +718,43 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   useEffect(() => {
     const handleCompanyProfileUpdate = () => {
       void (async () => {
-      setError(null);
-      setIsLoading(true);
+        setError(null);
+        setIsLoading(true);
 
-      // Wait a bit for the backend to process the profile update
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+        // Wait a bit for the backend to process the profile update
+        await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // Fetch the latest company profile from backend (with org_id)
-      try {
-        const profileUrl = `https://backend-11kr.onrender.com/profile/company?org_id=${orgIdToUse}`;
-        const profileResponse = await fetch(profileUrl, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-        if (profileResponse.ok) {
-          const latestProfile = await profileResponse.json();
-          // Verify profile belongs to current user before storing
-          if (latestProfile.user_id === currentUser?.uid || !latestProfile.user_id) {
-            // Store in user-specific localStorage so the API call can use it
-            setUserLocalStorage("companyProfile", JSON.stringify(latestProfile), currentUser?.uid);
-            setUserLocalStorage(
-              "companyProfileForRefresh",
-              JSON.stringify(latestProfile),
-              currentUser?.uid,
-            );
-          } else {
-            // intentional: skip refresh-cache write when latestProfile is missing
+        // Fetch the latest company profile from backend (with org_id)
+        try {
+          const profileUrl = `https://backend-11kr.onrender.com/profile/company?org_id=${orgIdToUse}`;
+          const profileResponse = await fetch(profileUrl, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+          });
+          if (profileResponse.ok) {
+            const latestProfile = await profileResponse.json();
+            // Verify profile belongs to current user before storing
+            if (latestProfile.user_id === currentUser?.uid || !latestProfile.user_id) {
+              // Store in user-specific localStorage so the API call can use it
+              setUserLocalStorage(
+                "companyProfile",
+                JSON.stringify(latestProfile),
+                currentUser?.uid,
+              );
+              setUserLocalStorage(
+                "companyProfileForRefresh",
+                JSON.stringify(latestProfile),
+                currentUser?.uid,
+              );
+            } else {
+              // intentional: skip refresh-cache write when latestProfile is missing
+            }
           }
+        } catch (_error) {
+          // intentional: ignore cache-write failures and proceed to refetch
         }
-      } catch (_error) {
-        // intentional: ignore cache-write failures and proceed to refetch
-      }
 
-      await fetchRegulatoryComplianceData(true); // refresh = true for company profile changes
+        await fetchRegulatoryComplianceData(true); // refresh = true for company profile changes
       })();
     };
 

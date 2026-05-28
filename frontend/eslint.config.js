@@ -38,9 +38,12 @@ export default tseslint.config(
       ],
       "@typescript-eslint/consistent-type-imports": "error",
       "@typescript-eslint/no-floating-promises": "error",
-      "@typescript-eslint/no-misused-promises": ["error", {
-        checksVoidReturn: { attributes: false },
-      }],
+      "@typescript-eslint/no-misused-promises": [
+        "error",
+        {
+          checksVoidReturn: { attributes: false },
+        },
+      ],
       "import-x/order": [
         "error",
         {

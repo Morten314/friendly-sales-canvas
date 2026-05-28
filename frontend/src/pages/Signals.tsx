@@ -1000,47 +1000,47 @@ const Index = () => {
     // Set up 5-second timer to call API
     const timer = setTimeout(() => {
       void (async () => {
-      // Remove from pending rejections
-      setPendingRejections((prev) => {
-        const updated = new Map(prev);
-        updated.delete(signalId);
-        return updated;
-      });
+        // Remove from pending rejections
+        setPendingRejections((prev) => {
+          const updated = new Map(prev);
+          updated.delete(signalId);
+          return updated;
+        });
 
-      // Call API to reject
-      try {
-        await signalAction(orgId, signalId, "reject");
-        console.log("Signal rejected via API:", signalId);
-      } catch (error) {
-        console.error("Error calling signal action API for reject:", error);
-        // If API fails, restore the signal
-        setSignals((prev) => {
-          const exists = prev.find((s) => s.id === signalToRestore.id);
-          if (exists) return prev;
-          const insertIndex = Math.min(originalIndex, prev.length);
-          const newSignals = [...prev];
-          newSignals.splice(insertIndex, 0, signalToRestore);
-          return newSignals;
-        });
-        setRejectedSignalHashes((prev) => {
-          const updatedRejected = new Set(prev);
-          updatedRejected.delete(contentHash);
-          try {
-            localStorage.setItem(
-              `${storageKey}_rejected`,
-              JSON.stringify(Array.from(updatedRejected)),
-            );
-          } catch (e) {
-            console.error("Error updating rejected signals in localStorage:", e);
-          }
-          return updatedRejected;
-        });
-        toast({
-          title: "Error",
-          description: "Failed to reject signal. It has been restored.",
-          variant: "destructive",
-        });
-      }
+        // Call API to reject
+        try {
+          await signalAction(orgId, signalId, "reject");
+          console.log("Signal rejected via API:", signalId);
+        } catch (error) {
+          console.error("Error calling signal action API for reject:", error);
+          // If API fails, restore the signal
+          setSignals((prev) => {
+            const exists = prev.find((s) => s.id === signalToRestore.id);
+            if (exists) return prev;
+            const insertIndex = Math.min(originalIndex, prev.length);
+            const newSignals = [...prev];
+            newSignals.splice(insertIndex, 0, signalToRestore);
+            return newSignals;
+          });
+          setRejectedSignalHashes((prev) => {
+            const updatedRejected = new Set(prev);
+            updatedRejected.delete(contentHash);
+            try {
+              localStorage.setItem(
+                `${storageKey}_rejected`,
+                JSON.stringify(Array.from(updatedRejected)),
+              );
+            } catch (e) {
+              console.error("Error updating rejected signals in localStorage:", e);
+            }
+            return updatedRejected;
+          });
+          toast({
+            title: "Error",
+            description: "Failed to reject signal. It has been restored.",
+            variant: "destructive",
+          });
+        }
       })();
     }, 5000); // 5 seconds delay
 
@@ -1452,7 +1452,9 @@ const Index = () => {
                                                                     }`}
                                                                     onClick={(e) => {
                                                                       e.stopPropagation();
-                                                                      void handleAcceptSignal(signal.id);
+                                                                      void handleAcceptSignal(
+                                                                        signal.id,
+                                                                      );
                                                                     }}
                                                                     title={
                                                                       isAccepted

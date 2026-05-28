@@ -62,12 +62,7 @@ const locationNeedsMetaRegions = (location: string[]): boolean => {
 
 function pickIcpNameFromRecord(icp: IcpRecord): string {
   const raw =
-    icp.name ??
-    icp.icp_name ??
-    icp.icpName ??
-    icp.title ??
-    icp.display_name ??
-    icp.displayName;
+    icp.name ?? icp.icp_name ?? icp.icpName ?? icp.title ?? icp.display_name ?? icp.displayName;
   return raw != null ? String(raw).trim() : "";
 }
 
@@ -75,7 +70,9 @@ function pickIcpNameFromRecord(icp: IcpRecord): string {
  * Best-effort parse of POST /customer_profile/from_suggested_icp JSON so we can key
  * local display metadata under the persisted profile ICP id (often differs from suggested id).
  */
-export function extractPersistedIcpIdFromSuggestedProfileResponse(res: unknown): string | undefined {
+export function extractPersistedIcpIdFromSuggestedProfileResponse(
+  res: unknown,
+): string | undefined {
   if (res == null || typeof res !== "object") return undefined;
   const root = res as Record<string, unknown>;
   const d = (root.data as ApiPayload) ?? root;
@@ -94,7 +91,8 @@ export function extractPersistedIcpIdFromSuggestedProfileResponse(res: unknown):
   const icps = d.icps;
   if (Array.isArray(icps) && icps.length > 0) {
     const last = icps[icps.length - 1];
-    const id = last && typeof last === "object" ? tryStr((last as Record<string, unknown>).id) : undefined;
+    const id =
+      last && typeof last === "object" ? tryStr((last as Record<string, unknown>).id) : undefined;
     if (id) return id;
   }
 
@@ -103,7 +101,8 @@ export function extractPersistedIcpIdFromSuggestedProfileResponse(res: unknown):
     const nested = (cp as Record<string, unknown>).icps;
     if (Array.isArray(nested) && nested.length > 0) {
       const last = nested[nested.length - 1];
-      const id = last && typeof last === "object" ? tryStr((last as Record<string, unknown>).id) : undefined;
+      const id =
+        last && typeof last === "object" ? tryStr((last as Record<string, unknown>).id) : undefined;
       if (id) return id;
     }
   }
@@ -284,7 +283,9 @@ export interface SuggestedIcpCardFields {
 
 export function extractIcpsArrayFromCustomerProfileResponse(profileData: unknown): IcpRecord[] {
   const root =
-    profileData && typeof profileData === "object" ? (profileData as Record<string, unknown>) : null;
+    profileData && typeof profileData === "object"
+      ? (profileData as Record<string, unknown>)
+      : null;
   const data =
     (root?.data && typeof root.data === "object" ? (root.data as Record<string, unknown>) : null) ??
     root;

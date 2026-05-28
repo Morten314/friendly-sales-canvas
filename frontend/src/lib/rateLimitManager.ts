@@ -129,8 +129,7 @@ class RateLimitManager {
   private isRateLimitError(error: unknown): boolean {
     if (!error) return false;
 
-    const errorMessage =
-      error instanceof Error ? error.message : String(error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     const errorString = errorMessage.toLowerCase();
 
     return (

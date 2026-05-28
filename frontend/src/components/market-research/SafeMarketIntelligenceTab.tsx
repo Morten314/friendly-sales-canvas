@@ -13,12 +13,7 @@ const SafeMarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) 
       return; // This is expected to be an object, don't flag it
     }
 
-    if (
-      obj &&
-      typeof obj === "object" &&
-      !React.isValidElement(obj) &&
-      !Array.isArray(obj)
-    ) {
+    if (obj && typeof obj === "object" && !React.isValidElement(obj) && !Array.isArray(obj)) {
       const r = obj as Record<string, unknown>;
       if (r.channel || r.channelMix || r.trigger || r.description) {
         console.error("🚨 FOUND PROBLEMATIC OBJECT:", path, obj);
@@ -59,12 +54,7 @@ const SafeMarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) 
 
   // Additional safety check: Ensure no objects are being passed that could be rendered directly
   const sanitizeProps = (obj: unknown, key?: string): unknown => {
-    if (
-      obj &&
-      typeof obj === "object" &&
-      !React.isValidElement(obj) &&
-      !Array.isArray(obj)
-    ) {
+    if (obj && typeof obj === "object" && !React.isValidElement(obj) && !Array.isArray(obj)) {
       // Preserve regionalHotspots as it's correctly an object from backend
       if (key === "industryTrendsRegionalHotspots") {
         return obj; // Keep as-is, it's meant to be an object
