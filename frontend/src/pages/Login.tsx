@@ -1,26 +1,32 @@
-import React, { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { useTenant } from '../contexts/TenantContext';
-import { useNavigate } from 'react-router-dom';
-import { auth } from '../lib/firebase';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Alert, AlertDescription } from '../components/ui/alert';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { useToast } from '../hooks/use-toast';
-import { Loader2, Mail, Lock, Building2 } from 'lucide-react';
+import React, { useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import { useTenant } from "../contexts/TenantContext";
+import { useNavigate } from "react-router-dom";
+import { auth } from "../lib/firebase";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Alert, AlertDescription } from "../components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
+import { useToast } from "../hooks/use-toast";
+import { Loader2, Mail, Lock, Building2 } from "lucide-react";
 
 const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [organization, setOrganization] = useState('Brewra');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [organization, setOrganization] = useState("Brewra");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
-  
+
   const { login, signup, fetchOrgId, loading: authLoading } = useAuth();
   const { selectTenant } = useTenant();
   const { toast } = useToast();
@@ -40,32 +46,32 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
-      setError('Please fill in all fields');
+      setError("Please fill in all fields");
       return;
     }
 
     if (isSignUp) {
       if (!fullName) {
-        setError('Please enter your full name');
+        setError("Please enter your full name");
         return;
       }
       if (!organization) {
-        setError('Please select an organization');
+        setError("Please select an organization");
         return;
       }
     }
 
     try {
-      setError('');
+      setError("");
       setLoading(true);
-      
+
       if (isSignUp) {
         await signup(email, password);
         // Store full name in localStorage (will be associated with user after login)
         // We'll store it temporarily and associate it with the user ID after they log in
-        localStorage.setItem('pendingFullName', fullName);
+        localStorage.setItem("pendingFullName", fullName);
         // After successful signup, show success message and switch to login
         toast({
           title: "Account Created Successfully!",
@@ -73,10 +79,10 @@ const Login: React.FC = () => {
           variant: "default",
         });
         setIsSignUp(false);
-        setError('');
+        setError("");
         // Clear password and full name fields
-        setPassword('');
-        setFullName('');
+        setPassword("");
+        setFullName("");
       } else {
         await login(email, password);
         // Fetch org_id and org_name after successful login
@@ -84,25 +90,25 @@ const Login: React.FC = () => {
         if (user?.uid) {
           const { orgId: fetchedOrgId, orgName: fetchedOrgName } = await fetchOrgId(user.uid);
           // Auto-select organization after login using fetched org_id and org_name or fallback to brewra
-          const orgIdToUse = fetchedOrgId || 'brewra';
-          const orgNameToUse = fetchedOrgName || 'Brewra';
+          const orgIdToUse = fetchedOrgId || "brewra";
+          const orgNameToUse = fetchedOrgName || "Brewra";
           selectTenant({
             id: orgIdToUse,
             name: orgNameToUse,
-            domain: `${orgIdToUse}.com`
+            domain: `${orgIdToUse}.com`,
           });
           // Store full name if it was pending from signup, or retrieve existing
-          const pendingFullName = localStorage.getItem('pendingFullName');
+          const pendingFullName = localStorage.getItem("pendingFullName");
           if (pendingFullName) {
             localStorage.setItem(`userFullName_${user.uid}`, pendingFullName);
-            localStorage.removeItem('pendingFullName');
+            localStorage.removeItem("pendingFullName");
           }
         }
         // Navigate to mission control after successful login
-        navigate('/mission-control');
+        navigate("/mission-control");
       }
     } catch (error: any) {
-      setError(error.message || 'Failed to authenticate');
+      setError(error.message || "Failed to authenticate");
     } finally {
       setLoading(false);
     }
@@ -114,33 +120,25 @@ const Login: React.FC = () => {
         {/* Logo/Brand Section */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center mb-4">
-            <img 
-              src="/logo.png" 
-              alt="Brewra Logo" 
-              className="h-16 w-auto object-contain"
-            />
+            <img src="/logo.png" alt="Brewra Logo" className="h-16 w-auto object-contain" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {isSignUp ? 'Create Your Account' : 'Welcome Back'}
+            {isSignUp ? "Create Your Account" : "Welcome Back"}
           </h1>
           <p className="text-gray-600">
-            {isSignUp 
-              ? 'Join us and start your journey' 
-              : 'Sign in to continue to your dashboard'
-            }
+            {isSignUp ? "Join us and start your journey" : "Sign in to continue to your dashboard"}
           </p>
         </div>
 
         <Card className="shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="text-2xl font-semibold text-center text-gray-900">
-              {isSignUp ? 'Sign Up' : 'Sign In'}
+              {isSignUp ? "Sign Up" : "Sign In"}
             </CardTitle>
             <CardDescription className="text-center text-gray-500">
-              {isSignUp 
-                ? 'Enter your details to create a new account'
-                : 'Enter your credentials to access your account'
-              }
+              {isSignUp
+                ? "Enter your details to create a new account"
+                : "Enter your credentials to access your account"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -150,7 +148,7 @@ const Login: React.FC = () => {
                   <AlertDescription className="text-sm">{error}</AlertDescription>
                 </Alert>
               )}
-              
+
               {isSignUp && (
                 <div className="space-y-2">
                   <Label htmlFor="fullName" className="text-sm font-medium text-gray-700">
@@ -167,9 +165,12 @@ const Login: React.FC = () => {
                   />
                 </div>
               )}
-              
+
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <Label
+                  htmlFor="email"
+                  className="text-sm font-medium text-gray-700 flex items-center gap-2"
+                >
                   <Mail className="h-4 w-4" />
                   Email
                 </Label>
@@ -183,9 +184,12 @@ const Login: React.FC = () => {
                   required
                 />
               </div>
-              
+
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <Label
+                  htmlFor="password"
+                  className="text-sm font-medium text-gray-700 flex items-center gap-2"
+                >
                   <Lock className="h-4 w-4" />
                   Password
                 </Label>
@@ -199,15 +203,21 @@ const Login: React.FC = () => {
                   required
                 />
               </div>
-              
+
               {isSignUp && (
                 <div className="space-y-2">
-                  <Label htmlFor="organization" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Label
+                    htmlFor="organization"
+                    className="text-sm font-medium text-gray-700 flex items-center gap-2"
+                  >
                     <Building2 className="h-4 w-4" />
                     Select organization
                   </Label>
                   <Select value={organization} onValueChange={setOrganization}>
-                    <SelectTrigger id="organization" className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                    <SelectTrigger
+                      id="organization"
+                      className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                    >
                       <SelectValue placeholder="Select organization" />
                     </SelectTrigger>
                     <SelectContent>
@@ -216,28 +226,30 @@ const Login: React.FC = () => {
                   </Select>
                 </div>
               )}
-              
-              <Button 
-                type="submit" 
-                className="w-full h-11 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium shadow-md hover:shadow-lg transition-all duration-200" 
+
+              <Button
+                type="submit"
+                className="w-full h-11 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium shadow-md hover:shadow-lg transition-all duration-200"
                 disabled={loading}
               >
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isSignUp ? 'Creating Account...' : 'Signing In...'}
+                    {isSignUp ? "Creating Account..." : "Signing In..."}
                   </>
+                ) : isSignUp ? (
+                  "Create Account"
                 ) : (
-                  isSignUp ? 'Create Account' : 'Sign In'
+                  "Sign In"
                 )}
               </Button>
             </form>
-            
+
             {/* Sign up/Sign in toggle - only show at bottom for sign in page */}
             {!isSignUp && (
               <div className="mt-6 pt-6 border-t border-gray-200 text-center">
                 <p className="text-sm text-gray-600">
-                  Don't have an account?{' '}
+                  Don't have an account?{" "}
                   <Button
                     variant="link"
                     onClick={() => setIsSignUp(true)}
@@ -253,12 +265,12 @@ const Login: React.FC = () => {
             {isSignUp && (
               <div className="mt-6 pt-6 border-t border-gray-200 text-center">
                 <p className="text-sm text-gray-600">
-                  Already have an account?{' '}
+                  Already have an account?{" "}
                   <Button
                     variant="link"
                     onClick={() => {
                       setIsSignUp(false);
-                      setError('');
+                      setError("");
                     }}
                     className="text-sm text-blue-600 hover:text-blue-700 font-medium p-0 h-auto"
                   >
@@ -282,4 +294,3 @@ const Login: React.FC = () => {
 };
 
 export default Login;
-

@@ -9,7 +9,15 @@ import StrategistLeadStream from "@/components/strategist/StrategistLeadStream";
 import StrategistRecommendations from "@/components/strategist/StrategistRecommendations";
 
 interface StrategistContext {
-  leads: { name: string; company: string; jobTitle: string; email?: string; tenure?: string; source?: string; signals?: string[] }[];
+  leads: {
+    name: string;
+    company: string;
+    jobTitle: string;
+    email?: string;
+    tenure?: string;
+    source?: string;
+    signals?: string[];
+  }[];
   opportunity?: string;
   icp?: string;
   triggerPrompt: string;
@@ -24,11 +32,11 @@ const Deals = () => {
 
   useEffect(() => {
     try {
-      const stored = sessionStorage.getItem('strategistContext');
+      const stored = sessionStorage.getItem("strategistContext");
       if (stored) {
         const parsed = JSON.parse(stored) as StrategistContext;
         setContext(parsed);
-        sessionStorage.removeItem('strategistContext');
+        sessionStorage.removeItem("strategistContext");
       }
     } catch {
       // ignore parse errors
@@ -63,7 +71,7 @@ const Deals = () => {
                 opportunity={context?.opportunity}
                 icp={context?.icp}
                 triggerPrompt={context?.triggerPrompt || ""}
-                onBack={() => navigate('/your-ai-team/scout/chatwithscout')}
+                onBack={() => navigate("/your-ai-team/scout/chatwithscout")}
               />
             ) : (
               <StrategistRecommendations />

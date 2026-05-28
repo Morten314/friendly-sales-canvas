@@ -10,7 +10,10 @@ const Reports = () => {
   usePageTitle("📊 Presenter - Brewra");
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { role: "ai", content: "Hello! I'm Presenter. How can I help with your demo preparation today?" }
+    {
+      role: "ai",
+      content: "Hello! I'm Presenter. How can I help with your demo preparation today?",
+    },
   ]);
   const [inputValue, setInputValue] = useState("");
 
@@ -28,37 +31,40 @@ const Reports = () => {
     };
 
     console.log("=== SETTING UP PRESENTER EVENT LISTENERS ===");
-    window.addEventListener('presenterChat', handlePresenterChat);
-    window.addEventListener('presenterCreateDemo', handlePresenterCreateDemo);
-    
+    window.addEventListener("presenterChat", handlePresenterChat);
+    window.addEventListener("presenterCreateDemo", handlePresenterCreateDemo);
+
     return () => {
       console.log("=== REMOVING PRESENTER EVENT LISTENERS ===");
-      window.removeEventListener('presenterChat', handlePresenterChat);
-      window.removeEventListener('presenterCreateDemo', handlePresenterCreateDemo);
+      window.removeEventListener("presenterChat", handlePresenterChat);
+      window.removeEventListener("presenterCreateDemo", handlePresenterCreateDemo);
     };
   }, [isChatOpen]);
 
   const handleSendMessage = () => {
     if (!inputValue.trim()) return;
-    
+
     // Add user message
     setMessages([...messages, { role: "user", content: inputValue }]);
-    
+
     // Simulate AI response
     setTimeout(() => {
-      setMessages(current => [...current, { 
-        role: "ai", 
-        content: "I can help prepare your demo. Would you like me to focus on slide content, talking points, or presentation structure?"
-      }]);
+      setMessages((current) => [
+        ...current,
+        {
+          role: "ai",
+          content:
+            "I can help prepare your demo. Would you like me to focus on slide content, talking points, or presentation structure?",
+        },
+      ]);
     }, 1000);
-    
+
     setInputValue("");
   };
 
   return (
     <Layout>
       <div className="animate-fade-in">
-        
         {isChatOpen && (
           <Card className="border-blue-200 bg-blue-50/40 mb-6">
             <CardHeader className="pb-3">
@@ -74,11 +80,11 @@ const Reports = () => {
               <div className="bg-white rounded-md border border-gray-200 p-4 flex flex-col gap-3">
                 <div className="space-y-3 max-h-60 overflow-y-auto">
                   {messages.map((message, index) => (
-                    <div 
+                    <div
                       key={index}
                       className={`${
-                        message.role === "ai" 
-                          ? "bg-blue-50 rounded-lg p-3 self-start max-w-[80%]" 
+                        message.role === "ai"
+                          ? "bg-blue-50 rounded-lg p-3 self-start max-w-[80%]"
                           : "bg-gray-100 rounded-lg p-3 self-end max-w-[80%] ml-auto"
                       }`}
                     >
@@ -89,19 +95,19 @@ const Reports = () => {
                     </div>
                   ))}
                 </div>
-                
+
                 <div className="flex gap-2 mt-2">
                   <Input
-                    type="text" 
+                    type="text"
                     placeholder="Ask Presenter about demo preparation..."
                     className="flex-1"
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleSendMessage();
+                      if (e.key === "Enter") handleSendMessage();
                     }}
                   />
-                  <Button 
+                  <Button
                     className="bg-sales-blue hover:bg-blue-700 flex items-center gap-2"
                     onClick={handleSendMessage}
                   >
@@ -112,7 +118,7 @@ const Reports = () => {
             </CardContent>
           </Card>
         )}
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-2">
@@ -139,7 +145,10 @@ const Reports = () => {
                   <span>Operational Efficiency</span>
                 </div>
                 <div className="pt-3 border-t flex space-x-2">
-                  <Button variant="outline" className="flex-1 flex items-center justify-center gap-1">
+                  <Button
+                    variant="outline"
+                    className="flex-1 flex items-center justify-center gap-1"
+                  >
                     <Download className="h-4 w-4" /> Slides
                   </Button>
                   <Button className="flex-1 bg-sales-blue hover:bg-blue-700 flex items-center justify-center gap-1">
@@ -149,7 +158,7 @@ const Reports = () => {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-2">
               <div className="flex justify-between items-start">
@@ -175,7 +184,10 @@ const Reports = () => {
                   <span>Technical Integration</span>
                 </div>
                 <div className="pt-3 border-t flex space-x-2">
-                  <Button variant="outline" className="flex-1 flex items-center justify-center gap-1">
+                  <Button
+                    variant="outline"
+                    className="flex-1 flex items-center justify-center gap-1"
+                  >
                     <Download className="h-4 w-4" /> Slides
                   </Button>
                   <Button className="flex-1 bg-sales-blue hover:bg-blue-700 flex items-center justify-center gap-1">
@@ -185,7 +197,7 @@ const Reports = () => {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card className="hover:shadow-md transition-shadow border-dashed border-2 flex flex-col justify-center items-center p-6">
             <div className="p-3 bg-blue-50 text-blue-500 rounded-full mb-3">
               <BarChart className="h-6 w-6" />
@@ -197,7 +209,7 @@ const Reports = () => {
             <Button variant="outline">Create Demo</Button>
           </Card>
         </div>
-        
+
         <Card>
           <CardHeader>
             <CardTitle>UK Fintech Ops Demo</CardTitle>
@@ -211,57 +223,66 @@ const Reports = () => {
                   <li>
                     <p className="font-medium">Introduction (3 min)</p>
                     <p className="text-sm text-gray-600">
-                      "Thank you for joining today. We'll show you how Brewra can help fintech operations leaders like yourself enter new markets faster and with greater precision."
+                      "Thank you for joining today. We'll show you how Brewra can help fintech
+                      operations leaders like yourself enter new markets faster and with greater
+                      precision."
                     </p>
                   </li>
                   <li>
                     <p className="font-medium">Market Research Capabilities (5 min)</p>
                     <p className="text-sm text-gray-600">
-                      Focus on Scout's ability to analyze UK financial regulations and identify growth opportunities specific to their fintech vertical.
+                      Focus on Scout's ability to analyze UK financial regulations and identify
+                      growth opportunities specific to their fintech vertical.
                     </p>
                   </li>
                   <li>
                     <p className="font-medium">ICP Development (5 min)</p>
                     <p className="text-sm text-gray-600">
-                      Demonstrate how Profiler builds accurate customer profiles for the UK market, highlighting the regulatory compliance pain points.
+                      Demonstrate how Profiler builds accurate customer profiles for the UK market,
+                      highlighting the regulatory compliance pain points.
                     </p>
                   </li>
                   <li>
                     <p className="font-medium">Operational Workflow (7 min)</p>
                     <p className="text-sm text-gray-600">
-                      Show how Activator can automate lead generation while maintaining compliance with UK financial regulations.
+                      Show how Activator can automate lead generation while maintaining compliance
+                      with UK financial regulations.
                     </p>
                   </li>
                   <li>
                     <p className="font-medium">Q&A and Next Steps (5 min)</p>
                     <p className="text-sm text-gray-600">
-                      Address specific questions about implementation timeline and ROI for UK market entry.
+                      Address specific questions about implementation timeline and ROI for UK market
+                      entry.
                     </p>
                   </li>
                 </ol>
               </div>
-              
+
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-2">Key Talking Points</h3>
                 <div className="space-y-3">
                   <div className="bg-gray-50 p-3 rounded-md">
                     <p className="font-medium mb-1">Regulatory Compliance</p>
                     <p className="text-sm">
-                      "Our platform reduces compliance overhead by 40% through automated market research and regulatory tracking specific to UK fintech operations."
+                      "Our platform reduces compliance overhead by 40% through automated market
+                      research and regulatory tracking specific to UK fintech operations."
                     </p>
                   </div>
-                  
+
                   <div className="bg-gray-50 p-3 rounded-md">
                     <p className="font-medium mb-1">Operational Efficiency</p>
                     <p className="text-sm">
-                      "Clients like yours have seen a 30% reduction in time-to-market when expanding to the UK, with 65% less resources required for market analysis."
+                      "Clients like yours have seen a 30% reduction in time-to-market when expanding
+                      to the UK, with 65% less resources required for market analysis."
                     </p>
                   </div>
-                  
+
                   <div className="bg-gray-50 p-3 rounded-md">
                     <p className="font-medium mb-1">ROI Metrics</p>
                     <p className="text-sm">
-                      "On average, our fintech clients see positive ROI within 3 months of UK market entry, with customer acquisition costs reduced by 35%."
+                      "On average, our fintech clients see positive ROI within 3 months of UK market
+                      entry, with customer acquisition costs reduced by 35%."
                     </p>
                   </div>
                 </div>
