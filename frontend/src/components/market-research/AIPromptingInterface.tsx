@@ -27,7 +27,7 @@ interface AIMessage {
   role: "user" | "ai";
   content: string;
   timestamp: Date;
-  responseData?: any;
+  responseData?: unknown;
 }
 
 interface AIPromptingInterfaceProps {

@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiFetchJson } from "@/lib/api";
 import { executeWithRateLimit } from "@/lib/rateLimitManager";
 import { toUTCTimestamp } from "@/lib/timestampUtils";
+import type { UntypedBackendProfile } from "@/lib/types/escape-hatches";
 import { setUserLocalStorage } from "@/utils/cacheUtils";
 
 interface EditRecord {
@@ -89,7 +90,7 @@ interface IndustryTrendsSectionProps {
   onGenerateShareableLink: () => void;
   // Add refresh props
   isRefreshing?: boolean;
-  companyProfile?: any;
+  companyProfile?: UntypedBackendProfile;
   // Add data props
   executiveSummary?: string;
   aiAdoption?: string;

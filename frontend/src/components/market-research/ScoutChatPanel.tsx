@@ -7,12 +7,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { getUserLocalStorage } from "@/utils/cacheUtils";
 
+import type { EditRecord } from "./types";
+
 interface ScoutChatPanelProps {
   showScoutChat: boolean;
   isSplitView: boolean;
   hasEdits: boolean;
   showEditHistory: boolean;
-  editHistory: any[];
+  editHistory: EditRecord[];
   lastEditedField: string;
   context?:
     | "market-size"

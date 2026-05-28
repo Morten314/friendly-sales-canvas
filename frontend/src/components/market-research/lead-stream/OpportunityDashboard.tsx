@@ -19,7 +19,16 @@ import { Card } from "@/components/ui/card";
 
 // ─── Custom tooltip ─────────────────────────────────────────────────────────
 
-const ReportTooltip = ({ active, payload }: any) => {
+interface ReportTooltipPayloadEntry {
+  payload: { name: string; high: number; medium: number; low: number };
+}
+
+interface ReportTooltipProps {
+  active?: boolean;
+  payload?: ReportTooltipPayloadEntry[];
+}
+
+const ReportTooltip = ({ active, payload }: ReportTooltipProps) => {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
   const total = d.high + d.medium + d.low;

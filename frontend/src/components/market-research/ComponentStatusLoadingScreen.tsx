@@ -8,6 +8,7 @@ import {
   Building2,
   Shield,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import React from "react";
 
@@ -18,7 +19,7 @@ import { Card, CardContent } from "@/components/ui/card";
 interface ComponentStatus {
   name: string;
   status: "pending" | "success" | "failed";
-  icon: React.ComponentType<any>;
+  icon: LucideIcon;
 }
 
 interface ComponentStatusLoadingScreenProps {
