@@ -69,6 +69,7 @@ import {
   invalidateProfilerCache,
 } from "@/lib/missionProfilerSessionCache";
 import { extractIcpsDataFromFlexibleApiResponse } from "@/utils/profileIcpsExtract";
+import type { UntypedBackendApiResponse } from "@/lib/types/escape-hatches";
 
 // Data Source Interface
 interface DataSource {
@@ -512,7 +513,7 @@ const MissionControl = () => {
   };
 
   // Helper function to map API data to form state
-  const mapApiDataToFormState = (data: any, userId: string) => {
+  const mapApiDataToFormState = (data: UntypedBackendApiResponse, userId: string) => {
     console.log("MissionControl: mapApiDataToFormState called with:", {
       data,
       dataType: typeof data,
@@ -580,7 +581,7 @@ const MissionControl = () => {
     return profileData;
   };
 
-  const applyCompanyProfileJsonToMissionControlUi = (data: any, userId: string) => {
+  const applyCompanyProfileJsonToMissionControlUi = (data: UntypedBackendApiResponse, userId: string) => {
     if (!data || (typeof data === "object" && Object.keys(data).length === 0)) {
       return;
     }
@@ -605,7 +606,7 @@ const MissionControl = () => {
       data.data_sources.sources &&
       Array.isArray(data.data_sources.sources)
     ) {
-      const loadedSources: DataSource[] = data.data_sources.sources.map((source: any) => ({
+      const loadedSources: DataSource[] = data.data_sources.sources.map((source: UntypedBackendApiResponse) => ({
         id: source.id || `source-${Date.now()}-${Math.random()}`,
         name: source.name || "",
         type: (source.type || "custom") as DataSource["type"],
@@ -925,12 +926,13 @@ const MissionControl = () => {
                 }
               }
             }
-          } catch (error: any) {
+          } catch (error: unknown) {
+            const err = error as { name?: string; message?: string; stack?: string; constructor?: { name?: string } } | null;
             const errorDetails = {
-              name: error?.name,
-              message: error?.message,
-              stack: error?.stack?.substring(0, 500), // First 500 chars of stack
-              type: error?.constructor?.name,
+              name: err?.name,
+              message: err?.message,
+              stack: err?.stack?.substring(0, 500), // First 500 chars of stack
+              type: err?.constructor?.name,
             };
             console.error("MissionControl: Error loading company profile:", errorDetails);
             console.error("MissionControl: Full error object:", error);
@@ -2956,7 +2958,7 @@ const MissionControl = () => {
                   <Label>Sync Frequency</Label>
                   <Select
                     value={configSyncFrequency}
-                    onValueChange={(value: any) => setConfigSyncFrequency(value)}
+                    onValueChange={(value: string) => setConfigSyncFrequency(value as DataSource["syncFrequency"])}
                   >
                     <SelectTrigger>
                       <SelectValue />
