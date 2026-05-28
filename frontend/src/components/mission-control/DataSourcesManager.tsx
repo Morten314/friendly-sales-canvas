@@ -1060,7 +1060,7 @@ const DataSourcesManager: React.FC = () => {
                       });
                       return {
                         ...s,
-                        id: uploadMetadata.oldId, // Keep the old ID to maintain reference (replaces old entry)
+                        id: uploadMetadata.oldId!, // Keep the old ID to maintain reference (replaces old entry)
                         name: uploadMetadata.name,
                         description: uploadMetadata.description,
                         tags: uploadMetadata.tags,
@@ -1166,7 +1166,7 @@ const DataSourcesManager: React.FC = () => {
             const url = buildApiUrl(`data-source/${fileId}`);
             
             const updatePayload = {
-              user_id: currentUser.uid,
+              user_id: currentUser?.uid,
               org_id: orgIdToUse,
               tags: selectedTags,
               description: sourceDescription.trim() || undefined,
@@ -1343,7 +1343,7 @@ const DataSourcesManager: React.FC = () => {
             // Always use the form value, don't fall back to existing URL
             // This ensures the backend receives the updated value even if it's empty
             const updatePayload = {
-              user_id: currentUser.uid,
+              user_id: currentUser?.uid,
               org_id: orgIdToUse,
               name: sourceName.trim(),
               url: sourceUrl.trim(), // Send the form value directly, no fallback
