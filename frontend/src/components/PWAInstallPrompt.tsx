@@ -88,7 +88,7 @@ const PWAInstallPrompt = ({ variant = "header" }: PWAInstallPromptProps) => {
     // Check if already installed (standalone mode)
     if (
       window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as any).standalone === true
+      (window.navigator as Navigator & { standalone?: boolean }).standalone === true
     ) {
       setIsInstalled(true);
       // Save to localStorage for future reference
