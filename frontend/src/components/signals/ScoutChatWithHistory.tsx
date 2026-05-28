@@ -193,6 +193,10 @@ export function ScoutChatWithHistory({
       setActiveSessionId(newSession.id);
       return [newSession, ...prev];
     });
+    // initialContext object itself intentionally omitted: the effect keys
+    // on specific stable fields above; tracking the object identity would
+    // re-run on every parent re-render even when content is unchanged.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     initialContext?.contentHash,
     initialContext?.signalHeading,
