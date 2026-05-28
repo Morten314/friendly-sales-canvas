@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
 import { MessageSquare, Send, ArrowRight, Loader2 } from "lucide-react";
 
 interface ChatMessage {

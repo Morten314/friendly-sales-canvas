@@ -457,8 +457,8 @@ const StrategistChat: React.FC<{
 const StrategistWorkspace: React.FC<StrategistWorkspaceProps> = ({
   leads,
   opportunity,
-  icp,
-  triggerPrompt,
+  icp: _icp,
+  triggerPrompt: _triggerPrompt,
   onBack,
 }) => {
   const navigate = useNavigate();
@@ -502,8 +502,6 @@ const StrategistWorkspace: React.FC<StrategistWorkspaceProps> = ({
     // Generate a customized mock email directly in chat
     const leadName = leads[0]?.name?.split(" ")[0] || "there";
     const leadCompany = leads[0]?.company || "your company";
-    const leadTitle = leads[0]?.jobTitle || "your role";
-
     let emailContent = "";
     if (step.id === "s1") {
       emailContent = `Subject: ${step.subject || `Quick question about scaling ${leadCompany}`}

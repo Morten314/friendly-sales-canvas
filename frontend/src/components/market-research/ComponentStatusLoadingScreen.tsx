@@ -28,7 +28,7 @@ export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreen
   maxRetries,
   isValidating = false,
   validationAttempt = 0,
-  consecutiveValidations = 0,
+  consecutiveValidations: _consecutiveValidations = 0,
   loadingPhase = 'api',
   componentRenderingStatus = {},
   onClose
@@ -278,7 +278,6 @@ export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreen
                   if (loadingPhase === 'api') {
                     return (Object.values(componentStatus).filter(status => status === 'success').length / components.length) * 50;
                   } else if (loadingPhase === 'rendering') {
-                    const apiComplete = Object.values(componentStatus).filter(status => status === 'success').length;
                     const rendered = Object.values(componentRenderingStatus).filter(status => status === 'complete').length;
                     return 50 + ((rendered / components.length) * 50);
                   } else {

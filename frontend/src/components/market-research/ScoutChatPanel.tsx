@@ -40,7 +40,7 @@ interface ScoutChatPanelProps {
 
 const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
   showScoutChat,
-  isSplitView,
+  isSplitView: _isSplitView,
   hasEdits,
   showEditHistory,
   editHistory,

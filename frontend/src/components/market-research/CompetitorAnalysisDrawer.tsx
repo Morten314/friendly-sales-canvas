@@ -103,13 +103,12 @@ export const CompetitorAnalysisDrawer = ({
     setEditValue("");
   };
 
-  const EditableField = ({ 
-    field, 
-    value, 
-    onEdit, 
-    className = "" 
-  }: { 
-    field: string; 
+  const EditableField = ({
+    value,
+    onEdit,
+    className = ""
+  }: {
+    field: string;
     value: string; 
     onEdit: () => void; 
     className?: string;
