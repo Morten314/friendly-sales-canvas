@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { loginAsTestUser } from '../helpers/login';
+import { test, expect } from "@playwright/test";
+import { loginAsTestUser } from "../helpers/login";
 
 /**
  * The page (src/pages/MarketResearch.tsx) auto-fetches market-research data
@@ -18,25 +18,25 @@ import { loginAsTestUser } from '../helpers/login';
  * bounced to login, auto-fetch fires. Reinstate screenshots when the page
  * is refactored.
  */
-test('market research page loads + auto-fetches first component', async ({ page }) => {
+test("market research page loads + auto-fetches first component", async ({ page }) => {
   await loginAsTestUser(page);
 
   let marketResearchRequestCount = 0;
-  await page.route('**/api/market-research', async (route) => {
+  await page.route("**/api/market-research", async (route) => {
     marketResearchRequestCount += 1;
     const reqBody = route.request().postDataJSON();
-    const componentName = reqBody?.component_name || 'market size & opportunity';
+    const componentName = reqBody?.component_name || "market size & opportunity";
     await route.fulfill({
       status: 200,
-      contentType: 'application/json',
+      contentType: "application/json",
       body: JSON.stringify({
         component_name: componentName,
-        status: 'completed',
+        status: "completed",
         result: {
           title: `${componentName} (mocked)`,
           summary: `Mocked summary for ${componentName}.`,
-          key_findings: ['Finding 1', 'Finding 2', 'Finding 3'],
-          sources: [{ url: 'https://example.test', title: 'Source 1' }],
+          key_findings: ["Finding 1", "Finding 2", "Finding 3"],
+          sources: [{ url: "https://example.test", title: "Source 1" }],
         },
         cached: false,
       }),
@@ -44,9 +44,8 @@ test('market research page loads + auto-fetches first component', async ({ page 
   });
 
   // App.tsx:92 redirects /market-research → /your-ai-team/scout/marketintelligence.
-  await page.goto('/your-ai-team/scout/marketintelligence');
+  await page.goto("/your-ai-team/scout/marketintelligence");
   await expect(page).not.toHaveURL(/\/login/);
 
-  await expect.poll(() => marketResearchRequestCount, { timeout: 15000 })
-    .toBeGreaterThan(0);
+  await expect.poll(() => marketResearchRequestCount, { timeout: 15000 }).toBeGreaterThan(0);
 });

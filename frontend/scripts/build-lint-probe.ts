@@ -196,11 +196,16 @@ function main(): void {
     rawJson = execFileSync(
       resolve(FRONTEND_DIR, "node_modules", ".bin", "eslint"),
       [".", "--config", "eslint.probe.config.js", "--format", "json"],
-      { cwd: FRONTEND_DIR, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 64 * 1024 * 1024 }
+      {
+        cwd: FRONTEND_DIR,
+        encoding: "utf-8",
+        stdio: ["ignore", "pipe", "pipe"],
+        maxBuffer: 64 * 1024 * 1024,
+      },
     );
   } catch (err: unknown) {
     const e = err as { stdout?: string; stderr?: string };
-    rawJson = (e.stdout ?? "");
+    rawJson = e.stdout ?? "";
     if (!rawJson) {
       // ESLint sometimes fails before producing JSON (e.g., config syntax error).
       // Surface stderr to the human runner.
@@ -216,7 +221,12 @@ function main(): void {
     rawText = execFileSync(
       resolve(FRONTEND_DIR, "node_modules", ".bin", "eslint"),
       [".", "--config", "eslint.probe.config.js"],
-      { cwd: FRONTEND_DIR, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 64 * 1024 * 1024 }
+      {
+        cwd: FRONTEND_DIR,
+        encoding: "utf-8",
+        stdio: ["ignore", "pipe", "pipe"],
+        maxBuffer: 64 * 1024 * 1024,
+      },
     );
   } catch (err: unknown) {
     const e = err as { stdout?: string; stderr?: string };
@@ -229,7 +239,12 @@ function main(): void {
     prettierRaw = execFileSync(
       resolve(FRONTEND_DIR, "node_modules", ".bin", "prettier"),
       ["--check", "."],
-      { cwd: FRONTEND_DIR, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 64 * 1024 * 1024 }
+      {
+        cwd: FRONTEND_DIR,
+        encoding: "utf-8",
+        stdio: ["ignore", "pipe", "pipe"],
+        maxBuffer: 64 * 1024 * 1024,
+      },
     );
   } catch (err: unknown) {
     const e = err as { stdout?: string; stderr?: string };
@@ -237,10 +252,10 @@ function main(): void {
   }
 
   // 5) Capture area tree.
-  const areaTree = execSync(
-    `find src components pages -maxdepth 2 -type d 2>/dev/null | sort`,
-    { cwd: FRONTEND_DIR, encoding: "utf-8" }
-  );
+  const areaTree = execSync(`find src components pages -maxdepth 2 -type d 2>/dev/null | sort`, {
+    cwd: FRONTEND_DIR,
+    encoding: "utf-8",
+  });
 
   // 6) Delete throwaway probe config.
   rmSync(probePath, { force: true });
@@ -300,7 +315,9 @@ function main(): void {
   writeFileSync(jsonOut, JSON.stringify(report, null, 2) + "\n", "utf-8");
 
   // 9) Console summary.
-  console.log(`Total problems: ${totalErrors + totalWarnings} (${totalErrors} errors, ${totalWarnings} warnings)`);
+  console.log(
+    `Total problems: ${totalErrors + totalWarnings} (${totalErrors} errors, ${totalWarnings} warnings)`,
+  );
   console.log("Errors by rule:", errorsByRule);
   console.log("Warnings by rule:", warningsByRule);
   console.log("Errors by area:", errorsByArea);

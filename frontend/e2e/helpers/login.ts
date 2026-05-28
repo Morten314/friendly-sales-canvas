@@ -1,6 +1,6 @@
-import { Page } from '@playwright/test';
-import { firebaseSignInResponse, seededAuthEntries } from '../fixtures/auth';
-import { installApiMocks } from '../fixtures/api-mocks';
+import { Page } from "@playwright/test";
+import { firebaseSignInResponse, seededAuthEntries } from "../fixtures/auth";
+import { installApiMocks } from "../fixtures/api-mocks";
 
 /**
  * Install Firebase REST mocks. Use this for tests that drive the login form
@@ -21,33 +21,37 @@ import { installApiMocks } from '../fixtures/api-mocks';
  * to fail. We route by endpoint suffix.
  */
 export async function mockFirebaseLogin(page: Page) {
-  await page.route('**/identitytoolkit.googleapis.com/**', async (route) => {
+  await page.route("**/identitytoolkit.googleapis.com/**", async (route) => {
     const url = route.request().url();
-    if (url.includes('accounts:lookup') || url.includes('getAccountInfo')) {
+    if (url.includes("accounts:lookup") || url.includes("getAccountInfo")) {
       await route.fulfill({
         status: 200,
-        contentType: 'application/json',
+        contentType: "application/json",
         body: JSON.stringify({
-          kind: 'identitytoolkit#GetAccountInfoResponse',
-          users: [{
-            localId: firebaseSignInResponse.localId,
-            email: firebaseSignInResponse.email,
-            emailVerified: true,
-            displayName: 'Test User',
-            providerUserInfo: [{
-              providerId: 'password',
+          kind: "identitytoolkit#GetAccountInfoResponse",
+          users: [
+            {
+              localId: firebaseSignInResponse.localId,
               email: firebaseSignInResponse.email,
-              federatedId: firebaseSignInResponse.email,
-              rawId: firebaseSignInResponse.email,
-              displayName: 'Test User',
-            }],
-            passwordHash: 'redacted',
-            passwordUpdatedAt: 1700000000000,
-            validSince: '0',
-            disabled: false,
-            lastLoginAt: '1700000000000',
-            createdAt: '1700000000000',
-          }],
+              emailVerified: true,
+              displayName: "Test User",
+              providerUserInfo: [
+                {
+                  providerId: "password",
+                  email: firebaseSignInResponse.email,
+                  federatedId: firebaseSignInResponse.email,
+                  rawId: firebaseSignInResponse.email,
+                  displayName: "Test User",
+                },
+              ],
+              passwordHash: "redacted",
+              passwordUpdatedAt: 1700000000000,
+              validSince: "0",
+              disabled: false,
+              lastLoginAt: "1700000000000",
+              createdAt: "1700000000000",
+            },
+          ],
         }),
       });
       return;
@@ -55,27 +59,27 @@ export async function mockFirebaseLogin(page: Page) {
     // Default: signin shape (signInWithPassword, signUp, etc.).
     await route.fulfill({
       status: 200,
-      contentType: 'application/json',
+      contentType: "application/json",
       body: JSON.stringify({
-        kind: 'identitytoolkit#VerifyPasswordResponse',
+        kind: "identitytoolkit#VerifyPasswordResponse",
         ...firebaseSignInResponse,
-        displayName: 'Test User',
+        displayName: "Test User",
       }),
     });
   });
 
-  await page.route('**/securetoken.googleapis.com/**', async (route) => {
+  await page.route("**/securetoken.googleapis.com/**", async (route) => {
     await route.fulfill({
       status: 200,
-      contentType: 'application/json',
+      contentType: "application/json",
       body: JSON.stringify({
-        access_token: 'mock_firebase_token',
-        id_token: 'mock_firebase_token',
-        refresh_token: 'mock_refresh_token',
-        expires_in: '3600',
-        token_type: 'Bearer',
+        access_token: "mock_firebase_token",
+        id_token: "mock_firebase_token",
+        refresh_token: "mock_refresh_token",
+        expires_in: "3600",
+        token_type: "Bearer",
         user_id: firebaseSignInResponse.localId,
-        project_id: '710721694093',
+        project_id: "710721694093",
       }),
     });
   });
@@ -114,13 +118,10 @@ export async function loginAsTestUser(page: Page) {
     }
   }, seededAuthEntries);
 
-  await page.goto('/');
-  await page.getByLabel(/email/i).fill('test@brewra.test');
-  await page.getByLabel(/password/i).fill('test_password');
-  await page.getByRole('button', { name: /sign in|log in/i }).click();
+  await page.goto("/");
+  await page.getByLabel(/email/i).fill("test@brewra.test");
+  await page.getByLabel(/password/i).fill("test_password");
+  await page.getByRole("button", { name: /sign in|log in/i }).click();
 
-  await page.waitForURL(
-    /\/(tenant-selection|mission-control|your-ai-team)/,
-    { timeout: 15000 },
-  );
+  await page.waitForURL(/\/(tenant-selection|mission-control|your-ai-team)/, { timeout: 15000 });
 }

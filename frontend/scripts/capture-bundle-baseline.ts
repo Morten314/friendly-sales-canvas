@@ -1,15 +1,15 @@
-import { readFile, readdir, stat, writeFile, mkdir } from 'node:fs/promises';
-import { join, relative, resolve, dirname } from 'node:path';
-import { gzipSize } from 'gzip-size';
+import { readFile, readdir, stat, writeFile, mkdir } from "node:fs/promises";
+import { join, relative, resolve, dirname } from "node:path";
+import { gzipSize } from "gzip-size";
 
-const FRONTEND_DIR = resolve(import.meta.dirname, '..');
-const DIST_DIR = join(FRONTEND_DIR, 'dist');
+const FRONTEND_DIR = resolve(import.meta.dirname, "..");
+const DIST_DIR = join(FRONTEND_DIR, "dist");
 const OUTPUT_FILE = resolve(
   FRONTEND_DIR,
-  '..',
-  'docs',
-  'audits',
-  '2026-05-26-frontend-bundle-baseline.json',
+  "..",
+  "docs",
+  "audits",
+  "2026-05-26-frontend-bundle-baseline.json",
 );
 
 async function walk(dir: string): Promise<string[]> {
@@ -36,7 +36,7 @@ async function main() {
       const sizeBytes = (await stat(full)).size;
       const gz = await gzipSize(contents);
       return {
-        file: relative(DIST_DIR, full).split('\\').join('/'),
+        file: relative(DIST_DIR, full).split("\\").join("/"),
         size_bytes: sizeBytes,
         gzip_bytes: gz,
       };
@@ -54,13 +54,13 @@ async function main() {
 
   const payload = {
     captured_at: new Date().toISOString(),
-    build_command: 'npm run build',
+    build_command: "npm run build",
     ...totals,
     chunks,
   };
 
   await mkdir(dirname(OUTPUT_FILE), { recursive: true });
-  await writeFile(OUTPUT_FILE, JSON.stringify(payload, null, 2) + '\n');
+  await writeFile(OUTPUT_FILE, JSON.stringify(payload, null, 2) + "\n");
   console.log(`Wrote ${chunks.length} chunks to ${OUTPUT_FILE}`);
 }
 
