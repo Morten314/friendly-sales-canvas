@@ -30,6 +30,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import type {
+  UntypedBackendApiResponse,
+  UntypedBackendProfile,
+} from "@/lib/types/escape-hatches";
 import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
 
 interface EditRecord {
@@ -73,10 +77,10 @@ interface CompetitorLandscapeSectionProps {
   onGenerateShareableLink: () => void;
   // Add refresh props
   isRefreshing?: boolean;
-  companyProfile?: any;
+  companyProfile?: UntypedBackendProfile;
 
   // Add centralized data prop
-  competitorData?: any;
+  competitorData?: UntypedBackendApiResponse;
   error?: string | null;
 }
 
@@ -135,10 +139,12 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   const displayError = localError || error;
 
   // Helper function to normalize uiComponents
-  const normalizeUiComponents = (components: any[]): any[] => {
+  const normalizeUiComponents = (
+    components: UntypedBackendApiResponse[],
+  ): UntypedBackendApiResponse[] => {
     if (!Array.isArray(components)) return [];
     return components
-      .map((comp: any) => {
+      .map((comp: UntypedBackendApiResponse) => {
         if (typeof comp === "string") {
           try {
             return JSON.parse(comp);
@@ -148,7 +154,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         }
         return comp;
       })
-      .filter((comp: any) => comp !== null);
+      .filter((comp: UntypedBackendApiResponse) => comp !== null);
   };
 
   // Extract uiComponents data
@@ -185,19 +191,23 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   // Local state for all uiComponents data
   const [localDataPoints, setLocalDataPoints] = useState<Array<{ label: string; value: string }>>(
     () => {
-      const reportComponent = normalizedComponents.find((comp: any) => comp?.type === "report");
+      const reportComponent = normalizedComponents.find(
+        (comp: UntypedBackendApiResponse) => comp?.type === "report",
+      );
       return reportComponent?.dataPoints || [];
     },
   );
   const [localCompetitors, setLocalCompetitors] = useState<string[]>(() => {
-    const sectionComponent = normalizedComponents.find((comp: any) => comp?.type === "section");
+    const sectionComponent = normalizedComponents.find(
+      (comp: UntypedBackendApiResponse) => comp?.type === "section",
+    );
     return sectionComponent?.tags || [];
   });
   const [localRegions, setLocalRegions] = useState<
     Array<{ name: string; data: Record<string, string> }>
   >(() => {
     const marketShareComponent = normalizedComponents.find(
-      (comp: any) => comp?.type === "marketShareCharts",
+      (comp: UntypedBackendApiResponse) => comp?.type === "marketShareCharts",
     );
     return marketShareComponent?.regions || [];
   });
@@ -210,7 +220,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       threats: string[];
     }>
   >(() => {
-    const swotComponent = normalizedComponents.find((comp: any) => comp?.type === "swotAnalysis");
+    const swotComponent = normalizedComponents.find(
+      (comp: UntypedBackendApiResponse) => comp?.type === "swotAnalysis",
+    );
     const entities = swotComponent?.entities || [];
     // Ensure backward compatibility by adding opportunities and threats if missing
     return entities.map(
@@ -228,7 +240,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     );
   });
   const [localHeadlines, setLocalHeadlines] = useState<string[]>(() => {
-    const newsComponent = normalizedComponents.find((comp: any) => comp?.type === "news");
+    const newsComponent = normalizedComponents.find(
+      (comp: UntypedBackendApiResponse) => comp?.type === "news",
+    );
     const apiHeadlines = newsComponent?.headlines;
     return apiHeadlines && apiHeadlines.length > 0
       ? apiHeadlines
@@ -240,19 +254,21 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   });
   const [localFeatures, setLocalFeatures] = useState<string[]>(() => {
     const featureComponent = normalizedComponents.find(
-      (comp: any) => comp?.type === "featureComparison",
+      (comp: UntypedBackendApiResponse) => comp?.type === "featureComparison",
     );
     return featureComponent?.features || [];
   });
   const [localTools, setLocalTools] = useState<Record<string, string[]>>(() => {
     const featureComponent = normalizedComponents.find(
-      (comp: any) => comp?.type === "featureComparison",
+      (comp: UntypedBackendApiResponse) => comp?.type === "featureComparison",
     );
     return featureComponent?.tools || {};
   });
   const [localInsights, setLocalInsights] = useState<Array<{ label: string; description: string }>>(
     () => {
-      const mnaComponent = normalizedComponents.find((comp: any) => comp?.type === "mnaInsights");
+      const mnaComponent = normalizedComponents.find(
+        (comp: UntypedBackendApiResponse) => comp?.type === "mnaInsights",
+      );
       let insights = mnaComponent?.insights;
       if (typeof insights === "string") {
         try {
@@ -263,7 +279,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       }
       if (!insights || !Array.isArray(insights)) return [];
       return insights
-        .map((insight: any) => {
+        .map((insight: UntypedBackendApiResponse) => {
           if (typeof insight === "string") {
             try {
               return JSON.parse(insight);
@@ -273,13 +289,16 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           }
           return insight;
         })
-        .filter((insight: any) => insight && (insight.label || insight.description));
+        .filter(
+          (insight: UntypedBackendApiResponse) =>
+            insight && (insight.label || insight.description),
+        );
     },
   );
   const [localCharts, setLocalCharts] = useState<Array<{ name: string; xAxis: string | string[] }>>(
     () => {
       const trendsComponent = normalizedComponents.find(
-        (comp: any) => comp?.type === "marketTrends",
+        (comp: UntypedBackendApiResponse) => comp?.type === "marketTrends",
       );
       return trendsComponent?.charts || [];
     },
@@ -287,7 +306,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   const [localMetrics, setLocalMetrics] = useState<
     Array<{ label: string; value: string; trend?: string }>
   >(() => {
-    const sectionComponent = normalizedComponents.find((comp: any) => comp?.type === "section");
+    const sectionComponent = normalizedComponents.find(
+      (comp: UntypedBackendApiResponse) => comp?.type === "section",
+    );
     return sectionComponent?.metrics || [];
   });
 
@@ -413,27 +434,43 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       const normalized = competitorData?.uiComponents
         ? normalizeUiComponents(competitorData.uiComponents)
         : [];
-      const reportComponent = normalized.find((comp: any) => comp?.type === "report");
-      const sectionComponent = normalized.find((comp: any) => comp?.type === "section");
-      const marketShareComponent = normalized.find(
-        (comp: any) => comp?.type === "marketShareCharts",
+      const reportComponent = normalized.find(
+        (comp: UntypedBackendApiResponse) => comp?.type === "report",
       );
-      const swotComponent = normalized.find((comp: any) => comp?.type === "swotAnalysis");
-      const newsComponent = normalized.find((comp: any) => comp?.type === "news");
-      const featureComponent = normalized.find((comp: any) => comp?.type === "featureComparison");
-      const mnaComponent = normalized.find((comp: any) => comp?.type === "mnaInsights");
-      const trendsComponent = normalized.find((comp: any) => comp?.type === "marketTrends");
+      const sectionComponent = normalized.find(
+        (comp: UntypedBackendApiResponse) => comp?.type === "section",
+      );
+      const marketShareComponent = normalized.find(
+        (comp: UntypedBackendApiResponse) => comp?.type === "marketShareCharts",
+      );
+      const swotComponent = normalized.find(
+        (comp: UntypedBackendApiResponse) => comp?.type === "swotAnalysis",
+      );
+      const newsComponent = normalized.find(
+        (comp: UntypedBackendApiResponse) => comp?.type === "news",
+      );
+      const featureComponent = normalized.find(
+        (comp: UntypedBackendApiResponse) => comp?.type === "featureComparison",
+      );
+      const mnaComponent = normalized.find(
+        (comp: UntypedBackendApiResponse) => comp?.type === "mnaInsights",
+      );
+      const trendsComponent = normalized.find(
+        (comp: UntypedBackendApiResponse) => comp?.type === "marketTrends",
+      );
 
       if (reportComponent?.dataPoints) setLocalDataPoints(reportComponent.dataPoints);
       if (sectionComponent?.tags) setLocalCompetitors(sectionComponent.tags);
       if (marketShareComponent?.regions) setLocalRegions(marketShareComponent.regions);
       if (swotComponent?.entities) {
         // Ensure backward compatibility by adding opportunities and threats if missing
-        const normalizedEntities = swotComponent.entities.map((entity: any) => ({
-          ...entity,
-          opportunities: entity.opportunities || [],
-          threats: entity.threats || [],
-        }));
+        const normalizedEntities = swotComponent.entities.map(
+          (entity: UntypedBackendApiResponse) => ({
+            ...entity,
+            opportunities: entity.opportunities || [],
+            threats: entity.threats || [],
+          }),
+        );
         setLocalEntities(normalizedEntities);
       }
       if (newsComponent?.headlines) {
@@ -456,7 +493,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         }
         if (insights && Array.isArray(insights)) {
           const validInsights = insights
-            .map((insight: any) => {
+            .map((insight: UntypedBackendApiResponse) => {
               if (typeof insight === "string") {
                 try {
                   return JSON.parse(insight);
@@ -466,7 +503,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               }
               return insight;
             })
-            .filter((insight: any) => insight && (insight.label || insight.description));
+            .filter(
+              (insight: UntypedBackendApiResponse) =>
+                insight && (insight.label || insight.description),
+            );
           setLocalInsights(validInsights);
         }
       }
@@ -1094,7 +1134,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                   );
                 }
 
-                return apiMetrics.map((metric: any, index: number) => (
+                return apiMetrics.map((metric: UntypedBackendApiResponse, index: number) => (
                   <div key={index} className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
                     <div className="flex items-center">
                       <div className="flex-1">
@@ -2277,7 +2317,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                   )}
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">M&A Insights</h3>
                   <div className="grid grid-cols-1 gap-4">
-                    {insights.map((insight: any, index: number) => {
+                    {insights.map((insight: UntypedBackendApiResponse, index: number) => {
                       return (
                         <div
                           key={index}
@@ -2401,7 +2441,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                   )}
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Market Trends</h3>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {charts.map((chart: any, index: number) => {
+                    {charts.map((chart: UntypedBackendApiResponse, index: number) => {
                       const chartData = generateTrendData(chart.xAxis, index);
                       return (
                         <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
