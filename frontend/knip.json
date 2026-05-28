@@ -17,9 +17,6 @@
   ],
   "ignoreDependencies": [
     "tailwindcss-animate",
-    "tsx",
-    "prettier",
-    "eslint-plugin-import-x",
-    "eslint-config-prettier"
+    "tsx"
   ]
 }

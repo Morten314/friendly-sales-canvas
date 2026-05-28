@@ -1,0 +1,4 @@
+# Pure-formatting commits to ignore in git blame.
+# See https://git-scm.com/docs/git-config#Documentation/git-config.txt-blameignoreRevsFile
+# Locally: git config blame.ignoreRevsFile .git-blame-ignore-revs
+# GitHub honors this file automatically.
