@@ -159,7 +159,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     const swotComponent = normalizedComponents.find((comp: any) => comp?.type === 'swotAnalysis');
     const entities = swotComponent?.entities || [];
     // Ensure backward compatibility by adding opportunities and threats if missing
-    return entities.map(entity => ({
+    return entities.map((entity: { name: string; strengths: string[]; weaknesses: string[]; opportunities: string[]; threats: string[] }) => ({
       ...entity,
       opportunities: entity.opportunities || [],
       threats: entity.threats || []
