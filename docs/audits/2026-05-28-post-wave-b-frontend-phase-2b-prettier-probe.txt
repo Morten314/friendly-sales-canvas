@@ -1,0 +1,4 @@
+Checking formatting...
+[warn] eslint.probe.config.js
+[warn] src/components/market-research/RegulatoryComplianceSection.tsx
+[warn] Code style issues found in 2 files. Run Prettier with --write to fix.

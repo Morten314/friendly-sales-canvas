@@ -1,0 +1,470 @@
+{
+  "generatedAt": "2026-05-28T14:00:12.187Z",
+  "date": "2026-05-28",
+  "prefix": "post-wave-b",
+  "totals": {
+    "errors": 406,
+    "warnings": 51,
+    "problems": 457
+  },
+  "errorsByRule": {
+    "@typescript-eslint/ban-types": 11,
+    "@typescript-eslint/no-unsafe-member-access": 3,
+    "@typescript-eslint/no-unsafe-assignment": 9,
+    "@typescript-eslint/no-unsafe-return": 6,
+    "(no-rule-id)": 26,
+    "@typescript-eslint/no-floating-promises": 46,
+    "@typescript-eslint/no-explicit-any": 232,
+    "@typescript-eslint/no-misused-promises": 67,
+    "react-hooks/rules-of-hooks": 1,
+    "import-x/order": 5
+  },
+  "warningsByRule": {
+    "(no-rule-id)": 12,
+    "react-refresh/only-export-components": 4,
+    "react-hooks/exhaustive-deps": 35
+  },
+  "errorsByArea": {
+    "other": 30,
+    "e2e": 18,
+    "root-config": 2,
+    "scripts": 5,
+    "components/PWAInstallPrompt.tsx": 4,
+    "components/customers": 15,
+    "components/layout": 2,
+    "components/market-research": 122,
+    "components/mission-control": 20,
+    "components/settings": 10,
+    "components/signals": 5,
+    "contexts": 1,
+    "hooks": 1,
+    "lib": 14,
+    "main.tsx": 2,
+    "pages": 100,
+    "services": 15,
+    "utils": 39,
+    "vite-env.d.ts": 1
+  },
+  "warningsByArea": {
+    "other": 12,
+    "components/customers": 3,
+    "components/layout": 1,
+    "components/market-research": 13,
+    "components/mission-control": 3,
+    "components/settings": 1,
+    "components/signals": 2,
+    "contexts": 3,
+    "pages": 13
+  },
+  "errorsByFile": {
+    "dev-dist/workbox-54d0af47.js": 9,
+    "dev-dist/workbox-6856d41d.js": 10,
+    "dev-dist/workbox-e755d862.js": 10,
+    "e2e/fixtures/api-mocks.ts": 1,
+    "e2e/fixtures/auth.ts": 1,
+    "e2e/fixtures/identities.ts": 1,
+    "e2e/fixtures/seed-data.ts": 1,
+    "e2e/helpers/login.ts": 1,
+    "e2e/helpers/mask-dynamic.ts": 1,
+    "e2e/journeys/01-login-tenant-mission.spec.ts": 1,
+    "e2e/journeys/02-csv-upload-leads.spec.ts": 1,
+    "e2e/journeys/03-signals-feed-action.spec.ts": 1,
+    "e2e/journeys/04-market-research-5-components.spec.ts": 1,
+    "e2e/journeys/05-icp-create.spec.ts": 1,
+    "e2e/journeys/06-customers-page-load.spec.ts": 1,
+    "e2e/journeys/07-settings-page-load.spec.ts": 1,
+    "e2e/stubs/agent-hub.spec.ts": 1,
+    "e2e/stubs/artifacts.spec.ts": 1,
+    "e2e/stubs/calendar.spec.ts": 1,
+    "e2e/stubs/insights.spec.ts": 1,
+    "e2e/stubs/reports.spec.ts": 1,
+    "playwright.config.ts": 1,
+    "scripts/build-audit-scorecard.ts": 1,
+    "scripts/build-lint-probe.ts": 1,
+    "scripts/build-strict-probe.ts": 1,
+    "scripts/capture-bundle-baseline.ts": 1,
+    "scripts/scan-inline-blocks.ts": 1,
+    "src/components/PWAInstallPrompt.tsx": 4,
+    "src/components/customers/ICPIntelligence.tsx": 1,
+    "src/components/customers/SuggestedICPCards.tsx": 14,
+    "src/components/layout/Sidebar.tsx": 2,
+    "src/components/market-research/AIPromptingInterface.tsx": 3,
+    "src/components/market-research/AddLeadModal.tsx": 1,
+    "src/components/market-research/ChatWithScout.tsx": 2,
+    "src/components/market-research/CompetitorLandscapeSection.tsx": 33,
+    "src/components/market-research/ComponentStatusLoadingScreen.tsx": 1,
+    "src/components/market-research/DataHistoryDialog.tsx": 10,
+    "src/components/market-research/IndustryTrendsSection.tsx": 4,
+    "src/components/market-research/MarketEntrySection.tsx": 5,
+    "src/components/market-research/MarketIntelligenceSections.tsx": 5,
+    "src/components/market-research/MarketIntelligenceTabProps.ts": 3,
+    "src/components/market-research/MarketSizeSection.tsx": 5,
+    "src/components/market-research/RegulatoryComplianceSection.tsx": 33,
+    "src/components/market-research/SafeMarketIntelligenceTab.tsx": 4,
+    "src/components/market-research/ScoutChatPanel.tsx": 4,
+    "src/components/market-research/ScoutLeadStream.tsx": 2,
+    "src/components/market-research/ScoutSettingsForm.tsx": 1,
+    "src/components/market-research/StrategistWorkspace.tsx": 2,
+    "src/components/market-research/lead-stream/LeadsTable.tsx": 3,
+    "src/components/market-research/lead-stream/OpportunityDashboard.tsx": 1,
+    "src/components/mission-control/DataSourcesManager.tsx": 15,
+    "src/components/mission-control/ICPManager.tsx": 5,
+    "src/components/settings/AgentProfile.tsx": 2,
+    "src/components/settings/CompanyProfile.tsx": 6,
+    "src/components/settings/UserProfile.tsx": 2,
+    "src/components/signals/ScoutChatWithHistory.tsx": 1,
+    "src/components/signals/SignalsContextChat.tsx": 4,
+    "src/contexts/AuthContext.tsx": 1,
+    "src/hooks/useAuth.ts": 1,
+    "src/lib/api.ts": 1,
+    "src/lib/jwt.ts": 1,
+    "src/lib/rateLimitManager.ts": 6,
+    "src/lib/types/escape-hatches.ts": 6,
+    "src/main.tsx": 2,
+    "src/pages/Login.tsx": 2,
+    "src/pages/MarketResearch.tsx": 61,
+    "src/pages/MissionControl.tsx": 23,
+    "src/pages/Settings.tsx": 3,
+    "src/pages/Signals.tsx": 7,
+    "src/pages/TenantSelection.tsx": 4,
+    "src/services/api.ts": 15,
+    "src/utils/apiUtils.ts": 7,
+    "src/utils/leadStreamChatContext.ts": 1,
+    "src/utils/profilerAcceptedIcpDisplay.ts": 31,
+    "src/vite-env.d.ts": 1,
+    "tailwind.config.ts": 1,
+    "vitest.config.ts": 1
+  },
+  "warningsByFile": {
+    "dev-dist/workbox-54d0af47.js": 4,
+    "dev-dist/workbox-6856d41d.js": 4,
+    "dev-dist/workbox-e755d862.js": 4,
+    "src/components/customers/LeadStream.tsx": 1,
+    "src/components/customers/SuggestedICPCards.tsx": 2,
+    "src/components/layout/Sidebar.tsx": 1,
+    "src/components/market-research/CompetitorLandscapeSection.tsx": 2,
+    "src/components/market-research/DataHistoryDialog.tsx": 1,
+    "src/components/market-research/MarketEntrySection.tsx": 2,
+    "src/components/market-research/MarketSizeSection.tsx": 4,
+    "src/components/market-research/RegulatoryComplianceSection.tsx": 4,
+    "src/components/mission-control/DataSourcesManager.tsx": 2,
+    "src/components/mission-control/ICPManager.tsx": 1,
+    "src/components/settings/CompanyProfile.tsx": 1,
+    "src/components/signals/ProfilerChatWithHistory.tsx": 1,
+    "src/components/signals/ScoutChatWithHistory.tsx": 1,
+    "src/contexts/AuthContext.tsx": 1,
+    "src/contexts/SidebarContext.tsx": 1,
+    "src/contexts/TenantContext.tsx": 1,
+    "src/pages/MarketResearch.tsx": 11,
+    "src/pages/MissionControl.tsx": 2
+  },
+  "rulesByFile": {
+    "dev-dist/workbox-54d0af47.js": {
+      "@typescript-eslint/ban-types": 3,
+      "(no-rule-id)": 4,
+      "@typescript-eslint/no-unsafe-member-access": 1,
+      "@typescript-eslint/no-unsafe-assignment": 3,
+      "@typescript-eslint/no-unsafe-return": 2
+    },
+    "dev-dist/workbox-6856d41d.js": {
+      "@typescript-eslint/ban-types": 4,
+      "(no-rule-id)": 4,
+      "@typescript-eslint/no-unsafe-member-access": 1,
+      "@typescript-eslint/no-unsafe-assignment": 3,
+      "@typescript-eslint/no-unsafe-return": 2
+    },
+    "dev-dist/workbox-e755d862.js": {
+      "@typescript-eslint/ban-types": 4,
+      "(no-rule-id)": 4,
+      "@typescript-eslint/no-unsafe-member-access": 1,
+      "@typescript-eslint/no-unsafe-assignment": 3,
+      "@typescript-eslint/no-unsafe-return": 2
+    },
+    "e2e/fixtures/api-mocks.ts": {
+      "(no-rule-id)": 1
+    },
+    "e2e/fixtures/auth.ts": {
+      "(no-rule-id)": 1
+    },
+    "e2e/fixtures/identities.ts": {
+      "(no-rule-id)": 1
+    },
+    "e2e/fixtures/seed-data.ts": {
+      "(no-rule-id)": 1
+    },
+    "e2e/helpers/login.ts": {
+      "(no-rule-id)": 1
+    },
+    "e2e/helpers/mask-dynamic.ts": {
+      "(no-rule-id)": 1
+    },
+    "e2e/journeys/01-login-tenant-mission.spec.ts": {
+      "(no-rule-id)": 1
+    },
+    "e2e/journeys/02-csv-upload-leads.spec.ts": {
+      "(no-rule-id)": 1
+    },
+    "e2e/journeys/03-signals-feed-action.spec.ts": {
+      "(no-rule-id)": 1
+    },
+    "e2e/journeys/04-market-research-5-components.spec.ts": {
+      "(no-rule-id)": 1
+    },
+    "e2e/journeys/05-icp-create.spec.ts": {
+      "(no-rule-id)": 1
+    },
+    "e2e/journeys/06-customers-page-load.spec.ts": {
+      "(no-rule-id)": 1
+    },
+    "e2e/journeys/07-settings-page-load.spec.ts": {
+      "(no-rule-id)": 1
+    },
+    "e2e/stubs/agent-hub.spec.ts": {
+      "(no-rule-id)": 1
+    },
+    "e2e/stubs/artifacts.spec.ts": {
+      "(no-rule-id)": 1
+    },
+    "e2e/stubs/calendar.spec.ts": {
+      "(no-rule-id)": 1
+    },
+    "e2e/stubs/insights.spec.ts": {
+      "(no-rule-id)": 1
+    },
+    "e2e/stubs/reports.spec.ts": {
+      "(no-rule-id)": 1
+    },
+    "playwright.config.ts": {
+      "(no-rule-id)": 1
+    },
+    "scripts/build-audit-scorecard.ts": {
+      "(no-rule-id)": 1
+    },
+    "scripts/build-lint-probe.ts": {
+      "(no-rule-id)": 1
+    },
+    "scripts/build-strict-probe.ts": {
+      "(no-rule-id)": 1
+    },
+    "scripts/capture-bundle-baseline.ts": {
+      "(no-rule-id)": 1
+    },
+    "scripts/scan-inline-blocks.ts": {
+      "(no-rule-id)": 1
+    },
+    "src/components/PWAInstallPrompt.tsx": {
+      "@typescript-eslint/no-floating-promises": 1,
+      "@typescript-eslint/no-explicit-any": 1,
+      "@typescript-eslint/no-misused-promises": 2
+    },
+    "src/components/customers/ICPIntelligence.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/customers/LeadStream.tsx": {
+      "react-refresh/only-export-components": 1
+    },
+    "src/components/customers/SuggestedICPCards.tsx": {
+      "@typescript-eslint/no-explicit-any": 14,
+      "react-hooks/exhaustive-deps": 2
+    },
+    "src/components/layout/Sidebar.tsx": {
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-misused-promises": 2
+    },
+    "src/components/market-research/AIPromptingInterface.tsx": {
+      "@typescript-eslint/no-explicit-any": 1,
+      "@typescript-eslint/no-floating-promises": 1,
+      "@typescript-eslint/no-misused-promises": 1
+    },
+    "src/components/market-research/AddLeadModal.tsx": {
+      "@typescript-eslint/no-misused-promises": 1
+    },
+    "src/components/market-research/ChatWithScout.tsx": {
+      "@typescript-eslint/no-floating-promises": 1,
+      "@typescript-eslint/no-misused-promises": 1
+    },
+    "src/components/market-research/CompetitorLandscapeSection.tsx": {
+      "@typescript-eslint/no-explicit-any": 32,
+      "react-hooks/exhaustive-deps": 2,
+      "@typescript-eslint/no-floating-promises": 1
+    },
+    "src/components/market-research/ComponentStatusLoadingScreen.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/market-research/DataHistoryDialog.tsx": {
+      "@typescript-eslint/no-explicit-any": 6,
+      "@typescript-eslint/no-floating-promises": 2,
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-misused-promises": 2
+    },
+    "src/components/market-research/IndustryTrendsSection.tsx": {
+      "@typescript-eslint/no-explicit-any": 1,
+      "@typescript-eslint/no-misused-promises": 3
+    },
+    "src/components/market-research/MarketEntrySection.tsx": {
+      "@typescript-eslint/no-explicit-any": 3,
+      "@typescript-eslint/no-floating-promises": 1,
+      "react-hooks/exhaustive-deps": 2,
+      "@typescript-eslint/no-misused-promises": 1
+    },
+    "src/components/market-research/MarketIntelligenceSections.tsx": {
+      "@typescript-eslint/no-misused-promises": 5
+    },
+    "src/components/market-research/MarketIntelligenceTabProps.ts": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/components/market-research/MarketSizeSection.tsx": {
+      "@typescript-eslint/no-explicit-any": 2,
+      "react-hooks/exhaustive-deps": 4,
+      "@typescript-eslint/no-floating-promises": 2,
+      "@typescript-eslint/no-misused-promises": 1
+    },
+    "src/components/market-research/RegulatoryComplianceSection.tsx": {
+      "@typescript-eslint/no-explicit-any": 26,
+      "react-hooks/exhaustive-deps": 4,
+      "@typescript-eslint/no-floating-promises": 4,
+      "@typescript-eslint/no-misused-promises": 2,
+      "react-hooks/rules-of-hooks": 1
+    },
+    "src/components/market-research/SafeMarketIntelligenceTab.tsx": {
+      "@typescript-eslint/no-explicit-any": 4
+    },
+    "src/components/market-research/ScoutChatPanel.tsx": {
+      "@typescript-eslint/no-explicit-any": 1,
+      "@typescript-eslint/no-floating-promises": 1,
+      "@typescript-eslint/no-misused-promises": 2
+    },
+    "src/components/market-research/ScoutLeadStream.tsx": {
+      "@typescript-eslint/no-explicit-any": 2
+    },
+    "src/components/market-research/ScoutSettingsForm.tsx": {
+      "@typescript-eslint/no-misused-promises": 1
+    },
+    "src/components/market-research/StrategistWorkspace.tsx": {
+      "@typescript-eslint/no-misused-promises": 2
+    },
+    "src/components/market-research/lead-stream/LeadsTable.tsx": {
+      "@typescript-eslint/no-explicit-any": 3
+    },
+    "src/components/market-research/lead-stream/OpportunityDashboard.tsx": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/components/mission-control/DataSourcesManager.tsx": {
+      "@typescript-eslint/no-explicit-any": 2,
+      "@typescript-eslint/no-misused-promises": 11,
+      "@typescript-eslint/no-floating-promises": 2,
+      "react-hooks/exhaustive-deps": 2
+    },
+    "src/components/mission-control/ICPManager.tsx": {
+      "@typescript-eslint/no-explicit-any": 3,
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-misused-promises": 2
+    },
+    "src/components/settings/AgentProfile.tsx": {
+      "@typescript-eslint/no-explicit-any": 1,
+      "@typescript-eslint/no-misused-promises": 1
+    },
+    "src/components/settings/CompanyProfile.tsx": {
+      "@typescript-eslint/no-explicit-any": 4,
+      "@typescript-eslint/no-floating-promises": 1,
+      "react-hooks/exhaustive-deps": 1,
+      "@typescript-eslint/no-misused-promises": 1
+    },
+    "src/components/settings/UserProfile.tsx": {
+      "@typescript-eslint/no-explicit-any": 1,
+      "@typescript-eslint/no-misused-promises": 1
+    },
+    "src/components/signals/ProfilerChatWithHistory.tsx": {
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/signals/ScoutChatWithHistory.tsx": {
+      "@typescript-eslint/no-explicit-any": 1,
+      "react-hooks/exhaustive-deps": 1
+    },
+    "src/components/signals/SignalsContextChat.tsx": {
+      "@typescript-eslint/no-misused-promises": 4
+    },
+    "src/contexts/AuthContext.tsx": {
+      "react-refresh/only-export-components": 1,
+      "@typescript-eslint/no-floating-promises": 1
+    },
+    "src/contexts/SidebarContext.tsx": {
+      "react-refresh/only-export-components": 1
+    },
+    "src/contexts/TenantContext.tsx": {
+      "react-refresh/only-export-components": 1
+    },
+    "src/hooks/useAuth.ts": {
+      "@typescript-eslint/no-floating-promises": 1
+    },
+    "src/lib/api.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/lib/jwt.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/lib/rateLimitManager.ts": {
+      "@typescript-eslint/no-explicit-any": 4,
+      "@typescript-eslint/no-floating-promises": 2
+    },
+    "src/lib/types/escape-hatches.ts": {
+      "@typescript-eslint/no-explicit-any": 6
+    },
+    "src/main.tsx": {
+      "@typescript-eslint/no-floating-promises": 1,
+      "@typescript-eslint/no-misused-promises": 1
+    },
+    "src/pages/Login.tsx": {
+      "@typescript-eslint/no-explicit-any": 1,
+      "@typescript-eslint/no-misused-promises": 1
+    },
+    "src/pages/MarketResearch.tsx": {
+      "import-x/order": 5,
+      "@typescript-eslint/no-explicit-any": 40,
+      "react-hooks/exhaustive-deps": 11,
+      "@typescript-eslint/no-floating-promises": 10,
+      "@typescript-eslint/no-misused-promises": 6
+    },
+    "src/pages/MissionControl.tsx": {
+      "@typescript-eslint/no-misused-promises": 10,
+      "@typescript-eslint/no-explicit-any": 5,
+      "@typescript-eslint/no-floating-promises": 8,
+      "react-hooks/exhaustive-deps": 2
+    },
+    "src/pages/Settings.tsx": {
+      "@typescript-eslint/no-explicit-any": 1,
+      "@typescript-eslint/no-floating-promises": 2
+    },
+    "src/pages/Signals.tsx": {
+      "@typescript-eslint/no-explicit-any": 3,
+      "@typescript-eslint/no-floating-promises": 3,
+      "@typescript-eslint/no-misused-promises": 1
+    },
+    "src/pages/TenantSelection.tsx": {
+      "@typescript-eslint/no-explicit-any": 1,
+      "@typescript-eslint/no-misused-promises": 2,
+      "@typescript-eslint/no-floating-promises": 1
+    },
+    "src/services/api.ts": {
+      "@typescript-eslint/no-explicit-any": 15
+    },
+    "src/utils/apiUtils.ts": {
+      "@typescript-eslint/no-explicit-any": 7
+    },
+    "src/utils/leadStreamChatContext.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "src/utils/profilerAcceptedIcpDisplay.ts": {
+      "@typescript-eslint/no-explicit-any": 31
+    },
+    "src/vite-env.d.ts": {
+      "@typescript-eslint/no-explicit-any": 1
+    },
+    "tailwind.config.ts": {
+      "(no-rule-id)": 1
+    },
+    "vitest.config.ts": {
+      "(no-rule-id)": 1
+    }
+  }
+}
