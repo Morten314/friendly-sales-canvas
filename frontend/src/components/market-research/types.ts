@@ -1,4 +1,3 @@
-
 export interface EditRecord {
   id: string;
   timestamp: string;
@@ -12,7 +11,7 @@ export interface EditRecord {
 export interface TrendSnapshot {
   title: string;
   metric: string;
-  type: 'growth' | 'performance' | 'adoption';
+  type: "growth" | "performance" | "adoption";
 }
 
 export interface IndustryTrendsRecommendations {

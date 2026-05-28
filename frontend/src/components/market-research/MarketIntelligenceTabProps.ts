@@ -1,15 +1,14 @@
-
-import { EditRecord, TrendSnapshot, IndustryTrendsRecommendations } from './types';
+import { EditRecord, TrendSnapshot, IndustryTrendsRecommendations } from "./types";
 
 export interface MarketIntelligenceTabProps {
   // General refresh state for all components
   isRefreshing?: boolean;
   companyProfile?: any;
-  
+
   // Add centralized data props
   competitorData?: any;
   regulatoryData?: any;
-  
+
   // Market Size Section
   isEditing: boolean;
   isSplitView: boolean;
@@ -30,7 +29,7 @@ export interface MarketIntelligenceTabProps {
   isMarketSizeLoading?: boolean;
   marketSizeError?: string | null;
   onMarketSizeRefresh?: () => void;
-  
+
   // Industry Trends Section
   isIndustryTrendsEditing: boolean;
   industryTrendsExpanded: boolean;
@@ -54,7 +53,7 @@ export interface MarketIntelligenceTabProps {
     };
   };
   industryTrendsLastEditedField: string;
-  
+
   // Competitor Landscape Section
   isCompetitorEditing: boolean;
   competitorExpanded: boolean;
@@ -96,11 +95,56 @@ export interface MarketIntelligenceTabProps {
   marketEntryError?: string | null;
   onCompetitorRefresh?: () => void;
   onToggleEdit: () => void;
-  onMarketSizeScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, lastEditedField?: string) => void | Promise<void>;
-  onIndustryTrendsScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, lastEditedField?: string) => void | Promise<void>;
-  onCompetitorScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, lastEditedField?: string) => void | Promise<void>;
-  onRegulatoryScoutIconClick?: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, lastEditedField?: string) => void | Promise<void>;
-  onMarketEntryScoutIconClick?: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, customMessage?: string) => void | Promise<void>;
+  onMarketSizeScoutIconClick: (
+    context?:
+      | "market-size"
+      | "industry-trends"
+      | "competitor-landscape"
+      | "regulatory-compliance"
+      | "market-entry",
+    hasEdits?: boolean,
+    lastEditedField?: string,
+  ) => void | Promise<void>;
+  onIndustryTrendsScoutIconClick: (
+    context?:
+      | "market-size"
+      | "industry-trends"
+      | "competitor-landscape"
+      | "regulatory-compliance"
+      | "market-entry",
+    hasEdits?: boolean,
+    lastEditedField?: string,
+  ) => void | Promise<void>;
+  onCompetitorScoutIconClick: (
+    context?:
+      | "market-size"
+      | "industry-trends"
+      | "competitor-landscape"
+      | "regulatory-compliance"
+      | "market-entry",
+    hasEdits?: boolean,
+    lastEditedField?: string,
+  ) => void | Promise<void>;
+  onRegulatoryScoutIconClick?: (
+    context?:
+      | "market-size"
+      | "industry-trends"
+      | "competitor-landscape"
+      | "regulatory-compliance"
+      | "market-entry",
+    hasEdits?: boolean,
+    lastEditedField?: string,
+  ) => void | Promise<void>;
+  onMarketEntryScoutIconClick?: (
+    context?:
+      | "market-size"
+      | "industry-trends"
+      | "competitor-landscape"
+      | "regulatory-compliance"
+      | "market-entry",
+    hasEdits?: boolean,
+    customMessage?: string,
+  ) => void | Promise<void>;
   onEditHistoryOpen: () => void;
   onDeleteSection: (sectionId: string) => void;
   onMarketSizeDeleteSection: (sectionId: string) => void;
@@ -165,14 +209,14 @@ export interface MarketIntelligenceTabProps {
   onMarketEntryCompetitiveDifferentiationChange?: (differentiation: string[]) => void;
   onMarketEntryStrategicRecommendationsChange?: (recommendations: string[]) => void;
   onMarketEntryRiskAssessmentChange?: (risks: string[]) => void;
-  
+
   // Scout panel visibility states
   showMarketSizeScoutChat?: boolean;
   showIndustryTrendsScoutChat?: boolean;
   showCompetitorScoutChat?: boolean;
   showRegulatoryScoutChat?: boolean;
   showMarketEntryScoutChat?: boolean;
-  
+
   // Scout panel props
   marketSizeHasEdits?: boolean;
   marketSizeLastEditedField?: string;
@@ -187,14 +231,14 @@ export interface MarketIntelligenceTabProps {
   marketEntryLastEditedField?: string;
   marketEntryCustomMessage?: string;
   marketEntryIsPostSave?: boolean;
-  
+
   // Scout panel close handlers
   onMarketSizeScoutClose?: () => void;
   onIndustryTrendsScoutClose?: () => void;
   onCompetitorScoutClose?: () => void;
   onRegulatoryScoutClose?: () => void;
   onMarketEntryScoutClose?: () => void;
-  
+
   onViewOpportunityLeads?: (sectionContext: string) => void;
   onExportPDF: () => void;
   onSaveToWorkspace: () => void;

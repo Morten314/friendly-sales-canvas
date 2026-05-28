@@ -1,28 +1,25 @@
-import React from 'react';
-import { Edit, Pencil } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React from "react";
+import { Edit, Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 
 interface EditDropdownMenuProps {
   onModify: () => void;
   className?: string;
 }
 
-export const EditDropdownMenu: React.FC<EditDropdownMenuProps> = ({
-  onModify,
-  className = ""
-}) => {
+export const EditDropdownMenu: React.FC<EditDropdownMenuProps> = ({ onModify, className = "" }) => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="sm" 
+        <Button
+          variant="ghost"
+          size="sm"
           className={`text-blue-800 hover:text-blue-900 pointer-events-auto ${className}`}
           disabled={false}
         >
@@ -30,7 +27,7 @@ export const EditDropdownMenu: React.FC<EditDropdownMenuProps> = ({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48 bg-white border shadow-lg z-50">
-        <DropdownMenuItem 
+        <DropdownMenuItem
           onClick={onModify}
           className="flex items-center gap-2 cursor-pointer hover:bg-gray-50"
         >

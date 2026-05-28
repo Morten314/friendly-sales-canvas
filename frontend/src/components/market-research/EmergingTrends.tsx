@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Bot } from "lucide-react";
@@ -29,7 +28,7 @@ export const EmergingTrends = ({ emergingTrends, isAIViewActive = false }: Emerg
   }, [emergingTrends]);
 
   const handleTrendClick = (trend: EmergingTrend) => {
-    console.log('EmergingTrends: Trend clicked', trend, 'AI View Active:', isAIViewActive);
+    console.log("EmergingTrends: Trend clicked", trend, "AI View Active:", isAIViewActive);
     if (isAIViewActive) {
       setSelectedTrend(trend);
       setIsDrawerOpen(true);
@@ -37,10 +36,8 @@ export const EmergingTrends = ({ emergingTrends, isAIViewActive = false }: Emerg
   };
 
   const handleUpdateTrend = (updatedTrend: EmergingTrend) => {
-    setLocalTrends(prevTrends => 
-      prevTrends.map(trend => 
-        trend.trend === selectedTrend?.trend ? updatedTrend : trend
-      )
+    setLocalTrends((prevTrends) =>
+      prevTrends.map((trend) => (trend.trend === selectedTrend?.trend ? updatedTrend : trend)),
     );
     // Also update the selected trend to reflect changes immediately
     setSelectedTrend(updatedTrend);
@@ -53,7 +50,10 @@ export const EmergingTrends = ({ emergingTrends, isAIViewActive = false }: Emerg
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-blue-600" /> Emerging Market Trends
             {isAIViewActive && (
-              <Badge variant="secondary" className="ml-2 bg-purple-100 text-purple-700 border-purple-200">
+              <Badge
+                variant="secondary"
+                className="ml-2 bg-purple-100 text-purple-700 border-purple-200"
+              >
                 <Bot className="h-3 w-3 mr-1" />
                 AI Enhanced
               </Badge>
@@ -64,12 +64,10 @@ export const EmergingTrends = ({ emergingTrends, isAIViewActive = false }: Emerg
         <CardContent>
           <div className="space-y-4">
             {localTrends.map((trend, index) => (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 className={`border rounded-md p-4 transition-colors ${
-                  isAIViewActive 
-                    ? 'hover:bg-blue-50 cursor-pointer' 
-                    : 'hover:bg-gray-50'
+                  isAIViewActive ? "hover:bg-blue-50 cursor-pointer" : "hover:bg-gray-50"
                 }`}
                 onClick={() => handleTrendClick(trend)}
               >

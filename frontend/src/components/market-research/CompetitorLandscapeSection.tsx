@@ -1,17 +1,37 @@
-import React, { useState, useEffect, useRef, useReducer } from 'react';
-import { BarChart3, Bot, Edit, X, FileText, Save, Share, Clock, ChevronDown, ChevronUp, Loader2, Check } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
+import React, { useState, useEffect, useRef, useReducer } from "react";
+import {
+  BarChart3,
+  Bot,
+  Edit,
+  X,
+  FileText,
+  Save,
+  Share,
+  Clock,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  Check,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useToast } from '@/hooks/use-toast';
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
 
-import MiniLineChart from '@/components/ui/MiniLineChart';
-import { useAuth } from '@/contexts/AuthContext';
-import { getUserLocalStorage, setUserLocalStorage } from '@/utils/cacheUtils';
+import MiniLineChart from "@/components/ui/MiniLineChart";
+import { useAuth } from "@/contexts/AuthContext";
+import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
 
 interface EditRecord {
   id: string;
@@ -35,7 +55,11 @@ interface CompetitorLandscapeSectionProps {
   emergingPlayers: string;
   fundingNews: string[];
   onToggleEdit: () => void;
-  onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, customMessage?: string) => void;
+  onScoutIconClick: (
+    context?: "market-size" | "industry-trends" | "competitor-landscape",
+    hasEdits?: boolean,
+    customMessage?: string,
+  ) => void;
   onEditHistoryOpen: () => void;
   onDeleteSection: (sectionId: string) => void;
   onSaveChanges: () => void;
@@ -51,12 +75,11 @@ interface CompetitorLandscapeSectionProps {
   // Add refresh props
   isRefreshing?: boolean;
   companyProfile?: any;
-  
+
   // Add centralized data prop
   competitorData?: any;
   error?: string | null;
 }
-
 
 const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   isEditing: isCompetitorLandscapeEditing,
@@ -86,131 +109,189 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   isRefreshing = false,
   companyProfile,
   competitorData: propCompetitorData,
-  error: propError
+  error: propError,
 }) => {
   const { currentUser } = useAuth();
   const { toast } = useToast();
   // Track previous user to detect user switches
   const previousUserRef = useRef<string | null | undefined>(currentUser?.uid);
-  
+
   // State for API data - parent handles loading and errors
   const error = propError; // Use prop error from parent
   const competitorData = propCompetitorData;
-  
+
   // Local state for error and loading management
   const [localError, setLocalError] = useState<string | null>(null);
   const [localLoading, setLocalLoading] = useState<boolean>(false);
-  
+
   // Check if we're loading - show loading when local loading is true OR when parent is refreshing
   // Don't show loading if we have data from props or parent
-  const hasPropData = executiveSummary || topPlayerShare || emergingPlayers || fundingNews?.length > 0;
-  
+  const hasPropData =
+    executiveSummary || topPlayerShare || emergingPlayers || fundingNews?.length > 0;
+
   // Show loading only when actively loading and no data available - simplified like other components
   const isLoading = localLoading && !hasPropData;
-  
+
   // Use local error if available, otherwise use prop error
   const displayError = localError || error;
-  
+
   // Helper function to normalize uiComponents
   const normalizeUiComponents = (components: any[]): any[] => {
     if (!Array.isArray(components)) return [];
-    return components.map((comp: any) => {
-      if (typeof comp === 'string') {
-        try {
-          return JSON.parse(comp);
-        } catch (e) {
-          return null;
+    return components
+      .map((comp: any) => {
+        if (typeof comp === "string") {
+          try {
+            return JSON.parse(comp);
+          } catch (e) {
+            return null;
+          }
         }
-      }
-      return comp;
-    }).filter((comp: any) => comp !== null);
+        return comp;
+      })
+      .filter((comp: any) => comp !== null);
   };
 
   // Extract uiComponents data
-  const normalizedComponents = competitorData?.uiComponents 
+  const normalizedComponents = competitorData?.uiComponents
     ? normalizeUiComponents(competitorData.uiComponents)
     : [];
 
   // Local editing state for inline editing - initialize with prop values and localStorage (user-specific)
   const [localExecutiveSummary, setLocalExecutiveSummary] = useState(() => {
-    return competitorData?.executiveSummary || executiveSummary || getUserLocalStorage('competitor_executiveSummary', currentUser?.uid) || '';
+    return (
+      competitorData?.executiveSummary ||
+      executiveSummary ||
+      getUserLocalStorage("competitor_executiveSummary", currentUser?.uid) ||
+      ""
+    );
   });
   const [localTopPlayerShare, setLocalTopPlayerShare] = useState(() => {
-    return competitorData?.topPlayerShare || topPlayerShare || getUserLocalStorage('competitor_topPlayerShare', currentUser?.uid) || '';
+    return (
+      competitorData?.topPlayerShare ||
+      topPlayerShare ||
+      getUserLocalStorage("competitor_topPlayerShare", currentUser?.uid) ||
+      ""
+    );
   });
   const [localEmergingPlayers, setLocalEmergingPlayers] = useState(() => {
-    return competitorData?.emergingPlayers || emergingPlayers || getUserLocalStorage('competitor_emergingPlayers', currentUser?.uid) || '';
+    return (
+      competitorData?.emergingPlayers ||
+      emergingPlayers ||
+      getUserLocalStorage("competitor_emergingPlayers", currentUser?.uid) ||
+      ""
+    );
   });
 
   // Local state for all uiComponents data
-  const [localDataPoints, setLocalDataPoints] = useState<Array<{label: string; value: string}>>(() => {
-    const reportComponent = normalizedComponents.find((comp: any) => comp?.type === 'report');
-    return reportComponent?.dataPoints || [];
-  });
+  const [localDataPoints, setLocalDataPoints] = useState<Array<{ label: string; value: string }>>(
+    () => {
+      const reportComponent = normalizedComponents.find((comp: any) => comp?.type === "report");
+      return reportComponent?.dataPoints || [];
+    },
+  );
   const [localCompetitors, setLocalCompetitors] = useState<string[]>(() => {
-    const sectionComponent = normalizedComponents.find((comp: any) => comp?.type === 'section');
+    const sectionComponent = normalizedComponents.find((comp: any) => comp?.type === "section");
     return sectionComponent?.tags || [];
   });
-  const [localRegions, setLocalRegions] = useState<Array<{name: string; data: Record<string, string>}>>(() => {
-    const marketShareComponent = normalizedComponents.find((comp: any) => comp?.type === 'marketShareCharts');
+  const [localRegions, setLocalRegions] = useState<
+    Array<{ name: string; data: Record<string, string> }>
+  >(() => {
+    const marketShareComponent = normalizedComponents.find(
+      (comp: any) => comp?.type === "marketShareCharts",
+    );
     return marketShareComponent?.regions || [];
   });
-  const [localEntities, setLocalEntities] = useState<Array<{name: string; strengths: string[]; weaknesses: string[]; opportunities: string[]; threats: string[]}>>(() => {
-    const swotComponent = normalizedComponents.find((comp: any) => comp?.type === 'swotAnalysis');
+  const [localEntities, setLocalEntities] = useState<
+    Array<{
+      name: string;
+      strengths: string[];
+      weaknesses: string[];
+      opportunities: string[];
+      threats: string[];
+    }>
+  >(() => {
+    const swotComponent = normalizedComponents.find((comp: any) => comp?.type === "swotAnalysis");
     const entities = swotComponent?.entities || [];
     // Ensure backward compatibility by adding opportunities and threats if missing
-    return entities.map((entity: { name: string; strengths: string[]; weaknesses: string[]; opportunities: string[]; threats: string[] }) => ({
-      ...entity,
-      opportunities: entity.opportunities || [],
-      threats: entity.threats || []
-    }));
+    return entities.map(
+      (entity: {
+        name: string;
+        strengths: string[];
+        weaknesses: string[];
+        opportunities: string[];
+        threats: string[];
+      }) => ({
+        ...entity,
+        opportunities: entity.opportunities || [],
+        threats: entity.threats || [],
+      }),
+    );
   });
   const [localHeadlines, setLocalHeadlines] = useState<string[]>(() => {
-    const newsComponent = normalizedComponents.find((comp: any) => comp?.type === 'news');
+    const newsComponent = normalizedComponents.find((comp: any) => comp?.type === "news");
     const apiHeadlines = newsComponent?.headlines;
-    return apiHeadlines && apiHeadlines.length > 0 ? apiHeadlines : 
-      (competitorData?.fundingNews && competitorData.fundingNews.length > 0) ? competitorData.fundingNews :
-      (fundingNews && fundingNews.length > 0) ? fundingNews : [];
+    return apiHeadlines && apiHeadlines.length > 0
+      ? apiHeadlines
+      : competitorData?.fundingNews && competitorData.fundingNews.length > 0
+        ? competitorData.fundingNews
+        : fundingNews && fundingNews.length > 0
+          ? fundingNews
+          : [];
   });
   const [localFeatures, setLocalFeatures] = useState<string[]>(() => {
-    const featureComponent = normalizedComponents.find((comp: any) => comp?.type === 'featureComparison');
+    const featureComponent = normalizedComponents.find(
+      (comp: any) => comp?.type === "featureComparison",
+    );
     return featureComponent?.features || [];
   });
   const [localTools, setLocalTools] = useState<Record<string, string[]>>(() => {
-    const featureComponent = normalizedComponents.find((comp: any) => comp?.type === 'featureComparison');
+    const featureComponent = normalizedComponents.find(
+      (comp: any) => comp?.type === "featureComparison",
+    );
     return featureComponent?.tools || {};
   });
-  const [localInsights, setLocalInsights] = useState<Array<{label: string; description: string}>>(() => {
-    const mnaComponent = normalizedComponents.find((comp: any) => comp?.type === 'mnaInsights');
-    let insights = mnaComponent?.insights;
-    if (typeof insights === 'string') {
-      try {
-        insights = JSON.parse(insights);
-      } catch (e) {
-        insights = null;
-      }
-    }
-    if (!insights || !Array.isArray(insights)) return [];
-    return insights.map((insight: any) => {
-      if (typeof insight === 'string') {
+  const [localInsights, setLocalInsights] = useState<Array<{ label: string; description: string }>>(
+    () => {
+      const mnaComponent = normalizedComponents.find((comp: any) => comp?.type === "mnaInsights");
+      let insights = mnaComponent?.insights;
+      if (typeof insights === "string") {
         try {
-          return JSON.parse(insight);
+          insights = JSON.parse(insights);
         } catch (e) {
-          return null;
+          insights = null;
         }
       }
-      return insight;
-    }).filter((insight: any) => insight && (insight.label || insight.description));
-  });
-  const [localCharts, setLocalCharts] = useState<Array<{name: string; xAxis: string | string[]}>>(() => {
-    const trendsComponent = normalizedComponents.find((comp: any) => comp?.type === 'marketTrends');
-    return trendsComponent?.charts || [];
-  });
-  const [localMetrics, setLocalMetrics] = useState<Array<{label: string; value: string; trend?: string}>>(() => {
-    const sectionComponent = normalizedComponents.find((comp: any) => comp?.type === 'section');
+      if (!insights || !Array.isArray(insights)) return [];
+      return insights
+        .map((insight: any) => {
+          if (typeof insight === "string") {
+            try {
+              return JSON.parse(insight);
+            } catch (e) {
+              return null;
+            }
+          }
+          return insight;
+        })
+        .filter((insight: any) => insight && (insight.label || insight.description));
+    },
+  );
+  const [localCharts, setLocalCharts] = useState<Array<{ name: string; xAxis: string | string[] }>>(
+    () => {
+      const trendsComponent = normalizedComponents.find(
+        (comp: any) => comp?.type === "marketTrends",
+      );
+      return trendsComponent?.charts || [];
+    },
+  );
+  const [localMetrics, setLocalMetrics] = useState<
+    Array<{ label: string; value: string; trend?: string }>
+  >(() => {
+    const sectionComponent = normalizedComponents.find((comp: any) => comp?.type === "section");
     return sectionComponent?.metrics || [];
   });
-  
+
   // Track if we just saved to prevent useEffect from overwriting our changes
   const justSavedRef = useRef(false);
   const savedLocalStateRef = useRef<{
@@ -218,26 +299,26 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     topPlayerShare: string;
     emergingPlayers: string;
   } | null>(null);
-  
+
   // Force re-render trigger to ensure UI updates immediately after save
-  const [, forceUpdate] = useReducer(x => x + 1, 0);
+  const [, forceUpdate] = useReducer((x) => x + 1, 0);
 
   // Save local state to localStorage whenever they change (user-specific)
   useEffect(() => {
     if (localExecutiveSummary && currentUser?.uid) {
-      setUserLocalStorage('competitor_executiveSummary', localExecutiveSummary, currentUser.uid);
+      setUserLocalStorage("competitor_executiveSummary", localExecutiveSummary, currentUser.uid);
     }
   }, [localExecutiveSummary, currentUser?.uid]);
 
   useEffect(() => {
     if (localTopPlayerShare && currentUser?.uid) {
-      setUserLocalStorage('competitor_topPlayerShare', localTopPlayerShare, currentUser.uid);
+      setUserLocalStorage("competitor_topPlayerShare", localTopPlayerShare, currentUser.uid);
     }
   }, [localTopPlayerShare, currentUser?.uid]);
 
   useEffect(() => {
     if (localEmergingPlayers && currentUser?.uid) {
-      setUserLocalStorage('competitor_emergingPlayers', localEmergingPlayers, currentUser.uid);
+      setUserLocalStorage("competitor_emergingPlayers", localEmergingPlayers, currentUser.uid);
     }
   }, [localEmergingPlayers, currentUser?.uid]);
 
@@ -247,35 +328,41 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   useEffect(() => {
     if (!isCompetitorLandscapeEditing && currentUser?.uid) {
       // Skip syncing if we just cleared due to user switch (local state is empty and competitorData is null/undefined)
-      if (!localExecutiveSummary && !localTopPlayerShare && !localEmergingPlayers && !competitorData) {
+      if (
+        !localExecutiveSummary &&
+        !localTopPlayerShare &&
+        !localEmergingPlayers &&
+        !competitorData
+      ) {
         return;
       }
-      
+
       // If we just saved, NEVER overwrite local state until props/competitorData catch up
       // Also, if local state was overwritten, restore it from saved state
       if (justSavedRef.current && savedLocalStateRef.current) {
-        const propsMatchSaved = 
-          (executiveSummary || '') === savedLocalStateRef.current.executiveSummary &&
-          (topPlayerShare || '') === savedLocalStateRef.current.topPlayerShare &&
-          (emergingPlayers || '') === savedLocalStateRef.current.emergingPlayers;
-        
-        const competitorDataMatchesSaved = 
-          (competitorData?.executiveSummary || '') === savedLocalStateRef.current.executiveSummary &&
-          (competitorData?.topPlayerShare || '') === savedLocalStateRef.current.topPlayerShare &&
-          (competitorData?.emergingPlayers || '') === savedLocalStateRef.current.emergingPlayers;
-        
+        const propsMatchSaved =
+          (executiveSummary || "") === savedLocalStateRef.current.executiveSummary &&
+          (topPlayerShare || "") === savedLocalStateRef.current.topPlayerShare &&
+          (emergingPlayers || "") === savedLocalStateRef.current.emergingPlayers;
+
+        const competitorDataMatchesSaved =
+          (competitorData?.executiveSummary || "") ===
+            savedLocalStateRef.current.executiveSummary &&
+          (competitorData?.topPlayerShare || "") === savedLocalStateRef.current.topPlayerShare &&
+          (competitorData?.emergingPlayers || "") === savedLocalStateRef.current.emergingPlayers;
+
         // Check if local state was overwritten with old values - if so, restore from saved state
-        const localStateWasOverwritten = 
+        const localStateWasOverwritten =
           localExecutiveSummary !== savedLocalStateRef.current.executiveSummary ||
           localTopPlayerShare !== savedLocalStateRef.current.topPlayerShare ||
           localEmergingPlayers !== savedLocalStateRef.current.emergingPlayers;
-        
+
         if (localStateWasOverwritten) {
           setLocalExecutiveSummary(savedLocalStateRef.current.executiveSummary);
           setLocalTopPlayerShare(savedLocalStateRef.current.topPlayerShare);
           setLocalEmergingPlayers(savedLocalStateRef.current.emergingPlayers);
         }
-        
+
         if (propsMatchSaved || competitorDataMatchesSaved) {
           // Props/competitorData have caught up - safe to reset flag and allow normal syncing
           justSavedRef.current = false;
@@ -283,58 +370,61 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           // Continue to sync below
         } else {
           // Props/competitorData haven't caught up yet - DO NOT overwrite local state
-          console.log('🛡️ Saved state (user edits):', {
+          console.log("🛡️ Saved state (user edits):", {
             exec: savedLocalStateRef.current.executiveSummary.substring(0, 50),
             topPlayer: savedLocalStateRef.current.topPlayerShare.substring(0, 50),
-            emerging: savedLocalStateRef.current.emergingPlayers.substring(0, 50)
+            emerging: savedLocalStateRef.current.emergingPlayers.substring(0, 50),
           });
-          console.log('🛡️ Props (from parent):', {
-            exec: (executiveSummary || '').substring(0, 50),
-            topPlayer: (topPlayerShare || '').substring(0, 50),
-            emerging: (emergingPlayers || '').substring(0, 50)
+          console.log("🛡️ Props (from parent):", {
+            exec: (executiveSummary || "").substring(0, 50),
+            topPlayer: (topPlayerShare || "").substring(0, 50),
+            emerging: (emergingPlayers || "").substring(0, 50),
           });
-          console.log('🛡️ CompetitorData (from API - might be old):', {
-            exec: (competitorData?.executiveSummary || '').substring(0, 50),
-            topPlayer: (competitorData?.topPlayerShare || '').substring(0, 50),
-            emerging: (competitorData?.emergingPlayers || '').substring(0, 50),
-            timestamp: competitorData?.timestamp
+          console.log("🛡️ CompetitorData (from API - might be old):", {
+            exec: (competitorData?.executiveSummary || "").substring(0, 50),
+            topPlayer: (competitorData?.topPlayerShare || "").substring(0, 50),
+            emerging: (competitorData?.emergingPlayers || "").substring(0, 50),
+            timestamp: competitorData?.timestamp,
           });
-          console.log('🛡️ Local state (preserved - will be used for display):', {
+          console.log("🛡️ Local state (preserved - will be used for display):", {
             exec: localExecutiveSummary.substring(0, 50),
             topPlayer: localTopPlayerShare.substring(0, 50),
-            emerging: localEmergingPlayers.substring(0, 50)
+            emerging: localEmergingPlayers.substring(0, 50),
           });
           return; // Exit early, don't overwrite - user's edits are preserved in local state
         }
       }
-      
+
       // Verify competitorData belongs to current user before syncing
       if (competitorData?.user_id && competitorData.user_id !== currentUser.uid) {
         return;
       }
-      
-      
+
       // Always update local state with competitorData (prioritize API data)
       // But only if competitorData exists (not null/undefined)
-      const newExecutiveSummary = competitorData?.executiveSummary || executiveSummary || '';
-      const newTopPlayerShare = competitorData?.topPlayerShare || topPlayerShare || '';
-      const newEmergingPlayers = competitorData?.emergingPlayers || emergingPlayers || '';
-      
+      const newExecutiveSummary = competitorData?.executiveSummary || executiveSummary || "";
+      const newTopPlayerShare = competitorData?.topPlayerShare || topPlayerShare || "";
+      const newEmergingPlayers = competitorData?.emergingPlayers || emergingPlayers || "";
+
       setLocalExecutiveSummary(newExecutiveSummary);
       setLocalTopPlayerShare(newTopPlayerShare);
       setLocalEmergingPlayers(newEmergingPlayers);
-      
+
       // Sync uiComponents data
-      const normalized = competitorData?.uiComponents ? normalizeUiComponents(competitorData.uiComponents) : [];
-      const reportComponent = normalized.find((comp: any) => comp?.type === 'report');
-      const sectionComponent = normalized.find((comp: any) => comp?.type === 'section');
-      const marketShareComponent = normalized.find((comp: any) => comp?.type === 'marketShareCharts');
-      const swotComponent = normalized.find((comp: any) => comp?.type === 'swotAnalysis');
-      const newsComponent = normalized.find((comp: any) => comp?.type === 'news');
-      const featureComponent = normalized.find((comp: any) => comp?.type === 'featureComparison');
-      const mnaComponent = normalized.find((comp: any) => comp?.type === 'mnaInsights');
-      const trendsComponent = normalized.find((comp: any) => comp?.type === 'marketTrends');
-      
+      const normalized = competitorData?.uiComponents
+        ? normalizeUiComponents(competitorData.uiComponents)
+        : [];
+      const reportComponent = normalized.find((comp: any) => comp?.type === "report");
+      const sectionComponent = normalized.find((comp: any) => comp?.type === "section");
+      const marketShareComponent = normalized.find(
+        (comp: any) => comp?.type === "marketShareCharts",
+      );
+      const swotComponent = normalized.find((comp: any) => comp?.type === "swotAnalysis");
+      const newsComponent = normalized.find((comp: any) => comp?.type === "news");
+      const featureComponent = normalized.find((comp: any) => comp?.type === "featureComparison");
+      const mnaComponent = normalized.find((comp: any) => comp?.type === "mnaInsights");
+      const trendsComponent = normalized.find((comp: any) => comp?.type === "marketTrends");
+
       if (reportComponent?.dataPoints) setLocalDataPoints(reportComponent.dataPoints);
       if (sectionComponent?.tags) setLocalCompetitors(sectionComponent.tags);
       if (marketShareComponent?.regions) setLocalRegions(marketShareComponent.regions);
@@ -343,7 +433,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         const normalizedEntities = swotComponent.entities.map((entity: any) => ({
           ...entity,
           opportunities: entity.opportunities || [],
-          threats: entity.threats || []
+          threats: entity.threats || [],
         }));
         setLocalEntities(normalizedEntities);
       }
@@ -358,7 +448,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       if (featureComponent?.tools) setLocalTools(featureComponent.tools);
       if (mnaComponent?.insights) {
         let insights = mnaComponent.insights;
-        if (typeof insights === 'string') {
+        if (typeof insights === "string") {
           try {
             insights = JSON.parse(insights);
           } catch (e) {
@@ -366,24 +456,34 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           }
         }
         if (insights && Array.isArray(insights)) {
-          const validInsights = insights.map((insight: any) => {
-            if (typeof insight === 'string') {
-              try {
-                return JSON.parse(insight);
-              } catch (e) {
-                return null;
+          const validInsights = insights
+            .map((insight: any) => {
+              if (typeof insight === "string") {
+                try {
+                  return JSON.parse(insight);
+                } catch (e) {
+                  return null;
+                }
               }
-            }
-            return insight;
-          }).filter((insight: any) => insight && (insight.label || insight.description));
+              return insight;
+            })
+            .filter((insight: any) => insight && (insight.label || insight.description));
           setLocalInsights(validInsights);
         }
       }
       if (trendsComponent?.charts) setLocalCharts(trendsComponent.charts);
       if (sectionComponent?.metrics) setLocalMetrics(sectionComponent.metrics);
-      
     }
-  }, [executiveSummary, topPlayerShare, emergingPlayers, competitorData, isCompetitorLandscapeEditing, isRefreshing, currentUser?.uid, fundingNews]);
+  }, [
+    executiveSummary,
+    topPlayerShare,
+    emergingPlayers,
+    competitorData,
+    isCompetitorLandscapeEditing,
+    isRefreshing,
+    currentUser?.uid,
+    fundingNews,
+  ]);
 
   // Handle save changes
   // Individual box save functions
@@ -462,103 +562,114 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
   const handleCompetitorLandscapeSaveChanges = async () => {
     try {
-      
       // IMPORTANT: Set the flag FIRST before any state updates to prevent useEffect from overwriting
       justSavedRef.current = true;
       savedLocalStateRef.current = {
         executiveSummary: localExecutiveSummary,
         topPlayerShare: localTopPlayerShare,
-        emergingPlayers: localEmergingPlayers
+        emergingPlayers: localEmergingPlayers,
       };
-      
+
       // Explicitly update local state to ensure React detects the change and re-renders
       // This ensures the display variables will use the updated local state
       setLocalExecutiveSummary(localExecutiveSummary);
       setLocalTopPlayerShare(localTopPlayerShare);
       setLocalEmergingPlayers(localEmergingPlayers);
-      
+
       // Apply local edits to props
       onExecutiveSummaryChange(localExecutiveSummary);
       onTopPlayerShareChange(localTopPlayerShare);
       onEmergingPlayersChange(localEmergingPlayers);
-      
-      console.log('✅ Competitor Landscape - Local state preserved for immediate UI refresh:', {
+
+      console.log("✅ Competitor Landscape - Local state preserved for immediate UI refresh:", {
         exec: localExecutiveSummary.substring(0, 30),
         topPlayer: localTopPlayerShare.substring(0, 30),
-        emerging: localEmergingPlayers.substring(0, 30)
+        emerging: localEmergingPlayers.substring(0, 30),
       });
-      
+
       // Force a re-render to ensure UI updates immediately with local state values
       forceUpdate();
-      
+
       // Prepare original data
       const originalData = {
-        section: 'competitor-landscape',
+        section: "competitor-landscape",
         executiveSummary: executiveSummary,
         topPlayerShare: topPlayerShare,
         emergingPlayers: emergingPlayers,
         fundingNews: fundingNews,
-        uiComponents: competitorData?.uiComponents || []
+        uiComponents: competitorData?.uiComponents || [],
       };
 
       // Prepare modified data with all editable fields
       const modifiedData = {
-        section: 'competitor-landscape',
+        section: "competitor-landscape",
         executiveSummary: localExecutiveSummary,
         topPlayerShare: localTopPlayerShare,
         emergingPlayers: localEmergingPlayers,
         fundingNews: localHeadlines,
         uiComponents: [
-          ...(localDataPoints.length > 0 ? [{ type: 'report', dataPoints: localDataPoints }] : []),
-          ...(localCompetitors.length > 0 ? [{ type: 'section', tags: localCompetitors }] : []),
-          ...(localRegions.length > 0 ? [{ type: 'marketShareCharts', regions: localRegions }] : []),
-          ...(localEntities.length > 0 ? [{ type: 'swotAnalysis', entities: localEntities }] : []),
-          ...(localHeadlines.length > 0 ? [{ type: 'news', headlines: localHeadlines }] : []),
-          ...(localFeatures.length > 0 || Object.keys(localTools).length > 0 ? [{ type: 'featureComparison', features: localFeatures, tools: localTools }] : []),
-          ...(localInsights.length > 0 ? [{ type: 'mnaInsights', insights: localInsights }] : []),
-          ...(localCharts.length > 0 ? [{ type: 'marketTrends', charts: localCharts }] : [])
-        ]
+          ...(localDataPoints.length > 0 ? [{ type: "report", dataPoints: localDataPoints }] : []),
+          ...(localCompetitors.length > 0 ? [{ type: "section", tags: localCompetitors }] : []),
+          ...(localRegions.length > 0
+            ? [{ type: "marketShareCharts", regions: localRegions }]
+            : []),
+          ...(localEntities.length > 0 ? [{ type: "swotAnalysis", entities: localEntities }] : []),
+          ...(localHeadlines.length > 0 ? [{ type: "news", headlines: localHeadlines }] : []),
+          ...(localFeatures.length > 0 || Object.keys(localTools).length > 0
+            ? [{ type: "featureComparison", features: localFeatures, tools: localTools }]
+            : []),
+          ...(localInsights.length > 0 ? [{ type: "mnaInsights", insights: localInsights }] : []),
+          ...(localCharts.length > 0 ? [{ type: "marketTrends", charts: localCharts }] : []),
+        ],
       };
 
       // Prepare data for API according to schema
       const editData = {
         original_json: originalData,
         modified_json: modifiedData,
-        edit_type: "modification"
+        edit_type: "modification",
       };
 
-      console.log('📤 Competitor Landscape - original_json:', editData.original_json);
-      console.log('📤 Competitor Landscape - modified_json:', editData.modified_json);
+      console.log("📤 Competitor Landscape - original_json:", editData.original_json);
+      console.log("📤 Competitor Landscape - modified_json:", editData.modified_json);
 
       // Store data for /ask API (user-specific)
-      setUserLocalStorage('competitor-landscape_original_json', JSON.stringify(editData.original_json), currentUser?.uid);
-      setUserLocalStorage('competitor-landscape_modified_json', JSON.stringify(editData.modified_json), currentUser?.uid);
+      setUserLocalStorage(
+        "competitor-landscape_original_json",
+        JSON.stringify(editData.original_json),
+        currentUser?.uid,
+      );
+      setUserLocalStorage(
+        "competitor-landscape_modified_json",
+        JSON.stringify(editData.modified_json),
+        currentUser?.uid,
+      );
 
       // Call GET API to save edits using /ask endpoint with query parameters
       const queryParams = new URLSearchParams({
         original_json: JSON.stringify(originalData),
         modified_json: JSON.stringify(modifiedData),
         edit_type: "modification",
-        section: "competitor_landscape"
+        section: "competitor_landscape",
       });
-      
+
       let response;
       try {
         response = await fetch(`/api/ask?${queryParams}`, {
-          method: 'GET',
+          method: "GET",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
-          redirect: 'follow', // Follow redirects (307, 308, etc.)
+          redirect: "follow", // Follow redirects (307, 308, etc.)
         });
 
-        console.log('📥 GET /ask status:', response.status);
+        console.log("📥 GET /ask status:", response.status);
 
         // 307 is a redirect - fetch should follow it automatically, but check if final response is ok
         if (!response.ok && response.status !== 307) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         // If we got a redirect (307), the fetch should have followed it
         // If the final response is still not ok, log it but don't throw (we'll preserve local state anyway)
         if (!response.ok) {
@@ -573,55 +684,54 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       let getData = null;
       if (response && response.ok) {
         try {
-          const getResponse = await fetch('/api/market_intelligence', {
-            method: 'GET',
+          const getResponse = await fetch("/api/market_intelligence", {
+            method: "GET",
             headers: {
-              'Content-Type': 'application/json',
-            }
+              "Content-Type": "application/json",
+            },
           });
 
-          console.log('📥 GET /market_intelligence status:', getResponse.status);
+          console.log("📥 GET /market_intelligence status:", getResponse.status);
 
           if (getResponse.ok) {
             getData = await getResponse.json();
           } else {
           }
-        } catch (getError) {
-        }
+        } catch (getError) {}
       } else {
       }
-      
+
       // Update component with fresh data from API response (if available)
       // Otherwise, use local state (user's edits) which is already preserved
       if (getData && getData.competitor_landscape_data) {
         const apiData = getData.competitor_landscape_data;
-        
+
         // Use API data if available, otherwise keep local state (user's edits)
         const finalExecutiveSummary = apiData.executiveSummary || localExecutiveSummary;
         const finalTopPlayerShare = apiData.topPlayerShare || localTopPlayerShare;
         const finalEmergingPlayers = apiData.emergingPlayers || localEmergingPlayers;
-        
+
         // Update saved state ref with final values
         savedLocalStateRef.current = {
           executiveSummary: finalExecutiveSummary,
           topPlayerShare: finalTopPlayerShare,
-          emergingPlayers: finalEmergingPlayers
+          emergingPlayers: finalEmergingPlayers,
         };
-        
+
         // Update local state with final values (this will be displayed immediately)
         setLocalExecutiveSummary(finalExecutiveSummary);
         setLocalTopPlayerShare(finalTopPlayerShare);
         setLocalEmergingPlayers(finalEmergingPlayers);
-        
+
         // Update parent state with final values
         onExecutiveSummaryChange(finalExecutiveSummary);
         onTopPlayerShareChange(finalTopPlayerShare);
         onEmergingPlayersChange(finalEmergingPlayers);
-        
-        console.log('✅ Competitor Landscape - Local state preserved for immediate UI refresh:', {
+
+        console.log("✅ Competitor Landscape - Local state preserved for immediate UI refresh:", {
           exec: finalExecutiveSummary.substring(0, 30),
           topPlayer: finalTopPlayerShare.substring(0, 30),
-          emerging: finalEmergingPlayers.substring(0, 30)
+          emerging: finalEmergingPlayers.substring(0, 30),
         });
       } else {
         // No API data - local state is already set and preserved above
@@ -629,47 +739,47 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         savedLocalStateRef.current = {
           executiveSummary: localExecutiveSummary,
           topPlayerShare: localTopPlayerShare,
-          emergingPlayers: localEmergingPlayers
+          emergingPlayers: localEmergingPlayers,
         };
-        
-        console.log('✅ Competitor Landscape - Local state values:', {
+
+        console.log("✅ Competitor Landscape - Local state values:", {
           exec: localExecutiveSummary.substring(0, 30),
           topPlayer: localTopPlayerShare.substring(0, 30),
-          emerging: localEmergingPlayers.substring(0, 30)
+          emerging: localEmergingPlayers.substring(0, 30),
         });
       }
-      
+
       // Force a re-render to ensure UI updates immediately with local state values
       forceUpdate();
-      
+
       // Call the original save function to trigger chat panel
       // This may set isEditing to false, but our flag prevents useEffect from overwriting
       onCompetitorLandscapeSaveChanges();
     } catch (error) {
-      console.error('❌ Competitor Landscape - Error saving changes:', error);
-      
+      console.error("❌ Competitor Landscape - Error saving changes:", error);
+
       // IMPORTANT: Set the flag even if API fails to prevent useEffect from overwriting
       justSavedRef.current = true;
       savedLocalStateRef.current = {
         executiveSummary: localExecutiveSummary,
         topPlayerShare: localTopPlayerShare,
-        emergingPlayers: localEmergingPlayers
+        emergingPlayers: localEmergingPlayers,
       };
-      
+
       // Explicitly update local state to ensure React detects the change and re-renders
       setLocalExecutiveSummary(localExecutiveSummary);
       setLocalTopPlayerShare(localTopPlayerShare);
       setLocalEmergingPlayers(localEmergingPlayers);
-      
-      console.log('✅ Competitor Landscape - Local state values:', {
+
+      console.log("✅ Competitor Landscape - Local state values:", {
         exec: localExecutiveSummary.substring(0, 30),
         topPlayer: localTopPlayerShare.substring(0, 30),
-        emerging: localEmergingPlayers.substring(0, 30)
+        emerging: localEmergingPlayers.substring(0, 30),
       });
-      
+
       // Force a re-render to ensure UI updates immediately with local state values
       forceUpdate();
-      
+
       // Still call the original save function even if API fails
       onCompetitorLandscapeSaveChanges();
     }
@@ -681,24 +791,23 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   useEffect(() => {
     const previousUserId = previousUserRef.current;
     const currentUserId = currentUser?.uid;
-    
+
     // Only clear if user actually changed (not on initial mount)
     if (previousUserId !== undefined && previousUserId !== currentUserId) {
       setLocalError(null);
       // Reset local state to empty to force fresh fetch
-      setLocalExecutiveSummary('');
-      setLocalTopPlayerShare('');
-      setLocalEmergingPlayers('');
+      setLocalExecutiveSummary("");
+      setLocalTopPlayerShare("");
+      setLocalEmergingPlayers("");
     }
-    
+
     // Update ref for next comparison
     previousUserRef.current = currentUserId;
   }, [currentUser?.uid]);
 
   // Component mount - parent handles all data fetching
-  useEffect(() => {
-  }, []);
-  
+  useEffect(() => {}, []);
+
   // Handle refresh when parent triggers it - parent handles all API calls
   useEffect(() => {
     if (isRefreshing) {
@@ -706,19 +815,18 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       setLocalLoading(false); // Don't show loading since parent handles it
     }
   }, [isRefreshing]);
-  
+
   // Log when competitorData changes
   useEffect(() => {
     // If we have new competitorData and we're not editing, update local state immediately
     if (competitorData && !isCompetitorLandscapeEditing) {
-      setLocalExecutiveSummary(competitorData.executiveSummary || '');
-      setLocalTopPlayerShare(competitorData.topPlayerShare || '');
-      setLocalEmergingPlayers(competitorData.emergingPlayers || '');
+      setLocalExecutiveSummary(competitorData.executiveSummary || "");
+      setLocalTopPlayerShare(competitorData.topPlayerShare || "");
+      setLocalEmergingPlayers(competitorData.emergingPlayers || "");
     }
   }, [competitorData, isCompetitorLandscapeEditing]);
 
   // Removed conflicting refresh effect - parent handles all data management
-
 
   // Removed company profile update effect - parent handles all data management
 
@@ -733,7 +841,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   // Single consolidated effect to sync with props (prevents infinite loops)
   useEffect(() => {
     // Simple sync with props like other components
-    
+
     // Only sync if props have meaningful data and are different from local state
     if (executiveSummary && executiveSummary !== localExecutiveSummary) {
       setLocalExecutiveSummary(executiveSummary);
@@ -748,18 +856,21 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
   // Check if we have any data to show (competitorData, local state, or props)
   // This needs to be defined early so it's available for both error handling and rendering
-  const hasDataToDisplay = competitorData || 
-                           localExecutiveSummary || 
-                           executiveSummary || 
-                           topPlayerShare || 
-                           emergingPlayers || 
-                           fundingNews?.length > 0;
+  const hasDataToDisplay =
+    competitorData ||
+    localExecutiveSummary ||
+    executiveSummary ||
+    topPlayerShare ||
+    emergingPlayers ||
+    fundingNews?.length > 0;
 
   // Show loading state when no API data is available yet
   if (isLoading) {
     return (
-      <div className={`${isSplitView ? 'flex gap-6' : ''}`}>
-        <div className={`bg-white rounded-lg border border-gray-200 p-6 ${isSplitView ? 'flex-1' : ''}`}>
+      <div className={`${isSplitView ? "flex gap-6" : ""}`}>
+        <div
+          className={`bg-white rounded-lg border border-gray-200 p-6 ${isSplitView ? "flex-1" : ""}`}
+        >
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
               <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
@@ -774,18 +885,21 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   // Only show full error screen if there's an error AND no data to display
   if (displayError && !hasDataToDisplay) {
     return (
-      <div className={`${isSplitView ? 'flex gap-6' : ''}`}>
-        <div className={`bg-white rounded-lg border border-gray-200 p-6 ${isSplitView ? 'flex-1' : ''}`}>
+      <div className={`${isSplitView ? "flex gap-6" : ""}`}>
+        <div
+          className={`bg-white rounded-lg border border-gray-200 p-6 ${isSplitView ? "flex-1" : ""}`}
+        >
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
               <X className="h-8 w-8 text-red-500 mx-auto mb-4" />
-              <p className="text-red-600 mb-4">Competitor Landscape Service Temporarily Unavailable</p>
-              <p className="text-gray-600 text-sm mb-4">
-                The competitor analysis service is currently experiencing issues. 
-                This is a backend service problem, not a frontend issue. 
-                Please try again later or contact support.
+              <p className="text-red-600 mb-4">
+                Competitor Landscape Service Temporarily Unavailable
               </p>
-              <Button 
+              <p className="text-gray-600 text-sm mb-4">
+                The competitor analysis service is currently experiencing issues. This is a backend
+                service problem, not a frontend issue. Please try again later or contact support.
+              </p>
+              <Button
                 onClick={() => {
                   // Error will be cleared by parent
                 }}
@@ -806,19 +920,30 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   // This ensures UI updates immediately after save since local state is preserved and updated during editing
   // Local state is the source of truth for display - it's updated during editing and preserved after save
   // IMPORTANT: When we just saved, always use local state (it has the user's edits)
-  const displayExecutiveSummary = justSavedRef.current && savedLocalStateRef.current
-    ? savedLocalStateRef.current.executiveSummary
-    : (localExecutiveSummary || competitorData?.executiveSummary || executiveSummary || 'No data available');
-  const displayTopPlayerShare = justSavedRef.current && savedLocalStateRef.current
-    ? savedLocalStateRef.current.topPlayerShare
-    : (localTopPlayerShare || competitorData?.topPlayerShare || topPlayerShare || 'No data available');
-  const displayEmergingPlayers = justSavedRef.current && savedLocalStateRef.current
-    ? savedLocalStateRef.current.emergingPlayers
-    : (localEmergingPlayers || competitorData?.emergingPlayers || emergingPlayers || 'No data available');
-
+  const displayExecutiveSummary =
+    justSavedRef.current && savedLocalStateRef.current
+      ? savedLocalStateRef.current.executiveSummary
+      : localExecutiveSummary ||
+        competitorData?.executiveSummary ||
+        executiveSummary ||
+        "No data available";
+  const displayTopPlayerShare =
+    justSavedRef.current && savedLocalStateRef.current
+      ? savedLocalStateRef.current.topPlayerShare
+      : localTopPlayerShare ||
+        competitorData?.topPlayerShare ||
+        topPlayerShare ||
+        "No data available";
+  const displayEmergingPlayers =
+    justSavedRef.current && savedLocalStateRef.current
+      ? savedLocalStateRef.current.emergingPlayers
+      : localEmergingPlayers ||
+        competitorData?.emergingPlayers ||
+        emergingPlayers ||
+        "No data available";
 
   return (
-    <div className={`${isSplitView ? 'flex gap-6' : ''}`}>
+    <div className={`${isSplitView ? "flex gap-6" : ""}`}>
       {/* Debug info - remove this after testing */}
       {/* {isRefreshing && (
         <div className="mb-4 p-2 bg-yellow-100 border border-yellow-300 rounded text-sm">
@@ -833,19 +958,21 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       {/* Debug company profile data */}
       {isRefreshing && (
         <div className="mb-4 p-2 bg-blue-100 border border-blue-300 rounded text-sm">
-          🔍 Company Profile: {companyProfile ? 'Available' : 'Not available'} | 
-          Industry: {companyProfile?.industry || 'Unknown'} | 
-          Company Size: {companyProfile?.companySize || 'Unknown'}
+          🔍 Company Profile: {companyProfile ? "Available" : "Not available"} | Industry:{" "}
+          {companyProfile?.industry || "Unknown"} | Company Size:{" "}
+          {companyProfile?.companySize || "Unknown"}
         </div>
-      )} 
-      
+      )}
+
       {/* API Error indicator - Show warning if there's an error but we have data to display */}
       {displayError && hasDataToDisplay && (
         <div className="mb-4 p-2 bg-yellow-100 border border-yellow-300 rounded text-sm">
           ⚠️ Warning: {displayError} - Showing cached/fallback data. Some features may be limited.
         </div>
       )}
-      <div className={`bg-white rounded-lg border border-gray-200 p-6 ${isSplitView ? 'flex-1' : ''}`}>
+      <div
+        className={`bg-white rounded-lg border border-gray-200 p-6 ${isSplitView ? "flex-1" : ""}`}
+      >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 rounded-lg">
@@ -853,18 +980,23 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             </div>
             <div>
               <h2 className="text-xl font-semibold text-gray-900">Competitor Landscape</h2>
-              <p className="text-sm text-gray-600">Comprehensive analysis of competitive environment</p>
+              <p className="text-sm text-gray-600">
+                Comprehensive analysis of competitive environment
+              </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
             {competitorLandscapeHasEdits && !isCompetitorLandscapeEditing && (
-              <Badge variant="secondary" className="bg-orange-100 text-orange-700 border-orange-200">
+              <Badge
+                variant="secondary"
+                className="bg-orange-100 text-orange-700 border-orange-200"
+              >
                 <Clock className="h-3 w-3 mr-1" />
                 Unsaved
               </Badge>
             )}
-            
+
             <Button
               variant="ghost"
               size="sm"
@@ -880,7 +1012,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    onScoutIconClick('competitor-landscape', competitorLandscapeHasEdits);
+                    onScoutIconClick("competitor-landscape", competitorLandscapeHasEdits);
                   }}
                   className="text-orange-600 hover:text-orange-700 transition-all duration-200 relative"
                 >
@@ -892,8 +1024,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 <p>Chat with Scout</p>
               </TooltipContent>
             </Tooltip>
-            
-
           </div>
         </div>
 
@@ -945,9 +1075,12 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             {(() => {
               // Try to get metrics from API's section component first
               const apiMetrics = localMetrics;
-              
+
               // If we have API metrics OR we're in edit mode (to allow adding), show metrics section
-              if ((apiMetrics && Array.isArray(apiMetrics) && apiMetrics.length > 0) || isCompetitorLandscapeEditing) {
+              if (
+                (apiMetrics && Array.isArray(apiMetrics) && apiMetrics.length > 0) ||
+                isCompetitorLandscapeEditing
+              ) {
                 // If no metrics but in edit mode, show empty state with ability to add
                 if (!apiMetrics || apiMetrics.length === 0) {
                   return (
@@ -956,7 +1089,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                     </div>
                   );
                 }
-                
+
                 return apiMetrics.map((metric: any, index: number) => (
                   <div key={index} className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
                     <div className="flex items-center">
@@ -964,7 +1097,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                         {isCompetitorLandscapeEditing ? (
                           <div className="space-y-2">
                             <Input
-                              value={metric.value || ''}
+                              value={metric.value || ""}
                               onChange={(e) => {
                                 const updated = [...localMetrics];
                                 updated[index] = { ...updated[index], value: e.target.value };
@@ -974,7 +1107,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                               placeholder="Value"
                             />
                             <Input
-                              value={metric.label || ''}
+                              value={metric.label || ""}
                               onChange={(e) => {
                                 const updated = [...localMetrics];
                                 updated[index] = { ...updated[index], label: e.target.value };
@@ -996,8 +1129,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                           </div>
                         ) : (
                           <>
-                            <div className="text-2xl font-bold text-blue-600">{metric.value || 'N/A'}</div>
-                            <div className="text-sm text-gray-700">{metric.label || 'Metric'}</div>
+                            <div className="text-2xl font-bold text-blue-600">
+                              {metric.value || "N/A"}
+                            </div>
+                            <div className="text-sm text-gray-700">{metric.label || "Metric"}</div>
                           </>
                         )}
                       </div>
@@ -1005,7 +1140,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                   </div>
                 ));
               }
-              
+
               // Fallback to original props-based display
               return (
                 <>
@@ -1045,14 +1180,16 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                           </div>
                         ) : (
                           <>
-                            <div className="text-2xl font-bold text-blue-600">{displayTopPlayerShare}</div>
+                            <div className="text-2xl font-bold text-blue-600">
+                              {displayTopPlayerShare}
+                            </div>
                             <div className="text-sm text-gray-700">Top Player Market Share</div>
                           </>
                         )}
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Emerging Players */}
                   <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg relative group">
                     {isCompetitorLandscapeEditing && (
@@ -1089,7 +1226,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                           </div>
                         ) : (
                           <>
-                            <div className="text-2xl font-bold text-blue-600">{displayEmergingPlayers}</div>
+                            <div className="text-2xl font-bold text-blue-600">
+                              {displayEmergingPlayers}
+                            </div>
                             <div className="text-sm text-gray-700">Emerging Players Added</div>
                           </>
                         )}
@@ -1104,7 +1243,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setLocalMetrics([...localMetrics, { label: '', value: '' }])}
+              onClick={() => setLocalMetrics([...localMetrics, { label: "", value: "" }])}
               className="mt-2"
             >
               Add Metric
@@ -1129,15 +1268,14 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         {/* Expanded content - Show when expanded, in split view, or in edit mode */}
         {(competitorLandscapeExpanded || isSplitView || isCompetitorLandscapeEditing) && (
           <div className="space-y-6">
-
             {/* Executive Summary section is now moved above for collapsed view */}
 
             {/* Competitor Report Data */}
             {(() => {
               const dataPoints = localDataPoints;
-              
+
               if (!dataPoints || dataPoints.length === 0) return null;
-              
+
               return (
                 <div className="mb-8 relative group">
                   {isCompetitorLandscapeEditing && (
@@ -1160,7 +1298,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                       </Tooltip>
                     </div>
                   )}
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Competitor Analysis Report</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Competitor Analysis Report
+                  </h3>
                   <div className="grid grid-cols-1 gap-4">
                     {dataPoints.map((dataPoint, index) => (
                       <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -1211,7 +1351,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setLocalDataPoints([...localDataPoints, { label: '', value: '' }])}
+                      onClick={() =>
+                        setLocalDataPoints([...localDataPoints, { label: "", value: "" }])
+                      }
                       className="mt-2"
                     >
                       Add Data Point
@@ -1224,9 +1366,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             {/* Top Players */}
             {(() => {
               const tags = localCompetitors;
-              
+
               if (!tags || tags.length === 0) return null;
-              
+
               return (
                 <div className="relative group">
                   {isCompetitorLandscapeEditing && (
@@ -1255,7 +1397,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                   </h3>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                     {tags.map((competitor, index) => (
-                      <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div
+                        key={index}
+                        className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                      >
                         {isCompetitorLandscapeEditing ? (
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex-1">
@@ -1271,14 +1416,19 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                               />
                             </div>
                             <div className="flex items-center gap-2">
-                              <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">
+                              <Badge
+                                variant="secondary"
+                                className="bg-green-100 text-green-700 border-green-200"
+                              >
                                 Competitor
                               </Badge>
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => {
-                                  setLocalCompetitors(localCompetitors.filter((_, i) => i !== index));
+                                  setLocalCompetitors(
+                                    localCompetitors.filter((_, i) => i !== index),
+                                  );
                                 }}
                                 className="text-red-600 hover:text-red-700"
                               >
@@ -1292,7 +1442,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                               <h4 className="font-semibold text-gray-900">{competitor}</h4>
                               <p className="text-sm text-blue-600 font-medium">Market Player</p>
                             </div>
-                            <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">
+                            <Badge
+                              variant="secondary"
+                              className="bg-green-100 text-green-700 border-green-200"
+                            >
                               Competitor
                             </Badge>
                           </div>
@@ -1304,7 +1457,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setLocalCompetitors([...localCompetitors, ''])}
+                      onClick={() => setLocalCompetitors([...localCompetitors, ""])}
                       className="mb-8"
                     >
                       Add Competitor
@@ -1317,9 +1470,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             {/* Market Share Charts */}
             {(() => {
               const regions = localRegions;
-              
+
               if (!regions || regions.length === 0) return null;
-              
+
               return (
                 <div className="mb-8 relative group">
                   {isCompetitorLandscapeEditing && (
@@ -1342,73 +1495,92 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                       </Tooltip>
                     </div>
                   )}
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Market Share Analysis</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Market Share Analysis
+                  </h3>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {regions.map((region, regionIndex) => (
-                      <div key={regionIndex} className="bg-white border border-gray-200 rounded-lg p-4">
+                      <div
+                        key={regionIndex}
+                        className="bg-white border border-gray-200 rounded-lg p-4"
+                      >
                         {isCompetitorLandscapeEditing ? (
                           <div className="space-y-3">
                             <Input
                               value={region.name}
                               onChange={(e) => {
                                 const updated = [...localRegions];
-                                updated[regionIndex] = { ...updated[regionIndex], name: e.target.value };
+                                updated[regionIndex] = {
+                                  ...updated[regionIndex],
+                                  name: e.target.value,
+                                };
                                 setLocalRegions(updated);
                               }}
                               className="font-medium text-gray-900 bg-white"
                               placeholder="Region name"
                             />
                             <div className="space-y-2">
-                              {Object.entries(region.data).map(([company, share], _companyIndex) => (
-                                <div key={company} className="flex gap-2 items-center">
-                                  <Input
-                                    value={company}
-                                    onChange={(e) => {
-                                      const updated = [...localRegions];
-                                      const newData = { ...updated[regionIndex].data };
-                                      delete newData[company];
-                                      newData[e.target.value] = share;
-                                      updated[regionIndex] = { ...updated[regionIndex], data: newData };
-                                      setLocalRegions(updated);
-                                    }}
-                                    className="flex-1 text-sm text-gray-700 bg-white"
-                                    placeholder="Company"
-                                  />
-                                  <Input
-                                    value={String(share)}
-                                    onChange={(e) => {
-                                      const updated = [...localRegions];
-                                      const newData = { ...updated[regionIndex].data };
-                                      newData[company] = e.target.value;
-                                      updated[regionIndex] = { ...updated[regionIndex], data: newData };
-                                      setLocalRegions(updated);
-                                    }}
-                                    className="w-24 text-sm font-medium text-blue-600 bg-white"
-                                    placeholder="Share"
-                                  />
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      const updated = [...localRegions];
-                                      const newData = { ...updated[regionIndex].data };
-                                      delete newData[company];
-                                      updated[regionIndex] = { ...updated[regionIndex], data: newData };
-                                      setLocalRegions(updated);
-                                    }}
-                                    className="text-red-600 hover:text-red-700"
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              ))}
+                              {Object.entries(region.data).map(
+                                ([company, share], _companyIndex) => (
+                                  <div key={company} className="flex gap-2 items-center">
+                                    <Input
+                                      value={company}
+                                      onChange={(e) => {
+                                        const updated = [...localRegions];
+                                        const newData = { ...updated[regionIndex].data };
+                                        delete newData[company];
+                                        newData[e.target.value] = share;
+                                        updated[regionIndex] = {
+                                          ...updated[regionIndex],
+                                          data: newData,
+                                        };
+                                        setLocalRegions(updated);
+                                      }}
+                                      className="flex-1 text-sm text-gray-700 bg-white"
+                                      placeholder="Company"
+                                    />
+                                    <Input
+                                      value={String(share)}
+                                      onChange={(e) => {
+                                        const updated = [...localRegions];
+                                        const newData = { ...updated[regionIndex].data };
+                                        newData[company] = e.target.value;
+                                        updated[regionIndex] = {
+                                          ...updated[regionIndex],
+                                          data: newData,
+                                        };
+                                        setLocalRegions(updated);
+                                      }}
+                                      className="w-24 text-sm font-medium text-blue-600 bg-white"
+                                      placeholder="Share"
+                                    />
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        const updated = [...localRegions];
+                                        const newData = { ...updated[regionIndex].data };
+                                        delete newData[company];
+                                        updated[regionIndex] = {
+                                          ...updated[regionIndex],
+                                          data: newData,
+                                        };
+                                        setLocalRegions(updated);
+                                      }}
+                                      className="text-red-600 hover:text-red-700"
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                ),
+                              )}
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => {
                                   const updated = [...localRegions];
                                   const newData = { ...updated[regionIndex].data };
-                                  newData[''] = '';
+                                  newData[""] = "";
                                   updated[regionIndex] = { ...updated[regionIndex], data: newData };
                                   setLocalRegions(updated);
                                 }}
@@ -1435,7 +1607,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                               {Object.entries(region.data).map(([company, share]) => (
                                 <div key={company} className="flex justify-between items-center">
                                   <span className="text-sm text-gray-700">{company}</span>
-                                  <span className="text-sm font-medium text-blue-600">{String(share)}</span>
+                                  <span className="text-sm font-medium text-blue-600">
+                                    {String(share)}
+                                  </span>
                                 </div>
                               ))}
                             </div>
@@ -1448,7 +1622,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setLocalRegions([...localRegions, { name: '', data: {} }])}
+                      onClick={() => setLocalRegions([...localRegions, { name: "", data: {} }])}
                       className="mt-2"
                     >
                       Add Region
@@ -1461,9 +1635,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             {/* SWOT Analysis */}
             {(() => {
               const entities = localEntities;
-              
+
               if (!entities || entities.length === 0) return null;
-              
+
               return (
                 <div className="mb-8 relative group">
                   {isCompetitorLandscapeEditing && (
@@ -1489,14 +1663,20 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">SWOT Analysis</h3>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {entities.map((entity, entityIndex) => (
-                      <div key={entityIndex} className="bg-white border border-gray-200 rounded-lg p-4">
+                      <div
+                        key={entityIndex}
+                        className="bg-white border border-gray-200 rounded-lg p-4"
+                      >
                         {isCompetitorLandscapeEditing ? (
                           <div className="space-y-3">
                             <Input
                               value={entity.name}
                               onChange={(e) => {
                                 const updated = [...localEntities];
-                                updated[entityIndex] = { ...updated[entityIndex], name: e.target.value };
+                                updated[entityIndex] = {
+                                  ...updated[entityIndex],
+                                  name: e.target.value,
+                                };
                                 setLocalEntities(updated);
                               }}
                               className="font-medium text-gray-900 bg-white"
@@ -1504,7 +1684,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                             />
                             <div className="grid grid-cols-2 gap-3">
                               <div>
-                                <h5 className="text-sm font-medium text-green-600 mb-2">Strengths</h5>
+                                <h5 className="text-sm font-medium text-green-600 mb-2">
+                                  Strengths
+                                </h5>
                                 <div className="space-y-2">
                                   {entity.strengths.map((strength, idx) => (
                                     <div key={idx} className="flex gap-2">
@@ -1523,7 +1705,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                                         size="sm"
                                         onClick={() => {
                                           const updated = [...localEntities];
-                                          updated[entityIndex].strengths = updated[entityIndex].strengths.filter((_, i) => i !== idx);
+                                          updated[entityIndex].strengths = updated[
+                                            entityIndex
+                                          ].strengths.filter((_, i) => i !== idx);
                                           setLocalEntities(updated);
                                         }}
                                         className="text-red-600 hover:text-red-700"
@@ -1537,7 +1721,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                                     size="sm"
                                     onClick={() => {
                                       const updated = [...localEntities];
-                                      updated[entityIndex].strengths = [...updated[entityIndex].strengths, ''];
+                                      updated[entityIndex].strengths = [
+                                        ...updated[entityIndex].strengths,
+                                        "",
+                                      ];
                                       setLocalEntities(updated);
                                     }}
                                   >
@@ -1546,7 +1733,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                                 </div>
                               </div>
                               <div>
-                                <h5 className="text-sm font-medium text-blue-600 mb-2">Opportunities</h5>
+                                <h5 className="text-sm font-medium text-blue-600 mb-2">
+                                  Opportunities
+                                </h5>
                                 <div className="space-y-2">
                                   {(entity.opportunities || []).map((opportunity, idx) => (
                                     <div key={idx} className="flex gap-2">
@@ -1554,7 +1743,8 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                                         value={opportunity}
                                         onChange={(e) => {
                                           const updated = [...localEntities];
-                                          if (!updated[entityIndex].opportunities) updated[entityIndex].opportunities = [];
+                                          if (!updated[entityIndex].opportunities)
+                                            updated[entityIndex].opportunities = [];
                                           updated[entityIndex].opportunities[idx] = e.target.value;
                                           setLocalEntities(updated);
                                         }}
@@ -1567,7 +1757,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                                         onClick={() => {
                                           const updated = [...localEntities];
                                           if (updated[entityIndex].opportunities) {
-                                            updated[entityIndex].opportunities = updated[entityIndex].opportunities.filter((_, i) => i !== idx);
+                                            updated[entityIndex].opportunities = updated[
+                                              entityIndex
+                                            ].opportunities.filter((_, i) => i !== idx);
                                             setLocalEntities(updated);
                                           }
                                         }}
@@ -1582,8 +1774,12 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                                     size="sm"
                                     onClick={() => {
                                       const updated = [...localEntities];
-                                      if (!updated[entityIndex].opportunities) updated[entityIndex].opportunities = [];
-                                      updated[entityIndex].opportunities = [...updated[entityIndex].opportunities, ''];
+                                      if (!updated[entityIndex].opportunities)
+                                        updated[entityIndex].opportunities = [];
+                                      updated[entityIndex].opportunities = [
+                                        ...updated[entityIndex].opportunities,
+                                        "",
+                                      ];
                                       setLocalEntities(updated);
                                     }}
                                   >
@@ -1592,7 +1788,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                                 </div>
                               </div>
                               <div>
-                                <h5 className="text-sm font-medium text-red-600 mb-2">Weaknesses</h5>
+                                <h5 className="text-sm font-medium text-red-600 mb-2">
+                                  Weaknesses
+                                </h5>
                                 <div className="space-y-2">
                                   {entity.weaknesses.map((weakness, idx) => (
                                     <div key={idx} className="flex gap-2">
@@ -1611,7 +1809,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                                         size="sm"
                                         onClick={() => {
                                           const updated = [...localEntities];
-                                          updated[entityIndex].weaknesses = updated[entityIndex].weaknesses.filter((_, i) => i !== idx);
+                                          updated[entityIndex].weaknesses = updated[
+                                            entityIndex
+                                          ].weaknesses.filter((_, i) => i !== idx);
                                           setLocalEntities(updated);
                                         }}
                                         className="text-red-600 hover:text-red-700"
@@ -1625,7 +1825,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                                     size="sm"
                                     onClick={() => {
                                       const updated = [...localEntities];
-                                      updated[entityIndex].weaknesses = [...updated[entityIndex].weaknesses, ''];
+                                      updated[entityIndex].weaknesses = [
+                                        ...updated[entityIndex].weaknesses,
+                                        "",
+                                      ];
                                       setLocalEntities(updated);
                                     }}
                                   >
@@ -1634,7 +1837,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                                 </div>
                               </div>
                               <div>
-                                <h5 className="text-sm font-medium text-orange-600 mb-2">Threats</h5>
+                                <h5 className="text-sm font-medium text-orange-600 mb-2">
+                                  Threats
+                                </h5>
                                 <div className="space-y-2">
                                   {(entity.threats || []).map((threat, idx) => (
                                     <div key={idx} className="flex gap-2">
@@ -1642,7 +1847,8 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                                         value={threat}
                                         onChange={(e) => {
                                           const updated = [...localEntities];
-                                          if (!updated[entityIndex].threats) updated[entityIndex].threats = [];
+                                          if (!updated[entityIndex].threats)
+                                            updated[entityIndex].threats = [];
                                           updated[entityIndex].threats[idx] = e.target.value;
                                           setLocalEntities(updated);
                                         }}
@@ -1655,7 +1861,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                                         onClick={() => {
                                           const updated = [...localEntities];
                                           if (updated[entityIndex].threats) {
-                                            updated[entityIndex].threats = updated[entityIndex].threats.filter((_, i) => i !== idx);
+                                            updated[entityIndex].threats = updated[
+                                              entityIndex
+                                            ].threats.filter((_, i) => i !== idx);
                                             setLocalEntities(updated);
                                           }
                                         }}
@@ -1670,8 +1878,12 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                                     size="sm"
                                     onClick={() => {
                                       const updated = [...localEntities];
-                                      if (!updated[entityIndex].threats) updated[entityIndex].threats = [];
-                                      updated[entityIndex].threats = [...updated[entityIndex].threats, ''];
+                                      if (!updated[entityIndex].threats)
+                                        updated[entityIndex].threats = [];
+                                      updated[entityIndex].threats = [
+                                        ...updated[entityIndex].threats,
+                                        "",
+                                      ];
                                       setLocalEntities(updated);
                                     }}
                                   >
@@ -1697,7 +1909,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                             <h4 className="font-medium text-gray-900 mb-3">{entity.name}</h4>
                             <div className="grid grid-cols-2 gap-3">
                               <div className="bg-green-50 p-3 rounded border border-green-100">
-                                <h5 className="text-sm font-medium text-green-700 mb-2">Strengths</h5>
+                                <h5 className="text-sm font-medium text-green-700 mb-2">
+                                  Strengths
+                                </h5>
                                 <ul className="text-sm text-gray-700 space-y-1">
                                   {entity.strengths.length > 0 ? (
                                     entity.strengths.map((strength, idx) => (
@@ -1707,12 +1921,16 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                                       </li>
                                     ))
                                   ) : (
-                                    <li className="text-gray-400 text-xs italic">No data available</li>
+                                    <li className="text-gray-400 text-xs italic">
+                                      No data available
+                                    </li>
                                   )}
                                 </ul>
                               </div>
                               <div className="bg-blue-50 p-3 rounded border border-blue-100">
-                                <h5 className="text-sm font-medium text-blue-700 mb-2">Opportunities</h5>
+                                <h5 className="text-sm font-medium text-blue-700 mb-2">
+                                  Opportunities
+                                </h5>
                                 <ul className="text-sm text-gray-700 space-y-1">
                                   {(entity.opportunities || []).length > 0 ? (
                                     (entity.opportunities || []).map((opportunity, idx) => (
@@ -1722,12 +1940,16 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                                       </li>
                                     ))
                                   ) : (
-                                    <li className="text-gray-400 text-xs italic">No data available</li>
+                                    <li className="text-gray-400 text-xs italic">
+                                      No data available
+                                    </li>
                                   )}
                                 </ul>
                               </div>
                               <div className="bg-orange-50 p-3 rounded border border-orange-100">
-                                <h5 className="text-sm font-medium text-orange-700 mb-2">Weaknesses</h5>
+                                <h5 className="text-sm font-medium text-orange-700 mb-2">
+                                  Weaknesses
+                                </h5>
                                 <ul className="text-sm text-gray-700 space-y-1">
                                   {entity.weaknesses.length > 0 ? (
                                     entity.weaknesses.map((weakness, idx) => (
@@ -1737,7 +1959,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                                       </li>
                                     ))
                                   ) : (
-                                    <li className="text-gray-400 text-xs italic">No data available</li>
+                                    <li className="text-gray-400 text-xs italic">
+                                      No data available
+                                    </li>
                                   )}
                                 </ul>
                               </div>
@@ -1752,7 +1976,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                                       </li>
                                     ))
                                   ) : (
-                                    <li className="text-gray-400 text-xs italic">No data available</li>
+                                    <li className="text-gray-400 text-xs italic">
+                                      No data available
+                                    </li>
                                   )}
                                 </ul>
                               </div>
@@ -1766,7 +1992,18 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setLocalEntities([...localEntities, { name: '', strengths: [], weaknesses: [], opportunities: [], threats: [] }])}
+                      onClick={() =>
+                        setLocalEntities([
+                          ...localEntities,
+                          {
+                            name: "",
+                            strengths: [],
+                            weaknesses: [],
+                            opportunities: [],
+                            threats: [],
+                          },
+                        ])
+                      }
                       className="mt-2"
                     >
                       Add Entity
@@ -1776,12 +2013,12 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               );
             })()}
 
-             {/* News Headlines */}
+            {/* News Headlines */}
             {(() => {
               const displayHeadlines = localHeadlines;
-              
+
               if (!displayHeadlines || displayHeadlines.length === 0) return null;
-              
+
               return (
                 <div className="mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Latest News</h3>
@@ -1822,7 +2059,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setLocalHeadlines([...localHeadlines, ''])}
+                      onClick={() => setLocalHeadlines([...localHeadlines, ""])}
                       className="mt-2"
                     >
                       Add News Headline
@@ -1836,9 +2073,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             {(() => {
               const features = localFeatures;
               const tools = localTools;
-              
+
               if (!features || !tools || Object.keys(tools).length === 0) return null;
-              
+
               return (
                 <div className="mb-8 relative group">
                   {isCompetitorLandscapeEditing && (
@@ -1907,7 +2144,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                                 variant="outline"
                                 size="sm"
                                 onClick={() => {
-                                  setLocalTools({ ...localTools, '': Array(features.length).fill('') });
+                                  setLocalTools({
+                                    ...localTools,
+                                    "": Array(features.length).fill(""),
+                                  });
                                 }}
                               >
                                 Add Tool
@@ -1939,7 +2179,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                               <TableCell key={tool}>
                                 {isCompetitorLandscapeEditing ? (
                                   <Input
-                                    value={tools[tool][featureIndex] || ''}
+                                    value={tools[tool][featureIndex] || ""}
                                     onChange={(e) => {
                                       const updated = { ...localTools };
                                       updated[tool] = [...updated[tool]];
@@ -1950,7 +2190,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                                     placeholder="-"
                                   />
                                 ) : (
-                                  tools[tool][featureIndex] || '-'
+                                  tools[tool][featureIndex] || "-"
                                 )}
                               </TableCell>
                             ))}
@@ -1960,10 +2200,14 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => {
-                                    setLocalFeatures(localFeatures.filter((_, i) => i !== featureIndex));
+                                    setLocalFeatures(
+                                      localFeatures.filter((_, i) => i !== featureIndex),
+                                    );
                                     const updated = { ...localTools };
-                                    Object.keys(updated).forEach(tool => {
-                                      updated[tool] = updated[tool].filter((_, i) => i !== featureIndex);
+                                    Object.keys(updated).forEach((tool) => {
+                                      updated[tool] = updated[tool].filter(
+                                        (_, i) => i !== featureIndex,
+                                      );
                                     });
                                     setLocalTools(updated);
                                   }}
@@ -1983,10 +2227,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        setLocalFeatures([...localFeatures, '']);
+                        setLocalFeatures([...localFeatures, ""]);
                         const updated = { ...localTools };
-                        Object.keys(updated).forEach(tool => {
-                          updated[tool] = [...updated[tool], ''];
+                        Object.keys(updated).forEach((tool) => {
+                          updated[tool] = [...updated[tool], ""];
                         });
                         setLocalTools(updated);
                       }}
@@ -2002,9 +2246,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             {/* M&A Insights */}
             {(() => {
               const insights = localInsights;
-              
+
               if (!insights || insights.length === 0) return null;
-              
+
               return (
                 <div className="mb-8 relative group">
                   {isCompetitorLandscapeEditing && (
@@ -2031,11 +2275,14 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                   <div className="grid grid-cols-1 gap-4">
                     {insights.map((insight: any, index: number) => {
                       return (
-                        <div key={index} className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <div
+                          key={index}
+                          className="bg-yellow-50 border border-yellow-200 rounded-lg p-4"
+                        >
                           {isCompetitorLandscapeEditing ? (
                             <div className="space-y-2">
                               <Input
-                                value={insight?.label || ''}
+                                value={insight?.label || ""}
                                 onChange={(e) => {
                                   const updated = [...localInsights];
                                   updated[index] = { ...updated[index], label: e.target.value };
@@ -2045,10 +2292,13 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                                 placeholder="Insight label"
                               />
                               <Textarea
-                                value={insight?.description || ''}
+                                value={insight?.description || ""}
                                 onChange={(e) => {
                                   const updated = [...localInsights];
-                                  updated[index] = { ...updated[index], description: e.target.value };
+                                  updated[index] = {
+                                    ...updated[index],
+                                    description: e.target.value,
+                                  };
                                   setLocalInsights(updated);
                                 }}
                                 className="text-yellow-700 bg-white"
@@ -2070,10 +2320,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                           ) : (
                             <>
                               <h4 className="font-medium text-yellow-800 mb-2">
-                                {insight?.label || 'No label available'}
+                                {insight?.label || "No label available"}
                               </h4>
                               <p className="text-yellow-700">
-                                {insight?.description || 'No description available'}
+                                {insight?.description || "No description available"}
                               </p>
                             </>
                           )}
@@ -2085,7 +2335,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setLocalInsights([...localInsights, { label: '', description: '' }])}
+                      onClick={() =>
+                        setLocalInsights([...localInsights, { label: "", description: "" }])
+                      }
                       className="mt-2"
                     >
                       Add M&A Insight
@@ -2098,26 +2350,29 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             {/* Market Trends */}
             {(() => {
               const charts = localCharts;
-              
+
               if (!charts || charts.length === 0) return null;
-              
+
               // Helper function to generate trend data from x-axis labels
               // Creates a deterministic growth trend based on chart index for consistency
-              const generateTrendData = (xAxis: string | string[], chartIndex: number): { name: string; value: number }[] => {
+              const generateTrendData = (
+                xAxis: string | string[],
+                chartIndex: number,
+              ): { name: string; value: number }[] => {
                 const labels = Array.isArray(xAxis) ? xAxis : [xAxis];
-                const baseValue = 25 + (chartIndex * 5); // Different starting point per chart
-                const growthRate = 12 + (chartIndex * 3); // Different growth rate per chart
-                
+                const baseValue = 25 + chartIndex * 5; // Different starting point per chart
+                const growthRate = 12 + chartIndex * 3; // Different growth rate per chart
+
                 return labels.map((label, index) => {
                   // Deterministic value based on index (no randomness for consistency)
-                  const value = baseValue + (index * growthRate) + (index * 2);
+                  const value = baseValue + index * growthRate + index * 2;
                   return {
                     name: label,
-                    value: Math.round(value * 10) / 10 // Round to 1 decimal place
+                    value: Math.round(value * 10) / 10, // Round to 1 decimal place
                   };
                 });
               };
-              
+
               return (
                 <div className="mb-8 relative group">
                   {isCompetitorLandscapeEditing && (
@@ -2159,11 +2414,19 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                                 placeholder="Chart name"
                               />
                               <Textarea
-                                value={Array.isArray(chart.xAxis) ? chart.xAxis.join(', ') : chart.xAxis}
+                                value={
+                                  Array.isArray(chart.xAxis) ? chart.xAxis.join(", ") : chart.xAxis
+                                }
                                 onChange={(e) => {
                                   const updated = [...localCharts];
-                                  const xAxisArray = e.target.value.split(',').map(s => s.trim()).filter(s => s);
-                                  updated[index] = { ...updated[index], xAxis: xAxisArray.length === 1 ? xAxisArray[0] : xAxisArray };
+                                  const xAxisArray = e.target.value
+                                    .split(",")
+                                    .map((s) => s.trim())
+                                    .filter((s) => s);
+                                  updated[index] = {
+                                    ...updated[index],
+                                    xAxis: xAxisArray.length === 1 ? xAxisArray[0] : xAxisArray,
+                                  };
                                   setLocalCharts(updated);
                                 }}
                                 className="text-sm text-gray-700 bg-white"
@@ -2186,7 +2449,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                             <MiniLineChart
                               data={chartData}
                               title={chart.name}
-                              color={index === 0 ? '#3b82f6' : '#10b981'} // Blue for first, green for second
+                              color={index === 0 ? "#3b82f6" : "#10b981"} // Blue for first, green for second
                             />
                           )}
                         </div>
@@ -2197,7 +2460,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setLocalCharts([...localCharts, { name: '', xAxis: [] }])}
+                      onClick={() => setLocalCharts([...localCharts, { name: "", xAxis: [] }])}
                       className="mt-2"
                     >
                       Add Chart
@@ -2211,15 +2474,15 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             {isCompetitorLandscapeEditing && (
               <div className="flex items-center justify-between pt-6 border-t border-gray-200">
                 <div className="flex gap-2">
-                  <Button 
+                  <Button
                     onClick={() => {
                       // Log original and modified JSON for debugging
                       const originalJson = {
-                        executiveSummary: executiveSummary || '',
-                        topPlayerShare: topPlayerShare || '',
-                        emergingPlayers: emergingPlayers || '',
+                        executiveSummary: executiveSummary || "",
+                        topPlayerShare: topPlayerShare || "",
+                        emergingPlayers: emergingPlayers || "",
                         fundingNews: fundingNews || [],
-                        uiComponents: competitorData?.uiComponents || []
+                        uiComponents: competitorData?.uiComponents || [],
                       };
 
                       const modifiedJson = {
@@ -2228,32 +2491,64 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                         emergingPlayers: localEmergingPlayers,
                         fundingNews: localHeadlines,
                         uiComponents: [
-                          ...(localDataPoints.length > 0 ? [{ type: 'report', dataPoints: localDataPoints }] : []),
-                          ...(localCompetitors.length > 0 ? [{ type: 'section', tags: localCompetitors }] : []),
-                          ...(localRegions.length > 0 ? [{ type: 'marketShareCharts', regions: localRegions }] : []),
-                          ...(localEntities.length > 0 ? [{ type: 'swotAnalysis', entities: localEntities }] : []),
-                          ...(localHeadlines.length > 0 ? [{ type: 'news', headlines: localHeadlines }] : []),
-                          ...(localFeatures.length > 0 || Object.keys(localTools).length > 0 ? [{ type: 'featureComparison', features: localFeatures, tools: localTools }] : []),
-                          ...(localInsights.length > 0 ? [{ type: 'mnaInsights', insights: localInsights }] : []),
-                          ...(localCharts.length > 0 ? [{ type: 'marketTrends', charts: localCharts }] : []),
-                          ...(localMetrics.length > 0 ? [{ type: 'section', metrics: localMetrics }] : [])
-                        ]
+                          ...(localDataPoints.length > 0
+                            ? [{ type: "report", dataPoints: localDataPoints }]
+                            : []),
+                          ...(localCompetitors.length > 0
+                            ? [{ type: "section", tags: localCompetitors }]
+                            : []),
+                          ...(localRegions.length > 0
+                            ? [{ type: "marketShareCharts", regions: localRegions }]
+                            : []),
+                          ...(localEntities.length > 0
+                            ? [{ type: "swotAnalysis", entities: localEntities }]
+                            : []),
+                          ...(localHeadlines.length > 0
+                            ? [{ type: "news", headlines: localHeadlines }]
+                            : []),
+                          ...(localFeatures.length > 0 || Object.keys(localTools).length > 0
+                            ? [
+                                {
+                                  type: "featureComparison",
+                                  features: localFeatures,
+                                  tools: localTools,
+                                },
+                              ]
+                            : []),
+                          ...(localInsights.length > 0
+                            ? [{ type: "mnaInsights", insights: localInsights }]
+                            : []),
+                          ...(localCharts.length > 0
+                            ? [{ type: "marketTrends", charts: localCharts }]
+                            : []),
+                          ...(localMetrics.length > 0
+                            ? [{ type: "section", metrics: localMetrics }]
+                            : []),
+                        ],
                       };
 
-                         // Logging original and modified JSON data
+                      // Logging original and modified JSON data
 
-                       // Store JSON data in localStorage for Scout API (user-specific)
-                       setUserLocalStorage('competitor-landscape_original_json', JSON.stringify(originalJson), currentUser?.uid);
-                       setUserLocalStorage('competitor-landscape_modified_json', JSON.stringify(modifiedJson), currentUser?.uid);
+                      // Store JSON data in localStorage for Scout API (user-specific)
+                      setUserLocalStorage(
+                        "competitor-landscape_original_json",
+                        JSON.stringify(originalJson),
+                        currentUser?.uid,
+                      );
+                      setUserLocalStorage(
+                        "competitor-landscape_modified_json",
+                        JSON.stringify(modifiedJson),
+                        currentUser?.uid,
+                      );
 
-                       // First, call the change handlers to update parent state with local values
+                      // First, call the change handlers to update parent state with local values
                       onExecutiveSummaryChange(localExecutiveSummary);
                       onTopPlayerShareChange(localTopPlayerShare);
                       onEmergingPlayersChange(localEmergingPlayers);
                       onFundingNewsChange(localHeadlines);
-                      
-                       // Then call the API save function
-                       handleCompetitorLandscapeSaveChanges();
+
+                      // Then call the API save function
+                      handleCompetitorLandscapeSaveChanges();
                     }}
                     className="bg-blue-600 hover:bg-blue-700"
                   >
@@ -2264,7 +2559,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                     Cancel
                   </Button>
                 </div>
-                
+
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={onExportPDF}>
                     <FileText className="h-4 w-4 mr-1" />

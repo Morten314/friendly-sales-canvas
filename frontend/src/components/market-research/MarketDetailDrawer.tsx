@@ -1,12 +1,11 @@
-
-import { 
-  Drawer, 
-  DrawerClose, 
-  DrawerContent, 
-  DrawerDescription, 
-  DrawerFooter, 
-  DrawerHeader, 
-  DrawerTitle 
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,11 +43,11 @@ interface MarketDetailDrawerProps {
   isAIViewActive: boolean;
 }
 
-export const MarketDetailDrawer = ({ 
-  isOpen, 
-  onOpenChange, 
+export const MarketDetailDrawer = ({
+  isOpen,
+  onOpenChange,
   selectedMarket,
-  isAIViewActive
+  isAIViewActive,
 }: MarketDetailDrawerProps) => {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
@@ -77,13 +76,13 @@ export const MarketDetailDrawer = ({
 
   const handleInsightEdit = (index: number, currentValue: string) => {
     setEditingInsightIndex(index);
-    setEditingField('insight');
+    setEditingField("insight");
     setEditValue(currentValue);
   };
 
   const handleActionEdit = (index: number, currentValue: string) => {
     setEditingActionIndex(index);
-    setEditingField('action');
+    setEditingField("action");
     setEditValue(currentValue);
   };
 
@@ -93,42 +92,42 @@ export const MarketDetailDrawer = ({
     const updatedMarket = { ...marketData };
 
     switch (editingField) {
-      case 'summary':
+      case "summary":
         updatedMarket.details.summary = editValue;
         break;
-      case 'score':
+      case "score":
         updatedMarket.score = editValue;
         break;
-      case 'size':
+      case "size":
         updatedMarket.size = editValue;
         break;
-      case 'competition':
+      case "competition":
         updatedMarket.competition = editValue;
         break;
-      case 'barriers':
+      case "barriers":
         updatedMarket.barriers = editValue;
         break;
-      case 'submarket-name':
+      case "submarket-name":
         if (editingSubMarketIndex !== null) {
           updatedMarket.details.subMarkets[editingSubMarketIndex].name = editValue;
         }
         break;
-      case 'submarket-size':
+      case "submarket-size":
         if (editingSubMarketIndex !== null) {
           updatedMarket.details.subMarkets[editingSubMarketIndex].size = editValue;
         }
         break;
-      case 'submarket-growth':
+      case "submarket-growth":
         if (editingSubMarketIndex !== null) {
           updatedMarket.details.subMarkets[editingSubMarketIndex].growth = editValue;
         }
         break;
-      case 'insight':
+      case "insight":
         if (editingInsightIndex !== null) {
           updatedMarket.details.keyInsights[editingInsightIndex] = editValue;
         }
         break;
-      case 'action':
+      case "action":
         if (editingActionIndex !== null) {
           updatedMarket.details.recommendedActions[editingActionIndex] = editValue;
         }
@@ -150,11 +149,11 @@ export const MarketDetailDrawer = ({
   const EditableField = ({
     value,
     onEdit,
-    className = ""
+    className = "",
   }: {
     field: string;
-    value: string; 
-    onEdit: () => void; 
+    value: string;
+    onEdit: () => void;
     className?: string;
   }) => (
     <div className={`group relative ${className}`}>
@@ -181,14 +180,14 @@ export const MarketDetailDrawer = ({
             {marketData.name}
           </DrawerTitle>
           <DrawerDescription>
-            Market score: <span className="font-medium">{marketData.score}</span> | 
-            TAM: <span className="font-medium">{marketData.size}</span>
+            Market score: <span className="font-medium">{marketData.score}</span> | TAM:{" "}
+            <span className="font-medium">{marketData.size}</span>
           </DrawerDescription>
         </DrawerHeader>
-        
-        <div className={`${isAIViewActive ? 'grid grid-cols-3 gap-4' : ''} overflow-auto`}>
+
+        <div className={`${isAIViewActive ? "grid grid-cols-3 gap-4" : ""} overflow-auto`}>
           {/* First Section - Market Details */}
-          <div className={`p-6 overflow-auto ${isAIViewActive ? 'border-r' : ''}`}>
+          <div className={`p-6 overflow-auto ${isAIViewActive ? "border-r" : ""}`}>
             <div className="space-y-6">
               <div>
                 <h3 className="text-lg font-medium mb-2 flex items-center gap-2">
@@ -197,11 +196,11 @@ export const MarketDetailDrawer = ({
                 <EditableField
                   field="summary"
                   value={marketData.details.summary}
-                  onEdit={() => handleEdit('summary', marketData.details.summary)}
+                  onEdit={() => handleEdit("summary", marketData.details.summary)}
                   className="text-gray-700"
                 />
               </div>
-              
+
               <div>
                 <h3 className="text-lg font-medium mb-2 flex items-center gap-2">
                   <Layers className="h-5 w-5 text-blue-600" /> Sub-Markets
@@ -222,21 +221,21 @@ export const MarketDetailDrawer = ({
                             <EditableField
                               field={`submarket-name-${index}`}
                               value={submarket.name}
-                              onEdit={() => handleSubMarketEdit(index, 'name', submarket.name)}
+                              onEdit={() => handleSubMarketEdit(index, "name", submarket.name)}
                             />
                           </td>
                           <td className="px-4 py-2">
                             <EditableField
                               field={`submarket-size-${index}`}
                               value={submarket.size}
-                              onEdit={() => handleSubMarketEdit(index, 'size', submarket.size)}
+                              onEdit={() => handleSubMarketEdit(index, "size", submarket.size)}
                             />
                           </td>
                           <td className="px-4 py-2 text-green-600">
                             <EditableField
                               field={`submarket-growth-${index}`}
                               value={submarket.growth}
-                              onEdit={() => handleSubMarketEdit(index, 'growth', submarket.growth)}
+                              onEdit={() => handleSubMarketEdit(index, "growth", submarket.growth)}
                             />
                           </td>
                         </tr>
@@ -245,7 +244,7 @@ export const MarketDetailDrawer = ({
                   </table>
                 </div>
               </div>
-              
+
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <h3 className="text-lg font-medium mb-2 flex items-center gap-2">
@@ -267,7 +266,7 @@ export const MarketDetailDrawer = ({
                     ))}
                   </ul>
                 </div>
-                
+
                 <div>
                   <h3 className="text-lg font-medium mb-2 flex items-center gap-2">
                     <Globe className="h-5 w-5 text-blue-600" /> Recommended Actions
@@ -291,36 +290,32 @@ export const MarketDetailDrawer = ({
               </div>
             </div>
           </div>
-          
+
           {/* Second Section - Editing Area (only shown when AI mode is active and editing) */}
           {isAIViewActive && editingField && (
             <div className="p-6 border-r bg-gray-50">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-medium">Edit Field</h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleCancel}
-                    className="h-8 w-8 p-0"
-                  >
+                  <Button variant="ghost" size="sm" onClick={handleCancel} className="h-8 w-8 p-0">
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-                
+
                 <div className="space-y-3">
                   <label className="text-sm font-medium text-gray-700">
-                    {editingField === 'summary' && 'Market Summary'}
-                    {editingField === 'score' && 'Market Score'}
-                    {editingField === 'size' && 'Market Size'}
-                    {editingField === 'competition' && 'Competition'}
-                    {editingField === 'barriers' && 'Barriers'}
-                    {editingField?.startsWith('submarket-') && `Sub-Market ${editingField.split('-')[1]}`}
-                    {editingField === 'insight' && 'Key Insight'}
-                    {editingField === 'action' && 'Recommended Action'}
+                    {editingField === "summary" && "Market Summary"}
+                    {editingField === "score" && "Market Score"}
+                    {editingField === "size" && "Market Size"}
+                    {editingField === "competition" && "Competition"}
+                    {editingField === "barriers" && "Barriers"}
+                    {editingField?.startsWith("submarket-") &&
+                      `Sub-Market ${editingField.split("-")[1]}`}
+                    {editingField === "insight" && "Key Insight"}
+                    {editingField === "action" && "Recommended Action"}
                   </label>
-                  
-                  {editingField === 'summary' ? (
+
+                  {editingField === "summary" ? (
                     <Textarea
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
@@ -334,7 +329,7 @@ export const MarketDetailDrawer = ({
                       className="w-full"
                     />
                   )}
-                  
+
                   <div className="flex gap-2">
                     <Button onClick={handleSave} size="sm" className="flex items-center gap-2">
                       <Save className="h-4 w-4" />
@@ -348,7 +343,7 @@ export const MarketDetailDrawer = ({
               </div>
             </div>
           )}
-          
+
           {/* Third Section - AI Prompting (only shown when AI mode is active) */}
           {isAIViewActive && (
             <div className="h-[70vh]">
@@ -356,7 +351,7 @@ export const MarketDetailDrawer = ({
             </div>
           )}
         </div>
-        
+
         <DrawerFooter className="border-t">
           <Button className="bg-blue-600 hover:bg-blue-700 text-white w-full">
             Generate Full Report

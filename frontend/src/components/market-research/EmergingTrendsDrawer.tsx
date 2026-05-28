@@ -1,12 +1,11 @@
-
-import { 
-  Drawer, 
-  DrawerClose, 
-  DrawerContent, 
-  DrawerDescription, 
-  DrawerFooter, 
-  DrawerHeader, 
-  DrawerTitle 
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,12 +30,12 @@ interface EmergingTrendsDrawerProps {
   onUpdateTrend?: (trend: EmergingTrend) => void;
 }
 
-export const EmergingTrendsDrawer = ({ 
-  isOpen, 
-  onOpenChange, 
+export const EmergingTrendsDrawer = ({
+  isOpen,
+  onOpenChange,
   selectedTrend,
   isAIViewActive,
-  onUpdateTrend
+  onUpdateTrend,
 }: EmergingTrendsDrawerProps) => {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
@@ -59,29 +58,29 @@ export const EmergingTrendsDrawer = ({
     const updatedTrend = { ...trendData };
 
     switch (editingField) {
-      case 'trend':
+      case "trend":
         updatedTrend.trend = editValue;
         break;
-      case 'growthRate':
+      case "growthRate":
         updatedTrend.growthRate = editValue;
         break;
-      case 'adoption':
+      case "adoption":
         updatedTrend.adoption = editValue;
         break;
-      case 'impact':
+      case "impact":
         updatedTrend.impact = editValue;
         break;
-      case 'description':
+      case "description":
         updatedTrend.description = editValue;
         break;
     }
 
     setTrendData(updatedTrend);
-    
+
     if (onUpdateTrend) {
       onUpdateTrend(updatedTrend);
     }
-    
+
     handleCancel();
   };
 
@@ -93,11 +92,11 @@ export const EmergingTrendsDrawer = ({
   const EditableField = ({
     value,
     onEdit,
-    className = ""
+    className = "",
   }: {
     field: string;
-    value: string; 
-    onEdit: () => void; 
+    value: string;
+    onEdit: () => void;
     className?: string;
   }) => (
     <div className={`group relative ${className}`}>
@@ -126,93 +125,86 @@ export const EmergingTrendsDrawer = ({
             <TrendingUp className="h-5 w-5 text-blue-600" />
             Emerging Trend Details
           </DrawerTitle>
-          <DrawerDescription>
-            Edit and analyze emerging trend data
-          </DrawerDescription>
+          <DrawerDescription>Edit and analyze emerging trend data</DrawerDescription>
         </DrawerHeader>
-        
-        <div className={`${isAIViewActive ? 'grid grid-cols-3 gap-4' : ''} overflow-auto`}>
+
+        <div className={`${isAIViewActive ? "grid grid-cols-3 gap-4" : ""} overflow-auto`}>
           {/* First Section - Trend Data */}
-          <div className={`p-6 overflow-auto ${isAIViewActive ? 'border-r' : ''}`}>
+          <div className={`p-6 overflow-auto ${isAIViewActive ? "border-r" : ""}`}>
             <div className="space-y-6">
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-2">Trend Name</h3>
                 <EditableField
                   field="trend"
                   value={trendData.trend}
-                  onEdit={() => handleEdit('trend', trendData.trend)}
+                  onEdit={() => handleEdit("trend", trendData.trend)}
                   className="text-lg font-semibold text-blue-700"
                 />
               </div>
-              
+
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-2">Growth Rate</h3>
                   <EditableField
                     field="growthRate"
                     value={trendData.growthRate}
-                    onEdit={() => handleEdit('growthRate', trendData.growthRate)}
+                    onEdit={() => handleEdit("growthRate", trendData.growthRate)}
                     className="bg-green-100 text-green-800 text-xs px-2.5 py-0.5 rounded-full inline-block"
                   />
                 </div>
-                
+
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-2">Adoption</h3>
                   <EditableField
                     field="adoption"
                     value={trendData.adoption}
-                    onEdit={() => handleEdit('adoption', trendData.adoption)}
+                    onEdit={() => handleEdit("adoption", trendData.adoption)}
                   />
                 </div>
-                
+
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-2">Impact</h3>
                   <EditableField
                     field="impact"
                     value={trendData.impact}
-                    onEdit={() => handleEdit('impact', trendData.impact)}
+                    onEdit={() => handleEdit("impact", trendData.impact)}
                   />
                 </div>
               </div>
-              
+
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-2">Description</h3>
                 <EditableField
                   field="description"
                   value={trendData.description}
-                  onEdit={() => handleEdit('description', trendData.description)}
+                  onEdit={() => handleEdit("description", trendData.description)}
                   className="text-gray-600"
                 />
               </div>
             </div>
           </div>
-          
+
           {/* Second Section - Editing Area */}
           {isAIViewActive && editingField && (
             <div className="p-6 border-r bg-gray-50">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-medium">Edit Field</h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleCancel}
-                    className="h-8 w-8 p-0"
-                  >
+                  <Button variant="ghost" size="sm" onClick={handleCancel} className="h-8 w-8 p-0">
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-                
+
                 <div className="space-y-3">
                   <label className="text-sm font-medium text-gray-700">
-                    {editingField === 'trend' && 'Trend Name'}
-                    {editingField === 'growthRate' && 'Growth Rate'}
-                    {editingField === 'adoption' && 'Adoption Level'}
-                    {editingField === 'impact' && 'Impact Level'}
-                    {editingField === 'description' && 'Description'}
+                    {editingField === "trend" && "Trend Name"}
+                    {editingField === "growthRate" && "Growth Rate"}
+                    {editingField === "adoption" && "Adoption Level"}
+                    {editingField === "impact" && "Impact Level"}
+                    {editingField === "description" && "Description"}
                   </label>
-                  
-                  {editingField === 'description' ? (
+
+                  {editingField === "description" ? (
                     <Textarea
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
@@ -227,7 +219,7 @@ export const EmergingTrendsDrawer = ({
                       placeholder={`Enter ${editingField}`}
                     />
                   )}
-                  
+
                   <div className="flex gap-2">
                     <Button onClick={handleSave} size="sm" className="flex items-center gap-2">
                       <Save className="h-4 w-4" />
@@ -241,7 +233,7 @@ export const EmergingTrendsDrawer = ({
               </div>
             </div>
           )}
-          
+
           {/* Third Section - AI Prompting */}
           {isAIViewActive && (
             <div className="h-[70vh]">
@@ -249,7 +241,7 @@ export const EmergingTrendsDrawer = ({
             </div>
           )}
         </div>
-        
+
         <DrawerFooter className="border-t">
           <Button className="bg-blue-600 hover:bg-blue-700 text-white w-full">
             Generate Trend Report

@@ -11,7 +11,11 @@ interface ScoutLeadStreamProps {
   selectedSize?: string;
   selectedRegion?: string;
   opportunityFilter?: string | null;
-  onFiltersChange?: (filters: { selectedIndustry: string; selectedSize: string; selectedRegion: string }) => void;
+  onFiltersChange?: (filters: {
+    selectedIndustry: string;
+    selectedSize: string;
+    selectedRegion: string;
+  }) => void;
   onClearOpportunityFilter?: () => void;
   onChatWithScout?: (leads: any[], reportFilter?: string) => void;
   onChatAboutCoverage?: () => void;
@@ -27,7 +31,9 @@ const ScoutLeadStream: React.FC<ScoutLeadStreamProps> = ({
   onChatAboutCoverage,
   onSendToStrategist,
 }) => {
-  const [heatmapRowsForDashboard, setHeatmapRowsForDashboard] = useState<HeatmapLead[] | null>(null);
+  const [heatmapRowsForDashboard, setHeatmapRowsForDashboard] = useState<HeatmapLead[] | null>(
+    null,
+  );
 
   return (
     <div className="space-y-6 animate-fade-in">

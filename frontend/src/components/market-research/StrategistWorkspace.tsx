@@ -5,9 +5,24 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Bot, CheckCircle2, Loader2, Mail, MessageSquare, Users,
-  ArrowLeft, Clock, Target, Send, Linkedin, Filter,
-  Play, Eye, MousePointerClick, FileCheck, ChevronRight, Save,
+  Bot,
+  CheckCircle2,
+  Loader2,
+  Mail,
+  MessageSquare,
+  Users,
+  ArrowLeft,
+  Clock,
+  Target,
+  Send,
+  Linkedin,
+  Filter,
+  Play,
+  Eye,
+  MousePointerClick,
+  FileCheck,
+  ChevronRight,
+  Save,
   Compass,
 } from "lucide-react";
 
@@ -40,20 +55,25 @@ interface ChatMessage {
 // ─── Strategy Generation (for dashboard cards) ──────────────────────────────
 
 function generateStrategy(leads: LeadContext[]) {
-  const signals = leads.flatMap(l => l.signals || []);
-  const hasHiring = signals.some(s => /hiring|hired/i.test(s));
-  const hasFunding = signals.some(s => /funding|raised|series/i.test(s));
+  const signals = leads.flatMap((l) => l.signals || []);
+  const hasHiring = signals.some((s) => /hiring|hired/i.test(s));
+  const hasFunding = signals.some((s) => /funding|raised|series/i.test(s));
 
-  const jobTitles = [...new Set(leads.map(l => l.jobTitle))];
+  const jobTitles = [...new Set(leads.map((l) => l.jobTitle))];
   const persona = jobTitles.slice(0, 2).join(" / ") || "Revenue Leaders";
 
-  const confidence = hasFunding && hasHiring ? "High" : hasFunding || hasHiring ? "Medium-High" : "Medium";
-  const basis = hasHiring ? "Hiring Surge + Growth Signals" : hasFunding ? "Funding Event + Expansion" : "Market Activity Signals";
+  const confidence =
+    hasFunding && hasHiring ? "High" : hasFunding || hasHiring ? "Medium-High" : "Medium";
+  const basis = hasHiring
+    ? "Hiring Surge + Growth Signals"
+    : hasFunding
+      ? "Funding Event + Expansion"
+      : "Market Activity Signals";
   const angle = hasHiring
     ? "Scaling infrastructure during hiring surge"
     : hasFunding
-    ? "Capitalizing on post-funding growth momentum"
-    : "Scaling operations during growth phase";
+      ? "Capitalizing on post-funding growth momentum"
+      : "Scaling operations during growth phase";
   const timing = hasHiring || hasFunding ? "30–60 days" : "2–4 weeks";
 
   return { persona, confidence, basis, angle, timing, leadCount: leads.length };
@@ -97,14 +117,69 @@ interface SequenceStep {
 
 function generateSequence(strategy: ReturnType<typeof generateStrategy>): SequenceStep[] {
   return [
-    { id: "s1", day: 1, channel: "email", action: "Opening Email", subject: `Quick question about ${strategy.angle}`, preview: `Hi {{first_name}}, noticed {{company}} is ${strategy.angle.toLowerCase()}. Wanted to share how we help similar ${strategy.persona} teams...` },
-    { id: "s2", day: 1, channel: "linkedin", action: "LinkedIn Connection Request", preview: "Personalized connection request referencing their role and recent activity", linkedinMessage: `Hi {{first_name}}, I came across {{company}} and was impressed by your work as ${strategy.persona}. I noticed you're ${strategy.angle.toLowerCase()} — we help teams like yours scale faster. Would love to connect!` },
-    { id: "s3", day: 3, channel: "wait", action: "Wait 2 Days", preview: "Allow time for open/reply before follow-up" },
-    { id: "s4", day: 3, channel: "email", action: "Follow-up Email", subject: "Re: Quick question", preview: `Following up on my previous note. I put together a brief analysis on how ${strategy.persona} teams are approaching ${strategy.angle.toLowerCase()}...` },
-    { id: "s5", day: 5, channel: "linkedin", action: "LinkedIn Message", preview: "Value-add message with industry insight", linkedinMessage: `Hey {{first_name}}, thought you'd find this interesting — we just published research on how ${strategy.persona} teams are navigating ${strategy.angle.toLowerCase()}. Happy to share the key takeaways if you're interested!` },
-    { id: "s6", day: 7, channel: "email", action: "Case Study Email", subject: `How {{similar_company}} achieved 3x results`, preview: "Social proof email with relevant case study and specific metrics..." },
-    { id: "s7", day: 10, channel: "linkedin", action: "LinkedIn Breakup Message", preview: "Final touchpoint with a soft close", linkedinMessage: `Hi {{first_name}}, I know you're busy scaling {{company}}. Just wanted to leave this here — if timing ever aligns for a quick chat about ${strategy.angle.toLowerCase()}, I'd love to help. Either way, wishing you all the best!` },
-    { id: "s8", day: 12, channel: "email", action: "Breakup Email", subject: "Should I close the loop?", preview: "Final email with a clear CTA and easy opt-out..." },
+    {
+      id: "s1",
+      day: 1,
+      channel: "email",
+      action: "Opening Email",
+      subject: `Quick question about ${strategy.angle}`,
+      preview: `Hi {{first_name}}, noticed {{company}} is ${strategy.angle.toLowerCase()}. Wanted to share how we help similar ${strategy.persona} teams...`,
+    },
+    {
+      id: "s2",
+      day: 1,
+      channel: "linkedin",
+      action: "LinkedIn Connection Request",
+      preview: "Personalized connection request referencing their role and recent activity",
+      linkedinMessage: `Hi {{first_name}}, I came across {{company}} and was impressed by your work as ${strategy.persona}. I noticed you're ${strategy.angle.toLowerCase()} — we help teams like yours scale faster. Would love to connect!`,
+    },
+    {
+      id: "s3",
+      day: 3,
+      channel: "wait",
+      action: "Wait 2 Days",
+      preview: "Allow time for open/reply before follow-up",
+    },
+    {
+      id: "s4",
+      day: 3,
+      channel: "email",
+      action: "Follow-up Email",
+      subject: "Re: Quick question",
+      preview: `Following up on my previous note. I put together a brief analysis on how ${strategy.persona} teams are approaching ${strategy.angle.toLowerCase()}...`,
+    },
+    {
+      id: "s5",
+      day: 5,
+      channel: "linkedin",
+      action: "LinkedIn Message",
+      preview: "Value-add message with industry insight",
+      linkedinMessage: `Hey {{first_name}}, thought you'd find this interesting — we just published research on how ${strategy.persona} teams are navigating ${strategy.angle.toLowerCase()}. Happy to share the key takeaways if you're interested!`,
+    },
+    {
+      id: "s6",
+      day: 7,
+      channel: "email",
+      action: "Case Study Email",
+      subject: `How {{similar_company}} achieved 3x results`,
+      preview: "Social proof email with relevant case study and specific metrics...",
+    },
+    {
+      id: "s7",
+      day: 10,
+      channel: "linkedin",
+      action: "LinkedIn Breakup Message",
+      preview: "Final touchpoint with a soft close",
+      linkedinMessage: `Hi {{first_name}}, I know you're busy scaling {{company}}. Just wanted to leave this here — if timing ever aligns for a quick chat about ${strategy.angle.toLowerCase()}, I'd love to help. Either way, wishing you all the best!`,
+    },
+    {
+      id: "s8",
+      day: 12,
+      channel: "email",
+      action: "Breakup Email",
+      subject: "Should I close the loop?",
+      preview: "Final email with a clear CTA and easy opt-out...",
+    },
   ];
 }
 
@@ -121,8 +196,7 @@ const StrategistDashboard: React.FC<{
       <span className="font-medium text-foreground">{strategy.leadCount} leads</span>
       <span className="text-border">|</span>
       <span>
-        Based on:{" "}
-        <span className="font-medium text-foreground">{strategy.basis}</span>
+        Based on: <span className="font-medium text-foreground">{strategy.basis}</span>
       </span>
       <span className="text-border">|</span>
       <span>
@@ -145,21 +219,27 @@ const StrategistDashboard: React.FC<{
       <Card className="p-3 space-y-1 border-border">
         <div className="flex items-center gap-1.5">
           <Users className="h-3.5 w-3.5 text-primary" />
-          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Target Persona</span>
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+            Target Persona
+          </span>
         </div>
         <p className="text-sm font-semibold text-foreground leading-tight">{strategy.persona}</p>
       </Card>
       <Card className="p-3 space-y-1 border-border">
         <div className="flex items-center gap-1.5">
           <Target className="h-3.5 w-3.5 text-primary" />
-          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Primary Angle</span>
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+            Primary Angle
+          </span>
         </div>
         <p className="text-sm font-semibold text-foreground leading-tight">{strategy.angle}</p>
       </Card>
       <Card className="p-3 space-y-1 border-border">
         <div className="flex items-center gap-1.5">
           <Clock className="h-3.5 w-3.5 text-primary" />
-          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Best Timing</span>
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+            Best Timing
+          </span>
         </div>
         <p className="text-sm font-semibold text-foreground leading-tight">{strategy.timing}</p>
       </Card>
@@ -169,11 +249,7 @@ const StrategistDashboard: React.FC<{
     <Card className="p-3 border-primary/20 bg-primary/5 space-y-2">
       <h4 className="text-xs font-semibold text-foreground">Quick Actions</h4>
       <div className="flex flex-wrap gap-2">
-        <Button
-          size="sm"
-          className="text-xs gap-1.5"
-          onClick={onCreateSequence}
-        >
+        <Button size="sm" className="text-xs gap-1.5" onClick={onCreateSequence}>
           <Play className="h-3.5 w-3.5" />
           Create an outreach sequence for these leads
         </Button>
@@ -181,7 +257,11 @@ const StrategistDashboard: React.FC<{
           variant="outline"
           size="sm"
           className="text-xs gap-1.5"
-          onClick={() => onAction("Segment these leads into targeted campaign groups based on their signals, industry, and persona")}
+          onClick={() =>
+            onAction(
+              "Segment these leads into targeted campaign groups based on their signals, industry, and persona",
+            )
+          }
         >
           <Filter className="h-3.5 w-3.5" />
           Segment these leads for campaigns
@@ -201,10 +281,34 @@ const SequenceView: React.FC<{
   activeEmailStepId: string | null;
 }> = ({ steps, onLinkedInClick, onEmailClick, savingStepId, activeEmailStepId }) => {
   const channelConfig = {
-    email: { icon: Mail, label: "Email", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/30", border: "border-blue-200 dark:border-blue-800" },
-    linkedin: { icon: Linkedin, label: "LinkedIn", color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-950/30", border: "border-indigo-200 dark:border-indigo-800" },
-    call: { icon: MessageSquare, label: "Call", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/30", border: "border-emerald-200 dark:border-emerald-800" },
-    wait: { icon: Clock, label: "Delay", color: "text-muted-foreground", bg: "bg-muted/30", border: "border-border" },
+    email: {
+      icon: Mail,
+      label: "Email",
+      color: "text-blue-600 dark:text-blue-400",
+      bg: "bg-blue-50 dark:bg-blue-950/30",
+      border: "border-blue-200 dark:border-blue-800",
+    },
+    linkedin: {
+      icon: Linkedin,
+      label: "LinkedIn",
+      color: "text-indigo-600 dark:text-indigo-400",
+      bg: "bg-indigo-50 dark:bg-indigo-950/30",
+      border: "border-indigo-200 dark:border-indigo-800",
+    },
+    call: {
+      icon: MessageSquare,
+      label: "Call",
+      color: "text-emerald-600 dark:text-emerald-400",
+      bg: "bg-emerald-50 dark:bg-emerald-950/30",
+      border: "border-emerald-200 dark:border-emerald-800",
+    },
+    wait: {
+      icon: Clock,
+      label: "Delay",
+      color: "text-muted-foreground",
+      bg: "bg-muted/30",
+      border: "border-border",
+    },
   };
 
   return (
@@ -212,7 +316,9 @@ const SequenceView: React.FC<{
       <div className="flex items-center gap-2 mb-3">
         <Play className="h-4 w-4 text-primary" />
         <h3 className="text-sm font-semibold text-foreground">Outreach Sequence</h3>
-        <Badge variant="outline" className="text-[10px]">{steps.length} steps · 12 days</Badge>
+        <Badge variant="outline" className="text-[10px]">
+          {steps.length} steps · 12 days
+        </Badge>
       </div>
 
       {steps.map((step, i) => {
@@ -228,12 +334,12 @@ const SequenceView: React.FC<{
           <div key={step.id} className="flex items-stretch gap-3">
             {/* Timeline connector */}
             <div className="flex flex-col items-center w-6 shrink-0">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center border-2 ${config.border} ${config.bg}`}>
+              <div
+                className={`w-7 h-7 rounded-full flex items-center justify-center border-2 ${config.border} ${config.bg}`}
+              >
                 <Icon className={`h-3.5 w-3.5 ${config.color}`} />
               </div>
-              {i < steps.length - 1 && (
-                <div className="w-px flex-1 bg-border min-h-[8px]" />
-              )}
+              {i < steps.length - 1 && <div className="w-px flex-1 bg-border min-h-[8px]" />}
             </div>
 
             {/* Step card */}
@@ -242,18 +348,23 @@ const SequenceView: React.FC<{
                 isLinkedIn && !isSaved
                   ? "border-indigo-200 dark:border-indigo-800 hover:border-indigo-400 dark:hover:border-indigo-600 cursor-pointer hover:shadow-sm"
                   : isActiveEmail
-                  ? "border-primary ring-1 ring-primary/20"
-                  : "border-border"
+                    ? "border-primary ring-1 ring-primary/20"
+                    : "border-border"
               } ${step.channel === "wait" ? "bg-muted/20" : "bg-background"}`}
               onClick={() => isLinkedIn && !isSaved && !isSaving && onLinkedInClick(step)}
             >
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-medium text-muted-foreground">Day {step.day}</span>
+                  <span className="text-[10px] font-medium text-muted-foreground">
+                    Day {step.day}
+                  </span>
                   <span className="text-xs font-semibold text-foreground">{step.action}</span>
                 </div>
                 {isLinkedIn && !isSaved && !isSaving && (
-                  <Badge variant="outline" className="text-[9px] gap-1 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800">
+                  <Badge
+                    variant="outline"
+                    className="text-[9px] gap-1 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800"
+                  >
                     <MousePointerClick className="h-2.5 w-2.5" />
                     Click to generate & save
                   </Badge>
@@ -265,7 +376,10 @@ const SequenceView: React.FC<{
                   </Badge>
                 )}
                 {isSaved && (
-                  <Badge variant="outline" className="text-[9px] gap-1 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">
+                  <Badge
+                    variant="outline"
+                    className="text-[9px] gap-1 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
+                  >
                     <FileCheck className="h-2.5 w-2.5" />
                     Saved to Artefacts
                   </Badge>
@@ -277,11 +391,14 @@ const SequenceView: React.FC<{
                 </p>
               )}
               <p className="text-[11px] text-muted-foreground leading-relaxed">{step.preview}</p>
-              
+
               {/* Email: Click here to generate */}
               {isEmail && !step.emailGenerated && !isSaved && (
                 <button
-                  onClick={(e) => { e.stopPropagation(); onEmailClick(step); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEmailClick(step);
+                  }}
                   className="flex items-center gap-1.5 mt-2 text-[11px] text-primary font-medium hover:underline cursor-pointer"
                 >
                   <Mail className="h-3 w-3" />
@@ -327,7 +444,17 @@ const StrategistChat: React.FC<{
   showSaveEmail: boolean;
   onSaveEmail: () => void;
   savingEmail: boolean;
-}> = ({ messages, isLoading, agentStep, input, onInputChange, onSend, showSaveEmail, onSaveEmail, savingEmail }) => {
+}> = ({
+  messages,
+  isLoading,
+  agentStep,
+  input,
+  onInputChange,
+  onSend,
+  showSaveEmail,
+  onSaveEmail,
+  savingEmail,
+}) => {
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -400,9 +527,13 @@ const StrategistChat: React.FC<{
               disabled={savingEmail}
             >
               {savingEmail ? (
-                <><Loader2 className="h-3 w-3 animate-spin" /> Saving...</>
+                <>
+                  <Loader2 className="h-3 w-3 animate-spin" /> Saving...
+                </>
               ) : (
-                <><Save className="h-3 w-3" /> Save email to Artefacts</>
+                <>
+                  <Save className="h-3 w-3" /> Save email to Artefacts
+                </>
               )}
             </Button>
           </div>
@@ -419,7 +550,9 @@ const StrategistChat: React.FC<{
                 ) : (
                   <div className="h-3.5 w-3.5 rounded-full border border-border shrink-0" />
                 )}
-                <span className={i <= agentStep ? "text-foreground" : "text-muted-foreground"}>{step}</span>
+                <span className={i <= agentStep ? "text-foreground" : "text-muted-foreground"}>
+                  {step}
+                </span>
               </div>
             ))}
           </div>
@@ -586,7 +719,7 @@ Take care,
 
     // Mark step as email generated
     setSequenceSteps((prev) =>
-      prev.map((s) => (s.id === step.id ? { ...s, emailGenerated: true } : s))
+      prev.map((s) => (s.id === step.id ? { ...s, emailGenerated: true } : s)),
     );
   };
 
@@ -639,7 +772,7 @@ Take care,
 
       // Mark step as saved
       setSequenceSteps((prev) =>
-        prev.map((s) => (s.id === activeEmailStepId ? { ...s, savedToArtefacts: true } : s))
+        prev.map((s) => (s.id === activeEmailStepId ? { ...s, savedToArtefacts: true } : s)),
       );
       setSavingEmail(false);
       setEmailEditMode(false);
@@ -692,7 +825,7 @@ Take care,
       window.dispatchEvent(artefactEvent);
 
       setSequenceSteps((prev) =>
-        prev.map((s) => (s.id === step.id ? { ...s, savedToArtefacts: true } : s))
+        prev.map((s) => (s.id === step.id ? { ...s, savedToArtefacts: true } : s)),
       );
       setSavingStepId(null);
 
@@ -723,7 +856,7 @@ Take care,
           method: "GET",
           headers: { "Content-Type": "application/json" },
           signal: controller.signal,
-        }
+        },
       );
 
       clearTimeout(timeoutId);
@@ -734,12 +867,20 @@ Take care,
 
       setChatMessages((prev) => [
         ...prev,
-        { role: "assistant", content: cleanResponse(raw), timestamp: new Date().toLocaleTimeString() },
+        {
+          role: "assistant",
+          content: cleanResponse(raw),
+          timestamp: new Date().toLocaleTimeString(),
+        },
       ]);
     } catch {
       setChatMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Sorry, I'm having trouble connecting. Please try again.", timestamp: new Date().toLocaleTimeString() },
+        {
+          role: "assistant",
+          content: "Sorry, I'm having trouble connecting. Please try again.",
+          timestamp: new Date().toLocaleTimeString(),
+        },
       ]);
     } finally {
       setIsLoading(false);
@@ -747,13 +888,22 @@ Take care,
   };
 
   // Determine if we should show the save email button
-  const showSaveEmail = emailEditMode && activeEmailStepId !== null && chatMessages.length > 0 && chatMessages[chatMessages.length - 1]?.role === "assistant";
+  const showSaveEmail =
+    emailEditMode &&
+    activeEmailStepId !== null &&
+    chatMessages.length > 0 &&
+    chatMessages[chatMessages.length - 1]?.role === "assistant";
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-background border rounded-lg overflow-hidden">
       {/* Header */}
       <div className="bg-muted/30 p-3 border-b flex items-center gap-2 shrink-0">
-        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={showSequence ? () => setShowSequence(false) : onBack}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 shrink-0"
+          onClick={showSequence ? () => setShowSequence(false) : onBack}
+        >
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="min-w-0">

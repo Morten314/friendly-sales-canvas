@@ -1,5 +1,3 @@
-
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
@@ -42,20 +40,20 @@ interface RecentMarketResearchProps {
   onViewAllReports?: () => void; // Optional callback for view all
 }
 
-export const RecentMarketResearch = ({ 
-  onViewResults, 
-  researchReports, 
+export const RecentMarketResearch = ({
+  onViewResults,
+  researchReports,
   markets,
-  onViewAllReports 
+  onViewAllReports,
 }: RecentMarketResearchProps) => {
   const [showAllReports, setShowAllReports] = useState(false);
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'completed':
+      case "completed":
         return "bg-green-100 text-green-800";
-      case 'in progress':
+      case "in progress":
         return "bg-yellow-100 text-yellow-800";
-      case 'pending':
+      case "pending":
         return "bg-gray-100 text-gray-800";
       default:
         return "bg-gray-100 text-gray-800";
@@ -64,11 +62,12 @@ export const RecentMarketResearch = ({
 
   const handleViewResults = (marketName: string) => {
     // Find the corresponding market data
-    const marketData = markets.find(market => 
-      market.name === marketName || 
-      market.name.toLowerCase().includes(marketName.toLowerCase().replace(' analysis', ''))
+    const marketData = markets.find(
+      (market) =>
+        market.name === marketName ||
+        market.name.toLowerCase().includes(marketName.toLowerCase().replace(" analysis", "")),
     );
-    
+
     onViewResults(marketData || null);
   };
 
@@ -90,32 +89,33 @@ export const RecentMarketResearch = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {            researchReports.length === 0 ? (
+          {researchReports.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <p>No recent market research available</p>
             </div>
           ) : (
             <>
               {reportsToShow.map((report, index) => (
-                <div 
-                  key={index} 
-                  className="border rounded-md p-4"
-                >
+                <div key={index} className="border rounded-md p-4">
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <h3 className="font-medium">{report.marketName}</h3>
                       <p className="text-sm text-gray-500">Completed {report.completedAgo}</p>
                     </div>
-                    <span className={`text-xs px-2.5 py-0.5 rounded-full ${getStatusColor(report.status)}`}>
+                    <span
+                      className={`text-xs px-2.5 py-0.5 rounded-full ${getStatusColor(report.status)}`}
+                    >
                       {report.status}
                     </span>
                   </div>
                   <p className="text-sm text-gray-600 mb-3">{report.summary}</p>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Market Score: {report.marketScore}</span>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <span className="text-sm text-gray-500">
+                      Market Score: {report.marketScore}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
                       onClick={() => handleViewResults(report.marketName)}
                     >
@@ -124,15 +124,11 @@ export const RecentMarketResearch = ({
                   </div>
                 </div>
               ))}
-              
+
               {researchReports.length > 3 && (
                 <div className="text-center pt-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={handleViewAllReports}
-                  >
-                    {showAllReports ? 'Show Less' : `View All Reports (${researchReports.length})`}
+                  <Button variant="outline" size="sm" onClick={handleViewAllReports}>
+                    {showAllReports ? "Show Less" : `View All Reports (${researchReports.length})`}
                   </Button>
                 </div>
               )}

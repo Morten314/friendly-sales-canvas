@@ -1,5 +1,3 @@
-
-
 // import { useState, useEffect } from "react";
 // import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 // import { Button } from "@/components/ui/button";
@@ -62,7 +60,7 @@
 //   const fetchAllHistoricalReports = async (historyDates: string[]) => {
 //     console.log('Attempting to fetch all historical reports...');
 //     const historicalReports: Record<string, any> = {};
-    
+
 //     // Try to fetch all historical reports in parallel
 //     const fetchPromises = historyDates.map(async (dateString) => {
 //       try {
@@ -72,7 +70,7 @@
 //           `${API_BASE_URL}/market_intelligence/history/${dateString}`,
 //           `${API_BASE_URL}/history/${dateString}`
 //         ];
-        
+
 //         for (const endpoint of endpoints) {
 //           try {
 //             const response = await fetch(endpoint);
@@ -94,7 +92,7 @@
 //         console.log(`Failed to fetch report for ${dateString}:`, err);
 //       }
 //     });
-    
+
 //     await Promise.allSettled(fetchPromises);
 //     return historicalReports;
 //   };
@@ -102,43 +100,43 @@
 //   const fetchHistoryData = async () => {
 //     setIsLoading(true);
 //     setError(null);
-    
+
 //     try {
 //       const response = await fetch(`${API_BASE_URL}/market_intelligence`);
-      
+
 //       if (!response.ok) {
 //         throw new Error(`HTTP error! status: ${response.status}`);
 //       }
-      
+
 //       const data: MarketIntelligenceResponse = await response.json();
 //       console.log('API Response:', data);
 //       console.log('Report History:', data.report_history);
 //       console.log('Current Report:', data.report);
-      
+
 //       let historyEntries: DataHistoryEntry[] = [];
 //       let historicalReports: Record<string, any> = {};
-      
+
 //       // Try to fetch all historical reports if we have history dates
 //       if (data.report_history && Array.isArray(data.report_history) && data.report_history.length > 0) {
 //         // Check if report_history contains full objects or just dates
 //         const firstItem = data.report_history[0];
 //         const hasFullObjects = typeof firstItem === 'object' && firstItem.timestamp;
-        
+
 //         if (hasFullObjects) {
 //           // report_history contains full objects
 //           console.log('Report history contains full objects');
 //           historyEntries = data.report_history.map((item: any, index: number) => {
 //             const timestamp = parseDate(item.timestamp);
 //             const isCurrentReport = data.report?.timestamp === item.timestamp;
-            
+
 //             return {
 //               timestamp,
 //               rawTimestamp: item.timestamp,
 //               type: 'report_generated' as const,
 //               status: 'success' as const,
 //               source: 'api' as const,
-//               details: isCurrentReport 
-//                 ? `Current report: ${item.summary || item.timestamp}` 
+//               details: isCurrentReport
+//                 ? `Current report: ${item.summary || item.timestamp}`
 //                 : `Historical report: ${item.summary || item.timestamp}`,
 //               dataSize: Object.keys(item.data || {}).length,
 //               reportData: item
@@ -148,42 +146,42 @@
 //           // report_history contains only dates - try to fetch full data
 //           console.log('Attempting to fetch full historical data...');
 //           historicalReports = await fetchAllHistoricalReports(data.report_history);
-          
+
 //           historyEntries = data.report_history.map((dateString: string, index: number) => {
 //             const timestamp = parseDate(dateString);
 //             const isCurrentReport = data.report?.timestamp === dateString;
 //             const historicalData = historicalReports[dateString];
-            
+
 //             return {
 //               timestamp,
 //               rawTimestamp: dateString,
 //               type: 'report_generated' as const,
 //               status: historicalData ? 'success' as const : 'loading' as const,
 //               source: 'api' as const,
-//               details: isCurrentReport 
-//                 ? `Current report generated (${dateString})` 
-//                 : historicalData 
+//               details: isCurrentReport
+//                 ? `Current report generated (${dateString})`
+//                 : historicalData
 //                   ? `Historical report from ${dateString} (Loaded)`
 //                   : `Historical report from ${dateString} (Click to load)`,
-//               dataSize: isCurrentReport 
-//                 ? Object.keys(data.report?.data || {}).length 
-//                 : historicalData 
-//                   ? Object.keys(historicalData.data || historicalData || {}).length 
+//               dataSize: isCurrentReport
+//                 ? Object.keys(data.report?.data || {}).length
+//                 : historicalData
+//                   ? Object.keys(historicalData.data || historicalData || {}).length
 //                   : undefined,
 //               reportData: isCurrentReport ? data.report : historicalData
 //             };
 //           });
 //         }
-        
+
 //         // Sort by timestamp (most recent first)
 //         historyEntries.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 //       }
-      
+
 //       // If no history but we have a current report, create an entry for it
 //       if (historyEntries.length === 0 && data.report) {
 //         console.log('Creating entry for current report only');
 //         const timestamp = parseDate(data.report.timestamp);
-        
+
 //         historyEntries = [{
 //           timestamp,
 //           rawTimestamp: data.report.timestamp,
@@ -210,11 +208,11 @@
 //       };
 
 //       setHistoryEntries([currentFetchEntry, ...historyEntries]);
-      
+
 //     } catch (err) {
 //       console.error('Error fetching history:', err);
 //       setError(err instanceof Error ? err.message : 'Failed to fetch history data');
-      
+
 //       const errorEntry: DataHistoryEntry = {
 //         timestamp: new Date(),
 //         rawTimestamp: new Date().toISOString(),
@@ -231,15 +229,15 @@
 
 //   const fetchSpecificReport = async (dateString: string) => {
 //     setLoadingReport(dateString);
-    
+
 //     try {
 //       // Check if we already have the report data
 //       const entry = historyEntries.find(e => e.rawTimestamp === dateString);
 //       if (entry?.reportData) {
 //         setSelectedReport(entry.reportData);
-        
-//         setHistoryEntries(prev => prev.map(historyEntry => 
-//           historyEntry.rawTimestamp === dateString 
+
+//         setHistoryEntries(prev => prev.map(historyEntry =>
+//           historyEntry.rawTimestamp === dateString
 //             ? { ...historyEntry, status: 'success' as const, details: entry.details + ' (Loaded)' }
 //             : historyEntry
 //         ));
@@ -248,7 +246,7 @@
 
 //       // Try multiple approaches to fetch historical data
 //       let reportData = null;
-      
+
 //       // Approach 1: Try fetching with date parameter
 //       try {
 //         const responseWithDate = await fetch(`${API_BASE_URL}/market_intelligence?date=${dateString}`);
@@ -261,7 +259,7 @@
 //       } catch (err) {
 //         console.log('Date parameter approach failed:', err);
 //       }
-      
+
 //       // Approach 2: Try dedicated history endpoint
 //       if (!reportData) {
 //         try {
@@ -273,7 +271,7 @@
 //           console.log('History endpoint approach failed:', err);
 //         }
 //       }
-      
+
 //       // Approach 3: Try alternative history endpoint format
 //       if (!reportData) {
 //         try {
@@ -285,40 +283,40 @@
 //           console.log('Alternative history endpoint failed:', err);
 //         }
 //       }
-      
+
 //       // Approach 4: Check if current endpoint returns expanded history
 //       if (!reportData) {
 //         const response = await fetch(`${API_BASE_URL}/market_intelligence`);
 //         if (response.ok) {
 //           const data: MarketIntelligenceResponse = await response.json();
-          
+
 //           // Check if report_history now contains full objects instead of just dates
 //           if (Array.isArray(data.report_history)) {
 //             const historicalReport = data.report_history.find((item: any) => {
 //               return (typeof item === 'object' && item.timestamp === dateString) ||
 //                      (typeof item === 'string' && item === dateString);
 //             });
-            
+
 //             if (historicalReport && typeof historicalReport === 'object') {
 //               reportData = historicalReport;
 //             }
 //           }
-          
+
 //           // Also check current report
 //           if (!reportData && data.report && data.report.timestamp === dateString) {
 //             reportData = data.report;
 //           }
 //         }
 //       }
-      
+
 //       if (reportData) {
 //         setSelectedReport(reportData);
-        
-//         setHistoryEntries(prev => prev.map(historyEntry => 
-//           historyEntry.rawTimestamp === dateString 
-//             ? { 
-//                 ...historyEntry, 
-//                 status: 'success' as const, 
+
+//         setHistoryEntries(prev => prev.map(historyEntry =>
+//           historyEntry.rawTimestamp === dateString
+//             ? {
+//                 ...historyEntry,
+//                 status: 'success' as const,
 //                 details: `Report from ${dateString} (Loaded)`,
 //                 reportData: reportData,
 //                 dataSize: Object.keys(reportData.data || reportData || {}).length
@@ -328,15 +326,15 @@
 //       } else {
 //         throw new Error(`Historical report for ${dateString} is not available. Please implement one of the backend approaches.`);
 //       }
-      
+
 //     } catch (err) {
 //       console.error('Error loading specific report:', err);
-      
-//       setHistoryEntries(prev => prev.map(entry => 
-//         entry.rawTimestamp === dateString 
-//           ? { 
-//               ...entry, 
-//               status: 'error' as const, 
+
+//       setHistoryEntries(prev => prev.map(entry =>
+//         entry.rawTimestamp === dateString
+//           ? {
+//               ...entry,
+//               status: 'error' as const,
 //               details: `Failed to load report: ${err instanceof Error ? err.message : 'Unknown error'}`
 //             }
 //           : entry
@@ -371,7 +369,7 @@
 //       error: "destructive",
 //       loading: "secondary"
 //     };
-    
+
 //     return (
 //       <Badge variant={variants[status] || "outline"} className="text-xs">
 //         {status}
@@ -463,7 +461,7 @@
 //             </Button>
 //           </DialogTitle>
 //         </DialogHeader>
-        
+
 //         {error && (
 //           <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
 //             <p className="text-sm text-red-600">
@@ -472,7 +470,7 @@
 //             </p>
 //           </div>
 //         )}
-        
+
 //         <ScrollArea className="max-h-[60vh] pr-4">
 //           {isLoading && historyEntries.length === 0 ? (
 //             <div className="flex items-center justify-center py-8">
@@ -492,7 +490,7 @@
 //                   <div className="flex-shrink-0 mt-1">
 //                     {getTypeIcon(entry.type)}
 //                   </div>
-                  
+
 //                   <div className="flex-1 min-w-0">
 //                     <div className="flex items-center justify-between gap-2 mb-2">
 //                       <div className="flex items-center gap-2">
@@ -506,17 +504,17 @@
 //                           </Badge>
 //                         )}
 //                       </div>
-                      
+
 //                       <div className="flex items-center gap-2 text-xs text-gray-500">
 //                         {getStatusIcon(entry.status)}
 //                         <span>{formatTimeAgo(entry.timestamp)}</span>
 //                       </div>
 //                     </div>
-                    
+
 //                     <p className="text-sm text-gray-600 mb-3 line-clamp-2">
 //                       {entry.details}
 //                     </p>
-                    
+
 //                     <div className="flex items-center justify-between">
 //                       <div className="flex items-center gap-4 text-xs text-gray-500">
 //                         <span className="flex items-center gap-1">
@@ -525,20 +523,20 @@
 //                           }`} />
 //                           {entry.source === 'api' ? 'Live data' : 'Cached'}
 //                         </span>
-                        
+
 //                         {entry.dataSize !== undefined && (
 //                           <span className="flex items-center gap-1">
 //                             <BarChart3 className="h-3 w-3" />
 //                             {entry.dataSize} items
 //                           </span>
 //                         )}
-                        
+
 //                         <span className="flex items-center gap-1 text-gray-400">
 //                           <Calendar className="h-3 w-3" />
 //                           {entry.timestamp.toLocaleString()}
 //                         </span>
 //                       </div>
-                      
+
 //                       {entry.rawTimestamp && entry.type === 'report_generated' && (
 //                         <Button
 //                           variant="ghost"
@@ -567,7 +565,7 @@
 //             </div>
 //           )}
 //         </ScrollArea>
-        
+
 //         {selectedReport && (
 //           <div className="pt-4 border-t">
 //             <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
@@ -581,7 +579,7 @@
 //             </div>
 //           </div>
 //         )}
-        
+
 //         <div className="pt-4 border-t">
 //           <div className="flex items-center justify-between text-xs text-gray-500">
 //             <span>Market Intelligence API • Live data tracking</span>
@@ -595,9 +593,6 @@
 //     </Dialog>
 //   );
 // };
-
-
-
 
 // with clickable timestamp alone
 
@@ -647,30 +642,30 @@
 //   const fetchHistoryData = async () => {
 //     setIsLoading(true);
 //     setError(null);
-    
+
 //     try {
 //       const response = await fetch(`${API_BASE_URL}/market_intelligence`);
-      
+
 //       if (!response.ok) {
 //         throw new Error(`HTTP error! status: ${response.status}`);
 //       }
-      
+
 //       const data: MarketIntelligenceResponse = await response.json();
 //       console.log('API Response:', data);
-      
+
 //       // Set current report
 //       if (data.report) {
 //         setCurrentReport(data.report);
 //       }
-      
+
 //       // Set report history (sorted by timestamp, most recent first)
 //       if (data.report_history && Array.isArray(data.report_history)) {
-//         const sortedHistory = [...data.report_history].sort((a, b) => 
+//         const sortedHistory = [...data.report_history].sort((a, b) =>
 //           new Date(b).getTime() - new Date(a).getTime()
 //         );
 //         setReportHistory(sortedHistory);
 //       }
-      
+
 //     } catch (err) {
 //       console.error('Error fetching history:', err);
 //       setError(err instanceof Error ? err.message : 'Failed to fetch history data');
@@ -681,23 +676,23 @@
 
 //   const fetchSpecificReport = async (timestamp: string) => {
 //     setLoadingTimestamp(timestamp);
-    
+
 //     try {
 //       // Make API call with timestamp parameter
 //       const response = await fetch(`${API_BASE_URL}/market_intelligence?timestamp=${timestamp}`);
-      
+
 //       if (!response.ok) {
 //         throw new Error(`HTTP error! status: ${response.status}`);
 //       }
-      
+
 //       const data = await response.json();
-      
+
 //       // Set the selected report (could be data.report or data itself depending on API structure)
 //       const reportData = data.report || data;
 //       setSelectedReport(reportData);
-      
+
 //       console.log(`Loaded report for ${timestamp}:`, reportData);
-      
+
 //     } catch (err) {
 //       console.error(`Error loading report for ${timestamp}:`, err);
 //       setError(`Failed to load report for ${timestamp}: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -782,7 +777,7 @@
 //             </Button>
 //           </DialogTitle>
 //         </DialogHeader>
-        
+
 //         {error && (
 //           <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
 //             <p className="text-sm text-red-600">
@@ -791,7 +786,7 @@
 //             </p>
 //           </div>
 //         )}
-        
+
 //         <ScrollArea className="max-h-[50vh] pr-4">
 //           {isLoading && reportHistory.length === 0 ? (
 //             <div className="flex items-center justify-center py-8">
@@ -810,14 +805,14 @@
 //                 const formatted = formatTimestamp(timestamp);
 //                 const isCurrent = isCurrentReport(timestamp);
 //                 const isLoading = loadingTimestamp === timestamp;
-                
+
 //                 return (
-//                   <div 
+//                   <div
 //                     key={timestamp}
 //                     className={`
 //                       flex items-center justify-between p-4 border rounded-lg transition-all cursor-pointer
-//                       ${isCurrent 
-//                         ? 'bg-blue-50 border-blue-200 hover:bg-blue-100' 
+//                       ${isCurrent
+//                         ? 'bg-blue-50 border-blue-200 hover:bg-blue-100'
 //                         : 'bg-white hover:bg-gray-50 border-gray-200'
 //                       }
 //                       ${isLoading ? 'opacity-75' : ''}
@@ -828,7 +823,7 @@
 //                       <div className="flex-shrink-0">
 //                         <BarChart3 className={`h-5 w-5 ${isCurrent ? 'text-blue-600' : 'text-gray-500'}`} />
 //                       </div>
-                      
+
 //                       <div className="flex-1">
 //                         <div className="flex items-center gap-2 mb-1">
 //                           <span className="font-medium text-sm">
@@ -840,7 +835,7 @@
 //                             </Badge>
 //                           )}
 //                         </div>
-                        
+
 //                         <div className="flex items-center gap-4 text-xs text-gray-500">
 //                           <span className="flex items-center gap-1">
 //                             <Calendar className="h-3 w-3" />
@@ -853,7 +848,7 @@
 //                         </div>
 //                       </div>
 //                     </div>
-                    
+
 //                     <div className="flex items-center gap-2">
 //                       {isLoading ? (
 //                         <>
@@ -881,7 +876,7 @@
 //             </div>
 //           )}
 //         </ScrollArea>
-        
+
 //         {selectedReport && (
 //           <div className="pt-4 border-t">
 //             <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg">
@@ -900,7 +895,7 @@
 //             </div>
 //           </div>
 //         )}
-        
+
 //         <div className="pt-4 border-t">
 //           <div className="flex items-center justify-between text-xs text-gray-500">
 //             <span>Market Intelligence API • Historical Reports</span>
@@ -915,15 +910,30 @@
 //   );
 // };
 
-
 // with reports generated with clickable timestamp
 
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { History, RefreshCw, CheckCircle, XCircle, Loader2, Calendar, TrendingUp, BarChart3, Clock } from "lucide-react";
+import {
+  History,
+  RefreshCw,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  Calendar,
+  TrendingUp,
+  BarChart3,
+  Clock,
+} from "lucide-react";
 
 interface MarketIntelligenceResponse {
   report: {
@@ -935,7 +945,7 @@ interface MarketIntelligenceResponse {
   [key: string]: any;
 }
 
-const API_BASE_URL = 'https://backend-11kr.onrender.com';
+const API_BASE_URL = "https://backend-11kr.onrender.com";
 
 interface DataHistoryDialogProps {
   onReportSelected?: (reportData: any) => void;
@@ -960,7 +970,7 @@ export const DataHistoryDialog = ({ onReportSelected }: DataHistoryDialogProps) 
     try {
       return new Date(timestamp);
     } catch (error) {
-      console.warn('Failed to parse timestamp:', timestamp);
+      console.warn("Failed to parse timestamp:", timestamp);
       return new Date();
     }
   };
@@ -968,33 +978,32 @@ export const DataHistoryDialog = ({ onReportSelected }: DataHistoryDialogProps) 
   const fetchHistoryData = async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/market_intelligence`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data: MarketIntelligenceResponse = await response.json();
-      console.log('API Response:', data);
-      
+      console.log("API Response:", data);
+
       // Set current report
       if (data.report) {
         setCurrentReport(data.report);
       }
-      
+
       // Set report history (sorted by timestamp, most recent first)
       if (data.report_history && Array.isArray(data.report_history)) {
-        const sortedHistory = [...data.report_history].sort((a, b) => 
-          new Date(b).getTime() - new Date(a).getTime()
+        const sortedHistory = [...data.report_history].sort(
+          (a, b) => new Date(b).getTime() - new Date(a).getTime(),
         );
         setReportHistory(sortedHistory);
       }
-      
     } catch (err) {
-      console.error('Error fetching history:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch history data');
+      console.error("Error fetching history:", err);
+      setError(err instanceof Error ? err.message : "Failed to fetch history data");
     } finally {
       setIsLoading(false);
     }
@@ -1002,34 +1011,35 @@ export const DataHistoryDialog = ({ onReportSelected }: DataHistoryDialogProps) 
 
   const fetchSpecificReport = async (timestamp: string) => {
     setLoadingTimestamp(timestamp);
-    
+
     try {
       // Make API call with timestamp parameter
       const response = await fetch(`${API_BASE_URL}/market_intelligence?timestamp=${timestamp}`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       // Set the selected report (could be data.report or data itself depending on API structure)
       const reportData = data.report || data;
       setSelectedReport(reportData);
-      
+
       console.log(`Loaded report for ${timestamp}:`, reportData);
-      
+
       // Notify parent component about the selected report
       if (onReportSelected) {
         onReportSelected(reportData);
       }
-      
+
       // Close the dialog after successful report selection
       setIsOpen(false);
-      
     } catch (err) {
       console.error(`Error loading report for ${timestamp}:`, err);
-      setError(`Failed to load report for ${timestamp}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setError(
+        `Failed to load report for ${timestamp}: ${err instanceof Error ? err.message : "Unknown error"}`,
+      );
     } finally {
       setLoadingTimestamp(null);
     }
@@ -1046,23 +1056,23 @@ export const DataHistoryDialog = ({ onReportSelected }: DataHistoryDialogProps) 
     try {
       const date = parseTimestamp(timestamp);
       return {
-        date: date.toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric'
+        date: date.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
         }),
-        time: date.toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit'
+        time: date.toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
         }),
-        full: date.toLocaleString('en-US')
+        full: date.toLocaleString("en-US"),
       };
     } catch (error) {
       return {
         date: timestamp,
-        time: '',
-        full: timestamp
+        time: "",
+        full: timestamp,
       };
     }
   };
@@ -1074,11 +1084,7 @@ export const DataHistoryDialog = ({ onReportSelected }: DataHistoryDialogProps) 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-2"
-        >
+        <Button variant="outline" size="sm" className="flex items-center gap-2">
           <History className="h-4 w-4" />
           History
         </Button>
@@ -1111,7 +1117,7 @@ export const DataHistoryDialog = ({ onReportSelected }: DataHistoryDialogProps) 
             </Button>
           </DialogTitle>
         </DialogHeader>
-        
+
         {error && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-sm text-red-600">
@@ -1120,7 +1126,7 @@ export const DataHistoryDialog = ({ onReportSelected }: DataHistoryDialogProps) 
             </p>
           </div>
         )}
-        
+
         <ScrollArea className="max-h-[50vh] pr-4">
           {isLoading && reportHistory.length === 0 ? (
             <div className="flex items-center justify-center py-8">
@@ -1139,25 +1145,28 @@ export const DataHistoryDialog = ({ onReportSelected }: DataHistoryDialogProps) 
                 const formatted = formatTimestamp(timestamp);
                 const isCurrent = isCurrentReport(timestamp);
                 const isLoading = loadingTimestamp === timestamp;
-                
+
                 return (
-                  <div 
+                  <div
                     key={timestamp}
                     className={`
                       flex items-center justify-between p-4 border rounded-lg transition-all cursor-pointer
-                      ${isCurrent 
-                        ? 'bg-blue-50 border-blue-200 hover:bg-blue-100' 
-                        : 'bg-white hover:bg-gray-50 border-gray-200'
+                      ${
+                        isCurrent
+                          ? "bg-blue-50 border-blue-200 hover:bg-blue-100"
+                          : "bg-white hover:bg-gray-50 border-gray-200"
                       }
-                      ${isLoading ? 'opacity-75' : ''}
+                      ${isLoading ? "opacity-75" : ""}
                     `}
                     onClick={() => !isLoading && fetchSpecificReport(timestamp)}
                   >
                     <div className="flex items-center gap-3">
                       <div className="flex-shrink-0">
-                        <BarChart3 className={`h-5 w-5 ${isCurrent ? 'text-blue-600' : 'text-gray-500'}`} />
+                        <BarChart3
+                          className={`h-5 w-5 ${isCurrent ? "text-blue-600" : "text-gray-500"}`}
+                        />
                       </div>
-                      
+
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-medium text-sm">
@@ -1169,7 +1178,7 @@ export const DataHistoryDialog = ({ onReportSelected }: DataHistoryDialogProps) 
                             </Badge>
                           )}
                         </div>
-                        
+
                         <div className="flex items-center gap-4 text-xs text-gray-500">
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
@@ -1182,7 +1191,7 @@ export const DataHistoryDialog = ({ onReportSelected }: DataHistoryDialogProps) 
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                       {isLoading ? (
                         <>
@@ -1210,7 +1219,7 @@ export const DataHistoryDialog = ({ onReportSelected }: DataHistoryDialogProps) 
             </div>
           )}
         </ScrollArea>
-        
+
         {selectedReport && (
           <div className="pt-4 border-t">
             <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg">
@@ -1223,13 +1232,14 @@ export const DataHistoryDialog = ({ onReportSelected }: DataHistoryDialogProps) 
                   <strong>Timestamp:</strong> {selectedReport.timestamp}
                 </p>
                 <p>
-                  <strong>Data Points:</strong> {Object.keys(selectedReport.data || selectedReport || {}).length}
+                  <strong>Data Points:</strong>{" "}
+                  {Object.keys(selectedReport.data || selectedReport || {}).length}
                 </p>
-              </div>  
+              </div>
             </div>
           </div>
         )}
-        
+
         <div className="pt-4 border-t">
           <div className="flex items-center justify-between text-xs text-gray-500">
             <span>Market Intelligence API • Historical Reports</span>
