@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React from "react";
 
 interface PieChartData {
   name: string;
@@ -54,10 +53,7 @@ const MiniPieChart: React.FC<MiniPieChartProps> = ({ data, title }) => {
           {data.map((item, index) => (
             <div key={index} className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: item.color }}
-                />
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
                 <span className="text-gray-700">{item.name}</span>
               </div>
               <span className="text-gray-600 font-medium">{item.value}%</span>
