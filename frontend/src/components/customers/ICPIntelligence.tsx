@@ -5,7 +5,7 @@ import { SuggestedICPCards } from "./SuggestedICPCards";
 interface SuggestedICP {
   id: string;
   name: string;
-  type: 'refined' | 'new';
+  type: "refined" | "new";
   [key: string]: any;
 }
 
@@ -23,10 +23,14 @@ export const ICPIntelligence = () => {
       if (uid) {
         sessionStorage.removeItem(`profiler_icp_refresh_${uid}`);
         if (import.meta.env.DEV) {
-          console.log("[Profiler ICP] Header Refresh → cleared session dedupe key → bump refreshTrigger");
+          console.log(
+            "[Profiler ICP] Header Refresh → cleared session dedupe key → bump refreshTrigger",
+          );
         }
       } else if (import.meta.env.DEV) {
-        console.warn("[Profiler ICP] Refresh clicked but no user id yet — wait for auth; GET /icp will be skipped");
+        console.warn(
+          "[Profiler ICP] Refresh clicked but no user id yet — wait for auth; GET /icp will be skipped",
+        );
       }
       setRefreshTrigger((prev) => prev + 1);
     };
@@ -35,7 +39,7 @@ export const ICPIntelligence = () => {
   }, [currentUser?.uid]);
 
   const handleICPAccepted = (icp: SuggestedICP) => {
-    window.dispatchEvent(new CustomEvent('icpAccepted', { detail: icp }));
+    window.dispatchEvent(new CustomEvent("icpAccepted", { detail: icp }));
   };
 
   const handleICPRejected = (_icp: SuggestedICP) => {
