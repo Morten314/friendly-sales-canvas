@@ -77,3 +77,32 @@ export type UntypedBackendProfile = any;
 // aliases (file_id, file_key/fileKey, name/file_name, tags as array|string, etc.).
 // Tightening to `Record<string, unknown>` would require narrowing every field access.
 export type UntypedBackendDocument = any;
+
+// TODO(phase-13): replace with a typed backend ApiResponse envelope once the
+// component-response contract is defined.
+// src/pages/MarketResearch.tsx:253 (validateApiResponseUserId), :1913 (transformReportData),
+// :1254, :1277, :1299, :1315, :1336 (localStorage save callbacks),
+// :3793 (uiComponentsData bag) — payloads have nested `data?.user_id`, `report?.user_id`,
+// snake/camel field aliases, and mixed shapes from many endpoints.
+export type UntypedBackendApiResponse = any;
+
+// TODO(phase-13): replace with a CascadeContext interface once the cascading
+// refresh contract between component fetches is typed.
+// src/pages/MarketResearch.tsx:2551, :2747, :2842, :3168, :3401, :3665, :3995
+// — `previousContext` accumulates prior component responses as keys keyed by
+// displayName; the schema is "whatever upstream components returned".
+export type UntypedCascadeContext = any;
+
+// TODO(phase-13): replace with a Lead interface once the strategist lead-stream
+// contract is typed.
+// src/pages/MarketResearch.tsx:382 (handleChatWithScout), :1530, :1533 (handleSendToStrategist)
+// — leads flow from multiple sources (lead-stream API, market-research components,
+// strategist persistence) with no single shape.
+export type UntypedLead = any;
+
+// TODO(phase-13): replace with a VisualDataCardRaw interface once the regulatory
+// card-data contract is typed.
+// src/pages/MarketResearch.tsx:3490, :3499, :3512, :3522
+// — `transformVisualDataCards` accepts raw cards with type-discriminated `data`
+// arrays (bar-chart / timeline / percentage) and maps each to a UI-shaped object.
+export type UntypedVisualDataCardRaw = any;

@@ -457,3 +457,35 @@ scope.
 typing (Phase ~10+) would unlock replacing these with proper types.
 
 **Owner:** TBD.
+
+## TD-FE-10 — Phase 2b escape-hatches threshold reached (5+ new entries)
+
+**Date logged:** 2026-05-28
+**Origin:** Spec 18 Phase 2b (plans/18-frontend-phase-2b-eslint-prettier.md), Step 4 Wave C.
+
+**Current state:**
+`src/lib/types/escape-hatches.ts` grew from 6 entries (TD-FE-9 baseline) to 13 entries during
+Phase 2b's per-file `no-explicit-any` cleanup. New entries:
+- `UntypedProfilerIcpRecord` — customer_profile ICP record consumed by mission-control + customers
+  components.
+- `UntypedBackendProfile` — UserProfile / AgentProfile / CompanyProfile prop shapes.
+- `UntypedBackendDocument` — DataSourcesManager document-list consumer.
+- `UntypedBackendApiResponse` — generic untyped backend API envelopes (MarketResearch.tsx state +
+  callback params + transform inputs).
+- `UntypedCascadeContext` — `previousContext` bag passed between sequential market-research
+  component fetchers.
+- `UntypedLead` — strategist lead-stream + Chat-with-Scout lead handoff callbacks.
+- `UntypedVisualDataCardRaw` — regulatory visualDataCards raw shape pre-UI transform.
+
+**Pattern:** Same as TD-FE-9 — backend response/payload shapes consumed by FE before contract types
+are written. Phase 2b's per-file pass routed remaining inline `any` through named aliases instead
+of suppressing the eslint rule.
+
+**Why deferred:**
+Spec 18 §4 escape-hatches policy carry-forward from Spec 17 §2.4 posture rule 3. Backend contracts
+are still out of scope.
+
+**Pull-forward trigger:** Phase 13's audit re-evaluates per master spec line 298. Backend contract
+typing (Phase ~10+) would unlock replacing these with proper types.
+
+**Owner:** TBD.

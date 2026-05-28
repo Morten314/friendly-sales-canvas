@@ -33,7 +33,14 @@ import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { buildApiUrl } from "@/lib/api";
 import { toUTCTimestamp, isTimestampNewer, logTimestampComparison } from "@/lib/timestampUtils";
-import type { UntypedReportState, UntypedUiComponent } from "@/lib/types/escape-hatches";
+import type {
+  UntypedReportState,
+  UntypedUiComponent,
+  UntypedBackendApiResponse,
+  UntypedCascadeContext,
+  UntypedLead,
+  UntypedVisualDataCardRaw,
+} from "@/lib/types/escape-hatches";
 import { logApiCallResult } from "@/utils/apiUtils";
 import {
   getUserLocalStorage,
@@ -44,6 +51,18 @@ import {
   buildLeadStreamChatContext,
   LEAD_STREAM_CHAT_CONTEXT_KEY,
 } from "@/utils/leadStreamChatContext";
+
+// Module augmentation: window-attached refresh-coordination + debug helpers.
+// These are written in this file and read elsewhere within it; declaring them
+// on Window avoids per-site `(window as any)` casts. Debug-helper return shape
+// is intentionally `unknown` — callers are console users, not typed consumers.
+declare global {
+  interface Window {
+    refreshStartTime?: number;
+    getAllScoutComponentResponses?: (refresh?: boolean) => Promise<unknown>;
+    getScoutResponses?: (refresh?: boolean) => Promise<unknown>;
+  }
+}
 
 // Define types for the API response
 
@@ -250,7 +269,7 @@ const clearUserCache = (userId: string | null | undefined) => {
 
 // Helper function to validate API response belongs to current user
 const validateApiResponseUserId = (
-  apiResponse: any,
+  apiResponse: UntypedBackendApiResponse,
   currentUserId: string | null | undefined,
   componentName: string,
 ): boolean => {
@@ -379,7 +398,7 @@ const MarketResearch = React.memo(() => {
   const [scoutMode, setScoutMode] = useState<"selected-leads" | "full-list">("selected-leads");
 
   /** Lead Stream → Chat with Scout: use session history UI + lead sidebar (not legacy full-page chat). */
-  const handleChatWithScout = (leads: any[], reportFilter?: string) => {
+  const handleChatWithScout = (leads: UntypedLead[], reportFilter?: string) => {
     setScoutResearchContext(null);
     try {
       const ctx = buildLeadStreamChatContext(leads, reportFilter);
@@ -849,7 +868,7 @@ const MarketResearch = React.memo(() => {
 
     // Add minimum wait time to ensure components have processed fresh data
 
-    const timeSinceRefresh = Date.now() - (window as any).refreshStartTime || 0;
+    const timeSinceRefresh = Date.now() - (window.refreshStartTime ?? 0) || 0;
 
     const minWaitTime = 3000; // 3 seconds minimum wait for data processing
 
@@ -870,7 +889,7 @@ const MarketResearch = React.memo(() => {
 
     // Check each component's data freshness AND loading states AND timestamp freshness
 
-    const refreshStartTime = (window as any).refreshStartTime || 0;
+    const refreshStartTime = window.refreshStartTime ?? 0;
 
     const isDataFresh = (timestamp: string | undefined) => {
       if (!timestamp) return false;
@@ -1170,7 +1189,7 @@ const MarketResearch = React.memo(() => {
 
   // Company profile state for centralized data context
 
-  const [companyProfile, setCompanyProfile] = useState<any>(null);
+  const [companyProfile, setCompanyProfile] = useState<UntypedBackendApiResponse>(null);
 
   // Function to mark fresh data and ensure strict replacement
 
@@ -1251,7 +1270,7 @@ const MarketResearch = React.memo(() => {
 
   // Helper function to save market intelligence data to localStorage (debounced)
 
-  const saveMarketIntelligenceToLocalStorage = React.useCallback((data: any) => {
+  const saveMarketIntelligenceToLocalStorage = React.useCallback((data: UntypedBackendApiResponse) => {
     try {
       // CRITICAL: Always use current user's ID - check first
       if (!currentUser?.uid) {
@@ -1274,7 +1293,7 @@ const MarketResearch = React.memo(() => {
 
   // Helper function to save competitor data to localStorage
 
-  const saveCompetitorDataToLocalStorage = React.useCallback((data: any) => {
+  const saveCompetitorDataToLocalStorage = React.useCallback((data: UntypedBackendApiResponse) => {
     try {
       const payloadToPersist = {
         ...data,
@@ -1296,7 +1315,7 @@ const MarketResearch = React.memo(() => {
 
   // Helper function to save regulatory data to localStorage
 
-  const saveRegulatoryDataToLocalStorage = React.useCallback((data: any) => {
+  const saveRegulatoryDataToLocalStorage = React.useCallback((data: UntypedBackendApiResponse) => {
     try {
       // CRITICAL: Always include user_id for multi-tenancy
       const dataWithUserId = {
@@ -1312,7 +1331,7 @@ const MarketResearch = React.memo(() => {
 
   // Helper function to save industry trends data to localStorage
 
-  const saveIndustryTrendsDataToLocalStorage = React.useCallback((data: any) => {
+  const saveIndustryTrendsDataToLocalStorage = React.useCallback((data: UntypedBackendApiResponse) => {
     try {
       const payloadToPersist = {
         ...data,
@@ -1333,7 +1352,7 @@ const MarketResearch = React.memo(() => {
 
   // Helper function to save market entry data to localStorage
 
-  const saveMarketEntryDataToLocalStorage = React.useCallback((data: any) => {
+  const saveMarketEntryDataToLocalStorage = React.useCallback((data: UntypedBackendApiResponse) => {
     try {
       const payloadToPersist = {
         ...data,
@@ -1527,10 +1546,10 @@ const MarketResearch = React.memo(() => {
     handleTabChange("trends");
   };
 
-  const handleSendToStrategist = (lead: any) => {
+  const handleSendToStrategist = (lead: UntypedLead) => {
     // Persist lead to strategist lead stream
-    const existing = JSON.parse(localStorage.getItem("strategistLeadStream") || "[]");
-    const alreadyExists = existing.some((l: any) => l.id === lead.id);
+    const existing = JSON.parse(localStorage.getItem("strategistLeadStream") || "[]") as UntypedLead[];
+    const alreadyExists = existing.some((l: UntypedLead) => l.id === lead.id);
     if (!alreadyExists) {
       existing.push({ ...lead, sentAt: new Date().toISOString() });
       localStorage.setItem("strategistLeadStream", JSON.stringify(existing));
@@ -1790,13 +1809,13 @@ const MarketResearch = React.memo(() => {
 
       riskAssessment: [],
 
-      swot: null as any,
+      swot: null as UntypedBackendApiResponse,
 
-      timeline: null as any,
+      timeline: null as UntypedBackendApiResponse,
 
-      marketSizeBySegment: null as any,
+      marketSizeBySegment: null as UntypedBackendApiResponse,
 
-      growthProjections: null as any,
+      growthProjections: null as UntypedBackendApiResponse,
 
       timestamp: null as string | null,
     };
@@ -1878,7 +1897,7 @@ const MarketResearch = React.memo(() => {
   // Expose getAllScoutComponentResponses to window for console access
   useEffect(() => {
     // Expose the function globally so it can be called from browser console
-    (window as any).getAllScoutComponentResponses = async (refresh = false) => {
+    window.getAllScoutComponentResponses = async (refresh = false) => {
       const result = await getAllScoutComponentResponses(refresh);
 
       // Log summary to console
@@ -1899,18 +1918,18 @@ const MarketResearch = React.memo(() => {
     };
 
     // Also create a simpler alias for quick access
-    (window as any).getScoutResponses = (window as any).getAllScoutComponentResponses;
+    window.getScoutResponses = window.getAllScoutComponentResponses;
 
     return () => {
-      delete (window as any).getAllScoutComponentResponses;
-      delete (window as any).getScoutResponses;
+      delete window.getAllScoutComponentResponses;
+      delete window.getScoutResponses;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.uid, orgIdToUse]);
 
   // Transform raw report data to our expected structure (for historical data only)
 
-  const transformReportData = (reportData: any): MarketIntelligenceData => {
+  const transformReportData = (reportData: UntypedBackendApiResponse): MarketIntelligenceData => {
     // Only transform if this is historical data or general market data
 
     // Don't use this for component-specific API responses
@@ -2407,7 +2426,7 @@ const MarketResearch = React.memo(() => {
 
       // Set refresh start time for minimum wait validation
 
-      (window as any).refreshStartTime = Date.now();
+      window.refreshStartTime = Date.now();
 
       clearGlobalLoadingTimeout();
 
@@ -2548,7 +2567,7 @@ const MarketResearch = React.memo(() => {
       const currentStatus = { ...componentStatus }; // Local copy to track status
 
       // Build context object to accumulate data from previous components for cascading refresh
-      const accumulatedContext: any = {};
+      const accumulatedContext: UntypedCascadeContext = {};
 
       // Process components sequentially (cascading) with context passing
 
@@ -2744,12 +2763,12 @@ const MarketResearch = React.memo(() => {
     ];
 
     // Build and log all request bodies before making API calls
-    const allRequestBodies: { [key: string]: any } = {};
+    const allRequestBodies: { [key: string]: UntypedBackendApiResponse } = {};
 
     components.forEach((component, _index) => {
       // Build clean payload with only fields the backend expects
       // Note: cache_bust fields are removed as backend doesn't accept them
-      const payload: any = {
+      const payload: UntypedBackendApiResponse = {
         org_id: orgIdToUse,
         user_id: currentUser.uid,
         component_name: component.name,
@@ -2839,7 +2858,7 @@ const MarketResearch = React.memo(() => {
   const fetchMarketSizeData = async (
     refresh = true,
     showLoading = true,
-    previousContext: any = {},
+    previousContext: UntypedCascadeContext = {},
   ) => {
     try {
       // Only show individual loading if not in global refresh mode
@@ -3165,7 +3184,7 @@ const MarketResearch = React.memo(() => {
   const fetchIndustryTrendsData = async (
     refresh = false,
     showLoading = true,
-    previousContext: any = {},
+    previousContext: UntypedCascadeContext = {},
   ) => {
     // Context will be visible in request body
 
@@ -3398,7 +3417,7 @@ const MarketResearch = React.memo(() => {
   const fetchRegulatoryData = async (
     refresh = true,
     showLoading = true,
-    previousContext: any = {},
+    previousContext: UntypedCascadeContext = {},
   ) => {
     if (Object.keys(previousContext).length > 0) {
       // intentional: context-present branch reserved for future telemetry
@@ -3487,7 +3506,7 @@ const MarketResearch = React.memo(() => {
 
         if (shouldUpdate) {
           // Transform visualDataCards to match component expectations
-          const transformVisualDataCards = (apiCards: any[]) => {
+          const transformVisualDataCards = (apiCards: UntypedVisualDataCardRaw[]) => {
             if (!apiCards || !Array.isArray(apiCards) || apiCards.length === 0) return [];
 
             return apiCards.map((card, _index) => {
@@ -3496,7 +3515,7 @@ const MarketResearch = React.memo(() => {
                 const colors = ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b"];
                 return {
                   ...card,
-                  data: card.data.map((item: any, idx: number) => ({
+                  data: card.data.map((item: UntypedVisualDataCardRaw, idx: number) => ({
                     name: item.label || item.name,
                     value:
                       typeof item.value === "number"
@@ -3509,7 +3528,7 @@ const MarketResearch = React.memo(() => {
                 // Transform timeline data: {label, time} -> {date, event, status}
                 return {
                   ...card,
-                  data: card.data.map((item: any) => ({
+                  data: card.data.map((item: UntypedVisualDataCardRaw) => ({
                     date: item.time || item.date,
                     event: item.label || item.event,
                     status: item.time?.includes("2026") ? "critical" : "upcoming",
@@ -3519,7 +3538,7 @@ const MarketResearch = React.memo(() => {
                 // Transform percentage data: {label, value} -> {metric, value, trend}
                 return {
                   ...card,
-                  data: card.data.map((item: any) => ({
+                  data: card.data.map((item: UntypedVisualDataCardRaw) => ({
                     metric: item.label || item.metric,
                     value:
                       typeof item.value === "number"
@@ -3630,13 +3649,13 @@ const MarketResearch = React.memo(() => {
 
       console.error(
         "❌🏆 API Error Status:",
-        error instanceof Error ? (error as any).status : String(error),
+        error instanceof Error ? (error as Error & { status?: number }).status : String(error),
       );
 
       console.error(
         "❌🏆 API Error Headers:",
-        error instanceof Error && (error as any).headers
-          ? Object.fromEntries((error as any).headers.entries())
+        error instanceof Error && (error as Error & { headers?: Headers }).headers
+          ? Object.fromEntries((error as Error & { headers: Headers }).headers.entries())
           : "No headers",
       );
 
@@ -3662,7 +3681,7 @@ const MarketResearch = React.memo(() => {
   const fetchCompetitorData = async (
     refresh = false,
     showLoading = true,
-    previousContext: any = {},
+    previousContext: UntypedCascadeContext = {},
   ) => {
     if (Object.keys(previousContext).length > 0) {
       // Context will be visible in request body
@@ -3790,7 +3809,7 @@ const MarketResearch = React.memo(() => {
         const competitorLandscapeData = apiData.competitorLandscape || {};
 
         // Try uiComponents array structure
-        let uiComponentsData: any = {};
+        let uiComponentsData: UntypedBackendApiResponse = {};
         if (apiData.uiComponents && Array.isArray(apiData.uiComponents)) {
           const reportComponent = apiData.uiComponents.find(
             (comp: UntypedUiComponent) => comp.type === "report",
@@ -3992,7 +4011,7 @@ const MarketResearch = React.memo(() => {
   const fetchMarketEntryData = async (
     refresh = false,
     showLoading = true,
-    previousContext: any = {},
+    previousContext: UntypedCascadeContext = {},
   ) => {
     if (Object.keys(previousContext).length > 0) {
       // intentional: context-present branch reserved for future telemetry
@@ -4088,7 +4107,7 @@ const MarketResearch = React.memo(() => {
         if (shouldUpdate) {
           // Update market entry data with API response - mapping all the swagger fields
           // Helper function to validate SWOT data structure (check structure, not content length)
-          const isValidSwotStructure = (swot: any): boolean => {
+          const isValidSwotStructure = (swot: UntypedBackendApiResponse): boolean => {
             if (!swot || typeof swot !== "object") return false;
             // Check that it has the expected structure with arrays (even if empty)
             return (
