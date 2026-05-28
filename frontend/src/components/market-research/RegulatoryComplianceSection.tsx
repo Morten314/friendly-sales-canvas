@@ -12,8 +12,6 @@ import {
   FileText, 
   Globe, 
   AlertTriangle,
-  CheckCircle,
-  Calendar,
   TrendingUp,
   ChevronDown,
   ChevronUp,
@@ -28,7 +26,6 @@ import {
   Building,
   Share,
   Bot,
-  MessageSquare,
   Sun,
   BarChart3,
   Factory
@@ -47,7 +44,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { EditRecord } from './types';
-import { toUTCTimestamp, isTimestampNewer, getCurrentUTCTimestamp, logTimestampComparison } from '@/lib/timestampUtils';
+
 import MiniPieChart from '../MiniPieChart';
 import MiniLineChart from '../MiniLineChart';
 import { apiFetchJson } from '@/lib/api';
@@ -94,7 +91,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   isExpanded,
   hasEdits,
   deletedSections,
-  editHistory,
+  editHistory: _editHistory,
   executiveSummary,
   euAiActDeadline,
   gdprCompliance,
@@ -125,10 +122,8 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   // Use centralized data from parent instead of local state
   const regulatoryData = propRegulatoryData;
-  const [regulatoryTimestamp, setRegulatoryTimestamp] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [regulatoryExpanded, setRegulatoryExpanded] = useState(true);
+  const [_isLoading, setIsLoading] = useState(false);
+  const [_error, setError] = useState<string | null>(null);
 
   // Normalize deletedSections to ensure it's always a Set
   const normalizedDeletedSections = React.useMemo(() => {
@@ -502,11 +497,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       };
 
       // Prepare data for API according to schema
-      const editData = {
-        original_json: originalData,
-        modified_json: modifiedData,
-        edit_type: "modification"
-      };
 
       // Store data for /ask API
       localStorage.setItem('regulatory-compliance_original_json', JSON.stringify(originalData));
@@ -531,9 +521,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
 
       const currentTime = Date.now();
       const randomId = Math.random().toString(36).substring(7);
-      
-      // Get company profile data for dynamic reports (user-specific)
-      const profile = companyProfile || JSON.parse(getUserLocalStorage('companyProfile', currentUser?.uid) || '{}');
       
       if (!currentUser?.uid) {
         console.error('User not authenticated');
@@ -744,45 +731,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   };
 
   // Create fallback key data points using local state values first, then regulatoryData properties
-  const fallbackKeyDataPoints = [
-    {
-      id: 'eu-ai-act-deadline',
-      icon: Scale,
-      title: 'EU AI Act Deadline',
-      value: localEuAiActDeadline || regulatoryData?.euAiActDeadline || euAiActDeadline || 'February 2, 2025',
-      badge: 'New',
-      badgeColor: 'bg-blue-100 text-blue-800',
-      tooltip: 'Upcoming deadline for EU AI Act compliance'
-    },
-    {
-      id: 'gdpr-compliance',
-      icon: Building,
-      title: 'GDPR Compliance',
-      value: localGdprCompliance || regulatoryData?.gdprCompliance || gdprCompliance || '68%',
-      badge: 'Update',
-      badgeColor: 'bg-yellow-100 text-yellow-800',
-      tooltip: 'Current GDPR compliance percentage'
-    },
-    {
-      id: 'potential-fines',
-      icon: Factory,
-      title: 'Potential Fines',
-      value: localPotentialFines || regulatoryData?.potentialFines || potentialFines || 'Up to 6% of annual revenue',
-      badge: 'Risk',
-      badgeColor: 'bg-red-100 text-red-800',
-      tooltip: 'Maximum regulatory fines'
-    },
-    {
-      id: 'data-localization',
-      icon: BarChart3,
-      title: 'Data Localization',
-      value: localDataLocalization || regulatoryData?.dataLocalization || dataLocalization || 'Mandatory for customer data',
-      badge: 'Support',
-      badgeColor: 'bg-green-100 text-green-800',
-      tooltip: 'Data storage requirements'
-    }
-  ];
-
 
   const keyDataPoints = (regulatoryData?.keyUpdates && Array.isArray(regulatoryData.keyUpdates)) ? regulatoryData.keyUpdates.filter((update: any) => update).map((update: any, index: number) => {
     // Parse if update is a JSON string
@@ -1157,9 +1105,9 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                                 point.id === 'data-localization' ? localDataLocalization :
                                 localKeyDataValues[point.id] || point.value
                               }
-                              onKeyDown={(e) => {
+                              onKeyDown={(_e) => {
                               }}
-                              onInput={(e) => {
+                              onInput={(_e) => {
                               }}
                               onChange={(e) => {
                                 const newValue = e.target.value;
@@ -1995,16 +1943,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                     
                     // Update key data points if regulatoryData exists
                     if (regulatoryData?.keyUpdates && Array.isArray(regulatoryData.keyUpdates)) {
-                      // For key updates, we need to update the regulatoryData directly since there's no individual change handlers
-                      const updatedKeyUpdates = regulatoryData.keyUpdates.filter((update: any) => update && update?.title && typeof update.title === 'string').map((update: any) => {
-                        const id = update.title.toLowerCase().replace(/\s+/g, '-');
-                        const localValue = localKeyDataValues[id];
-                        if (localValue !== undefined) {
-                          return { ...update, description: localValue };
-                        }
-                        return update;
-                      });
-                      
                       // Update the regulatory data with new key updates
                       // Update regulatory data would be handled by parent component
                     }
