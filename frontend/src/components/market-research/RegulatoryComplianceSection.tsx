@@ -1079,7 +1079,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Key Regulatory Updates</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {keyDataPoints.map((point) => {
+                  {keyDataPoints.map((point: any) => {
                     const IconComponent = point.icon;
                     return (
                       <div key={point.id} className="p-4 border border-gray-200 rounded-lg">
@@ -1505,7 +1505,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {(isEditing ? localRegionalData : regionalData).map((region, index) => (
+                      {(isEditing ? localRegionalData : regionalData).map((region: any, index: number) => (
                         <TableRow key={index}>
                           <TableCell className="font-medium">
                             {isEditing ? (
@@ -1992,7 +1992,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Key Regulatory Updates</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {keyDataPoints.map((point) => {
+                {keyDataPoints.map((point: any) => {
                   const IconComponent = point.icon;
                   return (
                     <div
@@ -2052,7 +2052,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Compliance Analytics</h3>
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {visualDataCards.map((card, cardIndex) => (
+                    {visualDataCards.map((card: any, cardIndex: number) => (
                       <div key={cardIndex} className="bg-white border border-gray-200 rounded-lg p-4">
                         <h5 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
                           {card.type === 'pie-chart' && <Users className="h-4 w-4 mr-2 text-blue-600" />}
@@ -2180,7 +2180,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {regionalData.map((region, index) => (
+                        {regionalData.map((region: any, index: number) => (
                           <TableRow key={index}>
                             <TableCell className="font-medium">{region.region}</TableCell>
                             <TableCell>{region.framework}</TableCell>
