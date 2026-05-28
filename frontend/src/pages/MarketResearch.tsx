@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getUserCacheKey, getUserLocalStorage, setUserLocalStorage, removeUserLocalStorage } from "@/utils/cacheUtils";
+import { getUserLocalStorage, setUserLocalStorage, removeUserLocalStorage } from "@/utils/cacheUtils";
 
 
 
@@ -15,7 +15,6 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 
 
 
-import { executeWithRateLimit } from "@/lib/rateLimitManager";
 
 
 
@@ -23,7 +22,7 @@ import { Button } from "@/components/ui/button";
 
 
 
-import { Search, MessageSquare, Users, Settings, RefreshCw, AlertCircle, History, Calendar, Info, Loader2 } from "lucide-react";
+import { Search, MessageSquare, Users, RefreshCw, AlertCircle, History, Calendar, Loader2 } from "lucide-react";
 
 
 
@@ -39,7 +38,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 
 
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 
 
@@ -47,15 +45,6 @@ import { Badge } from "@/components/ui/badge";
 
 
 
-import { RecentMarketResearch } from "@/components/market-research/RecentMarketResearch";
-
-
-
-import { ScoutCapabilities } from "@/components/market-research/ScoutCapabilities";
-
-
-
-import { CompetitorAnalysis } from "@/components/market-research/CompetitorAnalysis";
 
 
 
@@ -63,7 +52,12 @@ import { CompetitorAnalysis } from "@/components/market-research/CompetitorAnaly
 
 
 
-import { EmergingTrends } from "@/components/market-research/EmergingTrends";
+
+
+
+
+
+
 
 
 
@@ -85,11 +79,9 @@ import { ScoutSettingsForm } from "@/components/market-research/ScoutSettingsFor
 
 
 
-import { ComponentStatusLoadingScreen } from "@/components/market-research/ComponentStatusLoadingScreen";
 
 
 
-import { DataHistoryDialog } from "@/components/market-research/DataHistoryDialog";
 import {
   Dialog,
   DialogContent,
@@ -113,15 +105,14 @@ import { toUTCTimestamp, isTimestampNewer, logTimestampComparison } from '@/lib/
 
 
 
-import { apiFetchJson, buildApiUrl } from '@/lib/api';
+import { buildApiUrl } from '@/lib/api';
 
-import { marketResearchApiCall, logApiCallResult, shouldUseCachedData } from '@/utils/apiUtils';
+import { logApiCallResult } from '@/utils/apiUtils';
 import { buildLeadStreamChatContext, LEAD_STREAM_CHAT_CONTEXT_KEY } from '@/utils/leadStreamChatContext';
 
 
 
-import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
-import { SignalsContextChat, SignalsChatContext } from "@/components/signals/SignalsContextChat";
+import { SignalsChatContext } from "@/components/signals/SignalsContextChat";
 import { ScoutChatWithHistory } from "@/components/signals/ScoutChatWithHistory";
 
 
@@ -570,19 +561,6 @@ interface TrendSnapshot {
 
 
 
-interface IndustryTrendsRecommendations {
-
-
-
-  primaryFocus: string;
-
-
-
-  marketEntry: string;
-
-
-
-}
 
 
 
@@ -731,7 +709,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [, setIsChatOpen] = useState(false);
 
 
 
@@ -858,11 +836,11 @@ const MarketResearch = React.memo(() => {
 
 
 
-  const [scoutDeploymentData, setScoutDeploymentData] = useState<DeploymentData | null>(null);
+  const [scoutDeploymentData] = useState<DeploymentData | null>(null);
 
 
 
-  const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
+  const [selectedMarket] = useState<Market | null>(null);
 
 
 
@@ -1101,7 +1079,7 @@ const MarketResearch = React.memo(() => {
 
   // Fresh data flags to ensure strict replacement
 
-  const [freshDataFlags, setFreshDataFlags] = useState<Record<string, boolean>>({
+  const [, setFreshDataFlags] = useState<Record<string, boolean>>({
 
     'Market Size': false,
 
@@ -1119,7 +1097,7 @@ const MarketResearch = React.memo(() => {
 
   // Enhanced loading phases tracking
 
-  const [loadingPhase, setLoadingPhase] = useState<'api' | 'rendering' | 'complete'>('api');
+  const [, setLoadingPhase] = useState<'api' | 'rendering' | 'complete'>('api');
 
   const [componentRenderingStatus, setComponentRenderingStatus] = useState<Record<string, 'pending' | 'rendering' | 'complete'>>({
 
@@ -1135,14 +1113,14 @@ const MarketResearch = React.memo(() => {
 
   });
 
-  const [refreshAttempt, setRefreshAttempt] = useState(0);
+  const [, setRefreshAttempt] = useState(0);
 
   const [validationAttempts, setValidationAttempts] = useState(0);
 
   const [consecutiveValidations, setConsecutiveValidations] = useState(0);
   
   // Track component failure counts to prevent infinite retry loops
-  const [componentFailureCounts, setComponentFailureCounts] = useState<Record<string, number>>({});
+  const [, setComponentFailureCounts] = useState<Record<string, number>>({});
   
   // Track validation timeout IDs to clear them when validation completes
   const validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1234,11 +1212,6 @@ const MarketResearch = React.memo(() => {
 
       const allRendered = Object.values(renderingChecks).every(rendered => rendered);
 
-      const renderedComponents = Object.entries(renderingChecks)
-
-        .filter(([name, rendered]) => rendered)
-
-        .map(([name]) => name);
 
       
 
@@ -1560,11 +1533,6 @@ const MarketResearch = React.memo(() => {
     
     const allComponentsHaveData = Object.values(simplifiedChecks).every(hasData => hasData);
 
-    const missingDataComponents = Object.entries(simplifiedChecks)
-
-      .filter(([name, hasData]) => !hasData)
-
-      .map(([name]) => name);
 
     
 
@@ -1764,7 +1732,7 @@ const MarketResearch = React.memo(() => {
       
 
 
-      Object.entries(componentDataChecks).forEach(([name, hasData]) => {
+      Object.entries(componentDataChecks).forEach(([_name, hasData]) => {
 
         if (!hasData) {
           // Component missing data - validation will handle
@@ -1784,7 +1752,7 @@ const MarketResearch = React.memo(() => {
 
         // Check if at least the API calls completed successfully
 
-        const successfulComponents = Object.entries(componentStatus).filter(([name, status]) => status === 'success');
+        const successfulComponents = Object.entries(componentStatus).filter(([_name, status]) => status === 'success');
 
 
         
@@ -1896,16 +1864,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-  // Function to check if data is fresh and should replace old data
-
-  const shouldReplaceWithFreshData = (componentName: string): boolean => {
-
-    const isFresh = freshDataFlags[componentName];
-
-
-    return isFresh;
-
-  };
 
 
 
@@ -2386,11 +2344,11 @@ const MarketResearch = React.memo(() => {
 
   // Add missing error states for other components
 
-  const [industryTrendsError, setIndustryTrendsError] = useState<string | null>(null);
+  const [, setIndustryTrendsError] = useState<string | null>(null);
 
-  const [marketEntryError, setMarketEntryError] = useState<string | null>(null);
+  const [, setMarketEntryError] = useState<string | null>(null);
 
-  const [regulatoryError, setRegulatoryError] = useState<string | null>(null);
+  const [, setRegulatoryError] = useState<string | null>(null);
 
 
 
@@ -2616,22 +2574,6 @@ const MarketResearch = React.memo(() => {
     navigate('/your-ai-team/strategist/leadstream');
   };
 
-  const handleAskScoutTier = (tierCard: any) => {
-    setScoutMode("full-list");
-    setScoutResearchContext({
-      leads: [],
-      opportunity: `${tierCard.tier} — ${tierCard.label}`,
-      icp: 'All Segments',
-      reportTraits: [
-        `**${tierCard.tier} — ${tierCard.label}**`,
-        `Leads: ${tierCard.leadCount} | Fit Score: ${tierCard.fitScore}%`,
-        `Why it fits: ${tierCard.whyItFits}`,
-        `Key risks: ${tierCard.keyRisks}`,
-        `Recommended action: ${tierCard.recommendedAction}`,
-      ],
-    });
-    handleTabChange('trends');
-  };
 
 
 
@@ -2659,7 +2601,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-  const [regulatoryEditHistory, setRegulatoryEditHistory] = useState<EditRecord[]>([]);
+  const [regulatoryEditHistory] = useState<EditRecord[]>([]);
 
 
 
@@ -3369,7 +3311,7 @@ const MarketResearch = React.memo(() => {
       // Log summary to console
       
       // Log each component's response body
-      result.results.forEach((componentResult, index) => {
+      result.results.forEach((componentResult, _index) => {
         if (componentResult.success) {
         } else {
           console.error('❌ Error:', componentResult.error);
@@ -4342,10 +4284,6 @@ const MarketResearch = React.memo(() => {
       setError(null);
 
       
-      // Only clear data if this is a company profile change refresh, not a regular refresh
-      // Check if this is triggered by company profile update
-      const isCompanyProfileUpdate = (window as any).companyProfileUpdated || false;
-      
       // Always clear data for fresh fetch to ensure all components get updated data
       
         setMarketData(null);
@@ -4513,12 +4451,12 @@ const MarketResearch = React.memo(() => {
       
 
 
-      allComponents.forEach((component, index) => {
+      allComponents.forEach((_component, _index) => {
 
 
       });
 
-      
+
 
       const componentsToFetch = allComponents;
 
@@ -4560,10 +4498,10 @@ const MarketResearch = React.memo(() => {
         }
       }
       
-      allComponents.forEach((component, index) => {
+      allComponents.forEach((_component, _index) => {
       });
 
-      
+
 
 
 
@@ -4785,7 +4723,7 @@ const MarketResearch = React.memo(() => {
     // Build and log all request bodies before making API calls
     const allRequestBodies: { [key: string]: any } = {};
     
-    components.forEach((component, index) => {
+    components.forEach((component, _index) => {
       // Build clean payload with only fields the backend expects
       // Note: cache_bust fields are removed as backend doesn't accept them
       const payload: any = {
@@ -5021,10 +4959,6 @@ const MarketResearch = React.memo(() => {
         console.log(JSON.stringify(payload, null, 2));
       }
 
-      const requestTimestamp = Date.now();
-
-
-
 
 
       const response = await fetch(buildApiUrl('market-research'), {
@@ -5189,10 +5123,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-                  const apiData = altResult.data;
-
-
-
                   // ... rest of the processing logic
 
 
@@ -5213,10 +5143,6 @@ const MarketResearch = React.memo(() => {
 
 
               } else {
-
-
-
-                const altErrorText = await altResponse.text();
 
 
 
@@ -5778,23 +5704,6 @@ const MarketResearch = React.memo(() => {
 
       // Get company profile data for dynamic payload
 
-      let companyData = null;
-
-      try {
-
-        const profileData = getUserLocalStorage('companyProfileForRefresh', currentUser?.uid);
-
-        if (profileData) {
-
-          companyData = JSON.parse(profileData);
-
-
-        }
-
-      } catch (error) {
-
-
-      }
 
 
 
@@ -6078,34 +5987,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-      const currentTime = Date.now();
-
-
-
-      const randomId = Math.random().toString(36).substring(7);
-
-
-
-      
-
-
-
-      // Get company profile data for dynamic reports
-
-
-
-      const profile = JSON.parse(getUserLocalStorage('companyProfileForRefresh', currentUser?.uid) || '{}');
-
-
-
-
-
-
-
-
-
-
-
       // Payload specifically for Regulatory Compliance using API structure matching working components
       // Include previous component context in data field for cascading refresh
       const payload = {
@@ -6340,7 +6221,7 @@ const MarketResearch = React.memo(() => {
           const transformVisualDataCards = (apiCards: any[]) => {
             if (!apiCards || !Array.isArray(apiCards) || apiCards.length === 0) return [];
             
-            return apiCards.map((card, index) => {
+            return apiCards.map((card, _index) => {
               if (card.type === 'bar-chart' && card.data) {
                 // Transform bar-chart data: {label, value} -> {name, value, color}
                 const colors = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b'];
@@ -6669,42 +6550,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-      let companyData = null;
-
-
-
-      try {
-
-
-
-        const profileData = getUserLocalStorage('companyProfileForRefresh', currentUser?.uid);
-
-
-
-
-        if (profileData) {
-
-
-
-          companyData = JSON.parse(profileData);
-
-
-
-
-
-
-        }
-
-
-
-      } catch (error) {
-
-
-
-
-
-
-      }
 
 
 
@@ -7136,30 +6981,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-          const updatedData = {
-
-
-
-            ...competitorData,
-
-
-
-            executiveSummary: executiveSummary || competitorData?.executiveSummary || '',
-            topPlayerShare: topPlayerShare || competitorData?.topPlayerShare || '',
-            emergingPlayers: emergingPlayers || competitorData?.emergingPlayers || '',
-            fundingNews: fundingNews || competitorData?.fundingNews || [],
-
-
-
-            timestamp: toUTCTimestamp(newTimestamp) ?? Date.now(), // Ensure timestamp exists
-
-
-
-            uiComponents: apiData.uiComponents || []
-
-
-
-          };
 
 
 
@@ -7562,41 +7383,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-      let companyData = null;
-
-
-
-      try {
-
-
-
-        const profileData = getUserLocalStorage('companyProfileForRefresh', currentUser?.uid);
-
-
-
-        if (profileData) {
-
-
-
-          companyData = JSON.parse(profileData);
-
-
-
-
-
-
-        }
-
-
-
-      } catch (error) {
-
-
-
-
-
-
-      }
 
 
 
@@ -8487,54 +8273,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-  // Updated handleViewResults to work with Market object instead of just market name
-
-
-
-  const handleViewResults = (marketData: Market | null) => {
-
-
-
-    if (marketData) {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      
-
-
-
-      setSelectedMarket(marketData);
-
-
-
-      setIsDrawerOpen(true);
-
-
-
-    } else {
-
-
-
-
-
-
-    }
-
-
-
-  };
 
 
 
@@ -8546,51 +8284,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-  const handleViewResultsFromRankings = (marketName: string) => {
-
-
-
-    if (!marketData) return;
-
-
-
-    
-
-
-
-    const market = marketData.markets.find(m => 
-
-
-
-      m.name === marketName || 
-
-
-
-      m.name.toLowerCase().includes(marketName.toLowerCase().replace(' market', ''))
-
-
-
-    );
-
-
-
-    
-
-
-
-    if (market) {
-
-
-
-      handleViewResults(market);
-
-
-
-    }
-
-
-
-  };
 
 
 
@@ -8598,15 +8291,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-  const handleDeployScout = () => {
-
-
-
-    navigate('/scout-deployment');
-
-
-
-  };
 
 
 
@@ -8784,7 +8468,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-  const handleMarketSizeScoutClick = async (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, customMessage?: string) => {
+  const handleMarketSizeScoutClick = async (_context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, customMessage?: string) => {
 
 
 
@@ -8862,7 +8546,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-  const handleIndustryTrendsScoutClick = async (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, customMessage?: string) => {
+  const handleIndustryTrendsScoutClick = async (_context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, customMessage?: string) => {
 
 
 
@@ -8940,7 +8624,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-  const handleCompetitorScoutClick = async (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, customMessage?: string) => {
+  const handleCompetitorScoutClick = async (_context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, customMessage?: string) => {
 
 
 
@@ -10760,77 +10444,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-  // Market Size delete section handler
-
-
-
-  const handleDeleteSection = (sectionId: string) => {
-
-
-
-    const sectionNames: Record<string, string> = {
-
-
-
-      'executive-summary': 'Executive Summary',
-
-
-
-      'key-metrics': 'Key Metrics',
-
-
-
-      'strategic-recommendations': 'Strategic Recommendations', 
-
-
-
-      'market-entry': 'Market Entry Strategy',
-
-
-
-      'market-drivers': 'Key Market Drivers'
-
-
-
-    };
-
-
-
-    
-
-
-
-    const sectionName = sectionNames[sectionId] || sectionId;
-
-
-
-    setDeletedSections(prev => new Set([...prev, sectionId]));
-
-
-
-    
-
-
-
-    // Trigger Scout with deletion message
-
-
-
-    setTimeout(() => {
-
-
-
-      handleMarketSizeScoutClick('market-size', false, `I noticed you removed the ${sectionName}. Want me to help refine or replace it?`);
-
-
-
-    }, 300);
-
-
-
-  };
-
-
 
 
 
@@ -11127,7 +10740,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-  const handleRegulatoryScoutClick = async (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance', hasEdits?: boolean, customMessage?: string) => {
+  const handleRegulatoryScoutClick = async (_context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance', _hasEdits?: boolean, customMessage?: string) => {
 
 
 
@@ -11497,7 +11110,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-  const handleMarketEntryViewEditDetails = (editId: string) => {
+  const handleMarketEntryViewEditDetails = (_editId: string) => {
 
 
 
@@ -12152,7 +11765,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-  const handleMarketEntryScoutClick = async (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, customMessage?: string) => {
+  const handleMarketEntryScoutClick = async (_context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, customMessage?: string) => {
 
 
 
@@ -12830,7 +12443,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-  const handleViewEditDetails = (editId: string) => {
+  const handleViewEditDetails = (_editId: string) => {
 
 
 
@@ -12988,105 +12601,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-  // Simple delay function for rate limiting
-
-  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-
-
-  // Parallel refresh function for faster loading
-
-  const parallelRefresh = async () => {
-
-
-    
-
-    const components = [
-
-      { name: 'Market Size', fetchFn: fetchMarketSizeData },
-
-      { name: 'Competitor Landscape', fetchFn: fetchCompetitorData },
-
-      { name: 'Industry Trends', fetchFn: fetchIndustryTrendsData },
-
-      { name: 'Market Entry', fetchFn: fetchMarketEntryData },
-
-      { name: 'Regulatory Compliance', fetchFn: fetchRegulatoryData }
-
-    ];
-
-    
-
-    // Process all components in parallel with rate limiting
-
-    const promises = components.map(async (component, index) => {
-
-      try {
-
-        // Add small staggered delay to prevent overwhelming the API
-
-        const staggerDelay = index * 200; // 200ms between each component start
-
-        if (staggerDelay > 0) {
-
-          await new Promise(resolve => setTimeout(resolve, staggerDelay));
-
-        }
-
-        
-
-
-        const result = await executeWithRateLimit(
-
-          () => component.fetchFn(true, false),
-
-          component.name
-
-        );
-
-        
-
-
-        return { status: 'fulfilled', value: result };
-
-        
-
-      } catch (error) {
-
-        console.error(`❌ ${component.name} fetch failed:`, error);
-
-        return { 
-
-          status: 'rejected', 
-
-          reason: { 
-
-            status: 'error', 
-
-            component: component.name.toLowerCase().replace(' ', '-'), 
-
-            error: error instanceof Error ? error.message : 'Unknown error' 
-
-          } 
-
-        };
-
-      }
-
-    });
-
-    
-
-    // Wait for all components to complete
-
-    const results = await Promise.allSettled(promises);
-
-
-    
-
-    return results;
-
-  };
 
 
 
