@@ -1636,11 +1636,10 @@
 // export default ICPManager;
 
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -1653,7 +1652,6 @@ import {
   Command,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
@@ -1680,14 +1678,10 @@ import {
   Plus,
   Trash2,
   Edit,
-  Globe,
-  Building2,
-  Users,
   X,
   Check,
   Target,
   Eye,
-  ChevronRight,
   ChevronsUpDown,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -1787,12 +1781,12 @@ const ICPManager: React.FC = () => {
   const location = useLocation();
   const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
   const [icps, setIcps] = useState<ICP[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
+  const [_isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Inline editing state
   const [isAddingInline, setIsAddingInline] = useState(false);
-  const [inlineStep, setInlineStep] = useState<InlineStep>("primaryRegion");
+  const [_inlineStep, _setInlineStep] = useState<InlineStep>("primaryRegion");
   const [primaryRegion, setPrimaryRegion] = useState("");
   const [locations, setLocations] = useState<string[]>([]);
   const [locationInput, setLocationInput] = useState("");
@@ -2241,12 +2235,6 @@ const ICPManager: React.FC = () => {
     resetInlineForm();
   };
 
-  const handlePrimaryRegionKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") {
-      handleCancelInline();
-    }
-  };
-
   const handleFitConfidenceSelect = (value: FitConfidence) => {
     setFitConfidence(value);
     if (validationErrors.fitConfidence) {
@@ -2560,12 +2548,7 @@ const ICPManager: React.FC = () => {
     }
   };
 
-  const canSave = 
-    primaryRegion.trim() && 
-    selectedIndustries.length > 0 && 
-    selectedCompanySizes.length > 0 && 
-    selectedBuyerRoles.length > 0 && 
-    fitConfidence;
+
 
 
   // Render the inline editing row
@@ -2675,7 +2658,7 @@ const ICPManager: React.FC = () => {
                   onClick={() => {
                     setIsIndustryPopoverOpen(true);
                   }}
-                  onBlur={(e) => {
+                  onBlur={(_e) => {
                     // Delay to allow click events in popover
                     setTimeout(() => {
                       const activeElement = document.activeElement;
@@ -2872,7 +2855,7 @@ const ICPManager: React.FC = () => {
                   onClick={() => {
                     setIsBuyerRolePopoverOpen(true);
                   }}
-                  onBlur={(e) => {
+                  onBlur={(_e) => {
                     // Delay to allow click events in popover
                     setTimeout(() => {
                       const activeElement = document.activeElement;
