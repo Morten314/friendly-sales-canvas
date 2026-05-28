@@ -53,6 +53,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { buildApiUrl } from "@/lib/api";
 import jwtManager from "@/lib/jwt";
+import type { UntypedBackendDocument } from "@/lib/types/escape-hatches";
 
 // Types
 type SourceType = "url" | "file" | "system";
@@ -360,7 +361,7 @@ const DataSourcesManager: React.FC = () => {
   // Check processing status for a specific file
   const checkDocumentStatus = async (
     fileKey: string,
-  ): Promise<{ status: SourceStatus; chunks_count?: number; timestamps?: any }> => {
+  ): Promise<{ status: SourceStatus; chunks_count?: number; timestamps?: unknown }> => {
     if (!currentUser?.uid) {
       throw new Error("User not authenticated");
     }
@@ -446,7 +447,7 @@ const DataSourcesManager: React.FC = () => {
           documents.length,
           "documents",
         );
-        const loadedSources: DataSource[] = documents.map((doc: any) => {
+        const loadedSources: DataSource[] = documents.map((doc: UntypedBackendDocument) => {
           // Parse tags - handle both array and string formats
           let parsedTags: string[] = [];
           if (Array.isArray(doc.tags)) {

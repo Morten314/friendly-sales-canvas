@@ -1667,6 +1667,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiFetch } from "@/lib/api";
+import type { UntypedProfilerIcpRecord } from "@/lib/types/escape-hatches";
 import { cn } from "@/lib/utils";
 import {
   setUserLocalStorage,
@@ -2065,7 +2066,7 @@ const ICPManager: React.FC = () => {
         length: Array.isArray(icpsData) ? icpsData.length : 0,
         firstItem: Array.isArray(icpsData) && icpsData.length > 0 ? icpsData[0] : null,
         allItems: Array.isArray(icpsData)
-          ? icpsData.map((icp: any) => ({
+          ? icpsData.map((icp: UntypedProfilerIcpRecord) => ({
               id: icp.id,
               primary_region: icp.primary_region || icp.primaryRegion,
               industry: icp.industry,
@@ -2074,7 +2075,7 @@ const ICPManager: React.FC = () => {
       });
 
       if (Array.isArray(icpsData) && icpsData.length > 0) {
-        const loadedICPs: ICP[] = icpsData.map((icp: any) => {
+        const loadedICPs: ICP[] = icpsData.map((icp: UntypedProfilerIcpRecord) => {
           const merged = mergeProfilerAcceptedIcpDisplay(icp);
           return {
             id: String(merged.icp_id || merged.id || `icp-${Date.now()}-${Math.random()}`),
@@ -2153,7 +2154,8 @@ const ICPManager: React.FC = () => {
             if (Array.isArray(localICPs) && localICPs.length > 0) {
               // Check if any ICP has a user_id that doesn't match
               const hasMismatch = localICPs.some(
-                (icp: any) => icp.user_id && icp.user_id !== currentUser.uid,
+                (icp: UntypedProfilerIcpRecord) =>
+                  icp.user_id && icp.user_id !== currentUser.uid,
               );
 
               if (hasMismatch) {

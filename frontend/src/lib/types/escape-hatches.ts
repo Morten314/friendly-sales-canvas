@@ -69,3 +69,11 @@ export type UntypedProfilerIcpRecord = any;
 // — Props receive untyped JSON from backend; tightening to `Record<string, unknown>`
 // cascades into ~10 TS2322 errors at `setX(profileData?.field)` consumer sites.
 export type UntypedBackendProfile = any;
+
+// TODO(phase-13): replace with a DocumentRecord interface once the backend
+// document-status / list-documents contract is typed.
+// src/components/mission-control/DataSourcesManager.tsx:449
+// — `documents.map((doc: any) => ...)` consumer reads ~20 fields with snake/camel
+// aliases (file_id, file_key/fileKey, name/file_name, tags as array|string, etc.).
+// Tightening to `Record<string, unknown>` would require narrowing every field access.
+export type UntypedBackendDocument = any;
