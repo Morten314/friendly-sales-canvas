@@ -14,6 +14,7 @@ import { SignalsContextChat } from "./SignalsContextChat";
 import { AddLeadModal } from "@/components/market-research/AddLeadModal";
 import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
 import { SuggestedCompaniesSection } from "@/components/market-research/SuggestedCompaniesSection";
+import type { EditRecord } from "@/components/market-research/types";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -37,7 +38,7 @@ interface ScoutChatWithHistoryProps {
   /** Incoming context from Signals page (e.g. when user clicks "Chat with Scout" from a signal) */
   initialContext: SignalsChatContext | null;
   onClearContext?: () => void;
-  editHistory?: any[];
+  editHistory?: EditRecord[];
   onTabChange?: (tab: string) => void;
 }
 
