@@ -12,20 +12,20 @@ This document describes the UI implementation that connects **Lead Stream** with
 
 **Location:** Scout page → Your Lead Stream tab
 
-| Feature | Description |
-|--------|-------------|
-| **Ask Scout button** | Header button that switches to Chat with Scout tab. Use when you want to ask Scout about leads, find leads, or get market research. |
-| **Research with Scout (per lead)** | Message icon on each lead row. Click to open Chat with Scout with that lead's company pre-loaded as context. Scout receives a prompt like: *"I'd like to research [Company] - their market position, competitors, and growth opportunities."* |
-| **Empty state CTA** | When there are no leads, an "Ask Scout to find leads" button appears alongside "Upload CSV". |
+| Feature                            | Description                                                                                                                                                                                                                                   |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Ask Scout button**               | Header button that switches to Chat with Scout tab. Use when you want to ask Scout about leads, find leads, or get market research.                                                                                                           |
+| **Research with Scout (per lead)** | Message icon on each lead row. Click to open Chat with Scout with that lead's company pre-loaded as context. Scout receives a prompt like: _"I'd like to research [Company] - their market position, competitors, and growth opportunities."_ |
+| **Empty state CTA**                | When there are no leads, an "Ask Scout to find leads" button appears alongside "Upload CSV".                                                                                                                                                  |
 
 ### 2. Chat with Scout → Lead Stream
 
 **Location:** Scout page → Chat with Scout tab
 
-| Feature | Description |
-|--------|-------------|
-| **See leads in Lead Stream** | In the empty state (no active chat), a "See leads in Lead Stream" button switches to the Lead Stream tab. |
-| **Lead context in chat** | When you arrive from Lead Stream (Ask Scout or Research with Scout), Scout opens with a contextual message based on the lead/company. |
+| Feature                      | Description                                                                                                                           |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **See leads in Lead Stream** | In the empty state (no active chat), a "See leads in Lead Stream" button switches to the Lead Stream tab.                             |
+| **Lead context in chat**     | When you arrive from Lead Stream (Ask Scout or Research with Scout), Scout opens with a contextual message based on the lead/company. |
 
 ### 3. Scout Deployment in Lead Stream
 
@@ -38,18 +38,21 @@ When Scout is deployed (target market, industry, size, region), the **Scout Depl
 ## User Flows
 
 ### Flow A: Research a specific lead
+
 1. User is in **Your Lead Stream**.
 2. User clicks the **message icon** on a lead row (e.g., "Acme Corp").
-3. App switches to **Chat with Scout** with context: *"I'd like to research Acme Corp - their market position, competitors, and growth opportunities."*
+3. App switches to **Chat with Scout** with context: _"I'd like to research Acme Corp - their market position, competitors, and growth opportunities."_
 4. User continues the conversation with Scout.
 
 ### Flow B: Ask Scout about leads in general
+
 1. User is in **Your Lead Stream**.
 2. User clicks **Ask Scout** in the header.
 3. App switches to **Chat with Scout**.
 4. User can ask Scout to find leads, analyze markets, or get recommendations.
 
 ### Flow C: From Chat back to Lead Stream
+
 1. User is in **Chat with Scout** (empty state, no active chat).
 2. User clicks **See leads in Lead Stream**.
 3. App switches to **Your Lead Stream** tab.
@@ -96,11 +99,11 @@ When Scout is deployed (target market, industry, size, region), the **Scout Depl
 
 ### 4. Key talking points
 
-| Point | Message |
-|-------|---------|
-| **Bidirectional** | "The connection works both ways: Lead Stream → Scout and Scout → Lead Stream." |
-| **Context-aware** | "When you research a lead, Scout knows which company you're asking about." |
-| **Low friction** | "One click from a lead row opens Scout with the right context." |
+| Point                   | Message                                                                                                |
+| ----------------------- | ------------------------------------------------------------------------------------------------------ |
+| **Bidirectional**       | "The connection works both ways: Lead Stream → Scout and Scout → Lead Stream."                         |
+| **Context-aware**       | "When you research a lead, Scout knows which company you're asking about."                             |
+| **Low friction**        | "One click from a lead row opens Scout with the right context."                                        |
 | **Cohesive experience** | "Scout deployment status is visible in Lead Stream so users see that Scout is actively finding leads." |
 
 ### 5. Future enhancements (optional)

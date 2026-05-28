@@ -1,13 +1,12 @@
-
-// // import { 
-// //   Home, 
-// //   Users, 
-// //   FileText, 
-// //   Calendar, 
-// //   Settings, 
-// //   LogOut, 
+// // import {
+// //   Home,
+// //   Users,
+// //   FileText,
+// //   Calendar,
+// //   Settings,
+// //   LogOut,
 // //   Search,
-// //   BarChart, 
+// //   BarChart,
 // //   Menu,
 // //   LayoutDashboard
 // // } from "lucide-react";
@@ -47,9 +46,9 @@
 // //         {!collapsed && (
 // //           <div className="text-xl font-bold text-sales-blue">Brewra</div>
 // //         )}
-// //         <Button 
-// //           variant="ghost" 
-// //           size="icon" 
+// //         <Button
+// //           variant="ghost"
+// //           size="icon"
 // //           onClick={() => setCollapsed(!collapsed)}
 // //           className="ml-auto"
 // //         >
@@ -63,8 +62,8 @@
 // //         <ul className="space-y-2">
 // //           {navItems.map((item) => (
 // //             <li key={item.label}>
-// //               <Link 
-// //                 to={item.href} 
+// //               <Link
+// //                 to={item.href}
 // //                 className={cn(
 // //                   "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg mx-2 transition-colors",
 // //                   window.location.pathname === item.href && "bg-blue-50 text-sales-blue"
@@ -107,17 +106,16 @@
 // //   );
 // // }
 
-
 // // changes made to collapsable sidebar
 
-// import { 
-//   Users, 
-//   FileText, 
-//   Calendar, 
-//   Settings, 
-//   LogOut, 
+// import {
+//   Users,
+//   FileText,
+//   Calendar,
+//   Settings,
+//   LogOut,
 //   Search,
-//   BarChart, 
+//   BarChart,
 //   Menu,
 //   LayoutDashboard,
 //   ChevronDown,
@@ -134,10 +132,10 @@
 // import { Link } from "react-router-dom";
 // import { cn } from "@/lib/utils";
 // import { Button } from "@/components/ui/button";
-// import { 
-//   Collapsible, 
-//   CollapsibleContent, 
-//   CollapsibleTrigger 
+// import {
+//   Collapsible,
+//   CollapsibleContent,
+//   CollapsibleTrigger
 // } from "@/components/ui/collapsible";
 
 // type NavItem = {
@@ -171,9 +169,9 @@
 //         {!collapsed && (
 //           <div className="text-xl font-bold text-sales-blue">Brewra</div>
 //         )}
-//         <Button 
-//           variant="ghost" 
-//           size="icon" 
+//         <Button
+//           variant="ghost"
+//           size="icon"
 //           onClick={() => setCollapsed(!collapsed)}
 //           className="ml-auto"
 //         >
@@ -187,8 +185,8 @@
 //         <ul className="space-y-2">
 //           {/* Agent Hub link */}
 //           <li>
-//             <Link 
-//               to="/agent-hub" 
+//             <Link
+//               to="/agent-hub"
 //               className={cn(
 //                 "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg mx-2 transition-colors",
 //                 window.location.pathname === "/agent-hub" && "bg-blue-50 text-sales-blue"
@@ -198,11 +196,11 @@
 //               {!collapsed && <span className="ml-3">Dashboard</span>}
 //             </Link>
 //           </li>
-          
+
 //           {/* AI Team Collapsible Section */}
 // {!collapsed && (
 //   <li>
-//     <Collapsible 
+//     <Collapsible
 //       open={aiTeamOpen}
 //       onOpenChange={setAiTeamOpen}
 //       className="mx-2"
@@ -226,8 +224,8 @@
 //         <ul className="space-y-1">
 //           {navItems.slice(1, 6).map((item) => (
 //             <li key={item.label}>
-//               <Link 
-//                 to={item.href} 
+//               <Link
+//                 to={item.href}
 //                 className={cn(
 //                   "flex items-center px-4 py-2 text-sm text-gray-600 hover:bg-sales-gray hover:text-sales-blue rounded-lg transition-colors ml-9",
 //                   window.location.pathname === item.href && "bg-blue-50 text-sales-blue"
@@ -255,8 +253,8 @@
 
 // {/* Reports moved outside AI Team */}
 // <li key="reports">
-//   <Link 
-//     to="/insights" 
+//   <Link
+//     to="/insights"
 //     className={cn(
 //       "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg mx-2 transition-colors",
 //       window.location.pathname === "/insights" && "bg-blue-50 text-sales-blue"
@@ -269,8 +267,8 @@
 
 //           {/* Settings navigation item */}
 //           <li key="settings">
-//             <Link 
-//               to="/settings" 
+//             <Link
+//               to="/settings"
 //               className={cn(
 //                 "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg mx-2 transition-colors",
 //                 window.location.pathname === "/settings" && "bg-blue-50 text-sales-blue"
@@ -312,7 +310,6 @@
 //   );
 // }
 
-
 import {
   Users,
   FileText,
@@ -329,19 +326,18 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
-import { useTenant } from "@/contexts/TenantContext";
-import { clearUserCache } from "@/utils/cacheUtils";
-import { useSidebar } from "@/contexts/SidebarContext";
-import { useIsMobile } from "@/hooks/use-mobile";
-import {
-  Sheet,
-  SheetContent,
-} from "@/components/ui/sheet";
+
 import { ProfileDialog } from "./ProfileDialog";
+
+import { Button } from "@/components/ui/button";
 import { PopoverTrigger } from "@/components/ui/popover";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSidebar } from "@/contexts/SidebarContext";
+import { useTenant } from "@/contexts/TenantContext";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
+import { clearUserCache } from "@/utils/cacheUtils";
 
 type NavItem = {
   icon: React.ElementType;
@@ -367,13 +363,13 @@ export function Sidebar() {
   const { mobileOpen, setMobileOpen } = useSidebar();
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(false);
-  const [fullName, setFullName] = useState<string>('');
+  const [fullName, setFullName] = useState<string>("");
   const [aiTeamOpen, setAiTeamOpen] = useState(() => {
     // Check if there's a session-based state (not persistent across page reloads)
-    return sessionStorage.getItem('aiTeamDropdownOpen') === 'true';
+    return sessionStorage.getItem("aiTeamDropdownOpen") === "true";
   });
   const [signalsOpen, setSignalsOpen] = useState(() => {
-    return sessionStorage.getItem('signalsDropdownOpen') === 'true';
+    return sessionStorage.getItem("signalsDropdownOpen") === "true";
   });
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const location = useLocation();
@@ -386,14 +382,14 @@ export function Sidebar() {
         setFullName(storedFullName);
       }
     } else {
-      setFullName('');
+      setFullName("");
     }
   }, [currentUser?.uid]);
 
   // Get initials from full name
   const getInitials = (name: string): string => {
-    if (!name) return 'U';
-    const parts = name.trim().split(' ');
+    if (!name) return "U";
+    const parts = name.trim().split(" ");
     if (parts.length >= 2) {
       return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     }
@@ -406,7 +402,7 @@ export function Sidebar() {
     const newState = !aiTeamOpen;
     setAiTeamOpen(newState);
     // Store in sessionStorage to persist during navigation but not across page reloads
-    sessionStorage.setItem('aiTeamDropdownOpen', newState.toString());
+    sessionStorage.setItem("aiTeamDropdownOpen", newState.toString());
   };
 
   const handleSignalsDropdownToggle = (e?: React.MouseEvent) => {
@@ -415,7 +411,7 @@ export function Sidebar() {
     }
     const newState = !signalsOpen;
     setSignalsOpen(newState);
-    sessionStorage.setItem('signalsDropdownOpen', newState.toString());
+    sessionStorage.setItem("signalsDropdownOpen", newState.toString());
   };
 
   const handleSignalsClick = () => {
@@ -429,9 +425,12 @@ export function Sidebar() {
     if (location.pathname === "/signals" || location.pathname === "/artifacts") {
       if (!signalsOpen) {
         setSignalsOpen(true);
-        sessionStorage.setItem('signalsDropdownOpen', 'true');
+        sessionStorage.setItem("signalsDropdownOpen", "true");
       }
     }
+    // signalsOpen intentionally omitted: only react to path change, reading
+    // the latest open-state inside the effect avoids a redundant re-open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
   const handleLinkClick = () => {
@@ -443,10 +442,10 @@ export function Sidebar() {
 
   /** Match sidebar href to current route (Scout lives under /your-ai-team/scout/*, not /market-research). */
   const isYourAiTeamItemActive = (href: string) => {
-    if (href === '/market-research') {
+    if (href === "/market-research") {
       return (
-        location.pathname === '/market-research' ||
-        location.pathname.startsWith('/your-ai-team/scout')
+        location.pathname === "/market-research" ||
+        location.pathname.startsWith("/your-ai-team/scout")
       );
     }
     return location.pathname === href;
@@ -459,13 +458,11 @@ export function Sidebar() {
     <>
       {/* Logo Section */}
       <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-        {!isCollapsed && (
-          <div className="text-xl font-bold text-sales-blue">Brewra</div>
-        )}
+        {!isCollapsed && <div className="text-xl font-bold text-sales-blue">Brewra</div>}
         {!isMobile && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setCollapsed(!collapsed)}
             className="ml-auto"
           >
@@ -474,9 +471,9 @@ export function Sidebar() {
           </Button>
         )}
         {isMobile && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setMobileOpen(false)}
             className="ml-auto"
           >
@@ -491,27 +488,28 @@ export function Sidebar() {
         <ul className="space-y-2">
           {/* Mission Control link - First item */}
           <li>
-            <Link 
-              to="/mission-control" 
+            <Link
+              to="/mission-control"
               onClick={handleLinkClick}
               className={cn(
                 "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg mx-2 transition-colors",
-                location.pathname === "/mission-control" && "bg-blue-50 text-sales-blue"
+                location.pathname === "/mission-control" && "bg-blue-50 text-sales-blue",
               )}
             >
               <Command className="h-5 w-5" />
               {!isCollapsed && <span className="ml-3">Mission Control</span>}
             </Link>
           </li>
-          
+
           {/* Signals Section - Manual Dropdown Control */}
           {!isCollapsed && (
             <li>
               <div className="mx-2">
-                <div 
+                <div
                   className={cn(
                     "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg transition-colors cursor-pointer",
-                    (location.pathname === "/signals" || location.pathname === "/artifacts") && "bg-blue-50 text-sales-blue"
+                    (location.pathname === "/signals" || location.pathname === "/artifacts") &&
+                      "bg-blue-50 text-sales-blue",
                   )}
                   onClick={handleSignalsClick}
                 >
@@ -528,7 +526,7 @@ export function Sidebar() {
                     )}
                   </button>
                 </div>
-                
+
                 {/* Signals Dropdown Content */}
                 {signalsOpen && (
                   <div className="mt-1">
@@ -539,7 +537,7 @@ export function Sidebar() {
                           onClick={handleLinkClick}
                           className={cn(
                             "flex items-center px-4 py-2 text-sm text-gray-600 hover:bg-sales-gray hover:text-sales-blue rounded-lg transition-colors ml-9",
-                            location.pathname === "/artifacts" && "bg-blue-50 text-sales-blue"
+                            location.pathname === "/artifacts" && "bg-blue-50 text-sales-blue",
                           )}
                         >
                           <Archive className="h-4 w-4" />
@@ -552,7 +550,7 @@ export function Sidebar() {
               </div>
             </li>
           )}
-          
+
           {/* Dashboard link - Commented out for future use */}
           {/* <li>
             <Link 
@@ -566,12 +564,12 @@ export function Sidebar() {
               {!collapsed && <span className="ml-3">Dashboard</span>}
             </Link>
           </li> */}
-          
+
           {/* AI Team Section - Manual Dropdown Control */}
           {!isCollapsed && (
             <li>
               <div className="mx-2">
-                <div 
+                <div
                   className="flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray rounded-lg transition-colors cursor-pointer"
                   onClick={handleAITeamClick}
                 >
@@ -591,7 +589,7 @@ export function Sidebar() {
                     )}
                   </button>
                 </div>
-                
+
                 {/* Manual Dropdown Content */}
                 {aiTeamOpen && (
                   <div className="mt-1">
@@ -603,7 +601,7 @@ export function Sidebar() {
                             onClick={handleLinkClick}
                             className={cn(
                               "flex items-center px-4 py-2 text-sm text-gray-600 hover:bg-sales-gray rounded-lg transition-colors ml-9",
-                              isYourAiTeamItemActive(item.href) && "bg-gray-50"
+                              isYourAiTeamItemActive(item.href) && "bg-gray-50",
                             )}
                           >
                             <item.icon className="h-4 w-4" />
@@ -626,7 +624,7 @@ export function Sidebar() {
                 onClick={handleLinkClick}
                 className={cn(
                   "flex items-center justify-center py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg mx-2 transition-colors",
-                  location.pathname === "/mission-control" && "bg-blue-50 text-sales-blue"
+                  location.pathname === "/mission-control" && "bg-blue-50 text-sales-blue",
                 )}
               >
                 <Command className="h-5 w-5" />
@@ -642,7 +640,8 @@ export function Sidebar() {
                 onClick={handleLinkClick}
                 className={cn(
                   "flex items-center justify-center py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg mx-2 transition-colors",
-                  (location.pathname === "/signals" || location.pathname === "/artifacts") && "bg-blue-50 text-sales-blue"
+                  (location.pathname === "/signals" || location.pathname === "/artifacts") &&
+                    "bg-blue-50 text-sales-blue",
                 )}
               >
                 <Zap className="h-5 w-5" />
@@ -677,15 +676,14 @@ export function Sidebar() {
             </Link>
           </li> */}
 
-
           {/* Settings navigation item */}
           <li key="settings">
-            <Link 
-              to="/settings" 
+            <Link
+              to="/settings"
               onClick={handleLinkClick}
               className={cn(
                 "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg mx-2 transition-colors",
-                location.pathname === "/settings" && "bg-blue-50 text-sales-blue"
+                location.pathname === "/settings" && "bg-blue-50 text-sales-blue",
               )}
             >
               <Settings className="h-5 w-5" />
@@ -701,14 +699,16 @@ export function Sidebar() {
         onOpenChange={setProfileDialogOpen}
         fullName={fullName}
       >
-        <div className={cn(
-          "border-t border-gray-200 p-4",
-          isCollapsed ? "flex justify-center" : "flex items-center"
-        )}>
+        <div
+          className={cn(
+            "border-t border-gray-200 p-4",
+            isCollapsed ? "flex justify-center" : "flex items-center",
+          )}
+        >
           {!isCollapsed ? (
             <>
               <PopoverTrigger asChild>
-                <div 
+                <div
                   className="w-10 h-10 rounded-full bg-sales-blue text-white flex items-center justify-center font-medium cursor-pointer hover:opacity-80 transition-opacity"
                   title="View profile"
                 >
@@ -716,15 +716,15 @@ export function Sidebar() {
                 </div>
               </PopoverTrigger>
               <PopoverTrigger asChild>
-                <div 
+                <div
                   className="ml-3 flex-1 cursor-pointer hover:opacity-80 transition-opacity"
                   title="View profile"
                 >
-                  <div className="font-medium text-sm">{fullName || 'User'}</div>
+                  <div className="font-medium text-sm">{fullName || "User"}</div>
                 </div>
               </PopoverTrigger>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
                 className="ml-auto flex items-center gap-2 text-gray-600 hover:text-gray-900"
                 onClick={async () => {
@@ -732,7 +732,7 @@ export function Sidebar() {
                   clearUserCache(currentUser?.uid);
                   clearTenant();
                   await logout();
-                  navigate('/login');
+                  navigate("/login");
                 }}
               >
                 <LogOut className="h-4 w-4" />
@@ -742,23 +742,23 @@ export function Sidebar() {
           ) : (
             <div className="flex flex-col items-center gap-2">
               <PopoverTrigger asChild>
-                <div 
+                <div
                   className="w-10 h-10 rounded-full bg-sales-blue text-white flex items-center justify-center font-medium cursor-pointer hover:opacity-80 transition-opacity"
                   title="View profile"
                 >
                   {getInitials(fullName)}
                 </div>
               </PopoverTrigger>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="h-8 w-8"
                 onClick={async () => {
                   // Clear all user-specific cache before logout
                   clearUserCache(currentUser?.uid);
                   clearTenant();
                   await logout();
-                  navigate('/login');
+                  navigate("/login");
                 }}
                 title="Log out"
               >
@@ -776,9 +776,7 @@ export function Sidebar() {
     return (
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent side="left" className="w-[280px] p-0">
-          <div className="bg-white h-full flex flex-col">
-            {sidebarContent}
-          </div>
+          <div className="bg-white h-full flex flex-col">{sidebarContent}</div>
         </SheetContent>
       </Sheet>
     );
@@ -787,10 +785,12 @@ export function Sidebar() {
   // Desktop: Render as fixed sidebar
   return (
     <>
-      <div className={cn(
-        "bg-white border-r border-gray-200 h-screen flex flex-col transition-all duration-300",
-        collapsed ? "w-16" : "w-64"
-      )}>
+      <div
+        className={cn(
+          "bg-white border-r border-gray-200 h-screen flex flex-col transition-all duration-300",
+          collapsed ? "w-16" : "w-64",
+        )}
+      >
         {sidebarContent}
       </div>
     </>

@@ -19,44 +19,47 @@ export const clearUserCache = (userId: string | null | undefined): void => {
   if (!userId) {
     // Clear all cache keys (fallback)
     const cacheKeys = [
-      'marketIntelligenceData',
-      'competitorData',
-      'regulatoryData',
-      'industryTrendsData',
-      'marketEntryData',
-      'profilerCache',
-      'companyProfile',
-      'companyProfileHash'
+      "marketIntelligenceData",
+      "competitorData",
+      "regulatoryData",
+      "industryTrendsData",
+      "marketEntryData",
+      "profilerCache",
+      "companyProfile",
+      "companyProfileHash",
     ];
-    cacheKeys.forEach(key => localStorage.removeItem(key));
+    cacheKeys.forEach((key) => localStorage.removeItem(key));
     return;
   }
 
   // Clear user-specific cache keys
   const cacheKeys = [
-    'marketIntelligenceData',
-    'competitorData',
-    'regulatoryData',
-    'industryTrendsData',
-    'marketEntryData',
-    'profilerCache',
-    'companyProfile',
-    'companyProfileHash'
+    "marketIntelligenceData",
+    "competitorData",
+    "regulatoryData",
+    "industryTrendsData",
+    "marketEntryData",
+    "profilerCache",
+    "companyProfile",
+    "companyProfileHash",
   ];
-  
-  cacheKeys.forEach(key => {
+
+  cacheKeys.forEach((key) => {
     localStorage.removeItem(getUserCacheKey(key, userId));
     // Also clear old format for backward compatibility
     localStorage.removeItem(key);
   });
-  
+
   console.log(`🧹 Cleared all cache for user: ${userId}`);
 };
 
 /**
  * Get user-specific localStorage item
  */
-export const getUserLocalStorage = (key: string, userId: string | null | undefined): string | null => {
+export const getUserLocalStorage = (
+  key: string,
+  userId: string | null | undefined,
+): string | null => {
   if (!userId) {
     return localStorage.getItem(key); // Fallback to base key
   }
@@ -72,7 +75,11 @@ export const getUserLocalStorage = (key: string, userId: string | null | undefin
 /**
  * Set user-specific localStorage item
  */
-export const setUserLocalStorage = (key: string, value: string, userId: string | null | undefined): void => {
+export const setUserLocalStorage = (
+  key: string,
+  value: string,
+  userId: string | null | undefined,
+): void => {
   if (!userId) {
     localStorage.setItem(key, value); // Fallback to base key
     return;
@@ -94,5 +101,3 @@ export const removeUserLocalStorage = (key: string, userId: string | null | unde
   // Also remove old format for backward compatibility
   localStorage.removeItem(key);
 };
-
-

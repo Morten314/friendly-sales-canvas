@@ -1,18 +1,14 @@
+import { Loader2 } from "lucide-react";
 import React, { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import { buildApiUrl } from "@/lib/api";
 import jwtManager from "@/lib/jwt";
-import { Loader2 } from "lucide-react";
 
 interface AddLeadFormData {
   fullName: string;
@@ -72,7 +68,10 @@ export function AddLeadModal({
     const payload = { user_id: userId, org_id: orgId, data };
     const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...(authHeader && { Authorization: authHeader }) },
+      headers: {
+        "Content-Type": "application/json",
+        ...(authHeader && { Authorization: authHeader }),
+      },
       body: JSON.stringify(payload),
     });
     if (!res.ok) throw new Error(await res.text());

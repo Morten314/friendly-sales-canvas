@@ -1,9 +1,18 @@
-
+import {
+  Search,
+  MessageSquare,
+  Info,
+  RefreshCw,
+  Settings,
+  Download,
+  UserPlus,
+  PlusCircle,
+  Menu,
+  Building2,
+} from "lucide-react";
 import { useState, useEffect } from "react";
+
 import { Button } from "@/components/ui/button";
-import { Search, MessageSquare, Info, RefreshCw, Settings, Download, UserPlus, PlusCircle, Menu, Building2 } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,9 +20,17 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { useTenant } from "@/contexts/TenantContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 // import { AskBrewra } from "@/components/agent-hub/AskBrewra"; // Commented out - removed Ask button
 // import { ViewToggle } from "@/components/market-research/ViewToggle"; // Commented out - removed User/AI toggle
@@ -47,87 +64,87 @@ export function Header() {
       setIsSignalsRefreshing(false);
     };
 
-    window.addEventListener('signalsRefreshStart', handleSignalsRefreshStart);
-    window.addEventListener('signalsRefreshEnd', handleSignalsRefreshEnd);
-    
+    window.addEventListener("signalsRefreshStart", handleSignalsRefreshStart);
+    window.addEventListener("signalsRefreshEnd", handleSignalsRefreshEnd);
+
     return () => {
-      window.removeEventListener('signalsRefreshStart', handleSignalsRefreshStart);
-      window.removeEventListener('signalsRefreshEnd', handleSignalsRefreshEnd);
+      window.removeEventListener("signalsRefreshStart", handleSignalsRefreshStart);
+      window.removeEventListener("signalsRefreshEnd", handleSignalsRefreshEnd);
     };
   }, []);
 
   const getPageTitle = () => {
     const path = window.location.pathname;
     const search = window.location.search;
-    
-    // Check if we're on the AI Team view
-    if (path === '/agent-hub' && search.includes('view=ai-team')) {
-      return 'Signals';
-    }
-    
-    if (path === '/mission-control') return 'Mission Control';
-    if (path === '/signals') return 'Signals';
-    if (path === '/agent-hub') return 'Signals';
-    if (path === '/dashboard') return 'Dashboard';
-    if (path === '/market-research' || path.startsWith('/your-ai-team/scout')) return 'Scout';
-    if (path.startsWith('/your-ai-team/strategist')) return 'Strategist';
-    if (path === '/customers') return 'Profiler';
-    if (path === '/deals') return 'Strategist';
-    if (path === '/calendar') return 'Activator';
-    if (path === '/reports') return 'Presenter';
-    if (path === '/insights') return 'Reports';
-    if (path === '/artifacts') return 'Artefacts';
-    if (path === '/settings') return 'Settings';
 
-    return 'Agent Hub';
+    // Check if we're on the AI Team view
+    if (path === "/agent-hub" && search.includes("view=ai-team")) {
+      return "Signals";
+    }
+
+    if (path === "/mission-control") return "Mission Control";
+    if (path === "/signals") return "Signals";
+    if (path === "/agent-hub") return "Signals";
+    if (path === "/dashboard") return "Dashboard";
+    if (path === "/market-research" || path.startsWith("/your-ai-team/scout")) return "Scout";
+    if (path.startsWith("/your-ai-team/strategist")) return "Strategist";
+    if (path === "/customers") return "Profiler";
+    if (path === "/deals") return "Strategist";
+    if (path === "/calendar") return "Activator";
+    if (path === "/reports") return "Presenter";
+    if (path === "/insights") return "Reports";
+    if (path === "/artifacts") return "Artefacts";
+    if (path === "/settings") return "Settings";
+
+    return "Agent Hub";
   };
 
   const getPageSubtitle = () => {
     const path = window.location.pathname;
     const search = window.location.search;
-    
+
     // Check if we're on the Mission Control page
-    if (path === '/mission-control') {
-      return 'Tell Brewra about your business so it can work smarter for you';
+    if (path === "/mission-control") {
+      return "Tell Brewra about your business so it can work smarter for you";
     }
-    
+
     // Check if we're on the AI Team view
-    if (path === '/agent-hub' && search.includes('view=ai-team')) {
-      return 'Monitor and analyze market signals, trends, and opportunities';
+    if (path === "/agent-hub" && search.includes("view=ai-team")) {
+      return "Monitor and analyze market signals, trends, and opportunities";
     }
-    
+
     // Check if we're on the Signals page or agent-hub (now shows Signals content)
-    if (path === '/signals' || path === '/agent-hub') {
-      return 'Monitor and analyze market signals, trends, and opportunities';
+    if (path === "/signals" || path === "/agent-hub") {
+      return "Monitor and analyze market signals, trends, and opportunities";
     }
-    
+
     // Check if we're on the Scout page
-    if (path === '/market-research' || path.startsWith('/your-ai-team/scout')) {
-      return 'Find the best markets before your competitors do';
+    if (path === "/market-research" || path.startsWith("/your-ai-team/scout")) {
+      return "Find the best markets before your competitors do";
     }
-    
+
     // Check if we're on the Profiler page
-    if (path === '/customers') {
-      return 'Define ideal customers, find prospects, and enrich your data';
+    if (path === "/customers") {
+      return "Define ideal customers, find prospects, and enrich your data";
     }
-    
+
     // Check if we're on the Artefacts page
-    if (path === '/artifacts') {
-      return 'Agent-generated insights and deliverables from your workflows';
+    if (path === "/artifacts") {
+      return "Agent-generated insights and deliverables from your workflows";
     }
-    
+
     return null;
   };
 
   // const handleViewModeChange = (isAIView: boolean) => { // Commented out - removed User/AI toggle
   //   setIsAIViewActive(isAIView);
   //   // Dispatch custom event to communicate with other components
-  //   window.dispatchEvent(new CustomEvent('aiViewChanged', { 
-  //     detail: { isAIView } 
+  //   window.dispatchEvent(new CustomEvent('aiViewChanged', {
+  //     detail: { isAIView }
   //   }));
   // };
 
-  const isMarketResearchPage = window.location.pathname === '/market-research';
+  const isMarketResearchPage = window.location.pathname === "/market-research";
 
   return (
     <header className="bg-white border-b border-gray-200 p-3 md:p-4 flex items-center justify-between relative z-50">
@@ -144,87 +161,105 @@ export function Header() {
             <span className="sr-only">Open menu</span>
           </Button>
         )}
-        
+
         <div className="flex flex-col min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-800 truncate">{getPageTitle()}</h1>
-          {(isMarketResearchPage || window.location.pathname.startsWith('/your-ai-team/scout')) && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="ml-1 h-6 w-6 p-0 hover:bg-gray-100">
-                  <Info className="h-4 w-4 text-gray-500 hover:text-gray-700" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-[calc(100vw-2rem)] sm:w-80 bg-white border border-gray-200 shadow-lg z-50">
-                <DropdownMenuLabel className="text-sm font-semibold text-gray-800 pb-2">
-                  What can this agent do for you?
-                </DropdownMenuLabel>
-                <div className="px-2 pb-2">
-                  <ul className="text-sm text-gray-700 space-y-1">
-                    <li className="flex items-start">
-                      <span className="inline-block w-2 h-2 bg-gray-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                      <span>Market size estimation & TAM analysis</span>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="inline-block w-2 h-2 bg-gray-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                      <span>Competitor research & positioning</span>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="inline-block w-2 h-2 bg-gray-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                      <span>Industry trends & growth forecasts</span>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="inline-block w-2 h-2 bg-gray-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                      <span>Regulatory & compliance landscape</span>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="inline-block w-2 h-2 bg-gray-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                      <span>Market entry barriers analysis</span>
-                    </li>
-                  </ul>
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-800 truncate">
+              {getPageTitle()}
+            </h1>
+            {(isMarketResearchPage ||
+              window.location.pathname.startsWith("/your-ai-team/scout")) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="ml-1 h-6 w-6 p-0 hover:bg-gray-100"
+                  >
+                    <Info className="h-4 w-4 text-gray-500 hover:text-gray-700" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  className="w-[calc(100vw-2rem)] sm:w-80 bg-white border border-gray-200 shadow-lg z-50"
+                >
+                  <DropdownMenuLabel className="text-sm font-semibold text-gray-800 pb-2">
+                    What can this agent do for you?
+                  </DropdownMenuLabel>
+                  <div className="px-2 pb-2">
+                    <ul className="text-sm text-gray-700 space-y-1">
+                      <li className="flex items-start">
+                        <span className="inline-block w-2 h-2 bg-gray-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                        <span>Market size estimation & TAM analysis</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="inline-block w-2 h-2 bg-gray-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                        <span>Competitor research & positioning</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="inline-block w-2 h-2 bg-gray-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                        <span>Industry trends & growth forecasts</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="inline-block w-2 h-2 bg-gray-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                        <span>Regulatory & compliance landscape</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="inline-block w-2 h-2 bg-gray-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                        <span>Market entry barriers analysis</span>
+                      </li>
+                    </ul>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
           {getPageSubtitle() && (
-            <span className="text-sm md:text-base italic font-normal text-gray-600 truncate">{getPageSubtitle()}</span>
+            <span className="text-sm md:text-base italic font-normal text-gray-600 truncate">
+              {getPageSubtitle()}
+            </span>
           )}
           {isMarketResearchPage && !getPageSubtitle() && (
-            <span className="text-sm md:text-base italic font-normal text-gray-600 truncate">Find your best markets before your competitors do</span>
+            <span className="text-sm md:text-base italic font-normal text-gray-600 truncate">
+              Find your best markets before your competitors do
+            </span>
           )}
           {/* Scout page info text */}
-          {(isMarketResearchPage || window.location.pathname.startsWith('/your-ai-team/scout')) && (
+          {(isMarketResearchPage || window.location.pathname.startsWith("/your-ai-team/scout")) && (
             <span className="text-xs md:text-sm font-normal text-gray-400 mt-0.5 truncate">
-              Reports are generated according to fields such as company name, industry, etc. from your Company profile on Mission Control
+              Reports are generated according to fields such as company name, industry, etc. from
+              your Company profile on Mission Control
             </span>
           )}
         </div>
       </div>
 
       <div className="flex items-center gap-1 md:gap-2 lg:gap-4 flex-shrink-0">
-        
         {/* Signals page buttons */}
-        {((window.location.pathname === '/signals' || window.location.pathname.startsWith('/signals')) || 
-          (window.location.pathname === '/agent-hub' && window.location.search.includes('view=ai-team'))) && (
+        {(window.location.pathname === "/signals" ||
+          window.location.pathname.startsWith("/signals") ||
+          (window.location.pathname === "/agent-hub" &&
+            window.location.search.includes("view=ai-team"))) && (
           <Button
             variant="outline"
             size={isMobile ? "icon" : "sm"}
             disabled={isSignalsRefreshing}
             onClick={() => {
               // Trigger refresh by dispatching a custom event
-              window.dispatchEvent(new CustomEvent('signalsRefresh'));
+              window.dispatchEvent(new CustomEvent("signalsRefresh"));
             }}
             className="flex items-center gap-2"
-            title={isMobile ? (isSignalsRefreshing ? 'Refreshing...' : 'Refresh Signals') : undefined}
+            title={
+              isMobile ? (isSignalsRefreshing ? "Refreshing..." : "Refresh Signals") : undefined
+            }
           >
-            <RefreshCw className={`h-4 w-4 ${isSignalsRefreshing ? 'animate-spin' : ''}`} />
-            {!isMobile && (isSignalsRefreshing ? 'Refreshing...' : 'Refresh Signals')}
+            <RefreshCw className={`h-4 w-4 ${isSignalsRefreshing ? "animate-spin" : ""}`} />
+            {!isMobile && (isSignalsRefreshing ? "Refreshing..." : "Refresh Signals")}
           </Button>
         )}
 
         {/* Scout page buttons */}
-        {(isMarketResearchPage || window.location.pathname.startsWith('/your-ai-team/scout')) && (
+        {(isMarketResearchPage || window.location.pathname.startsWith("/your-ai-team/scout")) && (
           <>
             {isMobile ? (
               <DropdownMenu>
@@ -234,7 +269,9 @@ export function Header() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('scoutRefresh'))}>
+                  <DropdownMenuItem
+                    onClick={() => window.dispatchEvent(new CustomEvent("scoutRefresh"))}
+                  >
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Refresh
                   </DropdownMenuItem>
@@ -254,7 +291,7 @@ export function Header() {
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    window.dispatchEvent(new CustomEvent('scoutRefresh'));
+                    window.dispatchEvent(new CustomEvent("scoutRefresh"));
                   }}
                   className="flex items-center gap-2"
                 >
@@ -291,7 +328,7 @@ export function Header() {
         )}
 
         {/* Profiler page buttons */}
-        {window.location.pathname === '/customers' && (
+        {window.location.pathname === "/customers" && (
           <>
             {isMobile ? (
               <DropdownMenu>
@@ -301,15 +338,21 @@ export function Header() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('profilerRefresh'))}>
+                  <DropdownMenuItem
+                    onClick={() => window.dispatchEvent(new CustomEvent("profilerRefresh"))}
+                  >
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Refresh
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('profilerExportData'))}>
+                  <DropdownMenuItem
+                    onClick={() => window.dispatchEvent(new CustomEvent("profilerExportData"))}
+                  >
                     <Download className="h-4 w-4 mr-2" />
                     Export Data
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('profilerCreateICP'))}>
+                  <DropdownMenuItem
+                    onClick={() => window.dispatchEvent(new CustomEvent("profilerCreateICP"))}
+                  >
                     <UserPlus className="h-4 w-4 mr-2" />
                     Create New ICP
                   </DropdownMenuItem>
@@ -321,19 +364,19 @@ export function Header() {
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    window.dispatchEvent(new CustomEvent('profilerRefresh'));
+                    window.dispatchEvent(new CustomEvent("profilerRefresh"));
                   }}
                   className="flex items-center gap-2"
                 >
                   <RefreshCw className="h-4 w-4" />
                   Refresh
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   className="flex items-center gap-2"
                   onClick={() => {
-                    window.dispatchEvent(new CustomEvent('profilerExportData'));
+                    window.dispatchEvent(new CustomEvent("profilerExportData"));
                   }}
                 >
                   <Download className="h-4 w-4" />
@@ -404,7 +447,7 @@ export function Header() {
         )} */}
 
         {/* Presenter page buttons */}
-        {window.location.pathname === '/reports' && (
+        {window.location.pathname === "/reports" && (
           <>
             {isMobile ? (
               <DropdownMenu>
@@ -414,11 +457,15 @@ export function Header() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('presenterChat'))}>
+                  <DropdownMenuItem
+                    onClick={() => window.dispatchEvent(new CustomEvent("presenterChat"))}
+                  >
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Chat with Presenter
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('presenterCreateDemo'))}>
+                  <DropdownMenuItem
+                    onClick={() => window.dispatchEvent(new CustomEvent("presenterCreateDemo"))}
+                  >
                     <PlusCircle className="h-4 w-4 mr-2" />
                     Create New Demo
                   </DropdownMenuItem>
@@ -426,22 +473,22 @@ export function Header() {
               </DropdownMenu>
             ) : (
               <>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   className="flex items-center gap-2"
                   onClick={() => {
-                    window.dispatchEvent(new CustomEvent('presenterChat'));
+                    window.dispatchEvent(new CustomEvent("presenterChat"));
                   }}
                 >
                   <MessageSquare className="h-4 w-4" />
                   Chat with Presenter
                 </Button>
-                <Button 
+                <Button
                   size="sm"
                   className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2"
                   onClick={() => {
-                    window.dispatchEvent(new CustomEvent('presenterCreateDemo'));
+                    window.dispatchEvent(new CustomEvent("presenterCreateDemo"));
                   }}
                 >
                   <PlusCircle className="h-4 w-4" />
@@ -452,52 +499,54 @@ export function Header() {
           </>
         )}
 
-         {/* Signals page controls */}
-         {window.location.pathname === '/signals' && !isMobile && (
-           <>
-             {/* <Button variant="outline" size="sm" className="flex items-center gap-2">
+        {/* Signals page controls */}
+        {window.location.pathname === "/signals" && !isMobile && (
+          <>
+            {/* <Button variant="outline" size="sm" className="flex items-center gap-2">
                <Bookmark className="h-4 w-4" />
                Saved Insights (0)
              </Button> */}
-             
-             <Select defaultValue="today">
-               <SelectTrigger className="w-32">
-                 <SelectValue />
-               </SelectTrigger>
-               <SelectContent>
-                 <SelectItem value="today">Today</SelectItem>
-                 <SelectItem value="3days">Last 3 Days</SelectItem>
-                 <SelectItem value="week">Last Week</SelectItem>
-               </SelectContent>
-             </Select>
-           </>
-         )}
 
-         {/* Mission Control Chat with Agent button - commented out */}
-         {/* {window.location.pathname === '/mission-control' && (
+            <Select defaultValue="today">
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="3days">Last 3 Days</SelectItem>
+                <SelectItem value="week">Last Week</SelectItem>
+              </SelectContent>
+            </Select>
+          </>
+        )}
+
+        {/* Mission Control Chat with Agent button - commented out */}
+        {/* {window.location.pathname === '/mission-control' && (
            <Button variant="ghost" size="sm" className="flex items-center gap-2">
              <MessageSquare className="h-4 w-4" />
              Chat with Agent
            </Button>
          )} */}
 
-         {/* Artifacts page search bar */}
-         {window.location.pathname === '/artifacts' && (
-           <div className="relative">
-             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-             <Input 
-               placeholder="Search artefacts..." 
-               className={cn("pl-8", isMobile ? "w-[120px]" : "w-[300px]")}
-               onChange={(e) => {
-                 window.dispatchEvent(new CustomEvent('artifactsSearch', { 
-                   detail: { query: e.target.value } 
-                 }));
-               }}
-             />
-           </div>
-         )}
+        {/* Artifacts page search bar */}
+        {window.location.pathname === "/artifacts" && (
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search artefacts..."
+              className={cn("pl-8", isMobile ? "w-[120px]" : "w-[300px]")}
+              onChange={(e) => {
+                window.dispatchEvent(
+                  new CustomEvent("artifactsSearch", {
+                    detail: { query: e.target.value },
+                  }),
+                );
+              }}
+            />
+          </div>
+        )}
 
-         {/* Organization Badge - Ready for future dropdown when multiple orgs are available */}
+        {/* Organization Badge - Ready for future dropdown when multiple orgs are available */}
         {selectedTenant && (
           <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/50 shadow-sm">
             <Building2 className="h-5 w-5 text-blue-600 flex-shrink-0" />
@@ -510,7 +559,7 @@ export function Header() {
           </div>
         )}
 
-         {/* Notification Bell */}
+        {/* Notification Bell */}
         {/* <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon" className="relative">

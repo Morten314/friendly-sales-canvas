@@ -1,28 +1,3 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { EditDropdownMenu } from "@/components/market-research/EditDropdownMenu";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import {
   Check,
   X,
@@ -43,11 +18,44 @@ import {
   MessageSquare,
   Trash2,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect, useCallback, useRef } from "react";
+
+import { getLeadCountForICP } from "@/components/customers/LeadStream";
+import { EditDropdownMenu } from "@/components/market-research/EditDropdownMenu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ToastAction } from "@/components/ui/toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { getLeadCountForICP } from "@/components/customers/LeadStream";
+import { useToast } from "@/hooks/use-toast";
 import { buildIcpUrl, buildApiUrl, apiFetchJson, apiFetch } from "@/lib/api";
+import {
+  ensureMissionProfilerScope,
+  isProfilerCacheValid,
+  getProfilerSnapshot,
+  commitProfilerSnapshot,
+} from "@/lib/missionProfilerSessionCache";
+import type { UntypedProfilerIcpRecord } from "@/lib/types/escape-hatches";
 import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
 import { fetchIcpsRowsForOrg } from "@/utils/profileIcpsExtract";
 import {
@@ -64,12 +72,6 @@ import {
   PROFILER_ICP_DISPLAY_KEY,
   removeProfilerAcceptedIcpDisplayMeta,
 } from "@/utils/profilerAcceptedIcpDisplay";
-import {
-  ensureMissionProfilerScope,
-  isProfilerCacheValid,
-  getProfilerSnapshot,
-  commitProfilerSnapshot,
-} from "@/lib/missionProfilerSessionCache";
 
 const PROFILER_PENDING_RECOMMENDED_REJECT_KEY = "profiler_pendingRecommendedRejects";
 const PROFILER_DISMISSED_RECOMMENDED_IDS_KEY = "profiler_dismissedRecommendedIcpIds";
@@ -194,13 +196,18 @@ async function persistAcceptedSuggestedIcpToBackend(options: {
   const { orgId, suggested, targetIcpId } = options;
   const profileUrl = buildApiUrl(`customer_profile?org_id=${encodeURIComponent(orgId)}`);
   try {
-    const profileRes = await fetch(profileUrl, { method: "GET", headers: { "Content-Type": "application/json" } });
+    const profileRes = await fetch(profileUrl, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
     if (!profileRes.ok) return false;
     const profileData = await profileRes.json();
     const icpsData = extractIcpsArrayFromCustomerProfileResponse(profileData);
     if (!icpsData.length) return false;
 
-    const idx = icpsData.findIndex((row: any) => String(row.id) === String(targetIcpId));
+    const idx = icpsData.findIndex(
+      (row: UntypedProfilerIcpRecord) => String(row.id) === String(targetIcpId),
+    );
     if (idx < 0) return false;
 
     const merged = mergeSuggestedIntoCustomerProfileApiRow(icpsData[idx], suggested);
@@ -333,15 +340,24 @@ const confidenceColor = (c: string) => {
 };
 
 // Map customer profile ICP (Mission Control) to ExistingICP format
-const mapCustomerProfileICPToExisting = (icp: any, index: number): ExistingICP => {
+const mapCustomerProfileICPToExisting = (
+  icp: UntypedProfilerIcpRecord,
+  index: number,
+): ExistingICP => {
   const merged = mergeProfilerAcceptedIcpDisplay(icp);
-  const industryArr = Array.isArray(merged.industry) ? merged.industry : [merged.industry].filter(Boolean);
+  const industryArr = Array.isArray(merged.industry)
+    ? merged.industry
+    : [merged.industry].filter(Boolean);
   const companySizeArr = Array.isArray(merged.company_size)
     ? merged.company_size
     : Array.isArray(merged.companySize)
       ? merged.companySize
       : [];
-  const buyerRoleArr = Array.isArray(merged.buyer_role) ? merged.buyer_role : Array.isArray(merged.buyerRole) ? merged.buyerRole : [];
+  const buyerRoleArr = Array.isArray(merged.buyer_role)
+    ? merged.buyer_role
+    : Array.isArray(merged.buyerRole)
+      ? merged.buyerRole
+      : [];
   const locationArr = Array.isArray(merged.location) ? merged.location : [];
   const primaryRegion = merged.primary_region || merged.primaryRegion || "";
   let name =
@@ -393,7 +409,9 @@ const REPORT_FIELD_KEYS = [
   "competitors",
 ] as const;
 
-const buildFullReportFromRoot = (item: any): Record<string, unknown> | undefined => {
+const buildFullReportFromRoot = (
+  item: UntypedProfilerIcpRecord,
+): Record<string, unknown> | undefined => {
   if (item == null || typeof item !== "object") return undefined;
   const out: Record<string, unknown> = {};
   for (const k of REPORT_FIELD_KEYS) {
@@ -403,7 +421,9 @@ const buildFullReportFromRoot = (item: any): Record<string, unknown> | undefined
 };
 
 /** Nested report object from GET /icp (aliases + optional `data` wrapper), or report fields at root. */
-const extractFullReportFromApiItem = (item: any): Record<string, unknown> | undefined => {
+const extractFullReportFromApiItem = (
+  item: UntypedProfilerIcpRecord,
+): Record<string, unknown> | undefined => {
   const raw =
     item?.report ??
     item?.fullReport ??
@@ -413,7 +433,9 @@ const extractFullReportFromApiItem = (item: any): Record<string, unknown> | unde
     item?.profilerReport;
   if (raw != null && typeof raw === "object") {
     const inner =
-      "data" in raw && raw.data != null && typeof raw.data === "object" ? (raw as { data: unknown }).data : raw;
+      "data" in raw && raw.data != null && typeof raw.data === "object"
+        ? (raw as { data: unknown }).data
+        : raw;
     if (inner != null && typeof inner === "object") {
       const rec = inner as Record<string, unknown>;
       if (Object.keys(rec).length > 0) return rec;
@@ -426,7 +448,7 @@ const extractFullReportFromApiItem = (item: any): Record<string, unknown> | unde
  * Normalizes GET /icp JSON to an array of ICP items. Backend may return:
  * - an array; suggestedICPs / icps / results / items; { data: [...] }; { data: { single ICP } }; or a single root object.
  */
-const normalizeIcpGetResponse = (icpData: any): any[] => {
+const normalizeIcpGetResponse = (icpData: UntypedProfilerIcpRecord): UntypedProfilerIcpRecord[] => {
   if (icpData == null) return [];
   if (Array.isArray(icpData)) return icpData;
 
@@ -444,7 +466,8 @@ const normalizeIcpGetResponse = (icpData: any): any[] => {
     if (unwrapped && typeof unwrapped === "object" && !Array.isArray(unwrapped)) {
       const u = unwrapped as Record<string, unknown>;
       const nestedList = u.icps ?? u.suggestedICPs ?? u.results ?? u.items;
-      if (Array.isArray(nestedList) && nestedList.length > 0) return nestedList as any[];
+      if (Array.isArray(nestedList) && nestedList.length > 0)
+        return nestedList as UntypedProfilerIcpRecord[];
       const looksLikeIcp =
         u.id != null ||
         u.title != null ||
@@ -482,13 +505,19 @@ const normalizeIcpGetResponse = (icpData: any): any[] => {
 };
 
 const hasBackendFullReport = (icp: SuggestedICP) =>
-  Boolean(icp.fullReport && typeof icp.fullReport === "object" && Object.keys(icp.fullReport).length > 0);
+  Boolean(
+    icp.fullReport && typeof icp.fullReport === "object" && Object.keys(icp.fullReport).length > 0,
+  );
 
 // Map /icp API response item to SuggestedICP format
 // API returns: id, industry, segment, companySize, decisionMakers, regions, keyAttributes,
 // growthIndicator, whySuggested, confidenceScore, marketSize, growth, topPainPoint, buyingTriggers, competitors,
 // and optionally nested report payload (fullReport) for View Full Report
-const mapApiICPToSuggested = (item: any, index: number, type: "refined" | "new" = "new"): SuggestedICP => {
+const mapApiICPToSuggested = (
+  item: UntypedProfilerIcpRecord,
+  index: number,
+  type: "refined" | "new" = "new",
+): SuggestedICP => {
   const fullReport = extractFullReportFromApiItem(item);
   const firmo =
     item.firmographics && typeof item.firmographics === "object"
@@ -496,12 +525,19 @@ const mapApiICPToSuggested = (item: any, index: number, type: "refined" | "new" 
       : {};
 
   const industry =
-    coalesceString(item.industry, item.Industry, firmo.industry, firmo.Industry) ?? "Unknown Industry";
+    coalesceString(item.industry, item.Industry, firmo.industry, firmo.Industry) ??
+    "Unknown Industry";
   const segment =
-    coalesceString(item.segment, item.Segment, item.market_segment, firmo.segment, firmo.Segment) ?? "Unknown Segment";
+    coalesceString(item.segment, item.Segment, item.market_segment, firmo.segment, firmo.Segment) ??
+    "Unknown Segment";
   const companySize =
-    coalesceString(item.companySize, item.company_size, item.size, firmo.company_size, firmo.companySize) ??
-    "Unknown Size";
+    coalesceString(
+      item.companySize,
+      item.company_size,
+      item.size,
+      firmo.company_size,
+      firmo.companySize,
+    ) ?? "Unknown Size";
   const marketSize = coalesceString(
     item.marketSize,
     item.market_size,
@@ -529,12 +565,11 @@ const mapApiICPToSuggested = (item: any, index: number, type: "refined" | "new" 
   if (Array.isArray(item.regions)) regions = item.regions.map(String);
   else if (Array.isArray(item.target_markets)) regions = item.target_markets.map(String);
   else if (typeof item.regions === "string")
-    regions = item.regions.split(",").map((s: string) => s.trim()).filter(Boolean);
-  if (
-    regions.length === 0 &&
-    !("regions" in item) &&
-    !("target_markets" in item)
-  ) {
+    regions = item.regions
+      .split(",")
+      .map((s: string) => s.trim())
+      .filter(Boolean);
+  if (regions.length === 0 && !("regions" in item) && !("target_markets" in item)) {
     regions = ["Unknown Region"];
   }
 
@@ -573,9 +608,16 @@ const mapApiICPToSuggested = (item: any, index: number, type: "refined" | "new" 
           : ["Scalability", "Performance"],
     growthIndicator: item.growthIndicator || item.growth_indicator,
     whySuggested: whyFallback,
-    whatChanged: Array.isArray(item.whatChanged) ? item.whatChanged : Array.isArray(item.what_changed) ? item.what_changed : undefined,
+    whatChanged: Array.isArray(item.whatChanged)
+      ? item.whatChanged
+      : Array.isArray(item.what_changed)
+        ? item.what_changed
+        : undefined,
     opportunityUnlocked: item.opportunityUnlocked || item.opportunity_unlocked,
-    confidenceScore: (item.confidenceScore || item.confidence_score || "Medium") as "High" | "Medium" | "Low",
+    confidenceScore: (item.confidenceScore || item.confidence_score || "Medium") as
+      | "High"
+      | "Medium"
+      | "Low",
     marketSize,
     growth: item.growth,
     topPainPoint: item.topPainPoint || item.top_pain_point,
@@ -585,7 +627,11 @@ const mapApiICPToSuggested = (item: any, index: number, type: "refined" | "new" 
   };
 };
 
-type ProfilerPageToast = (opts: { title: string; description?: string; variant?: "destructive" }) => void;
+type ProfilerPageToast = (opts: {
+  title: string;
+  description?: string;
+  variant?: "destructive";
+}) => void;
 
 /** Shared loader for Profiler UI (customer_profile + GET /icp when needed). */
 async function loadProfilerPagePayload(options: {
@@ -618,7 +664,9 @@ async function loadProfilerPagePayload(options: {
     if (uid) {
       const rows = await fetchIcpsRowsForOrg(uid, orgIdToUse);
       if (rows.length > 0) {
-        icps = rows.map((icp: any, i: number) => mapCustomerProfileICPToExisting(icp, i));
+        icps = rows.map((icp: UntypedProfilerIcpRecord, i: number) =>
+          mapCustomerProfileICPToExisting(icp, i),
+        );
       }
     }
   } catch {
@@ -630,7 +678,9 @@ async function loadProfilerPagePayload(options: {
       if (customerProfileData) {
         const parsed = JSON.parse(customerProfileData);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          icps = parsed.map((icp: any, i: number) => mapCustomerProfileICPToExisting(icp, i));
+          icps = parsed.map((icp: UntypedProfilerIcpRecord, i: number) =>
+            mapCustomerProfileICPToExisting(icp, i),
+          );
         }
       }
     } catch {
@@ -650,7 +700,8 @@ async function loadProfilerPagePayload(options: {
   }
   if (icps.length === 0) {
     try {
-      const stored = localStorage.getItem("customerICPs") || localStorage.getItem("missionControlICPs");
+      const stored =
+        localStorage.getItem("customerICPs") || localStorage.getItem("missionControlICPs");
       if (stored) icps = JSON.parse(stored);
     } catch {
       /* ignore */
@@ -696,8 +747,15 @@ async function loadProfilerPagePayload(options: {
         icpParams.set("refresh", "true");
       }
       const icpUrl = buildIcpUrl(icpParams.toString());
-      profilerIcpDebug("GET /icp (backend) — request", { url: icpUrl, user_id: uid, refresh: refreshJustIncremented });
-      const icpRes = await fetch(icpUrl, { method: "GET", headers: { "Content-Type": "application/json" } });
+      profilerIcpDebug("GET /icp (backend) — request", {
+        url: icpUrl,
+        user_id: uid,
+        refresh: refreshJustIncremented,
+      });
+      const icpRes = await fetch(icpUrl, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
       profilerIcpDebug("GET /icp — response", { status: icpRes.status, ok: icpRes.ok });
       if (icpRes.ok) {
         const icpData = await icpRes.json();
@@ -712,7 +770,9 @@ async function loadProfilerPagePayload(options: {
         const icpArray = normalizeIcpGetResponse(icpData);
         profilerIcpDebug("GET /icp — normalized array length", icpArray.length);
         if (icpArray.length > 0) {
-          const mapped = icpArray.map((item: any, i: number) => mapApiICPToSuggested(item, i, "new"));
+          const mapped = icpArray.map((item: UntypedProfilerIcpRecord, i: number) =>
+            mapApiICPToSuggested(item, i, "new"),
+          );
           const filteredGet = filterDismissedFromSuggested(uid, [], mapped);
           newSuggestions = filteredGet.newSuggestions;
           refined = filteredGet.refined;
@@ -738,7 +798,10 @@ async function loadProfilerPagePayload(options: {
         }
       } else {
         console.warn("ICP API returned", icpRes.status, icpRes.statusText);
-        profilerIcpDebug("GET /icp — non-OK response", { status: icpRes.status, statusText: icpRes.statusText });
+        profilerIcpDebug("GET /icp — non-OK response", {
+          status: icpRes.status,
+          statusText: icpRes.statusText,
+        });
         if (refreshJustIncremented) {
           toast?.({
             title: "Refresh failed",
@@ -759,10 +822,15 @@ async function loadProfilerPagePayload(options: {
       }
     }
   } else if (refreshTrigger > 0 && !refreshJustIncremented) {
-    profilerIcpDebug("Skipping GET /icp (already handled this refreshTrigger or missing uid); using cache/mock path", {
-      refreshTrigger,
-      prevRefreshStored: refreshStorageKey ? Number(sessionStorage.getItem(refreshStorageKey) || "0") : 0,
-    });
+    profilerIcpDebug(
+      "Skipping GET /icp (already handled this refreshTrigger or missing uid); using cache/mock path",
+      {
+        refreshTrigger,
+        prevRefreshStored: refreshStorageKey
+          ? Number(sessionStorage.getItem(refreshStorageKey) || "0")
+          : 0,
+      },
+    );
   }
 
   if (newSuggestions.length === 0 && refined.length === 0) {
@@ -773,10 +841,13 @@ async function loadProfilerPagePayload(options: {
         if (Array.isArray(parsed) && parsed.length > 0) {
           newSuggestions = parsed;
           refined = [];
-          profilerIcpDebug("Recommended ICPs source: localStorage cache (profiler_recommendedICPs)", {
-            count: parsed.length,
-            ids: parsed.map((x: SuggestedICP) => x.id),
-          });
+          profilerIcpDebug(
+            "Recommended ICPs source: localStorage cache (profiler_recommendedICPs)",
+            {
+              count: parsed.length,
+              ids: parsed.map((x: SuggestedICP) => x.id),
+            },
+          );
         }
       }
     } catch {
@@ -822,18 +893,27 @@ async function loadProfilerPagePayload(options: {
         companySize: "500-2000 employees",
         regions: ["US", "EU"],
         decisionMakers: ["Chief Digital Officer", "VP of Innovation", "Head of Partnerships"],
-        keyAttributes: ["Digital transformation focus", "API-first strategy", "Regulatory compliance needs"],
+        keyAttributes: [
+          "Digital transformation focus",
+          "API-first strategy",
+          "Regulatory compliance needs",
+        ],
         whySuggested: [
           "High overlap with your current product capabilities",
           "Growing market with 24% YoY expansion",
           "Lower competition in this segment",
         ],
-        opportunityUnlocked: "Access to $2.4B addressable market with strong product-market fit signals",
+        opportunityUnlocked:
+          "Access to $2.4B addressable market with strong product-market fit signals",
         confidenceScore: "Medium",
         marketSize: "$28B",
         growth: "+24% YoY",
         topPainPoint: "Legacy system modernization",
-        buyingTriggers: ["Regulatory changes", "Digital transformation initiative", "Competitor pressure"],
+        buyingTriggers: [
+          "Regulatory changes",
+          "Digital transformation initiative",
+          "Competitor pressure",
+        ],
         competitors: ["Stripe", "Plaid", "Marqeta"],
       },
       {
@@ -875,7 +955,10 @@ async function loadProfilerPagePayload(options: {
 
   try {
     if (newSuggestions.length > 0 || refined.length > 0) {
-      localStorage.setItem("profiler_recommendedICPs", JSON.stringify([...refined, ...newSuggestions]));
+      localStorage.setItem(
+        "profiler_recommendedICPs",
+        JSON.stringify([...refined, ...newSuggestions]),
+      );
     }
   } catch {
     /* ignore */
@@ -918,7 +1001,9 @@ export const SuggestedICPCards = ({
     try {
       const saved = localStorage.getItem("profiler_cardStatuses");
       if (saved) return JSON.parse(saved);
-    } catch {}
+    } catch {
+      // intentional: ignore corrupt localStorage payload
+    }
     return {};
   });
 
@@ -929,7 +1014,9 @@ export const SuggestedICPCards = ({
   const [showRecommendations, _setShowRecommendations] = useState(() => {
     try {
       return localStorage.getItem("profiler_showRecommendations") === "true";
-    } catch {}
+    } catch {
+      // intentional: ignore corrupt localStorage payload
+    }
     return false;
   });
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
@@ -948,17 +1035,23 @@ export const SuggestedICPCards = ({
         setExistingICPs([]);
         return [];
       }
-      setExistingICPs(rows.map((icp: any, i: number) => mapCustomerProfileICPToExisting(icp, i)));
+      setExistingICPs(
+        rows.map((icp: UntypedProfilerIcpRecord, i: number) =>
+          mapCustomerProfileICPToExisting(icp, i),
+        ),
+      );
       try {
         setUserLocalStorage(
           "customerProfile",
-          JSON.stringify(mapCustomerProfileApiRowsToStoredIcps(rows as any[])),
-          uid
+          JSON.stringify(mapCustomerProfileApiRowsToStoredIcps(rows as UntypedProfilerIcpRecord[])),
+          uid,
         );
       } catch {
         /* ignore */
       }
-      return rows.map((row: any) => String(row.id ?? row.icp_id ?? "").trim()).filter(Boolean);
+      return rows
+        .map((row: UntypedProfilerIcpRecord) => String(row.id ?? row.icp_id ?? "").trim())
+        .filter(Boolean);
     } catch {
       /* keep existing rows */
     }
@@ -982,7 +1075,10 @@ export const SuggestedICPCards = ({
           { method: "DELETE" },
         );
         const deleteBody = await deleteRes.json();
-        console.log("[Profiler Current ICPs] DELETE customer_profile/icp: response body", deleteBody);
+        console.log(
+          "[Profiler Current ICPs] DELETE customer_profile/icp: response body",
+          deleteBody,
+        );
         if (deleteBody?.success && deleteBody?.data) {
           console.log(
             "[Profiler Current ICPs] DELETE: deleted_icp_id=",
@@ -1006,7 +1102,7 @@ export const SuggestedICPCards = ({
         });
       }
     },
-    [orgId, currentUser?.uid, toast, refetchCustomerProfileIcps],
+    [orgId, toast, refetchCustomerProfileIcps],
   );
 
   // Persist state changes
@@ -1150,7 +1246,7 @@ export const SuggestedICPCards = ({
         persistedFromResponse,
         idsBeforeAccept,
         idsAfter,
-        icp.id
+        icp.id,
       );
       if (targetIcpId) {
         const synced = await persistAcceptedSuggestedIcpToBackend({
@@ -1160,15 +1256,20 @@ export const SuggestedICPCards = ({
         });
         if (synced) {
           try {
-            const profileUrl = buildApiUrl(`customer_profile?org_id=${encodeURIComponent(orgIdToUse)}`);
-            const verifyRes = await fetch(profileUrl, { method: "GET", headers: { "Content-Type": "application/json" } });
+            const profileUrl = buildApiUrl(
+              `customer_profile?org_id=${encodeURIComponent(orgIdToUse)}`,
+            );
+            const verifyRes = await fetch(profileUrl, {
+              method: "GET",
+              headers: { "Content-Type": "application/json" },
+            });
             if (verifyRes.ok) {
               const vd = await verifyRes.json();
               const icpsData = extractIcpsArrayFromCustomerProfileResponse(vd);
               setUserLocalStorage(
                 "customerProfile",
                 JSON.stringify(mapCustomerProfileApiRowsToStoredIcps(icpsData)),
-                uid
+                uid,
               );
             }
           } catch {
@@ -1293,7 +1394,7 @@ export const SuggestedICPCards = ({
         }));
       }
     },
-    [refinedICPs, newICPs, orgId, toast, onICPRejected],
+    [refinedICPs, newICPs, toast, onICPRejected],
   );
 
   const finalizeRecommendedRejectRef = useRef(finalizeRecommendedReject);
@@ -1334,7 +1435,10 @@ export const SuggestedICPCards = ({
         [icpId]: { status: "suggested" },
       }));
       setExpandedReportId((cur) => (cur === icpId ? null : cur));
-      toast({ title: "Action undone", description: "ICP returned to suggestions and removed from Current ICPs." });
+      toast({
+        title: "Action undone",
+        description: "ICP returned to suggestions and removed from Current ICPs.",
+      });
     },
     [toast],
   );
@@ -1381,13 +1485,15 @@ export const SuggestedICPCards = ({
 
   const handleViewProspects = (icpName: string) => {
     window.dispatchEvent(
-      new CustomEvent("navigateToLeadStream", { detail: { filterICP: icpName } })
+      new CustomEvent("navigateToLeadStream", { detail: { filterICP: icpName } }),
     );
   };
 
   // --- Render ---
   const allSuggestions = [...refinedICPs, ...newICPs];
-  const visibleRecommendedIcps = allSuggestions.filter((s) => cardStatuses[s.id]?.status !== "accepted");
+  const visibleRecommendedIcps = allSuggestions.filter(
+    (s) => cardStatuses[s.id]?.status !== "accepted",
+  );
 
   return (
     <div className="space-y-8 relative">
@@ -1417,13 +1523,24 @@ export const SuggestedICPCards = ({
               <p className="text-lg font-semibold bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
                 Generating ICPs
               </p>
-              <p className="text-sm text-muted-foreground font-medium">Please wait while we fetch your recommended ICPs...</p>
+              <p className="text-sm text-muted-foreground font-medium">
+                Please wait while we fetch your recommended ICPs...
+              </p>
             </div>
             {/* Animated Progress Dots */}
             <div className="flex gap-2">
-              <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms", animationDuration: "1.4s" }} />
-              <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "200ms", animationDuration: "1.4s" }} />
-              <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "400ms", animationDuration: "1.4s" }} />
+              <div
+                className="w-2 h-2 rounded-full bg-primary animate-bounce"
+                style={{ animationDelay: "0ms", animationDuration: "1.4s" }}
+              />
+              <div
+                className="w-2 h-2 rounded-full bg-primary animate-bounce"
+                style={{ animationDelay: "200ms", animationDuration: "1.4s" }}
+              />
+              <div
+                className="w-2 h-2 rounded-full bg-primary animate-bounce"
+                style={{ animationDelay: "400ms", animationDuration: "1.4s" }}
+              />
             </div>
           </div>
         </DialogContent>
@@ -1461,18 +1578,31 @@ export const SuggestedICPCards = ({
                       <TableCell>{icp.companySize || "—"}</TableCell>
                       <TableCell>{icp.buyerRole || "—"}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${confidenceColor(icp.fitConfidence || "Medium")}`}>
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] px-1.5 py-0 ${confidenceColor(icp.fitConfidence || "Medium")}`}
+                        >
                           {icp.fitConfidence || "Medium"}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="sm" onClick={() => handleViewProspects(icp.name)} className="text-primary hover:text-primary/80">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewProspects(icp.name)}
+                          className="text-primary hover:text-primary/80"
+                        >
                           <Zap className="h-3.5 w-3.5 mr-1" />
                           View Leads
                         </Button>
                       </TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="sm" onClick={() => setExpandedCurrentICPId(isExpanded ? null : icp.id)} className="text-primary hover:text-primary/80">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setExpandedCurrentICPId(isExpanded ? null : icp.id)}
+                          className="text-primary hover:text-primary/80"
+                        >
                           <Eye className="h-3.5 w-3.5 mr-1" />
                           {isExpanded ? "Close" : "View Report"}
                         </Button>
@@ -1495,11 +1625,30 @@ export const SuggestedICPCards = ({
                             <div className="flex items-center justify-between flex-wrap gap-2">
                               <div className="flex items-center gap-2">
                                 <Sparkles className="h-4 w-4 text-primary" />
-                                <h4 className="text-sm font-semibold">Profiler's Analysis — {icp.name}</h4>
+                                <h4 className="text-sm font-semibold">
+                                  Profiler's Analysis — {icp.name}
+                                </h4>
                               </div>
                               <div className="flex items-center gap-1">
-                                <EditDropdownMenu onModify={() => toast({ title: "Edit mode", description: "You can now modify this report." })} />
-                                <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 gap-1 h-7 text-xs" onClick={() => toast({ title: "Chat with Profiler", description: "Profiler agent chat opening..." })}>
+                                <EditDropdownMenu
+                                  onModify={() =>
+                                    toast({
+                                      title: "Edit mode",
+                                      description: "You can now modify this report.",
+                                    })
+                                  }
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-primary hover:text-primary/80 gap-1 h-7 text-xs"
+                                  onClick={() =>
+                                    toast({
+                                      title: "Chat with Profiler",
+                                      description: "Profiler agent chat opening...",
+                                    })
+                                  }
+                                >
                                   <MessageSquare className="h-3.5 w-3.5" />
                                   Agentic
                                 </Button>
@@ -1507,8 +1656,12 @@ export const SuggestedICPCards = ({
                             </div>
 
                             <div className="bg-muted/50 rounded-lg p-4">
-                              <p className="text-xs font-medium text-foreground mb-1">Profiler's Interpretation</p>
-                              <p className="text-xs text-muted-foreground">{analysis.interpretation}</p>
+                              <p className="text-xs font-medium text-foreground mb-1">
+                                Profiler's Interpretation
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {analysis.interpretation}
+                              </p>
                             </div>
 
                             {analysis.strengths.length > 0 && (
@@ -1562,9 +1715,14 @@ export const SuggestedICPCards = ({
                             <div className="flex items-center justify-between pt-3 border-t">
                               <div className="flex items-center gap-2 text-xs">
                                 <Gauge className="h-3.5 w-3.5 text-muted-foreground" />
-                                <span className="text-muted-foreground">{analysis.broadNarrow}</span>
+                                <span className="text-muted-foreground">
+                                  {analysis.broadNarrow}
+                                </span>
                               </div>
-                              <Badge variant="outline" className={`text-xs ${confidenceColor(analysis.confidence)}`}>
+                              <Badge
+                                variant="outline"
+                                className={`text-xs ${confidenceColor(analysis.confidence)}`}
+                              >
                                 Confidence: {analysis.confidence}
                               </Badge>
                             </div>
@@ -1573,11 +1731,20 @@ export const SuggestedICPCards = ({
                               <div className="flex items-center gap-2">
                                 <Zap className="h-4 w-4 text-primary" />
                                 <div>
-                                  <p className="text-xs font-semibold text-foreground">View prospects</p>
-                                  <p className="text-[11px] text-muted-foreground">See leads for "{icp.name}"</p>
+                                  <p className="text-xs font-semibold text-foreground">
+                                    View prospects
+                                  </p>
+                                  <p className="text-[11px] text-muted-foreground">
+                                    See leads for "{icp.name}"
+                                  </p>
                                 </div>
                               </div>
-                              <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => handleViewProspects(icp.name)}>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1 text-xs"
+                                onClick={() => handleViewProspects(icp.name)}
+                              >
                                 Lead Stream <ArrowRight className="h-3 w-3" />
                               </Button>
                             </div>
@@ -1612,7 +1779,9 @@ export const SuggestedICPCards = ({
                     onAccept={() => handleAcceptClick(icp)}
                     onReject={() => handleRejectICP(icp)}
                     onUndo={() => handleUndoReject(icp.id)}
-                    onToggleReport={() => setExpandedReportId(expandedReportId === icp.id ? null : icp.id)}
+                    onToggleReport={() =>
+                      setExpandedReportId(expandedReportId === icp.id ? null : icp.id)
+                    }
                     onViewProspects={() => handleViewProspects(icp.name)}
                   />
                 ))}
@@ -1623,54 +1792,66 @@ export const SuggestedICPCards = ({
         )}
 
         {/* Full Report — appears below the cards, 80% width, no drawer */}
-        {expandedReportId && (() => {
-          const icp = allSuggestions.find((s) => s.id === expandedReportId);
-          if (!icp) return null;
-          const status = cardStatuses[icp.id] || { status: "suggested" as const };
-          const isSuggested = status.status === "suggested";
-          const isAccepted = status.status === "accepted";
-          const isRejected = status.status === "rejected";
-          const leadCount = getLeadCountForICP(icp.name);
-          return (
-            <Card className="w-full max-w-[55vw] mx-auto border-t-2 border-primary/20">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-primary" />
-                    Full Report — {icp.name}
-                  </CardTitle>
-                  <Button variant="outline" size="sm" onClick={() => setExpandedReportId(null)} className="gap-1">
-                    <X className="h-4 w-4" />
-                    Close Report
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <RecommendedICPReportContent
-                  icp={icp}
-                  leadCount={leadCount}
-                  status={status}
-                  isSuggested={isSuggested}
-                  isAccepted={isAccepted}
-                  isRejected={isRejected}
-                  onAccept={() => handleAcceptClick(icp)}
-                  onReject={() => handleRejectICP(icp)}
-                  onUndo={() => (isAccepted ? handleUndoAccept(icp.id) : handleUndoReject(icp.id))}
-                  onViewProspects={() => handleViewProspects(icp.name)}
-                />
-              </CardContent>
-            </Card>
-          );
-        })()}
+        {expandedReportId &&
+          (() => {
+            const icp = allSuggestions.find((s) => s.id === expandedReportId);
+            if (!icp) return null;
+            const status = cardStatuses[icp.id] || { status: "suggested" as const };
+            const isSuggested = status.status === "suggested";
+            const isAccepted = status.status === "accepted";
+            const isRejected = status.status === "rejected";
+            const leadCount = getLeadCountForICP(icp.name);
+            return (
+              <Card className="w-full max-w-[55vw] mx-auto border-t-2 border-primary/20">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-primary" />
+                      Full Report — {icp.name}
+                    </CardTitle>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setExpandedReportId(null)}
+                      className="gap-1"
+                    >
+                      <X className="h-4 w-4" />
+                      Close Report
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <RecommendedICPReportContent
+                    icp={icp}
+                    leadCount={leadCount}
+                    status={status}
+                    isSuggested={isSuggested}
+                    isAccepted={isAccepted}
+                    isRejected={isRejected}
+                    onAccept={() => handleAcceptClick(icp)}
+                    onReject={() => handleRejectICP(icp)}
+                    onUndo={() =>
+                      isAccepted ? handleUndoAccept(icp.id) : handleUndoReject(icp.id)
+                    }
+                    onViewProspects={() => handleViewProspects(icp.name)}
+                  />
+                </CardContent>
+              </Card>
+            );
+          })()}
       </div>
 
       {/* ═══ Accept Confirmation Dialog ═══ */}
-      <AlertDialog open={!!confirmAcceptICP} onOpenChange={(open) => !open && setConfirmAcceptICP(null)}>
+      <AlertDialog
+        open={!!confirmAcceptICP}
+        onOpenChange={(open) => !open && setConfirmAcceptICP(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Save to Customer Profile?</AlertDialogTitle>
             <AlertDialogDescription>
-              Do you want me to save "{confirmAcceptICP?.name}" to your Customer Profile? This will make it available for Lead Stream scoring and agent routing.
+              Do you want me to save "{confirmAcceptICP?.name}" to your Customer Profile? This will
+              make it available for Lead Stream scoring and agent routing.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1782,16 +1963,22 @@ const BackendProfilerReportView = ({ report }: { report: Record<string, unknown>
               <p className="font-medium">{firmographics.segment}</p>
             </div>
           )}
-          {(typeof firmographics.company_size === "string" || typeof firmographics.companySize === "string") && (
+          {(typeof firmographics.company_size === "string" ||
+            typeof firmographics.companySize === "string") && (
             <div>
               <p className="text-muted-foreground">Company Size</p>
-              <p className="font-medium">{(firmographics.company_size || firmographics.companySize) as string}</p>
+              <p className="font-medium">
+                {(firmographics.company_size || firmographics.companySize) as string}
+              </p>
             </div>
           )}
-          {(typeof firmographics.market_size === "string" || typeof firmographics.marketSize === "string") && (
+          {(typeof firmographics.market_size === "string" ||
+            typeof firmographics.marketSize === "string") && (
             <div>
               <p className="text-muted-foreground">Market Size</p>
-              <p className="font-medium">{(firmographics.market_size || firmographics.marketSize) as string}</p>
+              <p className="font-medium">
+                {(firmographics.market_size || firmographics.marketSize) as string}
+              </p>
             </div>
           )}
         </div>
@@ -1818,7 +2005,9 @@ const BackendProfilerReportView = ({ report }: { report: Record<string, unknown>
             <Target className="h-3 w-3" /> Pain Points & Triggers
           </p>
           {pain.critical && (
-            <p className="text-xs font-medium bg-destructive/10 text-destructive p-2 rounded-md mb-2">{pain.critical}</p>
+            <p className="text-xs font-medium bg-destructive/10 text-destructive p-2 rounded-md mb-2">
+              {pain.critical}
+            </p>
           )}
           {Array.isArray(pain.others) && pain.others.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
@@ -1874,12 +2063,16 @@ const SuggestedICPFullReportBody = ({ icp }: { icp: SuggestedICP }) => {
         </ul>
         {icp.opportunityUnlocked && (
           <div className="mt-2 bg-primary/5 rounded p-2">
-            <p className="text-[11px] font-medium text-primary">Opportunity: {icp.opportunityUnlocked}</p>
+            <p className="text-[11px] font-medium text-primary">
+              Opportunity: {icp.opportunityUnlocked}
+            </p>
           </div>
         )}
       </div>
 
-      <div className={`rounded-lg p-3 border ${icp.type === "refined" ? "border-amber-100 bg-amber-50/20" : "border-primary/10 bg-primary/[0.02]"}`}>
+      <div
+        className={`rounded-lg p-3 border ${icp.type === "refined" ? "border-amber-100 bg-amber-50/20" : "border-primary/10 bg-primary/[0.02]"}`}
+      >
         <p className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
           <RefreshCw className="h-3.5 w-3.5 text-amber-600" />
           {icp.type === "refined" ? "What Changed" : "How This Differs"}
@@ -1947,7 +2140,9 @@ const SuggestedICPFullReportBody = ({ icp }: { icp: SuggestedICP }) => {
             <Target className="h-3 w-3" /> Pain Points & Triggers
           </p>
           {icp.topPainPoint && (
-            <p className="text-xs font-medium bg-destructive/10 text-destructive p-2 rounded-md mb-2">{icp.topPainPoint}</p>
+            <p className="text-xs font-medium bg-destructive/10 text-destructive p-2 rounded-md mb-2">
+              {icp.topPainPoint}
+            </p>
           )}
           {icp.buyingTriggers && (
             <div className="flex flex-wrap gap-1.5">
@@ -2016,8 +2211,19 @@ const RecommendedICPReportContent = ({
           {icp.type === "refined" ? "Refined" : "New"}
         </Badge>
         <div className="flex items-center gap-1">
-          <EditDropdownMenu onModify={() => toast({ title: "Edit mode", description: "You can now modify this report." })} />
-          <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 gap-1 h-7 text-xs" onClick={() => toast({ title: "Chat with Profiler", description: "Profiler agent chat opening..." })}>
+          <EditDropdownMenu
+            onModify={() =>
+              toast({ title: "Edit mode", description: "You can now modify this report." })
+            }
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-primary hover:text-primary/80 gap-1 h-7 text-xs"
+            onClick={() =>
+              toast({ title: "Chat with Profiler", description: "Profiler agent chat opening..." })
+            }
+          >
             <MessageSquare className="h-3.5 w-3.5" />
             Agentic
           </Button>
@@ -2038,7 +2244,12 @@ const RecommendedICPReportContent = ({
       )}
       {(isAccepted || isRejected) && (
         <div className="pt-2 border-t">
-          <Button size="sm" variant="ghost" onClick={onUndo} className="w-full text-xs text-muted-foreground">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onUndo}
+            className="w-full text-xs text-muted-foreground"
+          >
             <Undo2 className="h-3 w-3 mr-1" /> Undo
           </Button>
         </div>
@@ -2112,20 +2323,33 @@ const RecommendedICPCard = ({
                 }`}
               >
                 {icp.type === "refined" ? (
-                  <><RefreshCw className="h-3 w-3 mr-1" />Refined ICP</>
+                  <>
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Refined ICP
+                  </>
                 ) : (
-                  <><Plus className="h-3 w-3 mr-1" />New ICP</>
+                  <>
+                    <Plus className="h-3 w-3 mr-1" />
+                    New ICP
+                  </>
                 )}
               </Badge>
               <CardTitle className="text-base font-semibold truncate">{icp.name}</CardTitle>
               {icp.type === "refined" && icp.sourceICPName && (
-                <p className="text-xs text-muted-foreground mt-1">Refined from: {icp.sourceICPName}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Refined from: {icp.sourceICPName}
+                </p>
               )}
               {icp.tag && icp.type === "new" && (
-                <Badge variant="outline" className="mt-1 text-xs">{icp.tag}</Badge>
+                <Badge variant="outline" className="mt-1 text-xs">
+                  {icp.tag}
+                </Badge>
               )}
             </div>
-            <Badge variant="outline" className={`text-xs shrink-0 ${confidenceColor(icp.confidenceScore)}`}>
+            <Badge
+              variant="outline"
+              className={`text-xs shrink-0 ${confidenceColor(icp.confidenceScore)}`}
+            >
               {icp.confidenceScore}
             </Badge>
           </div>
@@ -2149,19 +2373,24 @@ const RecommendedICPCard = ({
             {icp.marketSize && (
               <div>
                 <span className="text-muted-foreground">Market:</span>
-                <p className="font-medium">{icp.marketSize} {icp.growth && `(${icp.growth})`}</p>
+                <p className="font-medium">
+                  {icp.marketSize} {icp.growth && `(${icp.growth})`}
+                </p>
               </div>
             )}
             <div className="col-span-2 flex items-center gap-1.5 text-primary">
               <Zap className="h-3.5 w-3.5 shrink-0" />
               <span className="text-muted-foreground">Lead Stream:</span>
-              <span className="font-semibold">{leadCount} lead{leadCount !== 1 ? "s" : ""}</span>
+              <span className="font-semibold">
+                {leadCount} lead{leadCount !== 1 ? "s" : ""}
+              </span>
             </div>
           </div>
 
           {hasBackendFullReport(icp) && (
             <p className="text-xs text-muted-foreground border border-dashed border-primary/25 rounded-md px-2 py-2 bg-muted/30">
-              Detailed report from Profiler opens when you click <span className="font-medium text-foreground">View Full Report</span>.
+              Detailed report from Profiler opens when you click{" "}
+              <span className="font-medium text-foreground">View Full Report</span>.
             </p>
           )}
 
@@ -2250,7 +2479,12 @@ const RecommendedICPCard = ({
             </div>
           )}
           {(isAccepted || isRejected) && (
-            <Button size="sm" variant="ghost" onClick={onUndo} className="w-full text-xs text-muted-foreground">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onUndo}
+              className="w-full text-xs text-muted-foreground"
+            >
               <Undo2 className="h-3 w-3 mr-1" />
               Undo
             </Button>

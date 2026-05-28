@@ -1,9 +1,9 @@
+import { BarChart, LineChart, PieChart, Users } from "lucide-react";
 
 import { Layout } from "@/components/layout/Layout";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { BarChart, LineChart, PieChart, Users } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 const Insights = () => {
   return (
@@ -19,7 +19,7 @@ const Insights = () => {
             Export All Reports
           </Button>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
           <Card className="border-l-4 border-l-blue-500">
             <CardHeader>
@@ -55,7 +55,7 @@ const Insights = () => {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card className="border-l-4 border-l-green-500">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -90,7 +90,7 @@ const Insights = () => {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card className="border-l-4 border-l-amber-500">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -126,7 +126,7 @@ const Insights = () => {
             </CardContent>
           </Card>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="col-span-1">
             <CardHeader>
@@ -141,7 +141,7 @@ const Insights = () => {
                     <span className="font-medium">87%</span>
                   </div>
                   <Progress value={87} className="h-3 bg-gray-100">
-                    <div className="h-full bg-blue-500" style={{ width: '87%' }}></div>
+                    <div className="h-full bg-blue-500" style={{ width: "87%" }}></div>
                   </Progress>
                 </div>
                 <div>
@@ -150,7 +150,7 @@ const Insights = () => {
                     <span className="font-medium">91%</span>
                   </div>
                   <Progress value={91} className="h-3 bg-gray-100">
-                    <div className="h-full bg-green-500" style={{ width: '91%' }}></div>
+                    <div className="h-full bg-green-500" style={{ width: "91%" }}></div>
                   </Progress>
                 </div>
                 <div>
@@ -159,7 +159,7 @@ const Insights = () => {
                     <span className="font-medium">84%</span>
                   </div>
                   <Progress value={84} className="h-3 bg-gray-100">
-                    <div className="h-full bg-purple-500" style={{ width: '84%' }}></div>
+                    <div className="h-full bg-purple-500" style={{ width: "84%" }}></div>
                   </Progress>
                 </div>
                 <div>
@@ -168,7 +168,7 @@ const Insights = () => {
                     <span className="font-medium">79%</span>
                   </div>
                   <Progress value={79} className="h-3 bg-gray-100">
-                    <div className="h-full bg-amber-500" style={{ width: '79%' }}></div>
+                    <div className="h-full bg-amber-500" style={{ width: "79%" }}></div>
                   </Progress>
                 </div>
                 <div>
@@ -177,13 +177,13 @@ const Insights = () => {
                     <span className="font-medium">88%</span>
                   </div>
                   <Progress value={88} className="h-3 bg-gray-100">
-                    <div className="h-full bg-red-500" style={{ width: '88%' }}></div>
+                    <div className="h-full bg-red-500" style={{ width: "88%" }}></div>
                   </Progress>
                 </div>
               </div>
             </CardContent>
           </Card>
-          
+
           <Card className="col-span-1">
             <CardHeader>
               <CardTitle>Time Saved Analytics</CardTitle>
@@ -201,7 +201,7 @@ const Insights = () => {
                     <p className="text-sm text-gray-500">42 hours saved</p>
                   </div>
                 </div>
-                
+
                 <div className="flex justify-between items-center border-b pb-3">
                   <div>
                     <p className="font-medium">ICP Development</p>
@@ -212,7 +212,7 @@ const Insights = () => {
                     <p className="text-sm text-gray-500">18 hours saved</p>
                   </div>
                 </div>
-                
+
                 <div className="flex justify-between items-center border-b pb-3">
                   <div>
                     <p className="font-medium">Strategy Creation</p>
@@ -223,7 +223,7 @@ const Insights = () => {
                     <p className="text-sm text-gray-500">24 hours saved</p>
                   </div>
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="font-medium">Demo Preparation</p>

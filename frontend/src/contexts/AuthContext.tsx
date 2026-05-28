@@ -1,10 +1,10 @@
 // import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
-// import { 
-//   User, 
-//   signInWithEmailAndPassword, 
-//   signOut, 
+// import {
+//   User,
+//   signInWithEmailAndPassword,
+//   signOut,
 //   onAuthStateChanged,
-//   createUserWithEmailAndPassword 
+//   createUserWithEmailAndPassword
 // } from 'firebase/auth';
 // import { auth } from '../lib/firebase';
 
@@ -78,7 +78,7 @@
 //     setOrgId(HARDCODED_ORG_ID);
 //     setOrgName(HARDCODED_ORG_NAME);
 //     return { orgId: HARDCODED_ORG_ID, orgName: HARDCODED_ORG_NAME };
-    
+
 //     /* ORIGINAL CODE - Commented out for testing
 //     try {
 //       // Check localStorage first
@@ -104,12 +104,12 @@
 //       }
 
 //       const data = await response.json();
-      
+
 //       if (data.status === 'success' && data.org_id) {
 //         // Store in state and localStorage
 //         const fetchedOrgId = data.org_id;
 //         const fetchedOrgName = data.org_name || null;
-        
+
 //         setOrgId(fetchedOrgId);
 //         setOrgName(fetchedOrgName);
 //         localStorage.setItem(`org_id_${userId}`, fetchedOrgId);
@@ -130,15 +130,15 @@
 //   useEffect(() => {
 //     const unsubscribe = onAuthStateChanged(auth, (user) => {
 //       setCurrentUser(user);
-      
+
 //       // TODO: TEMPORARY - Hardcoded values for testing. Remove this and restore original logic when done testing.
-//       // Note: user_id comes from currentUser?.uid in other components. 
+//       // Note: user_id comes from currentUser?.uid in other components.
 //       // If you need to hardcode user_id everywhere, search for "currentUser?.uid" and replace with HARDCODED_USER_ID
 //       // Set hardcoded org_id and org_name for testing
 //       setOrgId(HARDCODED_ORG_ID);
 //       setOrgName(HARDCODED_ORG_NAME);
 //       setLoading(false);
-      
+
 //       /* ORIGINAL CODE - Commented out for testing
 //       // Load org_id and org_name from localStorage when user changes
 //       if (user?.uid) {
@@ -157,7 +157,7 @@
 //         setOrgId(null);
 //         setOrgName(null);
 //       }
-      
+
 //       setLoading(false);
 //       */
 //     });
@@ -184,16 +184,18 @@
 //   );
 // };
 
-import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
-import { 
-  User, 
-  signInWithEmailAndPassword, 
-  signOut, 
+import type { User } from "firebase/auth";
+import {
+  signInWithEmailAndPassword,
+  signOut,
   onAuthStateChanged,
-  createUserWithEmailAndPassword 
-} from 'firebase/auth';
-import { auth } from '../lib/firebase';
-import { buildApiUrl } from '../lib/api';
+  createUserWithEmailAndPassword,
+} from "firebase/auth";
+import type { ReactNode } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+
+import { buildApiUrl } from "../lib/api";
+import { auth } from "../lib/firebase";
 
 interface AuthContextType {
   currentUser: User | null;
@@ -211,7 +213,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -245,57 +247,60 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const fetchOrgId = useCallback(async (userId: string): Promise<{ orgId: string | null; orgName: string | null }> => {
-    try {
-      // Check localStorage first
-      const storedOrgId = localStorage.getItem(`org_id_${userId}`);
-      const storedOrgName = localStorage.getItem(`org_name_${userId}`);
-      if (storedOrgId && storedOrgName) {
-        setOrgId(storedOrgId);
-        setOrgName(storedOrgName);
-        return { orgId: storedOrgId, orgName: storedOrgName };
-      }
+  const fetchOrgId = useCallback(
+    async (userId: string): Promise<{ orgId: string | null; orgName: string | null }> => {
+      try {
+        // Check localStorage first
+        const storedOrgId = localStorage.getItem(`org_id_${userId}`);
+        const storedOrgName = localStorage.getItem(`org_name_${userId}`);
+        if (storedOrgId && storedOrgName) {
+          setOrgId(storedOrgId);
+          setOrgName(storedOrgName);
+          return { orgId: storedOrgId, orgName: storedOrgName };
+        }
 
-      // Fetch from API
-      const response = await fetch(`${buildApiUrl('org')}?user_id=${userId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+        // Fetch from API
+        const response = await fetch(`${buildApiUrl("org")}?user_id=${userId}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
 
-      if (!response.ok) {
-        console.error('Failed to fetch org data:', response.status, response.statusText);
+        if (!response.ok) {
+          console.error("Failed to fetch org data:", response.status, response.statusText);
+          return { orgId: null, orgName: null };
+        }
+
+        const data = await response.json();
+
+        if (data.status === "success" && data.org_id) {
+          // Store in state and localStorage
+          const fetchedOrgId = data.org_id;
+          const fetchedOrgName = data.org_name || null;
+
+          setOrgId(fetchedOrgId);
+          setOrgName(fetchedOrgName);
+          localStorage.setItem(`org_id_${userId}`, fetchedOrgId);
+          if (fetchedOrgName) {
+            localStorage.setItem(`org_name_${userId}`, fetchedOrgName);
+          }
+          return { orgId: fetchedOrgId, orgName: fetchedOrgName };
+        }
+
+        return { orgId: null, orgName: null };
+      } catch (error) {
+        console.error("Error fetching org data:", error);
         return { orgId: null, orgName: null };
       }
-
-      const data = await response.json();
-      
-      if (data.status === 'success' && data.org_id) {
-        // Store in state and localStorage
-        const fetchedOrgId = data.org_id;
-        const fetchedOrgName = data.org_name || null;
-        
-        setOrgId(fetchedOrgId);
-        setOrgName(fetchedOrgName);
-        localStorage.setItem(`org_id_${userId}`, fetchedOrgId);
-        if (fetchedOrgName) {
-          localStorage.setItem(`org_name_${userId}`, fetchedOrgName);
-        }
-        return { orgId: fetchedOrgId, orgName: fetchedOrgName };
-      }
-
-      return { orgId: null, orgName: null };
-    } catch (error) {
-      console.error('Error fetching org data:', error);
-      return { orgId: null, orgName: null };
-    }
-  }, []);
+    },
+    [],
+  );
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
-      
+
       // Load org_id and org_name from localStorage when user changes
       if (user?.uid) {
         const storedOrgId = localStorage.getItem(`org_id_${user.uid}`);
@@ -307,13 +312,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         } else {
           // Fetch org data if not in localStorage
-          fetchOrgId(user.uid);
+          void fetchOrgId(user.uid);
         }
       } else {
         setOrgId(null);
         setOrgName(null);
       }
-      
+
       setLoading(false);
     });
 
@@ -328,13 +333,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signup,
     logout,
     fetchOrgId,
-    loading
+    loading,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
 };
-

@@ -1,17 +1,28 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { MessageSquarePlus, PanelLeftClose, PanelLeft, MessageCircle, Trash2, Users } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { SignalsContextChat, SignalsChatContext, ChatMessage } from './SignalsContextChat';
-import ScoutChatPanel from '@/components/market-research/ScoutChatPanel';
-import { SuggestedCompaniesSection } from '@/components/market-research/SuggestedCompaniesSection';
-import { AddLeadModal } from '@/components/market-research/AddLeadModal';
+import {
+  MessageSquarePlus,
+  PanelLeftClose,
+  PanelLeft,
+  MessageCircle,
+  Trash2,
+  Users,
+} from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+
+import type { SignalsChatContext, ChatMessage } from "./SignalsContextChat";
+import { SignalsContextChat } from "./SignalsContextChat";
+
+import { AddLeadModal } from "@/components/market-research/AddLeadModal";
+import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
+import { SuggestedCompaniesSection } from "@/components/market-research/SuggestedCompaniesSection";
+import type { EditRecord } from "@/components/market-research/types";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   LEAD_STREAM_CHAT_CONTEXT_KEY,
   type LeadStreamChatContext,
-} from '@/utils/leadStreamChatContext';
+} from "@/utils/leadStreamChatContext";
 
-const STORAGE_KEY_PREFIX = 'scout_chat_sessions';
+const STORAGE_KEY_PREFIX = "scout_chat_sessions";
 
 interface ChatSession {
   id: string;
@@ -27,17 +38,17 @@ interface ScoutChatWithHistoryProps {
   /** Incoming context from Signals page (e.g. when user clicks "Chat with Scout" from a signal) */
   initialContext: SignalsChatContext | null;
   onClearContext?: () => void;
-  editHistory?: any[];
+  editHistory?: EditRecord[];
   onTabChange?: (tab: string) => void;
 }
 
 function getSessionTitle(context: SignalsChatContext | null): string {
-  if (!context) return 'New chat';
+  if (!context) return "New chat";
   const heading = context.signalHeading ?? context.recommendation ?? context.recommendations?.[0];
-  if (heading && typeof heading === 'string') {
+  if (heading && typeof heading === "string") {
     return heading;
   }
-  return 'Signal chat';
+  return "Signal chat";
 }
 
 function generateId(): string {
@@ -68,9 +79,9 @@ export function ScoutChatWithHistory({
         const parsed = JSON.parse(stored) as ChatSession[];
         if (Array.isArray(parsed) && parsed.length > 0) {
           loadedSessions = parsed.map((s) => {
-            const { leadContext, ...rest } = s;
+            const { leadContext: _leadContext, ...rest } = s;
             const session = { ...rest };
-            if (session.context && (session.title.endsWith('…') || session.title.length < 50)) {
+            if (session.context && (session.title.endsWith("…") || session.title.length < 50)) {
               session.title = getSessionTitle(session.context);
             }
             return session as ChatSession;
@@ -89,7 +100,7 @@ export function ScoutChatWithHistory({
               ? `Research: ${ctx.personName}`
               : ctx.company
                 ? `Research: ${ctx.company}`
-                : 'Ask Scout about leads');
+                : "Ask Scout about leads");
           const newSession: ChatSession = {
             id: generateId(),
             title,
@@ -113,7 +124,7 @@ export function ScoutChatWithHistory({
     } catch {
       // ignore
     }
-  }, [storageKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [storageKey]);
 
   // Persist sessions to localStorage (strip leadContext so Suggested companies only show when coming from Lead Stream)
   useEffect(() => {
@@ -122,7 +133,7 @@ export function ScoutChatWithHistory({
       if (sessions.length === 0) {
         localStorage.removeItem(storageKey);
       } else {
-        const toSave = sessions.map(({ leadContext, ...rest }) => rest);
+        const toSave = sessions.map(({ leadContext: _leadContext, ...rest }) => rest);
         localStorage.setItem(storageKey, JSON.stringify(toSave));
       }
     } catch {
@@ -140,21 +151,28 @@ export function ScoutChatWithHistory({
       initialContext.contentHash,
       initialContext.signalHeading,
       initialContext.recommendation,
-      initialContext.answer ? 'a' : '',
-    ].filter(Boolean).join('|');
+      initialContext.answer ? "a" : "",
+    ]
+      .filter(Boolean)
+      .join("|");
 
     if (processedContextRef.current === contextKey) return;
     processedContextRef.current = contextKey;
 
     const title = getSessionTitle(initialContext);
-    const contentHash = initialContext.contentHash ?? initialContext.signalHeading ?? initialContext.recommendation ?? '';
+    const contentHash =
+      initialContext.contentHash ??
+      initialContext.signalHeading ??
+      initialContext.recommendation ??
+      "";
 
     setSessions((prev) => {
       const existing = prev.find(
         (s) =>
           s.context &&
           (s.context.contentHash === contentHash ||
-            (s.context.signalHeading === initialContext.signalHeading && s.context.recommendation === initialContext.recommendation))
+            (s.context.signalHeading === initialContext.signalHeading &&
+              s.context.recommendation === initialContext.recommendation)),
       );
       if (existing) {
         setActiveSessionId(existing.id);
@@ -162,9 +180,7 @@ export function ScoutChatWithHistory({
         const mergedContext = initialContext.answer
           ? { ...existing.context!, ...initialContext }
           : existing.context!;
-        return prev.map((s) =>
-          s.id === existing.id ? { ...s, context: mergedContext } : s
-        );
+        return prev.map((s) => (s.id === existing.id ? { ...s, context: mergedContext } : s));
       }
 
       const newSession: ChatSession = {
@@ -177,13 +193,22 @@ export function ScoutChatWithHistory({
       setActiveSessionId(newSession.id);
       return [newSession, ...prev];
     });
-  }, [initialContext?.contentHash, initialContext?.signalHeading, initialContext?.recommendation, initialContext?.answer]);
+    // initialContext object itself intentionally omitted: the effect keys
+    // on specific stable fields above; tracking the object identity would
+    // re-run on every parent re-render even when content is unchanged.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    initialContext?.contentHash,
+    initialContext?.signalHeading,
+    initialContext?.recommendation,
+    initialContext?.answer,
+  ]);
 
   const handleNewChat = useCallback(() => {
     setSuggestionPrefill(null);
     const newSession: ChatSession = {
       id: generateId(),
-      title: 'New chat',
+      title: "New chat",
       context: null,
       messages: [],
       createdAt: Date.now(),
@@ -191,7 +216,7 @@ export function ScoutChatWithHistory({
     setSessions((prev) => [newSession, ...prev]);
     setActiveSessionId(newSession.id);
     onClearContext?.();
-    sessionStorage.removeItem('signalsChatContext');
+    sessionStorage.removeItem("signalsChatContext");
     sessionStorage.removeItem(LEAD_STREAM_CHAT_CONTEXT_KEY);
   }, [onClearContext]);
 
@@ -211,41 +236,47 @@ export function ScoutChatWithHistory({
     });
   }, [activeSessionId]);
 
-  const handleDeleteSession = useCallback((e: React.MouseEvent, sessionId: string) => {
-    e.stopPropagation();
-    const isActive = activeSessionId === sessionId;
-    setSessions((prev) => {
-      const filtered = prev.filter((s) => s.id !== sessionId);
-      if (isActive) {
-        const currentIndex = prev.findIndex((s) => s.id === sessionId);
-        const nextSession = filtered[currentIndex] ?? filtered[currentIndex - 1] ?? filtered[0];
-        setActiveSessionId(nextSession?.id ?? null);
-      }
-      return filtered;
-    });
-  }, [activeSessionId]);
+  const handleDeleteSession = useCallback(
+    (e: React.MouseEvent, sessionId: string) => {
+      e.stopPropagation();
+      const isActive = activeSessionId === sessionId;
+      setSessions((prev) => {
+        const filtered = prev.filter((s) => s.id !== sessionId);
+        if (isActive) {
+          const currentIndex = prev.findIndex((s) => s.id === sessionId);
+          const nextSession = filtered[currentIndex] ?? filtered[currentIndex - 1] ?? filtered[0];
+          setActiveSessionId(nextSession?.id ?? null);
+        }
+        return filtered;
+      });
+    },
+    [activeSessionId],
+  );
 
   const handleMessagesChange = useCallback(
     (sessionId: string) => (messages: ChatMessage[]) => {
-      setSessions((prev) =>
-        prev.map((s) => (s.id === sessionId ? { ...s, messages } : s))
-      );
+      setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, messages } : s)));
     },
-    []
+    [],
   );
 
   const activeSession = sessions.find((s) => s.id === activeSessionId);
   const [suggestionPrefill, setSuggestionPrefill] = useState<string | null>(null);
   const [addLeadModalOpen, setAddLeadModalOpen] = useState(false);
-  const [addLeadInitialData, setAddLeadInitialData] = useState<{ companyName?: string; companyWebsite?: string } | undefined>();
+  const [addLeadInitialData, setAddLeadInitialData] = useState<
+    { companyName?: string; companyWebsite?: string } | undefined
+  >();
 
-  const handleAddToLeadStream = useCallback((company: { companyName?: string; companyWebsite?: string }) => {
-    setAddLeadInitialData(company);
-    setAddLeadModalOpen(true);
-  }, []);
+  const handleAddToLeadStream = useCallback(
+    (company: { companyName?: string; companyWebsite?: string }) => {
+      setAddLeadInitialData(company);
+      setAddLeadModalOpen(true);
+    },
+    [],
+  );
 
   const handleLeadAdded = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('leadStreamRefresh'));
+    window.dispatchEvent(new CustomEvent("leadStreamRefresh"));
   }, []);
 
   const clearSuggestionPrefill = useCallback(() => setSuggestionPrefill(null), []);
@@ -255,7 +286,9 @@ export function ScoutChatWithHistory({
       {/* Sidebar - Chat history */}
       <div
         className={`flex flex-col border-r border-border bg-muted/30 transition-all duration-200 ${
-          sidebarOpen ? 'w-64 sm:w-72 min-w-[14rem] max-w-[min(18rem,42vw)] shrink-0' : 'w-0 overflow-hidden'
+          sidebarOpen
+            ? "w-64 sm:w-72 min-w-[14rem] max-w-[min(18rem,42vw)] shrink-0"
+            : "w-0 overflow-hidden"
         }`}
       >
         {sidebarOpen && (
@@ -286,14 +319,14 @@ export function ScoutChatWithHistory({
                 {sessions.map((session) => {
                   const displayTitle = session.context
                     ? getSessionTitle(session.context)
-                    : session.leadContext?.sessionTitle ?? session.title;
+                    : (session.leadContext?.sessionTitle ?? session.title);
                   return (
                     <div
                       key={session.id}
                       className={`group flex items-center gap-1 w-full rounded-lg pl-3 pr-2 py-2.5 text-left text-sm transition-colors ${
                         activeSessionId === session.id
-                          ? 'bg-primary/10 text-primary font-medium'
-                          : 'hover:bg-muted/60 text-muted-foreground'
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "hover:bg-muted/60 text-muted-foreground"
                       }`}
                     >
                       <button
@@ -303,7 +336,9 @@ export function ScoutChatWithHistory({
                         title={displayTitle}
                       >
                         <MessageCircle className="h-4 w-4 mt-0.5 shrink-0 flex-shrink-0" />
-                        <span className="flex-1 min-w-0 break-words text-left block [overflow-wrap:anywhere] whitespace-normal">{displayTitle}</span>
+                        <span className="flex-1 min-w-0 break-words text-left block [overflow-wrap:anywhere] whitespace-normal">
+                          {displayTitle}
+                        </span>
                       </button>
                       <Button
                         variant="ghost"
@@ -346,7 +381,7 @@ export function ScoutChatWithHistory({
               onMessagesChange={handleMessagesChange(activeSession.id)}
               onClose={handleCloseChat}
               onClearContext={() => {
-                sessionStorage.removeItem('signalsChatContext');
+                sessionStorage.removeItem("signalsChatContext");
                 onClearContext?.();
                 handleNewChat();
               }}
@@ -359,7 +394,7 @@ export function ScoutChatWithHistory({
                     variant="ghost"
                     size="sm"
                     className="w-fit -ml-1 text-muted-foreground hover:text-foreground shrink-0"
-                    onClick={() => onTabChange('analysis')}
+                    onClick={() => onTabChange("analysis")}
                   >
                     <Users className="h-4 w-4 mr-1.5" />
                     Back to Lead Stream
@@ -373,7 +408,7 @@ export function ScoutChatWithHistory({
                   showEditHistory={false}
                   editHistory={editHistory}
                   lastEditedField=""
-                  context={activeSession.leadContext ? 'lead-stream' : 'general'}
+                  context={activeSession.leadContext ? "lead-stream" : "general"}
                   customMessage={activeSession.leadContext?.customMessage}
                   workspaceLine={activeSession.leadContext?.workspaceLine}
                   inputPlaceholder={
@@ -390,14 +425,14 @@ export function ScoutChatWithHistory({
                   leadHeaderDetail={
                     activeSession.leadContext?.personName
                       ? {
-                          type: 'single',
+                          type: "single",
                           company: activeSession.leadContext.company,
                           source: activeSession.leadContext.source,
                         }
                       : activeSession.leadContext?.leadSummaries &&
                           activeSession.leadContext.leadSummaries.length > 0
                         ? {
-                            type: 'multi',
+                            type: "multi",
                             leadCount:
                               activeSession.leadContext.leadCount ??
                               activeSession.leadContext.leadSummaries.length,
@@ -420,7 +455,8 @@ export function ScoutChatWithHistory({
             <div>
               <h3 className="text-lg font-semibold mb-2">Chat with Scout</h3>
               <p className="text-sm text-muted-foreground max-w-sm">
-                Start a new conversation or select a signal from the Signals page to discuss it with Scout.
+                Start a new conversation or select a signal from the Signals page to discuss it with
+                Scout.
               </p>
             </div>
           </div>

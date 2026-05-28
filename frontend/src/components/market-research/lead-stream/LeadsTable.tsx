@@ -1,36 +1,64 @@
+import {
+  Bot,
+  ArrowRight,
+  ArrowUpDown,
+  Info,
+  ChevronRight,
+  ChevronDown,
+  TrendingUp,
+  AlertTriangle,
+  Zap,
+  ChevronUp,
+  Loader2,
+} from "lucide-react";
 import React, { useState, useEffect, useLayoutEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+
+import {
+  type Rating,
+  type HeatmapLead,
+  REPORT_COLUMNS,
+  RATING_SCORE,
+  TIER_INTELLIGENCE,
+  heatmapLeads,
+} from "./leadData";
+
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import {
-  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Bot, ArrowRight, ArrowUpDown, Info, ChevronRight, ChevronDown, TrendingUp, AlertTriangle, Zap, ChevronUp, Loader2 } from "lucide-react";
-import { type Rating, type HeatmapLead, REPORT_COLUMNS, RATING_SCORE, TIER_INTELLIGENCE, heatmapLeads } from "./leadData";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useTenant } from "@/contexts/TenantContext";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { buildApiUrl } from "@/lib/api";
+import jwtManager from "@/lib/jwt";
 import {
-  extractMarketScoreRowsFromResponse,
-  heatmapLeadFromUnknownRow,
-} from "@/lib/marketScoresHeatmap";
+  readLeadStreamHeatmapFromSession,
+  writeLeadStreamHeatmapToSession,
+} from "@/lib/leadStreamHeatmapSession";
 import {
   getDescriptionTextForColumn,
   type MarketScoreDescriptionsResponse,
 } from "@/lib/marketScoreDescriptions";
 import {
-  readLeadStreamHeatmapFromSession,
-  writeLeadStreamHeatmapToSession,
-} from "@/lib/leadStreamHeatmapSession";
-import { useAuth } from "@/hooks/useAuth";
-import { useTenant } from "@/contexts/TenantContext";
-import { useToast } from "@/hooks/use-toast";
-import { buildApiUrl } from "@/lib/api";
-import jwtManager from "@/lib/jwt";
+  extractMarketScoreRowsFromResponse,
+  heatmapLeadFromUnknownRow,
+} from "@/lib/marketScoresHeatmap";
 
 // ─── Score Breakdown Popover ────────────────────────────────────────────────
 
@@ -75,7 +103,8 @@ const ScoreBreakdown = ({ lead }: { lead: HeatmapLead }) => {
             <span className="font-bold text-foreground">{lead.totalScore}</span>
           </div>
           <p className="text-[10px] text-muted-foreground leading-snug pt-1">
-            High = {RATING_SCORE.High}pts · Medium = {RATING_SCORE.Medium}pts · Low = {RATING_SCORE.Low}pts
+            High = {RATING_SCORE.High}pts · Medium = {RATING_SCORE.Medium}pts · Low ={" "}
+            {RATING_SCORE.Low}pts
           </p>
         </div>
       )}
@@ -93,7 +122,9 @@ const RatingCell = ({ rating }: { rating: Rating }) => {
   };
 
   return (
-    <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold ${styles[rating]}`}>
+    <span
+      className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold ${styles[rating]}`}
+    >
       {rating}
     </span>
   );
@@ -103,9 +134,12 @@ const RatingCell = ({ rating }: { rating: Rating }) => {
 
 const PriorityBadge = ({ tier }: { tier: string }) => {
   const styles: Record<string, string> = {
-    "Tier 1": "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800",
-    "Tier 2": "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800",
-    "Tier 3": "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800",
+    "Tier 1":
+      "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800",
+    "Tier 2":
+      "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800",
+    "Tier 3":
+      "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800",
   };
 
   return (
@@ -140,7 +174,7 @@ const LeadIntelligencePanel = ({
   detail,
 }: {
   lead: HeatmapLead;
-  onChatWithScout?: (leads: any[], reportFilter?: string) => void;
+  onChatWithScout?: (leads: HeatmapLead[], reportFilter?: string) => void;
   detail?: LeadScoreDetailState;
 }) => {
   const intel = TIER_INTELLIGENCE[lead.priority];
@@ -163,13 +197,13 @@ const LeadIntelligencePanel = ({
           {intel && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <PriorityBadge tier={lead.priority} />
-              <span>{intel.label} · Fit Score {intel.fitScore}%</span>
+              <span>
+                {intel.label} · Fit Score {intel.fitScore}%
+              </span>
             </div>
           )}
 
-          {detailError && (
-            <p className="text-[11px] text-destructive">{detailError}</p>
-          )}
+          {detailError && <p className="text-[11px] text-destructive">{detailError}</p>}
 
           {/* Per-component explanations — narrative text only from GET …/market-score-descriptions (no mock fallback). */}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
@@ -184,7 +218,9 @@ const LeadIntelligencePanel = ({
                   className={`rounded-md border ${ratingBorderColor[rating]} bg-background p-2.5 space-y-1`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold text-foreground">{col.shortLabel}</span>
+                    <span className="text-[11px] font-semibold text-foreground">
+                      {col.shortLabel}
+                    </span>
                     <div className="flex items-center gap-1">
                       {ratingIcon[rating]}
                       <RatingCell rating={rating} />
@@ -270,8 +306,8 @@ const LeadIntelligencePanel = ({
 interface LeadsTableProps {
   opportunityFilter?: string | null;
   onClearOpportunityFilter?: () => void;
-  onSendToStrategist?: (lead: any) => void;
-  onChatWithScout?: (leads: any[], reportFilter?: string) => void;
+  onSendToStrategist?: (lead: HeatmapLead) => void;
+  onChatWithScout?: (leads: HeatmapLead[], reportFilter?: string) => void;
   /** Fires when POST/session heatmap rows change; parent charts use null → demo data, array → live counts. */
   onHeatmapRowsForDashboardChange?: (rows: HeatmapLead[] | null) => void;
 }
@@ -299,7 +335,10 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
     Record<string, LeadScoreDetailState>
   >({});
 
-  const resolveUserIdOrgId = useCallback(async (): Promise<{ userId: string; orgId: string } | null> => {
+  const resolveUserIdOrgId = useCallback(async (): Promise<{
+    userId: string;
+    orgId: string;
+  } | null> => {
     const userId = currentUser?.uid;
     let orgId = selectedTenant?.id ?? authOrgId ?? "";
     if (!orgId && userId) {
@@ -319,7 +358,8 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
     if (!ctx) {
       toast({
         title: "Missing account context",
-        description: "Sign in and select an organization (or ensure org is loaded) to refresh lead scores.",
+        description:
+          "Sign in and select an organization (or ensure org is loaded) to refresh lead scores.",
         variant: "destructive",
       });
       return;
@@ -362,7 +402,10 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
       if (import.meta.env.DEV) {
         console.info("[Lead Stream] mapped heatmap rows:", mapped.length);
       }
-      if (mapped.length === 0 && (data as { processing_status?: string })?.processing_status === "processing") {
+      if (
+        mapped.length === 0 &&
+        (data as { processing_status?: string })?.processing_status === "processing"
+      ) {
         toast({
           title: "Scoring started",
           description: "Rows will appear when scoring completes. Try refresh again shortly.",
@@ -412,7 +455,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
           org_id: ctx.orgId,
         });
         const url = buildApiUrl(
-          `leads/${encodeURIComponent(leadId)}/market-score-descriptions?${qs.toString()}`
+          `leads/${encodeURIComponent(leadId)}/market-score-descriptions?${qs.toString()}`,
         );
         const res = await fetch(url, {
           method: "GET",
@@ -440,7 +483,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
         }));
       }
     },
-    [resolveUserIdOrgId]
+    [resolveUserIdOrgId],
   );
 
   useEffect(() => {
@@ -448,7 +491,8 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
       void fetchMarketScores();
     };
     window.addEventListener("scoutLeadStreamHeatmapRefresh", onLeadStreamHeaderRefresh);
-    return () => window.removeEventListener("scoutLeadStreamHeatmapRefresh", onLeadStreamHeaderRefresh);
+    return () =>
+      window.removeEventListener("scoutLeadStreamHeatmapRefresh", onLeadStreamHeaderRefresh);
   }, [fetchMarketScores]);
 
   useLayoutEffect(() => {
@@ -471,14 +515,14 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
   };
 
   // Filter by tier
-  const filteredLeads = tierFilter === "all"
-    ? baseLeads
-    : baseLeads.filter((l) => l.priority === tierFilter);
+  const filteredLeads =
+    tierFilter === "all" ? baseLeads : baseLeads.filter((l) => l.priority === tierFilter);
 
   // Sort
   const sortedLeads = sortBy
     ? [...filteredLeads].sort((a, b) => {
-        const diff = sortBy === "score" ? a.totalScore - b.totalScore : a.priority.localeCompare(b.priority);
+        const diff =
+          sortBy === "score" ? a.totalScore - b.totalScore : a.priority.localeCompare(b.priority);
         return sortAsc ? diff : -diff;
       })
     : [...filteredLeads].sort((a, b) => b.totalScore - a.totalScore);
@@ -506,7 +550,10 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
               Live API
             </Badge>
           ) : (
-            <Badge variant="outline" className="text-[10px] text-muted-foreground font-normal shrink-0">
+            <Badge
+              variant="outline"
+              className="text-[10px] text-muted-foreground font-normal shrink-0"
+            >
               Sample data
             </Badge>
           )}
@@ -516,19 +563,25 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                 <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
               </TooltipTrigger>
               <TooltipContent side="right" className="max-w-xs text-xs">
-                Each lead is rated High, Medium, or Low across all Scout report sections. Click the arrow on any lead to view opportunity intelligence.
+                Each lead is rated High, Medium, or Low across all Scout report sections. Click the
+                arrow on any lead to view opportunity intelligence.
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
           {opportunityFilter && opportunityFilter !== "all" && (
-            <Badge variant="outline" className="text-xs bg-primary/5 text-primary border-primary/20 gap-1">
+            <Badge
+              variant="outline"
+              className="text-xs bg-primary/5 text-primary border-primary/20 gap-1"
+            >
               Filtered view
-              <button className="ml-1 hover:text-primary/70" onClick={onClearOpportunityFilter}>×</button>
+              <button className="ml-1 hover:text-primary/70" onClick={onClearOpportunityFilter}>
+                ×
+              </button>
             </Badge>
           )}
         </div>
         <button
-          onClick={() => navigate('/your-ai-team/strategist/workspace')}
+          onClick={() => navigate("/your-ai-team/strategist/workspace")}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/5 hover:bg-primary/10 hover:border-primary/40 transition-all duration-200 text-[11px] font-semibold text-primary"
         >
           <Zap className="h-3 w-3" />
@@ -541,10 +594,18 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
               <SelectValue placeholder="All Tiers" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all" className="text-xs">All Tiers</SelectItem>
-              <SelectItem value="Tier 1" className="text-xs">Tier 1 (75+)</SelectItem>
-              <SelectItem value="Tier 2" className="text-xs">Tier 2 (50–74)</SelectItem>
-              <SelectItem value="Tier 3" className="text-xs">Tier 3 (&lt;50)</SelectItem>
+              <SelectItem value="all" className="text-xs">
+                All Tiers
+              </SelectItem>
+              <SelectItem value="Tier 1" className="text-xs">
+                Tier 1 (75+)
+              </SelectItem>
+              <SelectItem value="Tier 2" className="text-xs">
+                Tier 2 (50–74)
+              </SelectItem>
+              <SelectItem value="Tier 3" className="text-xs">
+                Tier 3 (&lt;50)
+              </SelectItem>
             </SelectContent>
           </Select>
           <Button
@@ -581,10 +642,15 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="w-[170px] text-xs font-semibold sticky left-0 bg-background z-10">Lead</TableHead>
+                <TableHead className="w-[170px] text-xs font-semibold sticky left-0 bg-background z-10">
+                  Lead
+                </TableHead>
                 <TableHead className="w-[130px] text-xs font-semibold">Company</TableHead>
                 {REPORT_COLUMNS.map((col) => (
-                  <TableHead key={col.key} className="text-xs font-semibold text-center min-w-[100px]">
+                  <TableHead
+                    key={col.key}
+                    className="text-xs font-semibold text-center min-w-[100px]"
+                  >
                     <TooltipProvider delayDuration={200}>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -601,7 +667,9 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                     onClick={() => toggleSort("score")}
                   >
                     Total Score
-                    <ArrowUpDown className={`h-3 w-3 ${sortBy === "score" ? "text-primary" : "text-muted-foreground"}`} />
+                    <ArrowUpDown
+                      className={`h-3 w-3 ${sortBy === "score" ? "text-primary" : "text-muted-foreground"}`}
+                    />
                   </button>
                 </TableHead>
                 <TableHead className="text-xs font-semibold text-center w-[80px]">
@@ -610,7 +678,9 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                     onClick={() => toggleSort("priority")}
                   >
                     Priority
-                    <ArrowUpDown className={`h-3 w-3 ${sortBy === "priority" ? "text-primary" : "text-muted-foreground"}`} />
+                    <ArrowUpDown
+                      className={`h-3 w-3 ${sortBy === "priority" ? "text-primary" : "text-muted-foreground"}`}
+                    />
                   </button>
                 </TableHead>
                 <TableHead className="w-[160px] text-xs text-right">Action</TableHead>
@@ -619,7 +689,10 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
             <TableBody>
               {sortedLeads.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={REPORT_COLUMNS.length + 5} className="text-center py-10 text-sm text-muted-foreground">
+                  <TableCell
+                    colSpan={REPORT_COLUMNS.length + 5}
+                    className="text-center py-10 text-sm text-muted-foreground"
+                  >
                     No leads match this filter.
                   </TableCell>
                 </TableRow>
@@ -643,7 +716,9 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                           {lead.name}
                         </div>
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{lead.company}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {lead.company}
+                      </TableCell>
                       {REPORT_COLUMNS.map((col) => (
                         <TableCell key={col.key} className="text-center">
                           <RatingCell rating={lead.ratings[col.key]} />

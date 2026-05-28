@@ -1,10 +1,13 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { MessageSquarePlus, PanelLeftClose, PanelLeft, MessageCircle, Trash2 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { SignalsContextChat, SignalsChatContext, ChatMessage } from './SignalsContextChat';
+import { MessageSquarePlus, PanelLeftClose, PanelLeft, MessageCircle, Trash2 } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
-const STORAGE_KEY_PREFIX = 'profiler_chat_sessions';
+import type { SignalsChatContext, ChatMessage } from "./SignalsContextChat";
+import { SignalsContextChat } from "./SignalsContextChat";
+
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+
+const STORAGE_KEY_PREFIX = "profiler_chat_sessions";
 
 interface ProfilerChatSession {
   id: string;
@@ -22,12 +25,12 @@ interface ProfilerChatWithHistoryProps {
 }
 
 function getSessionTitle(context: SignalsChatContext | null): string {
-  if (!context) return 'New chat';
+  if (!context) return "New chat";
   const heading = context.signalHeading ?? context.recommendation ?? context.recommendations?.[0];
-  if (heading && typeof heading === 'string') {
+  if (heading && typeof heading === "string") {
     return heading;
   }
-  return 'Signal chat';
+  return "Signal chat";
 }
 
 function generateId(): string {
@@ -36,8 +39,8 @@ function generateId(): string {
 
 /** Minimal context for general Profiler chat (no signal) */
 const EMPTY_PROFILER_CONTEXT: SignalsChatContext = {
-  agent: 'profiler',
-  prompt: '',
+  agent: "profiler",
+  prompt: "",
 };
 
 export function ProfilerChatWithHistory({
@@ -60,7 +63,7 @@ export function ProfilerChatWithHistory({
         const parsed = JSON.parse(stored) as ProfilerChatSession[];
         if (Array.isArray(parsed) && parsed.length > 0) {
           const migrated = parsed.map((s) => {
-            if (s.context && (s.title.endsWith('…') || s.title.length < 50)) {
+            if (s.context && (s.title.endsWith("…") || s.title.length < 50)) {
               return { ...s, title: getSessionTitle(s.context) };
             }
             return s;
@@ -94,27 +97,34 @@ export function ProfilerChatWithHistory({
 
   // When initialContext arrives (from Signals page), add as new session or switch to existing
   useEffect(() => {
-    if (!initialContext || initialContext.agent !== 'profiler') return;
+    if (!initialContext || initialContext.agent !== "profiler") return;
 
     const contextKey = [
       initialContext.contentHash,
       initialContext.signalHeading,
       initialContext.recommendation,
-      initialContext.answer ? 'a' : '',
-    ].filter(Boolean).join('|');
+      initialContext.answer ? "a" : "",
+    ]
+      .filter(Boolean)
+      .join("|");
 
     if (processedContextRef.current === contextKey) return;
     processedContextRef.current = contextKey;
 
     const title = getSessionTitle(initialContext);
-    const contentHash = initialContext.contentHash ?? initialContext.signalHeading ?? initialContext.recommendation ?? '';
+    const contentHash =
+      initialContext.contentHash ??
+      initialContext.signalHeading ??
+      initialContext.recommendation ??
+      "";
 
     setSessions((prev) => {
       const existing = prev.find(
         (s) =>
           s.context &&
           (s.context.contentHash === contentHash ||
-            (s.context.signalHeading === initialContext.signalHeading && s.context.recommendation === initialContext.recommendation))
+            (s.context.signalHeading === initialContext.signalHeading &&
+              s.context.recommendation === initialContext.recommendation)),
       );
       if (existing) {
         setActiveSessionId(existing.id);
@@ -122,9 +132,7 @@ export function ProfilerChatWithHistory({
         const mergedContext = initialContext.answer
           ? { ...existing.context!, ...initialContext }
           : existing.context!;
-        return prev.map((s) =>
-          s.id === existing.id ? { ...s, context: mergedContext } : s
-        );
+        return prev.map((s) => (s.id === existing.id ? { ...s, context: mergedContext } : s));
       }
 
       const newSession: ProfilerChatSession = {
@@ -137,12 +145,22 @@ export function ProfilerChatWithHistory({
       setActiveSessionId(newSession.id);
       return [newSession, ...prev];
     });
-  }, [initialContext?.contentHash, initialContext?.signalHeading, initialContext?.recommendation, initialContext?.agent, initialContext?.answer]);
+    // initialContext object itself intentionally omitted: the effect keys
+    // on specific stable fields above; tracking the object identity would
+    // re-run on every parent re-render even when content is unchanged.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    initialContext?.contentHash,
+    initialContext?.signalHeading,
+    initialContext?.recommendation,
+    initialContext?.agent,
+    initialContext?.answer,
+  ]);
 
   const handleNewChat = useCallback(() => {
     const newSession: ProfilerChatSession = {
       id: generateId(),
-      title: 'New chat',
+      title: "New chat",
       context: null,
       messages: [],
       createdAt: Date.now(),
@@ -150,7 +168,7 @@ export function ProfilerChatWithHistory({
     setSessions((prev) => [newSession, ...prev]);
     setActiveSessionId(newSession.id);
     onClearContext?.();
-    sessionStorage.removeItem('signalsChatContext');
+    sessionStorage.removeItem("signalsChatContext");
   }, [onClearContext]);
 
   const handleSelectSession = useCallback((id: string) => {
@@ -169,27 +187,28 @@ export function ProfilerChatWithHistory({
     });
   }, [activeSessionId]);
 
-  const handleDeleteSession = useCallback((e: React.MouseEvent, sessionId: string) => {
-    e.stopPropagation();
-    const isActive = activeSessionId === sessionId;
-    setSessions((prev) => {
-      const filtered = prev.filter((s) => s.id !== sessionId);
-      if (isActive) {
-        const currentIndex = prev.findIndex((s) => s.id === sessionId);
-        const nextSession = filtered[currentIndex] ?? filtered[currentIndex - 1] ?? filtered[0];
-        setActiveSessionId(nextSession?.id ?? null);
-      }
-      return filtered;
-    });
-  }, [activeSessionId]);
+  const handleDeleteSession = useCallback(
+    (e: React.MouseEvent, sessionId: string) => {
+      e.stopPropagation();
+      const isActive = activeSessionId === sessionId;
+      setSessions((prev) => {
+        const filtered = prev.filter((s) => s.id !== sessionId);
+        if (isActive) {
+          const currentIndex = prev.findIndex((s) => s.id === sessionId);
+          const nextSession = filtered[currentIndex] ?? filtered[currentIndex - 1] ?? filtered[0];
+          setActiveSessionId(nextSession?.id ?? null);
+        }
+        return filtered;
+      });
+    },
+    [activeSessionId],
+  );
 
   const handleMessagesChange = useCallback(
     (sessionId: string) => (messages: ChatMessage[]) => {
-      setSessions((prev) =>
-        prev.map((s) => (s.id === sessionId ? { ...s, messages } : s))
-      );
+      setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, messages } : s)));
     },
-    []
+    [],
   );
 
   const activeSession = sessions.find((s) => s.id === activeSessionId);
@@ -199,7 +218,7 @@ export function ProfilerChatWithHistory({
       {/* Sidebar - Chat history */}
       <div
         className={`flex flex-col border-r border-border bg-muted/30 transition-all duration-200 ${
-          sidebarOpen ? 'w-[28rem] min-w-[24rem] max-w-[90vw] shrink-0' : 'w-0 overflow-hidden'
+          sidebarOpen ? "w-[28rem] min-w-[24rem] max-w-[90vw] shrink-0" : "w-0 overflow-hidden"
         }`}
       >
         {sidebarOpen && (
@@ -228,14 +247,16 @@ export function ProfilerChatWithHistory({
             <div className="flex-1 min-h-0 overflow-y-auto px-3 pr-4">
               <div className="space-y-3 py-2 min-w-0 w-full">
                 {sessions.map((session) => {
-                  const displayTitle = session.context ? getSessionTitle(session.context) : session.title;
+                  const displayTitle = session.context
+                    ? getSessionTitle(session.context)
+                    : session.title;
                   return (
                     <div
                       key={session.id}
                       className={`group flex items-center gap-1 w-full rounded-lg pl-3 pr-2 py-2.5 text-left text-sm transition-colors ${
                         activeSessionId === session.id
-                          ? 'bg-primary/10 text-primary font-medium'
-                          : 'hover:bg-muted/60 text-muted-foreground'
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "hover:bg-muted/60 text-muted-foreground"
                       }`}
                     >
                       <button
@@ -245,7 +266,9 @@ export function ProfilerChatWithHistory({
                         title={displayTitle}
                       >
                         <MessageCircle className="h-4 w-4 mt-0.5 shrink-0 flex-shrink-0" />
-                        <span className="flex-1 min-w-0 break-words text-left block [overflow-wrap:anywhere] whitespace-normal">{displayTitle}</span>
+                        <span className="flex-1 min-w-0 break-words text-left block [overflow-wrap:anywhere] whitespace-normal">
+                          {displayTitle}
+                        </span>
                       </button>
                       <Button
                         variant="ghost"
@@ -287,7 +310,7 @@ export function ProfilerChatWithHistory({
             onMessagesChange={handleMessagesChange(activeSession.id)}
             onClose={handleCloseChat}
             onClearContext={() => {
-              sessionStorage.removeItem('signalsChatContext');
+              sessionStorage.removeItem("signalsChatContext");
               onClearContext?.();
               handleNewChat();
             }}
@@ -298,7 +321,8 @@ export function ProfilerChatWithHistory({
             <div>
               <h3 className="text-lg font-semibold mb-2">Chat with Profiler</h3>
               <p className="text-sm text-muted-foreground mb-4 max-w-sm">
-                Start a new conversation or select a signal from the Signals page to discuss it with Profiler.
+                Start a new conversation or select a signal from the Signals page to discuss it with
+                Profiler.
               </p>
               <Button onClick={handleNewChat} className="flex items-center gap-2">
                 <MessageSquarePlus className="h-4 w-4" />

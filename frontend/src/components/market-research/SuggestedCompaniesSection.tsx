@@ -1,6 +1,7 @@
+import { Plus, Lightbulb } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Lightbulb } from "lucide-react";
 
 /** Mock suggested companies - backend will replace with Scout API structured output */
 const MOCK_SUGGESTED = [

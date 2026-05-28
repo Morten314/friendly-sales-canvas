@@ -1,9 +1,18 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { BarChart3, Bot } from "lucide-react";
 import { useState } from "react";
+
 import { CompetitorAnalysisDrawer } from "./CompetitorAnalysisDrawer";
+
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface Market {
   name: string;
@@ -28,13 +37,16 @@ interface CompetitorAnalysisProps {
   isAIViewActive?: boolean;
 }
 
-export const CompetitorAnalysis = ({ competitorData, isAIViewActive = false }: CompetitorAnalysisProps) => {
+export const CompetitorAnalysis = ({
+  competitorData,
+  isAIViewActive = false,
+}: CompetitorAnalysisProps) => {
   const [selectedCompetitor, setSelectedCompetitor] = useState<Market | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [localCompetitorData, setLocalCompetitorData] = useState<Market[]>(competitorData);
 
   const handleRowClick = (competitor: Market) => {
-    console.log('CompetitorAnalysis: Row clicked', competitor, 'AI View Active:', isAIViewActive);
+    console.log("CompetitorAnalysis: Row clicked", competitor, "AI View Active:", isAIViewActive);
     if (isAIViewActive) {
       setSelectedCompetitor(competitor);
       setIsDrawerOpen(true);
@@ -49,8 +61,8 @@ export const CompetitorAnalysis = ({ competitorData, isAIViewActive = false }: C
 
     // Check if the click target is part of the table
     const target = e.target as HTMLElement;
-    const isTableClick = target.closest('table') !== null;
-    
+    const isTableClick = target.closest("table") !== null;
+
     // If it's a table click, let the row handler manage it
     if (isTableClick) {
       return;
@@ -63,38 +75,37 @@ export const CompetitorAnalysis = ({ competitorData, isAIViewActive = false }: C
   };
 
   const handleUpdateCompetitor = (updatedCompetitor: Market) => {
-    setLocalCompetitorData(prevData => 
-      prevData.map(competitor => 
-        competitor.name === selectedCompetitor?.name ? updatedCompetitor : competitor
-      )
+    setLocalCompetitorData((prevData) =>
+      prevData.map((competitor) =>
+        competitor.name === selectedCompetitor?.name ? updatedCompetitor : competitor,
+      ),
     );
     setSelectedCompetitor(updatedCompetitor);
   };
 
   return (
     <>
-      <Card 
+      <Card
         className={`transition-colors ${
-          isAIViewActive 
-            ? 'hover:bg-blue-50 cursor-pointer' 
-            : 'hover:bg-gray-50'
+          isAIViewActive ? "hover:bg-blue-50 cursor-pointer" : "hover:bg-gray-50"
         }`}
         onClick={handleCardClick}
       >
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-blue-600" /> 
+            <BarChart3 className="h-5 w-5 text-blue-600" />
             Competitor Analysis
             {isAIViewActive && (
-              <Badge variant="secondary" className="ml-2 bg-purple-100 text-purple-700 border-purple-200">
+              <Badge
+                variant="secondary"
+                className="ml-2 bg-purple-100 text-purple-700 border-purple-200"
+              >
                 <Bot className="h-3 w-3 mr-1" />
                 AI Enhanced
               </Badge>
             )}
           </CardTitle>
-          <CardDescription>
-            Detailed analysis of key markets and opportunities
-          </CardDescription>
+          <CardDescription>Detailed analysis of key markets and opportunities</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -109,12 +120,10 @@ export const CompetitorAnalysis = ({ competitorData, isAIViewActive = false }: C
             </TableHeader>
             <TableBody>
               {localCompetitorData.map((market, index) => (
-                <TableRow 
+                <TableRow
                   key={index}
                   className={`transition-colors ${
-                    isAIViewActive 
-                      ? 'hover:bg-blue-50 cursor-pointer' 
-                      : 'hover:bg-gray-50'
+                    isAIViewActive ? "hover:bg-blue-50 cursor-pointer" : "hover:bg-gray-50"
                   }`}
                   onClick={() => handleRowClick(market)}
                 >

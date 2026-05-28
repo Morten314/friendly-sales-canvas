@@ -21,7 +21,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
 const FRONTEND_DIR = resolve(import.meta.dirname, "..");
@@ -99,14 +99,9 @@ function main(): void {
     REPO_DIR,
     "docs",
     "audits",
-    `${date}-frontend-phase-2a-strict-probe.json`
+    `${date}-frontend-phase-2a-strict-probe.json`,
   );
-  const txtOut = resolve(
-    REPO_DIR,
-    "docs",
-    "audits",
-    `${date}-frontend-phase-2a-strict-probe.txt`
-  );
+  const txtOut = resolve(REPO_DIR, "docs", "audits", `${date}-frontend-phase-2a-strict-probe.txt`);
 
   // 1) Write the throwaway probe config.
   // noImplicitAny is set explicitly even though strict:true enables it umbrellally,
@@ -132,7 +127,7 @@ function main(): void {
     raw = execFileSync(
       resolve(FRONTEND_DIR, "node_modules", ".bin", "tsc"),
       ["--noEmit", "-p", "tsconfig.strict-probe.json"],
-      { cwd: FRONTEND_DIR, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }
+      { cwd: FRONTEND_DIR, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] },
     );
   } catch (err: unknown) {
     const e = err as { stdout?: string; stderr?: string };

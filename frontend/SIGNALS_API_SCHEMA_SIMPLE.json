@@ -106,11 +106,27 @@
       "engagement patterns"
     ],
     "signalTypes": {
-      "competitor": ["competitive move", "market positioning", "pricing strategy", "feature launch", "market share"],
-      "funding": ["market confidence", "growth trajectory", "competitive landscape", "market opportunity"],
+      "competitor": [
+        "competitive move",
+        "market positioning",
+        "pricing strategy",
+        "feature launch",
+        "market share"
+      ],
+      "funding": [
+        "market confidence",
+        "growth trajectory",
+        "competitive landscape",
+        "market opportunity"
+      ],
       "icp_segment": ["target segment", "ICP profile", "buyer persona", "market penetration"],
       "social_signal": ["buyer engagement", "pain point", "buying signal", "outreach opportunity"],
-      "industry_trend": ["market trend", "industry shift", "market evolution", "strategic opportunity"]
+      "industry_trend": [
+        "market trend",
+        "industry shift",
+        "market evolution",
+        "strategic opportunity"
+      ]
     }
   },
   "contextFieldsToUse": [
@@ -124,5 +140,3 @@
   ],
   "exampleRichSnippet": "This competitive pricing move by Company X directly impacts your SMB segment in the mid-market SaaS space. With 40% of your current pipeline falling into this category, this development could accelerate decision timelines or create pricing pressure. The launch targets companies with 50-200 employees—your core ICP—and includes features that overlap with your value proposition. Consider monitoring early adoption signals and preparing competitive differentiation messaging that emphasizes your unique ROI model and enterprise-grade capabilities."
 }
-
-

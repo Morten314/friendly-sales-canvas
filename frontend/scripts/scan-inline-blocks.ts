@@ -16,19 +16,20 @@
  * occurrence): collapse all runs of whitespace to a single space, drop trailing
  * whitespace before line terminators.
  */
-import { createHash } from 'node:crypto';
-import { readFile, readdir, writeFile, mkdir } from 'node:fs/promises';
-import { join, relative, resolve, dirname } from 'node:path';
-import * as ts from 'typescript';
+import { createHash } from "node:crypto";
+import { readFile, readdir, writeFile, mkdir } from "node:fs/promises";
+import { join, relative, resolve, dirname } from "node:path";
 
-const FRONTEND_DIR = resolve(import.meta.dirname, '..');
-const SRC_DIR = join(FRONTEND_DIR, 'src');
+import * as ts from "typescript";
+
+const FRONTEND_DIR = resolve(import.meta.dirname, "..");
+const SRC_DIR = join(FRONTEND_DIR, "src");
 const OUTPUT_FILE = resolve(
   FRONTEND_DIR,
-  '..',
-  'docs',
-  'audits',
-  '2026-05-27-frontend-inline-block-scan.json',
+  "..",
+  "docs",
+  "audits",
+  "2026-05-27-frontend-inline-block-scan.json",
 );
 
 const MIN_BLOCK_STATEMENTS = 3;
@@ -64,10 +65,10 @@ async function walk(dir: string): Promise<string[]> {
 
 function normalize(s: string): string {
   return s
-    .split('\n')
-    .map((l) => l.replace(/\s+$/, ''))
-    .join('\n')
-    .replace(/\s+/g, ' ')
+    .split("\n")
+    .map((l) => l.replace(/\s+$/, ""))
+    .join("\n")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -148,24 +149,93 @@ function processBlock(file: string, src: string, statements: ts.Statement[]): vo
   const referenced = collectReferencedIdentifiers(statements);
 
   const builtins = new Set([
-    'undefined', 'null', 'true', 'false', 'NaN', 'Infinity',
-    'console', 'window', 'document', 'globalThis', 'self', 'process',
-    'navigator', 'performance', 'location', 'history', 'screen',
-    'Object', 'Array', 'String', 'Number', 'Boolean', 'Date', 'Math', 'JSON',
-    'Map', 'Set', 'WeakMap', 'WeakSet', 'Promise', 'Symbol', 'Error', 'RegExp',
-    'TypeError', 'RangeError', 'SyntaxError', 'ReferenceError',
-    'parseInt', 'parseFloat', 'isNaN', 'isFinite',
-    'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval',
-    'queueMicrotask', 'requestAnimationFrame', 'cancelAnimationFrame',
-    'fetch', 'localStorage', 'sessionStorage', 'caches', 'indexedDB',
-    'Request', 'Response', 'Headers', 'URL', 'URLSearchParams', 'AbortController', 'AbortSignal',
-    'TextEncoder', 'TextDecoder', 'Blob', 'File', 'FormData', 'FileReader',
-    'WebSocket', 'EventSource', 'crypto', 'structuredClone',
-    'Event', 'CustomEvent', 'MessageEvent', 'ErrorEvent',
-    'HTMLElement', 'Element', 'Node', 'Document', 'Window',
-    'MutationObserver', 'IntersectionObserver', 'ResizeObserver', 'PerformanceObserver',
-    'alert', 'confirm', 'prompt',
-    'React',
+    "undefined",
+    "null",
+    "true",
+    "false",
+    "NaN",
+    "Infinity",
+    "console",
+    "window",
+    "document",
+    "globalThis",
+    "self",
+    "process",
+    "navigator",
+    "performance",
+    "location",
+    "history",
+    "screen",
+    "Object",
+    "Array",
+    "String",
+    "Number",
+    "Boolean",
+    "Date",
+    "Math",
+    "JSON",
+    "Map",
+    "Set",
+    "WeakMap",
+    "WeakSet",
+    "Promise",
+    "Symbol",
+    "Error",
+    "RegExp",
+    "TypeError",
+    "RangeError",
+    "SyntaxError",
+    "ReferenceError",
+    "parseInt",
+    "parseFloat",
+    "isNaN",
+    "isFinite",
+    "setTimeout",
+    "setInterval",
+    "clearTimeout",
+    "clearInterval",
+    "queueMicrotask",
+    "requestAnimationFrame",
+    "cancelAnimationFrame",
+    "fetch",
+    "localStorage",
+    "sessionStorage",
+    "caches",
+    "indexedDB",
+    "Request",
+    "Response",
+    "Headers",
+    "URL",
+    "URLSearchParams",
+    "AbortController",
+    "AbortSignal",
+    "TextEncoder",
+    "TextDecoder",
+    "Blob",
+    "File",
+    "FormData",
+    "FileReader",
+    "WebSocket",
+    "EventSource",
+    "crypto",
+    "structuredClone",
+    "Event",
+    "CustomEvent",
+    "MessageEvent",
+    "ErrorEvent",
+    "HTMLElement",
+    "Element",
+    "Node",
+    "Document",
+    "Window",
+    "MutationObserver",
+    "IntersectionObserver",
+    "ResizeObserver",
+    "PerformanceObserver",
+    "alert",
+    "confirm",
+    "prompt",
+    "React",
   ]);
 
   for (const r of referenced) {
@@ -179,7 +249,7 @@ function processBlock(file: string, src: string, statements: ts.Statement[]): vo
   const raw = src.slice(start, end);
   const normalized = normalize(raw);
   if (normalized.length < 20) return;
-  const hash = createHash('sha256').update(normalized).digest('hex');
+  const hash = createHash("sha256").update(normalized).digest("hex");
 
   const sourceFile = statements[0].getSourceFile();
   const lineStart = sourceFile.getLineAndCharacterOfPosition(start).line + 1;
@@ -187,7 +257,7 @@ function processBlock(file: string, src: string, statements: ts.Statement[]): vo
 
   const existing = groups.get(hash);
   const occurrence: Occurrence = {
-    file: relative(FRONTEND_DIR, file).split('\\').join('/'),
+    file: relative(FRONTEND_DIR, file).split("\\").join("/"),
     line: lineStart,
     end_line: lineEnd,
   };
@@ -242,8 +312,14 @@ function visitContainer(file: string, src: string, node: ts.Node): void {
 async function main() {
   const files = await walk(SRC_DIR);
   for (const file of files) {
-    const src = await readFile(file, 'utf-8');
-    const sourceFile = ts.createSourceFile(file, src, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const src = await readFile(file, "utf-8");
+    const sourceFile = ts.createSourceFile(
+      file,
+      src,
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TSX,
+    );
     visitContainer(file, src, sourceFile);
   }
 
@@ -256,8 +332,10 @@ async function main() {
   out.groups.sort((a, b) => b.occurrences.length - a.occurrences.length);
 
   await mkdir(dirname(OUTPUT_FILE), { recursive: true });
-  await writeFile(OUTPUT_FILE, JSON.stringify(out, null, 2) + '\n');
-  console.log(`Scanned ${files.length} files; found ${out.groups.length} byte-identical group(s) with >=${MIN_GROUP_OCCURRENCES} occurrences.`);
+  await writeFile(OUTPUT_FILE, JSON.stringify(out, null, 2) + "\n");
+  console.log(
+    `Scanned ${files.length} files; found ${out.groups.length} byte-identical group(s) with >=${MIN_GROUP_OCCURRENCES} occurrences.`,
+  );
 }
 
 main().catch((err) => {

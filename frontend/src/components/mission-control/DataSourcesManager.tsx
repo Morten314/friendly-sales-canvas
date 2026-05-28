@@ -1,30 +1,3 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Plus,
   Link as LinkIcon,
@@ -42,10 +15,11 @@ import {
   ChevronDown,
   Plug,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
-import { buildApiUrl } from "@/lib/api";
-import jwtManager from "@/lib/jwt";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,6 +31,29 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { buildApiUrl } from "@/lib/api";
+import jwtManager from "@/lib/jwt";
+import type { UntypedBackendDocument } from "@/lib/types/escape-hatches";
 
 // Types
 type SourceType = "url" | "file" | "system";
@@ -107,11 +104,10 @@ const SUGGESTED_TAGS = [
   "Market Research",
 ];
 
-
 const DataSourcesManager: React.FC = () => {
   const { toast } = useToast();
   const { currentUser, orgId } = useAuth();
-  const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
+  const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [_isSaving, setIsSaving] = useState(false);
@@ -133,10 +129,10 @@ const DataSourcesManager: React.FC = () => {
   useEffect(() => {
     const loadCompanyProfile = () => {
       if (!currentUser?.uid) return;
-      
+
       const storageKey = `company_profile_${currentUser.uid}`;
       const stored = localStorage.getItem(storageKey);
-      
+
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
@@ -158,7 +154,7 @@ const DataSourcesManager: React.FC = () => {
     // Listen for company profile updates
     const handleProfileUpdate = () => loadCompanyProfile();
     window.addEventListener("companyProfileUpdated", handleProfileUpdate);
-    
+
     return () => {
       window.removeEventListener("companyProfileUpdated", handleProfileUpdate);
     };
@@ -184,53 +180,67 @@ const DataSourcesManager: React.FC = () => {
     console.log("🔍 extractFileIdFromFileKey - Input:", fileKey);
 
     // If file_key contains a slash, extract the part after it
-    if (fileKey.includes('/')) {
-      const parts = fileKey.split('/');
+    if (fileKey.includes("/")) {
+      const parts = fileKey.split("/");
       const afterSlash = parts[parts.length - 1]; // Get the last part after the slash
       console.log("🔍 extractFileIdFromFileKey - After slash:", afterSlash);
-      
+
       // Extract UUID (36 characters with hyphens) before the first underscore
-      const uuidMatch = afterSlash.match(/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+      const uuidMatch = afterSlash.match(
+        /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i,
+      );
       if (uuidMatch && uuidMatch[1]) {
         console.log("✅ extractFileIdFromFileKey - Extracted UUID via regex:", uuidMatch[1]);
         return uuidMatch[1];
       }
-      
+
       // If no UUID pattern found, try to extract just the part before the first underscore
-      const beforeUnderscore = afterSlash.split('_')[0];
+      const beforeUnderscore = afterSlash.split("_")[0];
       console.log("🔍 extractFileIdFromFileKey - Before underscore:", beforeUnderscore);
-      
+
       // Check if it looks like a UUID (36 chars with hyphens)
-      if (beforeUnderscore.length === 36 && beforeUnderscore.includes('-')) {
+      if (beforeUnderscore.length === 36 && beforeUnderscore.includes("-")) {
         // Validate it's actually a UUID format
         const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         if (uuidPattern.test(beforeUnderscore)) {
-          console.log("✅ extractFileIdFromFileKey - Extracted UUID before underscore:", beforeUnderscore);
+          console.log(
+            "✅ extractFileIdFromFileKey - Extracted UUID before underscore:",
+            beforeUnderscore,
+          );
           return beforeUnderscore;
         }
       }
     }
-    
+
     // If no slash, check if the whole string is a UUID
-    const uuidMatch = fileKey.match(/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+    const uuidMatch = fileKey.match(
+      /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i,
+    );
     if (uuidMatch && uuidMatch[1]) {
       console.log("✅ extractFileIdFromFileKey - Whole string is UUID:", uuidMatch[1]);
       return uuidMatch[1];
     }
-    
+
     // Fallback: return the original fileKey if we can't extract UUID
-    console.warn("⚠️ extractFileIdFromFileKey - Could not extract UUID, returning original:", fileKey);
+    console.warn(
+      "⚠️ extractFileIdFromFileKey - Could not extract UUID, returning original:",
+      fileKey,
+    );
     return fileKey;
   };
 
   // Upload file to backend (stores in S3 via backend)
-  const uploadFileToBackend = async (file: File, tags?: string[], description?: string): Promise<void> => {
+  const uploadFileToBackend = async (
+    file: File,
+    tags?: string[],
+    description?: string,
+  ): Promise<void> => {
     if (!currentUser?.uid) {
       throw new Error("User not authenticated");
     }
 
     // Use org_id fetched from login API, fallback to 'brewra' for backward compatibility
-    const orgIdToUse = orgId || 'brewra';
+    const orgIdToUse = orgId || "brewra";
 
     const authHeader = await getAuthHeader();
     const url = buildApiUrl("upload-document");
@@ -239,7 +249,7 @@ const DataSourcesManager: React.FC = () => {
     formData.append("file", file);
     formData.append("user_id", currentUser.uid);
     formData.append("org_id", orgIdToUse);
-    
+
     // Add optional fields if provided
     // Backend accepts either comma-separated string or JSON array string
     // Using comma-separated string as it's more standard for form data
@@ -284,13 +294,18 @@ const DataSourcesManager: React.FC = () => {
   };
 
   // Upload URL to backend
-  const uploadUrlToBackend = async (url: string, name: string, tags?: string[], description?: string): Promise<void> => {
+  const uploadUrlToBackend = async (
+    url: string,
+    name: string,
+    tags?: string[],
+    description?: string,
+  ): Promise<void> => {
     if (!currentUser?.uid) {
       throw new Error("User not authenticated");
     }
 
     // Use org_id fetched from login API, fallback to 'brewra' for backward compatibility
-    const orgIdToUse = orgId || 'brewra';
+    const orgIdToUse = orgId || "brewra";
 
     const authHeader = await getAuthHeader();
     const apiUrl = buildApiUrl("upload-document");
@@ -300,7 +315,7 @@ const DataSourcesManager: React.FC = () => {
     formData.append("name", name);
     formData.append("user_id", currentUser.uid);
     formData.append("org_id", orgIdToUse);
-    
+
     // Add optional fields if provided
     if (tags && tags.length > 0) {
       formData.append("tags", tags.join(","));
@@ -344,7 +359,9 @@ const DataSourcesManager: React.FC = () => {
   };
 
   // Check processing status for a specific file
-  const checkDocumentStatus = async (fileKey: string): Promise<{ status: SourceStatus; chunks_count?: number; timestamps?: any }> => {
+  const checkDocumentStatus = async (
+    fileKey: string,
+  ): Promise<{ status: SourceStatus; chunks_count?: number; timestamps?: unknown }> => {
     if (!currentUser?.uid) {
       throw new Error("User not authenticated");
     }
@@ -377,23 +394,23 @@ const DataSourcesManager: React.FC = () => {
   const checkProcessingFilesStatus = async () => {
     setDataSources((currentSources) => {
       const processingFiles = currentSources.filter(
-        (s) => s.status === "processing" && s.type === "file"
+        (s) => s.status === "processing" && s.type === "file",
       );
-      
+
       // Check status for each processing file using file_key
-      processingFiles.forEach(async (file) => {
-        try {
-          const statusPayload = await checkDocumentStatus(file.id);
-          setDataSources((prev) =>
-            prev.map((s) =>
-              s.id === file.id ? { ...s, status: statusPayload.status } : s
-            )
-          );
-        } catch (err) {
-          console.error(`Error checking status for file ${file.id}:`, err);
-        }
+      processingFiles.forEach((file) => {
+        void (async () => {
+          try {
+            const statusPayload = await checkDocumentStatus(file.id);
+            setDataSources((prev) =>
+              prev.map((s) => (s.id === file.id ? { ...s, status: statusPayload.status } : s)),
+            );
+          } catch (err) {
+            console.error(`Error checking status for file ${file.id}:`, err);
+          }
+        })();
       });
-      
+
       return currentSources;
     });
   };
@@ -427,13 +444,17 @@ const DataSourcesManager: React.FC = () => {
         : data.documents || data.files || data.data || [];
 
       if (Array.isArray(documents)) {
-        console.log("📋 DataSourcesManager - Loading documents from backend:", documents.length, "documents");
-        const loadedSources: DataSource[] = documents.map((doc: any) => {
+        console.log(
+          "📋 DataSourcesManager - Loading documents from backend:",
+          documents.length,
+          "documents",
+        );
+        const loadedSources: DataSource[] = documents.map((doc: UntypedBackendDocument) => {
           // Parse tags - handle both array and string formats
           let parsedTags: string[] = [];
           if (Array.isArray(doc.tags)) {
             parsedTags = doc.tags;
-          } else if (typeof doc.tags === 'string') {
+          } else if (typeof doc.tags === "string") {
             // Handle comma-separated string or JSON array string
             try {
               // Try parsing as JSON first
@@ -441,17 +462,22 @@ const DataSourcesManager: React.FC = () => {
               parsedTags = Array.isArray(parsed) ? parsed : [];
             } catch {
               // If not JSON, treat as comma-separated string
-              parsedTags = doc.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0);
+              parsedTags = doc.tags
+                .split(",")
+                .map((tag: string) => tag.trim())
+                .filter((tag: string) => tag.length > 0);
             }
           }
 
           // Determine if this is a URL or file source
           // URLs have file_key === null (or undefined), files have file_key with a path
-          const hasFileKey = doc.file_key !== null && doc.file_key !== undefined && doc.file_key !== "";
-          const hasFileKeyAlt = doc.fileKey !== null && doc.fileKey !== undefined && doc.fileKey !== "";
+          const hasFileKey =
+            doc.file_key !== null && doc.file_key !== undefined && doc.file_key !== "";
+          const hasFileKeyAlt =
+            doc.fileKey !== null && doc.fileKey !== undefined && doc.fileKey !== "";
           const isUrlSource = !hasFileKey && !hasFileKeyAlt && doc.file_id; // URL if no file_key but has file_id
           const isFileSource = hasFileKey || hasFileKeyAlt;
-          
+
           if (isUrlSource) {
             console.log("🔗 DataSourcesManager - Identified as URL source:", {
               file_id: doc.file_id,
@@ -459,7 +485,7 @@ const DataSourcesManager: React.FC = () => {
               fileKey: doc.fileKey,
               name: doc.name || doc.file_name,
               hasFileKey,
-              hasFileKeyAlt
+              hasFileKeyAlt,
             });
           }
 
@@ -469,11 +495,21 @@ const DataSourcesManager: React.FC = () => {
           if (doc.file_id) {
             // file_id is the primary identifier for both files and URLs
             fileId = doc.file_id;
-            console.log("📋 DataSourcesManager - Using doc.file_id:", fileId, "type:", isUrlSource ? "URL" : "file");
+            console.log(
+              "📋 DataSourcesManager - Using doc.file_id:",
+              fileId,
+              "type:",
+              isUrlSource ? "URL" : "file",
+            );
           } else if (doc._id) {
             // Fallback to _id if file_id is not present
             fileId = doc._id;
-            console.log("📋 DataSourcesManager - Using doc._id as fallback:", fileId, "type:", isUrlSource ? "URL" : "file");
+            console.log(
+              "📋 DataSourcesManager - Using doc._id as fallback:",
+              fileId,
+              "type:",
+              isUrlSource ? "URL" : "file",
+            );
           } else if (isFileSource) {
             // For files only, extract UUID from file_key as fallback
             const extracted = extractFileIdFromFileKey(doc.file_key || doc.fileKey);
@@ -483,22 +519,28 @@ const DataSourcesManager: React.FC = () => {
               fileId = extracted;
               console.log("📋 DataSourcesManager - Extracted valid file_id from file_key:", {
                 file_key: doc.file_key || doc.fileKey,
-                extracted_fileId: fileId
+                extracted_fileId: fileId,
               });
             } else {
-              console.warn("⚠️ DataSourcesManager - Extraction failed, got full path instead of UUID:", {
-                file_key: doc.file_key || doc.fileKey,
-                extracted: extracted
-              });
+              console.warn(
+                "⚠️ DataSourcesManager - Extraction failed, got full path instead of UUID:",
+                {
+                  file_key: doc.file_key || doc.fileKey,
+                  extracted: extracted,
+                },
+              );
               // Try one more time with a more aggressive extraction
               const fileKeyStr = doc.file_key || doc.fileKey;
-              if (fileKeyStr.includes('/')) {
-                const parts = fileKeyStr.split('/');
+              if (fileKeyStr.includes("/")) {
+                const parts = fileKeyStr.split("/");
                 const afterSlash = parts[parts.length - 1];
-                const uuidPart = afterSlash.split('_')[0];
+                const uuidPart = afterSlash.split("_")[0];
                 if (uuidPattern.test(uuidPart)) {
                   fileId = uuidPart;
-                  console.log("✅ DataSourcesManager - Successfully extracted UUID on retry:", fileId);
+                  console.log(
+                    "✅ DataSourcesManager - Successfully extracted UUID on retry:",
+                    fileId,
+                  );
                 }
               }
             }
@@ -511,20 +553,20 @@ const DataSourcesManager: React.FC = () => {
             // If file_id exists, use it as both id and fileId
             // Otherwise fall back to _id
             const urlId = fileId || doc._id || doc.id || `url-${Date.now()}-${Math.random()}`;
-            
+
             // URL might be in doc.url, doc.source_url, or might need to be fetched separately
             // For now, check multiple possible fields
             const urlValue = doc.url || doc.source_url || doc.file_url || undefined;
-            
+
             console.log("📋 DataSourcesManager - Loading URL source:", {
               file_id: fileId,
               id: urlId,
               name: doc.name || doc.file_name,
               url: urlValue,
               hasUrl: !!urlValue,
-              docKeys: Object.keys(doc)
+              docKeys: Object.keys(doc),
             });
-            
+
             return {
               id: urlId,
               fileId: fileId || doc._id, // Store the file_id for deletion (required for API calls)
@@ -537,84 +579,83 @@ const DataSourcesManager: React.FC = () => {
               createdAt: doc.uploaded_at
                 ? new Date(doc.uploaded_at)
                 : doc.created_at
-                ? new Date(doc.created_at)
-                : new Date(),
+                  ? new Date(doc.created_at)
+                  : new Date(),
             };
           } else {
             // File source
-          return {
-            id: doc.file_key || doc.fileKey || doc.id || `source-${Date.now()}-${Math.random()}`,
-            fileId: fileId, // Store the file_id for deletion
-            type: "file",
-            name: doc.name || doc.file_name || doc.original_filename || doc.fileKey || "Uploaded file",
-            fileName: doc.file_name || doc.original_filename || doc.name,
-            url: doc.file_url,
-            description: doc.description || undefined,
-            tags: parsedTags,
-            status: (doc.status || "processing") as SourceStatus,
-            createdAt: doc.uploaded_at
-              ? new Date(doc.uploaded_at)
-              : doc.created_at
-              ? new Date(doc.created_at)
-              : new Date(),
+            return {
+              id: doc.file_key || doc.fileKey || doc.id || `source-${Date.now()}-${Math.random()}`,
+              fileId: fileId, // Store the file_id for deletion
+              type: "file",
+              name:
+                doc.name ||
+                doc.file_name ||
+                doc.original_filename ||
+                doc.fileKey ||
+                "Uploaded file",
+              fileName: doc.file_name || doc.original_filename || doc.name,
+              url: doc.file_url,
+              description: doc.description || undefined,
+              tags: parsedTags,
+              status: (doc.status || "processing") as SourceStatus,
+              createdAt: doc.uploaded_at
+                ? new Date(doc.uploaded_at)
+                : doc.created_at
+                  ? new Date(doc.created_at)
+                  : new Date(),
             };
           }
         });
-        
+
         // Log summary of loaded sources
-        const urlCount = loadedSources.filter(s => s.type === "url").length;
-        const fileCount = loadedSources.filter(s => s.type === "file").length;
+        const urlCount = loadedSources.filter((s) => s.type === "url").length;
+        const fileCount = loadedSources.filter((s) => s.type === "file").length;
         console.log("📋 DataSourcesManager - Loaded sources summary:", {
           total: loadedSources.length,
           urls: urlCount,
-          files: fileCount
+          files: fileCount,
         });
 
         // Merge with existing sources: keep system types, update file and URL types from backend
         setDataSources((prev) => {
-          const systemSources = prev.filter(s => s.type === "system");
-          const existingFileSources = prev.filter(s => s.type === "file");
-          const existingUrlSources = prev.filter(s => s.type === "url");
-          
+          const systemSources = prev.filter((s) => s.type === "system");
+          const existingFileSources = prev.filter((s) => s.type === "file");
+          const existingUrlSources = prev.filter((s) => s.type === "url");
+
           // Separate loaded sources by type
-          const loadedFileSources = loadedSources.filter(s => s.type === "file");
-          const loadedUrlSources = loadedSources.filter(s => s.type === "url");
-          
+          const loadedFileSources = loadedSources.filter((s) => s.type === "file");
+          const loadedUrlSources = loadedSources.filter((s) => s.type === "url");
+
           // Create a map of existing files by fileId (UUID) for primary matching - this is the most reliable
           const existingFilesByFileId = new Map(
-            existingFileSources
-              .filter(f => f.fileId)
-              .map(f => [f.fileId!, f])
+            existingFileSources.filter((f) => f.fileId).map((f) => [f.fileId!, f]),
           );
-          
+
           // Create a map by ID (file_key) for fallback matching
-          const existingFilesById = new Map(existingFileSources.map(f => [f.id, f]));
-          
+          const existingFilesById = new Map(existingFileSources.map((f) => [f.id, f]));
+
           // Also create a map by fileName for additional fallback matching
           const existingFilesByFileName = new Map(
-            existingFileSources
-              .filter(f => f.fileName)
-              .map(f => [f.fileName!, f])
+            existingFileSources.filter((f) => f.fileName).map((f) => [f.fileName!, f]),
           );
-          
+
           // Create a map of existing URLs by fileId (UUID) for primary matching
           const existingUrlsByFileId = new Map(
-            existingUrlSources
-              .filter(u => u.fileId)
-              .map(u => [u.fileId!, u])
+            existingUrlSources.filter((u) => u.fileId).map((u) => [u.fileId!, u]),
           );
-          
+
           // Create a map by ID for URL fallback matching
-          const existingUrlsById = new Map(existingUrlSources.map(u => [u.id, u]));
-          
+          const existingUrlsById = new Map(existingUrlSources.map((u) => [u.id, u]));
+
           // Track which existing files and URLs we've matched (by their IDs)
           const matchedExistingIds = new Set<string>();
-          
+
           // Merge file sources: use backend data, but preserve any local metadata updates
-          const mergedFileSources = loadedFileSources.map(backendFile => {
+          const mergedFileSources = loadedFileSources.map((backendFile) => {
             let existingFile: DataSource | undefined = undefined;
             let matchedById: string | undefined = undefined;
-            
+
             // Priority 1: Match by fileId (UUID) - most reliable for updated entries
             if (backendFile.fileId) {
               existingFile = existingFilesByFileId.get(backendFile.fileId);
@@ -627,7 +668,7 @@ const DataSourcesManager: React.FC = () => {
                 });
               }
             }
-            
+
             // Priority 2: Match by ID (file_key) if fileId match failed
             if (!existingFile) {
               existingFile = existingFilesById.get(backendFile.id);
@@ -639,7 +680,7 @@ const DataSourcesManager: React.FC = () => {
                 });
               }
             }
-            
+
             // Priority 3: Match by fileName if both above failed
             if (!existingFile && backendFile.fileName) {
               existingFile = existingFilesByFileName.get(backendFile.fileName);
@@ -654,7 +695,7 @@ const DataSourcesManager: React.FC = () => {
                 });
               }
             }
-            
+
             if (existingFile && matchedById) {
               matchedExistingIds.add(matchedById);
               // When matched by fileId, use backend data (which has the latest updates from PUT)
@@ -665,22 +706,25 @@ const DataSourcesManager: React.FC = () => {
                 fileId: backendFile.fileId || existingFile.fileId, // Use backend fileId (most up-to-date)
                 // Use backend data for all fields since backend is source of truth after PUT update
                 name: backendFile.name || existingFile.name,
-                description: backendFile.description !== undefined ? backendFile.description : existingFile.description,
+                description:
+                  backendFile.description !== undefined
+                    ? backendFile.description
+                    : existingFile.description,
                 tags: backendFile.tags, // Always use backend tags (even if empty array)
                 fileName: backendFile.fileName || existingFile.fileName,
                 createdAt: existingFile.createdAt, // Preserve original creation date
               };
             }
-            
+
             // New file from backend - return as is
             return backendFile;
           });
-          
+
           // Merge URL sources: use backend data, but preserve any local metadata updates
-          const mergedUrlSources = loadedUrlSources.map(backendUrl => {
+          const mergedUrlSources = loadedUrlSources.map((backendUrl) => {
             let existingUrl: DataSource | undefined = undefined;
             let matchedById: string | undefined = undefined;
-            
+
             // Priority 1: Match by fileId (UUID) - most reliable for updated entries
             if (backendUrl.fileId) {
               existingUrl = existingUrlsByFileId.get(backendUrl.fileId);
@@ -693,7 +737,7 @@ const DataSourcesManager: React.FC = () => {
                 });
               }
             }
-            
+
             // Priority 2: Match by ID if fileId match failed
             if (!existingUrl) {
               existingUrl = existingUrlsById.get(backendUrl.id);
@@ -705,7 +749,7 @@ const DataSourcesManager: React.FC = () => {
                 });
               }
             }
-            
+
             if (existingUrl && matchedById) {
               matchedExistingIds.add(matchedById);
               // When matched by fileId, use backend data (which has the latest updates from PUT)
@@ -716,29 +760,42 @@ const DataSourcesManager: React.FC = () => {
                 fileId: backendUrl.fileId || existingUrl.fileId, // Use backend fileId (most up-to-date)
                 // Use backend data for all fields since backend is source of truth after PUT update
                 name: backendUrl.name || existingUrl.name,
-                description: backendUrl.description !== undefined ? backendUrl.description : existingUrl.description,
+                description:
+                  backendUrl.description !== undefined
+                    ? backendUrl.description
+                    : existingUrl.description,
                 tags: backendUrl.tags, // Always use backend tags (even if empty array)
                 url: backendUrl.url || existingUrl.url,
                 createdAt: existingUrl.createdAt, // Preserve original creation date
               };
             }
-            
+
             // New URL from backend - return as is
             return backendUrl;
           });
-          
+
           // Add any existing file sources that weren't in the backend response (local-only edits or files not yet synced)
-          const unmatchedExistingFiles = existingFileSources.filter(s => !matchedExistingIds.has(s.id));
-          
+          const unmatchedExistingFiles = existingFileSources.filter(
+            (s) => !matchedExistingIds.has(s.id),
+          );
+
           // Add any existing URL sources that weren't in the backend response
-          const unmatchedExistingUrls = existingUrlSources.filter(s => !matchedExistingIds.has(s.id));
-          
+          const unmatchedExistingUrls = existingUrlSources.filter(
+            (s) => !matchedExistingIds.has(s.id),
+          );
+
           // Combine all sources and remove duplicates by id
-          const allSources = [...systemSources, ...mergedFileSources, ...mergedUrlSources, ...unmatchedExistingFiles, ...unmatchedExistingUrls];
+          const allSources = [
+            ...systemSources,
+            ...mergedFileSources,
+            ...mergedUrlSources,
+            ...unmatchedExistingFiles,
+            ...unmatchedExistingUrls,
+          ];
           const uniqueSourcesMap = new Map<string, DataSource>();
-          
+
           // Process in order: existing sources first (to preserve local edits), then backend sources
-          allSources.forEach(source => {
+          allSources.forEach((source) => {
             if (!uniqueSourcesMap.has(source.id)) {
               uniqueSourcesMap.set(source.id, source);
             } else {
@@ -750,7 +807,7 @@ const DataSourcesManager: React.FC = () => {
               }
             }
           });
-          
+
           const result = Array.from(uniqueSourcesMap.values());
           console.log("📋 DataSourcesManager - Merged data sources:", {
             systemCount: systemSources.length,
@@ -761,7 +818,7 @@ const DataSourcesManager: React.FC = () => {
             totalCount: result.length,
             matchedIds: Array.from(matchedExistingIds),
           });
-          
+
           return result;
         });
         console.log("Data sources loaded from dedicated backend:", loadedSources);
@@ -776,10 +833,11 @@ const DataSourcesManager: React.FC = () => {
   // Load data sources on mount
   useEffect(() => {
     if (currentUser?.uid) {
-      loadDataSourcesFromBackend();
+      void loadDataSourcesFromBackend();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadDataSourcesFromBackend is stable within scope; intentionally watches only user identity edge
   }, [currentUser?.uid]);
-  
+
   // Form state
   const [isAddingInline, setIsAddingInline] = useState(false);
   const [selectedType, setSelectedType] = useState<SourceType | "">("");
@@ -790,23 +848,23 @@ const DataSourcesManager: React.FC = () => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTag, setCustomTag] = useState("");
   const [sourceDescription, setSourceDescription] = useState("");
-  
+
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formCardRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to form when editing URL source
   useEffect(() => {
     if (isAddingInline && editingId && formCardRef.current) {
-      const source = dataSources.find(s => s.id === editingId);
+      const source = dataSources.find((s) => s.id === editingId);
       if (source && source.type === "url") {
         // Use setTimeout to ensure DOM has updated
         setTimeout(() => {
-          formCardRef.current?.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start' 
+          formCardRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
           });
         }, 100);
       }
@@ -850,7 +908,6 @@ const DataSourcesManager: React.FC = () => {
     }
   };
 
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -861,7 +918,7 @@ const DataSourcesManager: React.FC = () => {
 
   const handleTagToggle = (tag: string) => {
     setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
   };
 
@@ -928,7 +985,7 @@ const DataSourcesManager: React.FC = () => {
           // If editing, get the old file's fileId to delete it after uploading the new one
           let oldFileId: string | undefined = undefined;
           if (isEditing && editingId) {
-            const existingSource = dataSources.find(s => s.id === editingId);
+            const existingSource = dataSources.find((s) => s.id === editingId);
             if (existingSource && existingSource.type === "file") {
               oldFileId = existingSource.fileId || extractFileIdFromFileKey(existingSource.id);
               // Validate oldFileId is a UUID
@@ -939,10 +996,13 @@ const DataSourcesManager: React.FC = () => {
                   oldFileId = extractFileIdFromFileKey(existingSource.fileId);
                 }
                 if (!oldFileId || !uuidPattern.test(oldFileId)) {
-                  console.warn("⚠️ DataSourcesManager - Could not extract valid oldFileId for deletion:", {
-                    existingSourceId: existingSource.id,
-                    existingFileId: existingSource.fileId,
-                  });
+                  console.warn(
+                    "⚠️ DataSourcesManager - Could not extract valid oldFileId for deletion:",
+                    {
+                      existingSourceId: existingSource.id,
+                      existingFileId: existingSource.fileId,
+                    },
+                  );
                   oldFileId = undefined; // Will skip deletion if we can't get valid fileId
                 }
               }
@@ -950,30 +1010,37 @@ const DataSourcesManager: React.FC = () => {
           }
 
           // Capture current file IDs and fileIds before any state changes (for identifying new file after reload)
-          const fileIdsBeforeReload = dataSources.filter(s => s.type === "file").map(s => s.id);
+          const fileIdsBeforeReload = dataSources.filter((s) => s.type === "file").map((s) => s.id);
           const fileFileIdsBeforeReload = dataSources
-            .filter(s => s.type === "file" && s.fileId)
-            .map(s => s.fileId!);
+            .filter((s) => s.type === "file" && s.fileId)
+            .map((s) => s.fileId!);
 
           // Upload new file to backend (stored in S3)
-          await uploadFileToBackend(selectedFile, selectedTags, sourceDescription.trim() || undefined);
-          
+          await uploadFileToBackend(
+            selectedFile,
+            selectedTags,
+            sourceDescription.trim() || undefined,
+          );
+
           // If editing, delete the old file from backend to prevent duplicates
           if (isEditing && oldFileId) {
             try {
-              console.log("🗑️ DataSourcesManager - Deleting old file after uploading replacement:", {
-                oldFileId,
-                oldId: editingId,
-              });
-              
+              console.log(
+                "🗑️ DataSourcesManager - Deleting old file after uploading replacement:",
+                {
+                  oldFileId,
+                  oldId: editingId,
+                },
+              );
+
               const authHeader = await getAuthHeader();
               const deleteUrl = buildApiUrl(`data-source/${oldFileId}`);
-              
+
               const deleteResponse = await fetch(deleteUrl, {
                 method: "DELETE",
                 headers: {
                   "Content-Type": "application/json",
-                  "accept": "application/json",
+                  accept: "application/json",
                   ...(authHeader && { Authorization: authHeader }),
                 },
               });
@@ -990,115 +1057,91 @@ const DataSourcesManager: React.FC = () => {
                 console.log("✅ DataSourcesManager - Old file deleted successfully");
               }
             } catch (deleteError) {
-              console.error("❌ DataSourcesManager - Error deleting old file (non-critical):", deleteError);
+              console.error(
+                "❌ DataSourcesManager - Error deleting old file (non-critical):",
+                deleteError,
+              );
               // Don't throw - continue with the update even if old file deletion fails
             }
           }
 
           toast({
             title: isEditing ? "File updated" : "File uploaded",
-            description: isEditing 
-              ? `${sourceName} has been updated.` 
+            description: isEditing
+              ? `${sourceName} has been updated.`
               : `${sourceName} is being processed.`,
           });
           updateSuccess = true;
 
           // Notify MissionControl that a data source was added/updated
           if (!isEditing) {
-            window.dispatchEvent(new CustomEvent('dataSourceAdded'));
+            window.dispatchEvent(new CustomEvent("dataSourceAdded"));
           }
 
           // Reload documents from backend to get the new file_key
           // Then apply the custom name, tags, and description to the newly uploaded file
-          setTimeout(async () => {
-            try {
-              console.log("🔄 DataSourcesManager - Reloading after upload, applying metadata:", uploadMetadata);
-              await loadDataSourcesFromBackend();
-              
-              // Apply metadata to the newly uploaded file
-              setDataSources((prev) => {
-                console.log("📋 DataSourcesManager - Current data sources before metadata application:", prev.length);
-                console.log("📋 DataSourcesManager - File IDs before reload:", fileIdsBeforeReload);
-                
-                if (isEditing && uploadMetadata.oldId) {
-                  // If editing, remove the old entry by both ID and fileId (in case old file still exists in backend)
-                  // Get old fileId from the closure (captured before state changes)
-                  const oldFileIdToExclude = oldFileId;
-                  
-                  const withoutOldEntry = prev.filter(s => {
-                    // Exclude by ID
-                    if (s.id === uploadMetadata.oldId) return false;
-                    // Also exclude by fileId if it matches the old file's fileId
-                    if (oldFileIdToExclude && s.fileId === oldFileIdToExclude) {
-                      console.log("🗑️ DataSourcesManager - Excluding old file by fileId:", {
-                        oldFileId: oldFileIdToExclude,
-                        excludedId: s.id,
-                      });
-                      return false;
-                    }
-                    return true;
-                  });
-                  
-                  // Find the new file (the one that wasn't in the list before) and apply metadata
-                  // Match by both ID and fileId to be sure
-                  const updated = withoutOldEntry.map((s) => {
-                    const isNewFile = s.type === "file" && 
-                      (!fileIdsBeforeReload.includes(s.id)) &&
-                      (!s.fileId || !fileFileIdsBeforeReload.includes(s.fileId));
-                    
-                    if (isNewFile) {
-                      // This is the newly uploaded file - apply all metadata and update the ID to match old entry
-                      console.log("✅ DataSourcesManager - Applying metadata to edited file:", {
-                        newId: s.id,
-                        oldId: uploadMetadata.oldId,
-                        oldName: s.name,
-                        newName: uploadMetadata.name,
-                        oldTags: s.tags,
-                        newTags: uploadMetadata.tags,
-                        oldDescription: s.description,
-                        newDescription: uploadMetadata.description,
-                      });
-                      return {
-                        ...s,
-                        id: uploadMetadata.oldId!, // Keep the old ID to maintain reference (replaces old entry)
-                        name: uploadMetadata.name,
-                        description: uploadMetadata.description,
-                        tags: uploadMetadata.tags,
-                      };
-                    }
-                    return s;
-                  });
-                  
-                  console.log("✅ DataSourcesManager - Metadata applied to edited file, old entry replaced");
-                  return updated;
-                } else {
-                  // For new uploads, find the file that wasn't in the list before
-                  // Match by file name to identify the newly uploaded file
-                  const newFiles = prev.filter(s => 
-                    s.type === "file" && 
-                    !fileIdsBeforeReload.includes(s.id) &&
-                    (s.fileName === uploadMetadata.fileName || s.name === uploadMetadata.fileName)
+          setTimeout(() => {
+            void (async () => {
+              try {
+                console.log(
+                  "🔄 DataSourcesManager - Reloading after upload, applying metadata:",
+                  uploadMetadata,
+                );
+                await loadDataSourcesFromBackend();
+
+                // Apply metadata to the newly uploaded file
+                setDataSources((prev) => {
+                  console.log(
+                    "📋 DataSourcesManager - Current data sources before metadata application:",
+                    prev.length,
                   );
-                  
-                  console.log("🔍 DataSourcesManager - New files found:", newFiles.length, newFiles.map(f => ({ id: f.id, fileName: f.fileName, name: f.name })));
-                  
-                  if (newFiles.length > 0) {
-                    // Apply metadata to the most recently uploaded file (should be the last one)
-                    const fileToUpdate = newFiles[newFiles.length - 1];
-                    console.log("✅ DataSourcesManager - Applying metadata to new file:", {
-                      id: fileToUpdate.id,
-                      fileName: fileToUpdate.fileName,
-                      oldName: fileToUpdate.name,
-                      newName: uploadMetadata.name,
-                      oldTags: fileToUpdate.tags,
-                      newTags: uploadMetadata.tags,
-                      oldDescription: fileToUpdate.description,
-                      newDescription: uploadMetadata.description,
+                  console.log(
+                    "📋 DataSourcesManager - File IDs before reload:",
+                    fileIdsBeforeReload,
+                  );
+
+                  if (isEditing && uploadMetadata.oldId) {
+                    // If editing, remove the old entry by both ID and fileId (in case old file still exists in backend)
+                    // Get old fileId from the closure (captured before state changes)
+                    const oldFileIdToExclude = oldFileId;
+
+                    const withoutOldEntry = prev.filter((s) => {
+                      // Exclude by ID
+                      if (s.id === uploadMetadata.oldId) return false;
+                      // Also exclude by fileId if it matches the old file's fileId
+                      if (oldFileIdToExclude && s.fileId === oldFileIdToExclude) {
+                        console.log("🗑️ DataSourcesManager - Excluding old file by fileId:", {
+                          oldFileId: oldFileIdToExclude,
+                          excludedId: s.id,
+                        });
+                        return false;
+                      }
+                      return true;
                     });
-                    return prev.map((s) => {
-                      if (s.id === fileToUpdate.id) {
+
+                    // Find the new file (the one that wasn't in the list before) and apply metadata
+                    // Match by both ID and fileId to be sure
+                    const updated = withoutOldEntry.map((s) => {
+                      const isNewFile =
+                        s.type === "file" &&
+                        !fileIdsBeforeReload.includes(s.id) &&
+                        (!s.fileId || !fileFileIdsBeforeReload.includes(s.fileId));
+
+                      if (isNewFile) {
+                        // This is the newly uploaded file - apply all metadata and update the ID to match old entry
+                        console.log("✅ DataSourcesManager - Applying metadata to edited file:", {
+                          newId: s.id,
+                          oldId: uploadMetadata.oldId,
+                          oldName: s.name,
+                          newName: uploadMetadata.name,
+                          oldTags: s.tags,
+                          newTags: uploadMetadata.tags,
+                          oldDescription: s.description,
+                          newDescription: uploadMetadata.description,
+                        });
                         return {
                           ...s,
+                          id: uploadMetadata.oldId!, // Keep the old ID to maintain reference (replaces old entry)
                           name: uploadMetadata.name,
                           description: uploadMetadata.description,
                           tags: uploadMetadata.tags,
@@ -1106,28 +1149,80 @@ const DataSourcesManager: React.FC = () => {
                       }
                       return s;
                     });
+
+                    console.log(
+                      "✅ DataSourcesManager - Metadata applied to edited file, old entry replaced",
+                    );
+                    return updated;
                   } else {
-                    console.warn("⚠️ DataSourcesManager - No new file found to apply metadata to");
+                    // For new uploads, find the file that wasn't in the list before
+                    // Match by file name to identify the newly uploaded file
+                    const newFiles = prev.filter(
+                      (s) =>
+                        s.type === "file" &&
+                        !fileIdsBeforeReload.includes(s.id) &&
+                        (s.fileName === uploadMetadata.fileName ||
+                          s.name === uploadMetadata.fileName),
+                    );
+
+                    console.log(
+                      "🔍 DataSourcesManager - New files found:",
+                      newFiles.length,
+                      newFiles.map((f) => ({ id: f.id, fileName: f.fileName, name: f.name })),
+                    );
+
+                    if (newFiles.length > 0) {
+                      // Apply metadata to the most recently uploaded file (should be the last one)
+                      const fileToUpdate = newFiles[newFiles.length - 1];
+                      console.log("✅ DataSourcesManager - Applying metadata to new file:", {
+                        id: fileToUpdate.id,
+                        fileName: fileToUpdate.fileName,
+                        oldName: fileToUpdate.name,
+                        newName: uploadMetadata.name,
+                        oldTags: fileToUpdate.tags,
+                        newTags: uploadMetadata.tags,
+                        oldDescription: fileToUpdate.description,
+                        newDescription: uploadMetadata.description,
+                      });
+                      return prev.map((s) => {
+                        if (s.id === fileToUpdate.id) {
+                          return {
+                            ...s,
+                            name: uploadMetadata.name,
+                            description: uploadMetadata.description,
+                            tags: uploadMetadata.tags,
+                          };
+                        }
+                        return s;
+                      });
+                    } else {
+                      console.warn(
+                        "⚠️ DataSourcesManager - No new file found to apply metadata to",
+                      );
+                    }
                   }
-                }
-                return prev;
-              });
-              
-              // Poll status for processing files after a delay
-              setTimeout(() => {
-                checkProcessingFilesStatus();
-              }, 2000);
-            } catch (err) {
-              console.error("Error reloading documents after upload:", err);
-            }
+                  return prev;
+                });
+
+                // Poll status for processing files after a delay
+                setTimeout(() => {
+                  void checkProcessingFilesStatus();
+                }, 2000);
+              } catch (err) {
+                console.error("Error reloading documents after upload:", err);
+              }
+            })();
           }, 1000);
         } else if (editingId) {
           // Editing existing file source - update metadata via PUT API
           // IMPORTANT: We are EDITING, not creating a new entry
-          console.log("📝 DataSourcesManager - Editing existing source (not creating new):", editingId);
-          
+          console.log(
+            "📝 DataSourcesManager - Editing existing source (not creating new):",
+            editingId,
+          );
+
           // Find the existing source to preserve its ID and other properties
-          const existingSource = dataSources.find(s => s.id === editingId);
+          const existingSource = dataSources.find((s) => s.id === editingId);
           if (!existingSource) {
             console.error("❌ DataSourcesManager - Source not found for editing:", editingId);
             toast({
@@ -1138,11 +1233,10 @@ const DataSourcesManager: React.FC = () => {
             setIsSaving(false);
             return;
           }
-          
 
           // Get fileId for the PUT request
           let fileId = existingSource.fileId || extractFileIdFromFileKey(existingSource.id);
-          
+
           // Validate that fileId is a UUID
           const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
           if (!fileId || !uuidPattern.test(fileId)) {
@@ -1164,7 +1258,7 @@ const DataSourcesManager: React.FC = () => {
             // Call PUT API to update the data source
             const authHeader = await getAuthHeader();
             const url = buildApiUrl(`data-source/${fileId}`);
-            
+
             const updatePayload = {
               user_id: currentUser?.uid,
               org_id: orgIdToUse,
@@ -1183,7 +1277,7 @@ const DataSourcesManager: React.FC = () => {
               method: "PUT",
               headers: {
                 "Content-Type": "application/json",
-                "accept": "application/json",
+                accept: "application/json",
                 ...(authHeader && { Authorization: authHeader }),
               },
               body: JSON.stringify(updatePayload),
@@ -1206,10 +1300,13 @@ const DataSourcesManager: React.FC = () => {
             // Update the existing entry in place - do NOT add a new entry
             setDataSources((prev) => {
               // First, find the existing entry to ensure it exists
-              const existingSourceIndex = prev.findIndex(s => s.id === editingId);
-              
+              const existingSourceIndex = prev.findIndex((s) => s.id === editingId);
+
               if (existingSourceIndex === -1) {
-                console.error("❌ DataSourcesManager - Could not find source to update:", editingId);
+                console.error(
+                  "❌ DataSourcesManager - Could not find source to update:",
+                  editingId,
+                );
                 // Return previous state unchanged if source not found
                 return prev;
               }
@@ -1217,7 +1314,7 @@ const DataSourcesManager: React.FC = () => {
               // Create a new array with the updated entry
               const updated = [...prev];
               const existingSource = updated[existingSourceIndex];
-              
+
               // Update only the existing entry - replace it in place
               updated[existingSourceIndex] = {
                 ...existingSource,
@@ -1225,10 +1322,10 @@ const DataSourcesManager: React.FC = () => {
                 description: sourceDescription.trim() || undefined,
                 tags: selectedTags,
               };
-              
+
               // Ensure no duplicates by ID - this is a safety check
               const uniqueMap = new Map<string, DataSource>();
-              updated.forEach(source => {
+              updated.forEach((source) => {
                 // If we already have this ID, keep the one we just updated (if it's the one we're editing)
                 if (uniqueMap.has(source.id)) {
                   if (source.id === editingId) {
@@ -1240,9 +1337,9 @@ const DataSourcesManager: React.FC = () => {
                   uniqueMap.set(source.id, source);
                 }
               });
-              
+
               const unique = Array.from(uniqueMap.values());
-              
+
               console.log("📝 DataSourcesManager - State update:", {
                 beforeCount: prev.length,
                 afterCount: unique.length,
@@ -1250,12 +1347,14 @@ const DataSourcesManager: React.FC = () => {
                 updatedName: sourceName.trim(),
                 foundAtIndex: existingSourceIndex,
               });
-              
+
               // Verify we didn't accidentally add a new entry
               if (unique.length > prev.length) {
-                console.warn("⚠️ DataSourcesManager - Warning: Entry count increased after update! This should not happen.");
+                console.warn(
+                  "⚠️ DataSourcesManager - Warning: Entry count increased after update! This should not happen.",
+                );
               }
-              
+
               return unique;
             });
 
@@ -1264,23 +1363,28 @@ const DataSourcesManager: React.FC = () => {
               description: `${sourceName} has been updated.`,
             });
             updateSuccess = true;
-            
+
             // Reload from backend after a short delay to ensure state is synced
             // This ensures that after refresh, the updated data is properly matched
-            setTimeout(async () => {
-              try {
-                console.log("🔄 DataSourcesManager - Reloading after PUT update to sync state");
-                await loadDataSourcesFromBackend();
-              } catch (err) {
-                console.error("Error reloading after update:", err);
-                // Don't show error to user - local state is already updated
-              }
+            setTimeout(() => {
+              void (async () => {
+                try {
+                  console.log("🔄 DataSourcesManager - Reloading after PUT update to sync state");
+                  await loadDataSourcesFromBackend();
+                } catch (err) {
+                  console.error("Error reloading after update:", err);
+                  // Don't show error to user - local state is already updated
+                }
+              })();
             }, 500);
           } catch (error) {
             console.error("Error updating data source:", error);
             toast({
               title: "Update failed",
-              description: error instanceof Error ? error.message : "Could not update data source. Please try again.",
+              description:
+                error instanceof Error
+                  ? error.message
+                  : "Could not update data source. Please try again.",
               variant: "destructive",
             });
             // Don't throw - return early to prevent form reset on error
@@ -1291,13 +1395,16 @@ const DataSourcesManager: React.FC = () => {
       } else if (selectedType === "url") {
         // URL sources - use API
         const isEditing = !!editingId;
-        
+
         if (isEditing) {
           // Editing existing URL source - update metadata via PUT API
-          console.log("📝 DataSourcesManager - Editing existing URL source (not creating new):", editingId);
-          
+          console.log(
+            "📝 DataSourcesManager - Editing existing URL source (not creating new):",
+            editingId,
+          );
+
           // Find the existing source to preserve its ID and other properties
-          const existingSource = dataSources.find(s => s.id === editingId);
+          const existingSource = dataSources.find((s) => s.id === editingId);
           if (!existingSource) {
             console.error("❌ DataSourcesManager - URL source not found for editing:", editingId);
             toast({
@@ -1311,7 +1418,7 @@ const DataSourcesManager: React.FC = () => {
 
           // Get fileId for the PUT request - use fileId or fall back to id (which should be file_id for URLs)
           let fileId = existingSource.fileId;
-          
+
           // Validate that fileId is a UUID
           const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
           if (!fileId || !uuidPattern.test(fileId)) {
@@ -1319,15 +1426,16 @@ const DataSourcesManager: React.FC = () => {
             if (uuidPattern.test(editingId)) {
               fileId = editingId;
               console.log("📋 DataSourcesManager - Using URL id as fileId for edit:", fileId);
-      } else {
+            } else {
               console.error("❌ DataSourcesManager - No valid fileId found for URL edit:", {
                 editingId,
                 storedFileId: existingSource.fileId,
-                source: existingSource
+                source: existingSource,
               });
               toast({
                 title: "Error",
-                description: "Unable to determine URL file_id for update. URL may not have been saved to backend.",
+                description:
+                  "Unable to determine URL file_id for update. URL may not have been saved to backend.",
                 variant: "destructive",
               });
               setIsSaving(false);
@@ -1339,7 +1447,7 @@ const DataSourcesManager: React.FC = () => {
             // Call PUT API to update the URL data source
             const authHeader = await getAuthHeader();
             const url = buildApiUrl(`data-source/${fileId}?org_id=${orgIdToUse}`);
-            
+
             // Always use the form value, don't fall back to existing URL
             // This ensures the backend receives the updated value even if it's empty
             const updatePayload = {
@@ -1366,7 +1474,7 @@ const DataSourcesManager: React.FC = () => {
               method: "PUT",
               headers: {
                 "Content-Type": "application/json",
-                "accept": "application/json",
+                accept: "application/json",
                 ...(authHeader && { Authorization: authHeader }),
               },
               body: JSON.stringify(updatePayload),
@@ -1374,16 +1482,19 @@ const DataSourcesManager: React.FC = () => {
 
             // Log the raw response for debugging
             const responseClone = response.clone();
-            responseClone.text().then(text => {
-              console.log("📥 DataSourcesManager - PUT Response (raw):", {
-                status: response.status,
-                statusText: response.statusText,
-                headers: Object.fromEntries(response.headers.entries()),
-                body: text,
+            responseClone
+              .text()
+              .then((text) => {
+                console.log("📥 DataSourcesManager - PUT Response (raw):", {
+                  status: response.status,
+                  statusText: response.statusText,
+                  headers: Object.fromEntries(response.headers.entries()),
+                  body: text,
+                });
+              })
+              .catch((err) => {
+                console.error("Error reading response:", err);
               });
-            }).catch(err => {
-              console.error("Error reading response:", err);
-            });
 
             if (!response.ok) {
               const errorText = await response.text();
@@ -1393,7 +1504,9 @@ const DataSourcesManager: React.FC = () => {
                 fileId,
                 url,
               });
-              throw new Error(`Failed to update URL data source: ${response.status} - ${errorText}`);
+              throw new Error(
+                `Failed to update URL data source: ${response.status} - ${errorText}`,
+              );
             }
 
             // Try to get the updated data from the response
@@ -1402,43 +1515,62 @@ const DataSourcesManager: React.FC = () => {
             try {
               const responseData = await response.json();
               // Handle different response structures
-              updatedDataFromBackend = responseData.data || responseData.dataSource || responseData.document || responseData;
+              updatedDataFromBackend =
+                responseData.data ||
+                responseData.dataSource ||
+                responseData.document ||
+                responseData;
               console.log("✅ DataSourcesManager - URL update success, response data:", {
                 rawResponse: responseData,
                 extractedData: updatedDataFromBackend,
-                responseUrl: updatedDataFromBackend?.url || updatedDataFromBackend?.source_url || updatedDataFromBackend?.file_url,
+                responseUrl:
+                  updatedDataFromBackend?.url ||
+                  updatedDataFromBackend?.source_url ||
+                  updatedDataFromBackend?.file_url,
                 sentUrl: updatePayload.url,
-                urlMatches: (updatedDataFromBackend?.url || updatedDataFromBackend?.source_url || updatedDataFromBackend?.file_url) === updatePayload.url,
+                urlMatches:
+                  (updatedDataFromBackend?.url ||
+                    updatedDataFromBackend?.source_url ||
+                    updatedDataFromBackend?.file_url) === updatePayload.url,
                 allUrlFields: {
                   url: updatedDataFromBackend?.url,
                   source_url: updatedDataFromBackend?.source_url,
                   file_url: updatedDataFromBackend?.file_url,
-                  website_url: updatedDataFromBackend?.website_url
-                }
+                  website_url: updatedDataFromBackend?.website_url,
+                },
               });
-              
+
               // Warn if the URL in response doesn't match what we sent
-              const responseUrl = updatedDataFromBackend?.url || updatedDataFromBackend?.source_url || updatedDataFromBackend?.file_url;
+              const responseUrl =
+                updatedDataFromBackend?.url ||
+                updatedDataFromBackend?.source_url ||
+                updatedDataFromBackend?.file_url;
               if (responseUrl && responseUrl !== updatePayload.url) {
                 console.warn("⚠️ DataSourcesManager - URL mismatch detected!", {
                   sent: updatePayload.url,
                   received: responseUrl,
-                  message: "Backend returned a different URL than what was sent. This may indicate a backend issue."
+                  message:
+                    "Backend returned a different URL than what was sent. This may indicate a backend issue.",
                 });
               }
-            } catch (e) {
+            } catch (_e) {
               // Response might not be JSON, that's okay
-              console.log("✅ DataSourcesManager - URL update success (no response body or not JSON)");
+              console.log(
+                "✅ DataSourcesManager - URL update success (no response body or not JSON)",
+              );
             }
 
             // Update local state after successful API call
             // Update the existing entry in place - do NOT add a new entry
             setDataSources((prev) => {
               // First, find the existing entry to ensure it exists
-              const existingSourceIndex = prev.findIndex(s => s.id === editingId);
-              
+              const existingSourceIndex = prev.findIndex((s) => s.id === editingId);
+
               if (existingSourceIndex === -1) {
-                console.error("❌ DataSourcesManager - Could not find URL source to update:", editingId);
+                console.error(
+                  "❌ DataSourcesManager - Could not find URL source to update:",
+                  editingId,
+                );
                 // Return previous state unchanged if source not found
                 return prev;
               }
@@ -1446,34 +1578,38 @@ const DataSourcesManager: React.FC = () => {
               // Create a new array with the updated entry
               const updated = [...prev];
               const existingSource = updated[existingSourceIndex];
-              
+
               // Use response data if available (most reliable), otherwise use form values
               // For URL: prefer response data, then form value, never fall back to old value
-              const responseUrl = updatedDataFromBackend?.url || updatedDataFromBackend?.source_url || updatedDataFromBackend?.file_url;
-              const finalUrl = responseUrl !== undefined 
-                ? responseUrl 
-                : sourceUrl.trim(); // Use form value directly, no fallback to old value
-              
+              const responseUrl =
+                updatedDataFromBackend?.url ||
+                updatedDataFromBackend?.source_url ||
+                updatedDataFromBackend?.file_url;
+              const finalUrl = responseUrl !== undefined ? responseUrl : sourceUrl.trim(); // Use form value directly, no fallback to old value
+
               console.log("📝 DataSourcesManager - Updating local state with URL:", {
                 responseUrl,
                 formUrl: sourceUrl.trim(),
                 existingUrl: existingSource.url,
                 finalUrl,
-                responseData: updatedDataFromBackend
+                responseData: updatedDataFromBackend,
               });
-              
+
               // Update only the existing entry - replace it in place
               updated[existingSourceIndex] = {
                 ...existingSource,
                 name: updatedDataFromBackend?.name || sourceName.trim(),
                 url: finalUrl, // Use the determined final URL
-                description: updatedDataFromBackend?.description !== undefined ? updatedDataFromBackend.description : (sourceDescription.trim() || undefined),
+                description:
+                  updatedDataFromBackend?.description !== undefined
+                    ? updatedDataFromBackend.description
+                    : sourceDescription.trim() || undefined,
                 tags: updatedDataFromBackend?.tags || selectedTags,
               };
-              
+
               // Ensure no duplicates by ID - this is a safety check
               const uniqueMap = new Map<string, DataSource>();
-              updated.forEach(source => {
+              updated.forEach((source) => {
                 // If we already have this ID, keep the one we just updated (if it's the one we're editing)
                 if (uniqueMap.has(source.id)) {
                   if (source.id === editingId) {
@@ -1485,9 +1621,9 @@ const DataSourcesManager: React.FC = () => {
                   uniqueMap.set(source.id, source);
                 }
               });
-              
+
               const unique = Array.from(uniqueMap.values());
-              
+
               console.log("📝 DataSourcesManager - URL state update:", {
                 beforeCount: prev.length,
                 afterCount: unique.length,
@@ -1495,12 +1631,14 @@ const DataSourcesManager: React.FC = () => {
                 updatedName: sourceName.trim(),
                 foundAtIndex: existingSourceIndex,
               });
-              
+
               // Verify we didn't accidentally add a new entry
               if (unique.length > prev.length) {
-                console.warn("⚠️ DataSourcesManager - Warning: Entry count increased after URL update! This should not happen.");
+                console.warn(
+                  "⚠️ DataSourcesManager - Warning: Entry count increased after URL update! This should not happen.",
+                );
               }
-              
+
               return unique;
             });
 
@@ -1509,22 +1647,27 @@ const DataSourcesManager: React.FC = () => {
               description: `${sourceName} has been updated.`,
             });
             updateSuccess = true;
-            
+
             // Reload from backend after a short delay to ensure state is synced
-            setTimeout(async () => {
-              try {
-                console.log("🔄 DataSourcesManager - Reloading after PUT update to sync state");
-                await loadDataSourcesFromBackend();
-              } catch (err) {
-                console.error("Error reloading after URL update:", err);
-                // Don't show error to user - local state is already updated
-              }
+            setTimeout(() => {
+              void (async () => {
+                try {
+                  console.log("🔄 DataSourcesManager - Reloading after PUT update to sync state");
+                  await loadDataSourcesFromBackend();
+                } catch (err) {
+                  console.error("Error reloading after URL update:", err);
+                  // Don't show error to user - local state is already updated
+                }
+              })();
             }, 500);
           } catch (error) {
             console.error("Error updating URL data source:", error);
             toast({
               title: "Update failed",
-              description: error instanceof Error ? error.message : "Could not update URL data source. Please try again.",
+              description:
+                error instanceof Error
+                  ? error.message
+                  : "Could not update URL data source. Please try again.",
               variant: "destructive",
             });
             // Don't throw - return early to prevent form reset on error
@@ -1541,17 +1684,17 @@ const DataSourcesManager: React.FC = () => {
           };
 
           // Capture current URL IDs before any state changes
-          const urlIdsBeforeReload = dataSources.filter(s => s.type === "url").map(s => s.id);
+          const urlIdsBeforeReload = dataSources.filter((s) => s.type === "url").map((s) => s.id);
           const urlFileIdsBeforeReload = dataSources
-            .filter(s => s.type === "url" && s.fileId)
-            .map(s => s.fileId!);
+            .filter((s) => s.type === "url" && s.fileId)
+            .map((s) => s.fileId!);
 
           // Upload URL to backend
           await uploadUrlToBackend(
             sourceUrl.trim(),
             sourceName.trim(),
             selectedTags,
-            sourceDescription.trim() || undefined
+            sourceDescription.trim() || undefined,
           );
 
           toast({
@@ -1561,74 +1704,92 @@ const DataSourcesManager: React.FC = () => {
           updateSuccess = true;
 
           // Notify MissionControl that a data source was added
-          window.dispatchEvent(new CustomEvent('dataSourceAdded'));
+          window.dispatchEvent(new CustomEvent("dataSourceAdded"));
 
           // Reload documents from backend to get the new URL entry
           // Then apply the custom name, tags, and description to the newly uploaded URL
-          setTimeout(async () => {
-            try {
-              console.log("🔄 DataSourcesManager - Reloading after URL upload, applying metadata:", uploadMetadata);
-              await loadDataSourcesFromBackend();
-              
-              // Apply metadata to the newly uploaded URL
-              setDataSources((prev) => {
-                console.log("📋 DataSourcesManager - Current data sources before URL metadata application:", prev.length);
-                console.log("📋 DataSourcesManager - URL IDs before reload:", urlIdsBeforeReload);
-                console.log("📋 DataSourcesManager - All URLs in current state:", prev.filter(s => s.type === "url").map(u => ({ id: u.id, fileId: u.fileId, name: u.name, url: u.url })));
-                
-                // For new uploads, find the URL that wasn't in the list before
-                // Match by fileId first (most reliable), then by URL if available, then by name
-                const newUrls = prev.filter(s => {
-                  if (s.type !== "url") return false;
-                  
-                  // Check if it's a new URL by ID
-                  const isNewById = !urlIdsBeforeReload.includes(s.id);
-                  
-                  // Check if it's a new URL by fileId
-                  const isNewByFileId = !s.fileId || !urlFileIdsBeforeReload.includes(s.fileId);
-                  
-                  // Match by URL if available, otherwise match by name (since backend might not return URL)
-                  const urlMatches = s.url ? s.url === uploadMetadata.url : true;
-                  const nameMatches = s.name === uploadMetadata.name || !s.name || s.name === "URL Source";
-                  
-                  return isNewById && isNewByFileId && (urlMatches || nameMatches);
+          setTimeout(() => {
+            void (async () => {
+              try {
+                console.log(
+                  "🔄 DataSourcesManager - Reloading after URL upload, applying metadata:",
+                  uploadMetadata,
+                );
+                await loadDataSourcesFromBackend();
+
+                // Apply metadata to the newly uploaded URL
+                setDataSources((prev) => {
+                  console.log(
+                    "📋 DataSourcesManager - Current data sources before URL metadata application:",
+                    prev.length,
+                  );
+                  console.log("📋 DataSourcesManager - URL IDs before reload:", urlIdsBeforeReload);
+                  console.log(
+                    "📋 DataSourcesManager - All URLs in current state:",
+                    prev
+                      .filter((s) => s.type === "url")
+                      .map((u) => ({ id: u.id, fileId: u.fileId, name: u.name, url: u.url })),
+                  );
+
+                  // For new uploads, find the URL that wasn't in the list before
+                  // Match by fileId first (most reliable), then by URL if available, then by name
+                  const newUrls = prev.filter((s) => {
+                    if (s.type !== "url") return false;
+
+                    // Check if it's a new URL by ID
+                    const isNewById = !urlIdsBeforeReload.includes(s.id);
+
+                    // Check if it's a new URL by fileId
+                    const isNewByFileId = !s.fileId || !urlFileIdsBeforeReload.includes(s.fileId);
+
+                    // Match by URL if available, otherwise match by name (since backend might not return URL)
+                    const urlMatches = s.url ? s.url === uploadMetadata.url : true;
+                    const nameMatches =
+                      s.name === uploadMetadata.name || !s.name || s.name === "URL Source";
+
+                    return isNewById && isNewByFileId && (urlMatches || nameMatches);
+                  });
+
+                  console.log(
+                    "🔍 DataSourcesManager - New URLs found:",
+                    newUrls.length,
+                    newUrls.map((u) => ({ id: u.id, fileId: u.fileId, url: u.url, name: u.name })),
+                  );
+
+                  if (newUrls.length > 0) {
+                    // Apply metadata to the most recently uploaded URL (should be the last one)
+                    const urlToUpdate = newUrls[newUrls.length - 1];
+                    console.log("✅ DataSourcesManager - Applying metadata to new URL:", {
+                      id: urlToUpdate.id,
+                      url: urlToUpdate.url,
+                      oldName: urlToUpdate.name,
+                      newName: uploadMetadata.name,
+                      oldTags: urlToUpdate.tags,
+                      newTags: uploadMetadata.tags,
+                      oldDescription: urlToUpdate.description,
+                      newDescription: uploadMetadata.description,
+                    });
+                    return prev.map((s) => {
+                      if (s.id === urlToUpdate.id) {
+                        return {
+                          ...s,
+                          name: uploadMetadata.name,
+                          url: uploadMetadata.url || s.url || "",
+                          description: uploadMetadata.description,
+                          tags: uploadMetadata.tags,
+                        };
+                      }
+                      return s;
+                    });
+                  } else {
+                    console.warn("⚠️ DataSourcesManager - No new URL found to apply metadata to");
+                  }
+                  return prev;
                 });
-                
-                console.log("🔍 DataSourcesManager - New URLs found:", newUrls.length, newUrls.map(u => ({ id: u.id, fileId: u.fileId, url: u.url, name: u.name })));
-                
-                if (newUrls.length > 0) {
-                  // Apply metadata to the most recently uploaded URL (should be the last one)
-                  const urlToUpdate = newUrls[newUrls.length - 1];
-                  console.log("✅ DataSourcesManager - Applying metadata to new URL:", {
-                    id: urlToUpdate.id,
-                    url: urlToUpdate.url,
-                    oldName: urlToUpdate.name,
-                    newName: uploadMetadata.name,
-                    oldTags: urlToUpdate.tags,
-                    newTags: uploadMetadata.tags,
-                    oldDescription: urlToUpdate.description,
-                    newDescription: uploadMetadata.description,
-                  });
-                  return prev.map((s) => {
-                    if (s.id === urlToUpdate.id) {
-                      return {
-                        ...s,
-                        name: uploadMetadata.name,
-                        url: uploadMetadata.url || s.url || "",
-                        description: uploadMetadata.description,
-                        tags: uploadMetadata.tags,
-                      };
-                    }
-                    return s;
-                  });
-                } else {
-                  console.warn("⚠️ DataSourcesManager - No new URL found to apply metadata to");
-                }
-                return prev;
-              });
-            } catch (err) {
-              console.error("Error reloading documents after URL upload:", err);
-            }
+              } catch (err) {
+                console.error("Error reloading documents after URL upload:", err);
+              }
+            })();
           }, 1000);
         }
       } else {
@@ -1641,8 +1802,8 @@ const DataSourcesManager: React.FC = () => {
           description: sourceDescription.trim() || undefined,
           tags: selectedTags,
           status: "active",
-          createdAt: editingId 
-            ? (dataSources.find(s => s.id === editingId)?.createdAt || new Date())
+          createdAt: editingId
+            ? dataSources.find((s) => s.id === editingId)?.createdAt || new Date()
             : new Date(),
         };
 
@@ -1663,7 +1824,8 @@ const DataSourcesManager: React.FC = () => {
       console.error("Error saving data source:", error);
       toast({
         title: "Upload failed",
-        description: error instanceof Error ? error.message : "Could not upload file. Please try again.",
+        description:
+          error instanceof Error ? error.message : "Could not upload file. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -1782,55 +1944,55 @@ const DataSourcesManager: React.FC = () => {
   // Helper: Normalize column names
   const normalizeColumnNames = (headerLine: string): string => {
     const columnMapping: Record<string, string> = {
-      'fullname': 'fullName',
-      'full_name': 'fullName',
-      'FullName': 'fullName',
-      'Full Name': 'fullName',
-      'full name': 'fullName',
-      'name': 'fullName',
-      'Name': 'fullName',
-      'email': 'email',
-      'Email': 'email',
-      'mobile': 'mobile',
-      'Mobile': 'mobile',
-      'phone': 'mobile',
-      'Phone': 'mobile',
-      'phone_number': 'mobile',
-      'Phone Number': 'mobile',
-      'phone number': 'mobile',
-      'companyname': 'companyName',
-      'company_name': 'companyName',
-      'CompanyName': 'companyName',
-      'Company Name': 'companyName',
-      'company name': 'companyName',
-      'company': 'companyName',
-      'Company': 'companyName',
-      'companywebsite': 'companyWebsite',
-      'company_website': 'companyWebsite',
-      'CompanyWebsite': 'companyWebsite',
-      'Company Website': 'companyWebsite',
-      'company website': 'companyWebsite',
-      'website': 'companyWebsite',
-      'Website': 'companyWebsite',
-      'linkedinprofile': 'linkedInProfile',
-      'linkedin_profile': 'linkedInProfile',
-      'LinkedInProfile': 'linkedInProfile',
-      'LinkedIn Profile': 'linkedInProfile',
-      'linkedin profile': 'linkedInProfile',
-      'linkedin': 'linkedInProfile',
-      'LinkedIn': 'linkedInProfile',
-      'actions': 'actions',
-      'Actions': 'actions',
-      'notes': 'actions',
-      'Notes': 'actions',
+      fullname: "fullName",
+      full_name: "fullName",
+      FullName: "fullName",
+      "Full Name": "fullName",
+      "full name": "fullName",
+      name: "fullName",
+      Name: "fullName",
+      email: "email",
+      Email: "email",
+      mobile: "mobile",
+      Mobile: "mobile",
+      phone: "mobile",
+      Phone: "mobile",
+      phone_number: "mobile",
+      "Phone Number": "mobile",
+      "phone number": "mobile",
+      companyname: "companyName",
+      company_name: "companyName",
+      CompanyName: "companyName",
+      "Company Name": "companyName",
+      "company name": "companyName",
+      company: "companyName",
+      Company: "companyName",
+      companywebsite: "companyWebsite",
+      company_website: "companyWebsite",
+      CompanyWebsite: "companyWebsite",
+      "Company Website": "companyWebsite",
+      "company website": "companyWebsite",
+      website: "companyWebsite",
+      Website: "companyWebsite",
+      linkedinprofile: "linkedInProfile",
+      linkedin_profile: "linkedInProfile",
+      LinkedInProfile: "linkedInProfile",
+      "LinkedIn Profile": "linkedInProfile",
+      "linkedin profile": "linkedInProfile",
+      linkedin: "linkedInProfile",
+      LinkedIn: "linkedInProfile",
+      actions: "actions",
+      Actions: "actions",
+      notes: "actions",
+      Notes: "actions",
     };
 
-    const columns = headerLine.split(',');
-    const normalizedColumns = columns.map(col => {
+    const columns = headerLine.split(",");
+    const normalizedColumns = columns.map((col) => {
       const trimmed = col.trim();
-      const lowerKey = trimmed.toLowerCase().replace(/\s+/g, '');
+      const lowerKey = trimmed.toLowerCase().replace(/\s+/g, "");
       const lowerWithSpaces = trimmed.toLowerCase();
-      
+
       if (columnMapping[trimmed]) {
         return columnMapping[trimmed];
       } else if (columnMapping[lowerKey]) {
@@ -1843,24 +2005,24 @@ const DataSourcesManager: React.FC = () => {
       return trimmed;
     });
 
-    return normalizedColumns.join(',');
+    return normalizedColumns.join(",");
   };
 
   // Helper: Parse CSV line respecting quoted fields
-  const parseCsvLine = (line: string, delimiter: string = ','): string[] => {
+  const parseCsvLine = (line: string, delimiter: string = ","): string[] => {
     const fields: string[] = [];
-    let currentField = '';
+    let currentField = "";
     let inQuotes = false;
-    
+
     // Handle empty line
     if (!line || line.trim().length === 0) {
       return [];
     }
-    
+
     for (let i = 0; i < line.length; i++) {
       const char = line[i];
       const nextChar = line[i + 1];
-      
+
       if (char === '"') {
         if (inQuotes && nextChar === '"') {
           // Escaped quote (double quote)
@@ -1874,20 +2036,20 @@ const DataSourcesManager: React.FC = () => {
       } else if (char === delimiter && !inQuotes) {
         // Field separator - push current field and start new one
         fields.push(currentField);
-        currentField = '';
+        currentField = "";
       } else {
         currentField += char;
       }
     }
-    
+
     // Add the last field (even if line ends without delimiter)
     fields.push(currentField);
-    
+
     // Handle trailing delimiter (creates empty field at end)
     if (line.endsWith(delimiter) && !inQuotes) {
-      fields.push('');
+      fields.push("");
     }
-    
+
     return fields;
   };
 
@@ -1928,42 +2090,47 @@ const DataSourcesManager: React.FC = () => {
 
   // Helper: Normalize CSV format
   const normalizeCsv = (text: string): string => {
-    text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
     text = normalizeCsvAsciiDoubleQuotes(text);
     const delimiter = detectDelimiter(text);
-    const lines = splitCsvIntoLogicalRows(text).filter(line => line.trim().length > 0);
+    const lines = splitCsvIntoLogicalRows(text).filter((line) => line.trim().length > 0);
     if (lines.length === 0) return text;
-    
+
     // Normalize all lines to ensure consistent formatting
-    const normalizedLines = lines.map(line => {
-      if (line.trim() === '') return line;
-      
+    const normalizedLines = lines.map((line) => {
+      if (line.trim() === "") return line;
+
       // Parse the line using the detected delimiter
       const fields = parseCsvLineRelaxed(line, delimiter);
-      
+
       // Ensure fields with special characters are properly quoted
-      const normalizedFields = fields.map(field => {
+      const normalizedFields = fields.map((field) => {
         const trimmedField = field.trim();
         // Quote fields that contain commas, quotes, or newlines
-        if (trimmedField.includes(',') || trimmedField.includes('"') || trimmedField.includes('\n') || trimmedField.includes('\r')) {
+        if (
+          trimmedField.includes(",") ||
+          trimmedField.includes('"') ||
+          trimmedField.includes("\n") ||
+          trimmedField.includes("\r")
+        ) {
           // Escape existing quotes by doubling them
           return `"${trimmedField.replace(/"/g, '""')}"`;
         }
         return trimmedField;
       });
-      
-      return normalizedFields.join(',');
+
+      return normalizedFields.join(",");
     });
-    
-    text = normalizedLines.join('\n');
-    
+
+    text = normalizedLines.join("\n");
+
     // Normalize column names in header
-    const finalLines = splitCsvIntoLogicalRows(text).filter(line => line.trim().length > 0);
+    const finalLines = splitCsvIntoLogicalRows(text).filter((line) => line.trim().length > 0);
     if (finalLines.length > 0) {
       finalLines[0] = normalizeColumnNames(finalLines[0]);
-      text = finalLines.join('\n');
+      text = finalLines.join("\n");
     }
-    
+
     return text;
   };
 
@@ -1971,50 +2138,51 @@ const DataSourcesManager: React.FC = () => {
   const isBinaryFile = (arrayBuffer: ArrayBuffer): boolean => {
     const bytes = new Uint8Array(arrayBuffer);
     const maxBytesToCheck = Math.min(512, bytes.length);
-    
+
     // Check for common binary file signatures
     // Excel files: PK (ZIP signature) at start
-    if (bytes.length >= 4 && bytes[0] === 0x50 && bytes[1] === 0x4B) {
+    if (bytes.length >= 4 && bytes[0] === 0x50 && bytes[1] === 0x4b) {
       return true; // ZIP/Excel file
     }
-    
+
     // Check for high percentage of non-printable characters
     let nonPrintableCount = 0;
     for (let i = 0; i < maxBytesToCheck; i++) {
       const byte = bytes[i];
       // Allow common text characters: 0x09 (tab), 0x0A (LF), 0x0D (CR), 0x20-0x7E (printable ASCII)
-      if (byte < 0x09 || (byte > 0x0D && byte < 0x20) || byte > 0x7E) {
+      if (byte < 0x09 || (byte > 0x0d && byte < 0x20) || byte > 0x7e) {
         nonPrintableCount++;
       }
     }
-    
+
     // If more than 30% are non-printable, likely binary
-    return (nonPrintableCount / maxBytesToCheck) > 0.3;
+    return nonPrintableCount / maxBytesToCheck > 0.3;
   };
 
   // Helper: Validate CSV format
   const validateCsvFormat = async (file: File): Promise<{ valid: boolean; error?: string }> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
-      
+
       reader.onload = async (e) => {
         try {
           // Use the same encoding detection as uploadCsvBatch
           const arrayBuffer = e.target?.result as ArrayBuffer;
-          
+
           // Check if file is binary
           if (isBinaryFile(arrayBuffer)) {
-            resolve({ 
-              valid: false, 
-              error: "Invalid file format: This appears to be a binary file (possibly an Excel file). Please save your file as a CSV file before uploading. In Excel: File > Save As > CSV (Comma delimited) (*.csv)" 
+            resolve({
+              valid: false,
+              error:
+                "Invalid file format: This appears to be a binary file (possibly an Excel file). Please save your file as a CSV file before uploading. In Excel: File > Save As > CSV (Comma delimited) (*.csv)",
             });
             return;
           }
-          
-          const encodings = ['windows-1252', 'iso-8859-1', 'utf-8'];
-          let text = '';
+
+          const encodings = ["windows-1252", "iso-8859-1", "utf-8"];
+          let text = "";
           let decoded = false;
-          
+
           for (const encoding of encodings) {
             try {
               const decoder = new TextDecoder(encoding, { fatal: false });
@@ -2025,60 +2193,65 @@ const DataSourcesManager: React.FC = () => {
               continue;
             }
           }
-          
+
           if (!decoded || !text) {
-            text = new TextDecoder('utf-8', { fatal: false }).decode(arrayBuffer);
+            text = new TextDecoder("utf-8", { fatal: false }).decode(arrayBuffer);
           }
-          
+
           // Remove BOM if present
-          if (text.charCodeAt(0) === 0xFEFF) {
+          if (text.charCodeAt(0) === 0xfeff) {
             text = text.slice(1);
           }
 
-          text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+          text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
           text = normalizeCsvAsciiDoubleQuotes(text);
-          
+
           // Check for binary content in decoded text
+          // eslint-disable-next-line no-control-regex -- intentional: detecting control chars to identify binary uploads
           const binaryPattern = /[\x00-\x08\x0E-\x1F\x7F-\x9F]/g;
           const binaryMatches = text.substring(0, 1000).match(binaryPattern);
           if (binaryMatches && binaryMatches.length > 50) {
-            resolve({ 
-              valid: false, 
-              error: "Invalid file format: This file contains binary data and is not a valid CSV file. Please ensure you're uploading a plain text CSV file. If you're using Excel, save the file as 'CSV (Comma delimited) (*.csv)' format." 
+            resolve({
+              valid: false,
+              error:
+                "Invalid file format: This file contains binary data and is not a valid CSV file. Please ensure you're uploading a plain text CSV file. If you're using Excel, save the file as 'CSV (Comma delimited) (*.csv)' format.",
             });
             return;
           }
-          
+
           if (!text || text.trim().length === 0) {
             resolve({ valid: false, error: "CSV file is empty" });
             return;
           }
-          
+
           // First, validate the original file structure (respect quoted fields that span lines)
-          const originalLines = splitCsvIntoLogicalRows(text).filter((line) => line.trim().length > 0);
+          const originalLines = splitCsvIntoLogicalRows(text).filter(
+            (line) => line.trim().length > 0,
+          );
           if (originalLines.length === 0) {
             resolve({ valid: false, error: "CSV file appears to be empty" });
             return;
           }
-          
+
           // Detect delimiter from original file
           const originalDelimiter = detectDelimiter(text);
-          
+
           // Validate original structure
           const originalHeaderFields = parseCsvLineRelaxed(originalLines[0], originalDelimiter);
           const originalExpectedCount = originalHeaderFields.length;
-          
+
           if (originalExpectedCount === 0) {
             resolve({ valid: false, error: "CSV header is empty or invalid" });
             return;
           }
-          
+
           // Check original file structure (scan all rows — "line 70" is logical row index, not always your editor line)
           type BadRow = { rowNum: number; actual: number; line: string; unclosed: boolean };
           const badOriginal: BadRow[] = [];
           for (let i = 1; i < originalLines.length; i++) {
             const line = originalLines[i];
 
+            // eslint-disable-next-line no-control-regex -- intentional: detecting control chars to identify binary uploads
             const binaryPatternRow = /[\x00-\x08\x0E-\x1F\x7F-\x9F]/;
             if (binaryPatternRow.test(line)) {
               console.error("❌ CSV Validation Error - Binary content detected:", {
@@ -2110,8 +2283,7 @@ const DataSourcesManager: React.FC = () => {
               .slice(0, 8)
               .map((b) => `row ${b.rowNum} (${b.actual} columns)`)
               .join(", ");
-            const more =
-              badOriginal.length > 8 ? ` (+${badOriginal.length - 8} more)` : "";
+            const more = badOriginal.length > 8 ? ` (+${badOriginal.length - 8} more)` : "";
             console.error("❌ CSV Validation Error (Original):", {
               badRowCount: badOriginal.length,
               expectedColumns: originalExpectedCount,
@@ -2138,36 +2310,36 @@ const DataSourcesManager: React.FC = () => {
             });
             return;
           }
-          
+
           // Now validate after normalization (what will be sent to backend)
           const normalizedText = normalizeCsv(text);
           const normalizedLines = splitCsvIntoLogicalRows(normalizedText).filter(
             (line) => line.trim().length > 0,
           );
-          
+
           if (normalizedLines.length === 0) {
             resolve({ valid: false, error: "CSV file appears to be empty after normalization" });
             return;
           }
-          
+
           // Use comma as delimiter after normalization
-          const delimiter = ',';
-          
+          const delimiter = ",";
+
           // Parse normalized header
           const headerFields = parseCsvLineRelaxed(normalizedLines[0], delimiter);
           const expectedColumnCount = headerFields.length;
-          
+
           console.log("🔍 CSV Validation - Normalized Header:", {
             headerLine: normalizedLines[0],
             headerFields,
-            expectedColumnCount
+            expectedColumnCount,
           });
-          
+
           if (expectedColumnCount === 0) {
             resolve({ valid: false, error: "CSV header is empty or invalid after normalization" });
             return;
           }
-          
+
           const badNormalized: BadRow[] = [];
           for (let i = 1; i < normalizedLines.length; i++) {
             const normLine = normalizedLines[i];
@@ -2189,8 +2361,7 @@ const DataSourcesManager: React.FC = () => {
               .slice(0, 8)
               .map((b) => `row ${b.rowNum} (${b.actual} columns)`)
               .join(", ");
-            const more =
-              badNormalized.length > 8 ? ` (+${badNormalized.length - 8} more)` : "";
+            const more = badNormalized.length > 8 ? ` (+${badNormalized.length - 8} more)` : "";
             console.error("❌ CSV Validation Error (Normalized):", {
               badRowCount: badNormalized.length,
               expectedColumns: expectedColumnCount,
@@ -2211,18 +2382,20 @@ const DataSourcesManager: React.FC = () => {
             });
             return;
           }
-          
-          console.log("✅ CSV Validation - All rows validated successfully (original and normalized)");
-          
+
+          console.log(
+            "✅ CSV Validation - All rows validated successfully (original and normalized)",
+          );
+
           resolve({ valid: true });
         } catch (error) {
-          resolve({ 
-            valid: false, 
-            error: `Failed to read CSV file: ${error instanceof Error ? error.message : 'Unknown error'}` 
+          resolve({
+            valid: false,
+            error: `Failed to read CSV file: ${error instanceof Error ? error.message : "Unknown error"}`,
           });
         }
       };
-      
+
       reader.onerror = () => resolve({ valid: false, error: "Failed to read file" });
       // Read as ArrayBuffer to match uploadCsvBatch encoding detection
       reader.readAsArrayBuffer(file);
@@ -2236,20 +2409,20 @@ const DataSourcesManager: React.FC = () => {
     try {
       const jsonMatch = errorMessage.match(/\{"detail":\s*"([^"]+)"\}/);
       if (jsonMatch) {
-        cleanMessage = jsonMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+        cleanMessage = jsonMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
       }
     } catch {
       // If parsing fails, use original message
     }
-    
+
     // Check for CSV format errors
-    if (cleanMessage.includes('Expected') && cleanMessage.includes('fields')) {
+    if (cleanMessage.includes("Expected") && cleanMessage.includes("fields")) {
       const match = cleanMessage.match(/Expected (\d+) fields? in line (\d+), saw (\d+)/);
       if (match) {
         const [, expected, lineNum, actual] = match;
         return `CSV format error on line ${lineNum}: Expected ${expected} column(s), but found ${actual}. Please ensure all rows have the same number of columns and that fields containing commas are enclosed in quotes.`;
       }
-      
+
       // Alternative pattern
       const match2 = cleanMessage.match(/Expected (\d+) fields? in line (\d+), saw (\d+)/);
       if (match2) {
@@ -2257,21 +2430,21 @@ const DataSourcesManager: React.FC = () => {
         return `CSV format error on line ${lineNum}: Expected ${expected} column(s), but found ${actual}. Please ensure all rows have the same number of columns and that fields containing commas are enclosed in quotes.`;
       }
     }
-    
-    if (cleanMessage.includes('tokenizing data')) {
+
+    if (cleanMessage.includes("tokenizing data")) {
       return `CSV parsing error: ${cleanMessage}. Please check that your CSV file uses commas as delimiters and that fields with commas or special characters are enclosed in double quotes.`;
     }
-    
-    if (cleanMessage.includes('codec') || cleanMessage.includes('decode')) {
+
+    if (cleanMessage.includes("codec") || cleanMessage.includes("decode")) {
       return `File encoding error: ${cleanMessage}. The file has been converted to UTF-8, but please try saving your CSV file as UTF-8 format before uploading.`;
     }
-    
+
     // Remove status code prefix if present
     const statusMatch = cleanMessage.match(/^\d+\s*-\s*(.+)$/);
     if (statusMatch) {
       cleanMessage = statusMatch[1];
     }
-    
+
     return cleanMessage;
   };
 
@@ -2300,7 +2473,8 @@ const DataSourcesManager: React.FC = () => {
     const ab = await f.slice(0, 8).arrayBuffer();
     const u = new Uint8Array(ab);
     if (u.length >= 2 && u[0] === 0x50 && u[1] === 0x4b) return true;
-    if (u.length >= 4 && u[0] === 0xd0 && u[1] === 0xcf && u[2] === 0x11 && u[3] === 0xe0) return true;
+    if (u.length >= 4 && u[0] === 0xd0 && u[1] === 0xcf && u[2] === 0x11 && u[3] === 0xe0)
+      return true;
     return false;
   };
 
@@ -2316,14 +2490,14 @@ const DataSourcesManager: React.FC = () => {
     const convertToUtf8 = (file: File): Promise<File> => {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        
+
         reader.onload = (e) => {
           try {
             const arrayBuffer = e.target?.result as ArrayBuffer;
-            const encodings = ['windows-1252', 'iso-8859-1', 'utf-8'];
-            let text = '';
+            const encodings = ["windows-1252", "iso-8859-1", "utf-8"];
+            let text = "";
             let decoded = false;
-            
+
             for (const encoding of encodings) {
               try {
                 const decoder = new TextDecoder(encoding, { fatal: false });
@@ -2334,25 +2508,29 @@ const DataSourcesManager: React.FC = () => {
                 continue;
               }
             }
-            
+
             if (!decoded || !text) {
-              text = new TextDecoder('utf-8', { fatal: false }).decode(arrayBuffer);
+              text = new TextDecoder("utf-8", { fatal: false }).decode(arrayBuffer);
             }
-            
+
             text = normalizeCsv(text);
-            const utf8Blob = new Blob([text], { type: 'text/csv;charset=utf-8' });
+            const utf8Blob = new Blob([text], { type: "text/csv;charset=utf-8" });
             const utf8File = new File([utf8Blob], file.name, {
-              type: 'text/csv',
+              type: "text/csv",
               lastModified: file.lastModified,
             });
-            
+
             resolve(utf8File);
           } catch (error) {
-            reject(new Error(`Failed to convert file encoding: ${error instanceof Error ? error.message : 'Unknown error'}`));
+            reject(
+              new Error(
+                `Failed to convert file encoding: ${error instanceof Error ? error.message : "Unknown error"}`,
+              ),
+            );
           }
         };
-        
-        reader.onerror = () => reject(new Error('Failed to read file'));
+
+        reader.onerror = () => reject(new Error("Failed to read file"));
         reader.readAsArrayBuffer(file);
       });
     };
@@ -2364,13 +2542,15 @@ const DataSourcesManager: React.FC = () => {
       try {
         uploadFile = await convertToUtf8(file);
       } catch (error) {
-        throw new Error(`Failed to process CSV file encoding: ${error instanceof Error ? error.message : "Unknown error"}`);
+        throw new Error(
+          `Failed to process CSV file encoding: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
       }
     }
 
     const authHeader = await getAuthHeader();
     const url = buildApiUrl("leads/batch-upload");
-    
+
     const formData = new FormData();
     formData.append("file", uploadFile);
     formData.append("user_id", userId);
@@ -2399,7 +2579,7 @@ const DataSourcesManager: React.FC = () => {
         status: response.status,
         errorText,
       });
-      
+
       // Try to parse JSON error response
       try {
         const errorJson = JSON.parse(errorText);
@@ -2413,13 +2593,13 @@ const DataSourcesManager: React.FC = () => {
       } catch {
         // If not JSON, use the text as is
       }
-      
+
       throw new Error(`Failed to upload file: ${response.status} - ${errorText}`);
     }
 
     const result = await response.json();
     console.log("✅ DataSourcesManager - Batch Upload Success:", result);
-    
+
     return result;
   };
 
@@ -2431,8 +2611,7 @@ const DataSourcesManager: React.FC = () => {
 
   const filterVisibleLeadStreamFiles = (files: LeadStreamFileApiRow[]): LeadStreamFileApiRow[] =>
     files.filter(
-      (f) =>
-        !deletedLeadStreamFileIdsRef.current.has(f.file_id) && !isLeadStreamRowDeletedInApi(f)
+      (f) => !deletedLeadStreamFileIdsRef.current.has(f.file_id) && !isLeadStreamRowDeletedInApi(f),
     );
 
   const isTerminalLeadStreamStatus = (status?: string) => {
@@ -2478,57 +2657,61 @@ const DataSourcesManager: React.FC = () => {
   };
 
   /** GET /leads/stream/status — list uploads + processing stats for user/org */
-  const refreshLeadStreamStatus = useCallback(async (opts?: { silent?: boolean }) => {
-    const silent = opts?.silent === true;
-    const userId = currentUser?.uid || "";
-    if (!userId) {
-      setLeadStreamFiles([]);
-      return;
-    }
-
-    if (!silent) {
-      setLeadStreamStatusLoading(true);
-    }
-    try {
-      const authHeader = await getAuthHeader();
-      const qs = new URLSearchParams({
-        user_id: userId,
-        org_id: orgIdToUse,
-      });
-      const url = buildApiUrl(`leads/stream/status?${qs.toString()}`);
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          ...(authHeader && { Authorization: authHeader }),
-        },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to fetch lead stream status: ${response.status} - ${errorText}`);
+  const refreshLeadStreamStatus = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      const silent = opts?.silent === true;
+      const userId = currentUser?.uid || "";
+      if (!userId) {
+        setLeadStreamFiles([]);
+        return;
       }
 
-      const data = await response.json();
-      let files: LeadStreamFileApiRow[] = [];
-      if (data && typeof data === "object" && Array.isArray(data.files)) {
-        files = data.files;
-      } else if (Array.isArray(data)) {
-        files = data;
-      }
-      const idsInResponse = new Set(files.map((f) => f.file_id));
-      for (const id of [...deletedLeadStreamFileIdsRef.current]) {
-        if (!idsInResponse.has(id)) deletedLeadStreamFileIdsRef.current.delete(id);
-      }
-      setLeadStreamFiles(filterVisibleLeadStreamFiles(files));
-    } catch (e) {
-      console.error("DataSourcesManager refreshLeadStreamStatus:", e);
-    } finally {
       if (!silent) {
-        setLeadStreamStatusLoading(false);
+        setLeadStreamStatusLoading(true);
       }
-    }
-  }, [currentUser?.uid, orgIdToUse]);
+      try {
+        const authHeader = await getAuthHeader();
+        const qs = new URLSearchParams({
+          user_id: userId,
+          org_id: orgIdToUse,
+        });
+        const url = buildApiUrl(`leads/stream/status?${qs.toString()}`);
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            ...(authHeader && { Authorization: authHeader }),
+          },
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to fetch lead stream status: ${response.status} - ${errorText}`);
+        }
+
+        const data = await response.json();
+        let files: LeadStreamFileApiRow[] = [];
+        if (data && typeof data === "object" && Array.isArray(data.files)) {
+          files = data.files;
+        } else if (Array.isArray(data)) {
+          files = data;
+        }
+        const idsInResponse = new Set(files.map((f) => f.file_id));
+        for (const id of [...deletedLeadStreamFileIdsRef.current]) {
+          if (!idsInResponse.has(id)) deletedLeadStreamFileIdsRef.current.delete(id);
+        }
+        setLeadStreamFiles(filterVisibleLeadStreamFiles(files));
+      } catch (e) {
+        console.error("DataSourcesManager refreshLeadStreamStatus:", e);
+      } finally {
+        if (!silent) {
+          setLeadStreamStatusLoading(false);
+        }
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- filterVisibleLeadStreamFiles is a non-memoized helper reading only refs; including it would defeat useCallback memoization without behavior change
+    [currentUser?.uid, orgIdToUse],
+  );
 
   /** DELETE /leads/by-file/{file_id} — removes all leads for file (user/org scoped) and updates stream tracking */
   const deleteLeadsByFile = async (fileId: string) => {
@@ -2588,7 +2771,7 @@ const DataSourcesManager: React.FC = () => {
     }
     if (
       !confirm(
-        "Remove this lead stream file? All leads imported from this upload will be deleted from the backend."
+        "Remove this lead stream file? All leads imported from this upload will be deleted from the backend.",
       )
     ) {
       return;
@@ -2680,18 +2863,18 @@ const DataSourcesManager: React.FC = () => {
   const handleConnectToCRM = (crmSystem: string) => {
     // CRM system login URLs
     const crmUrls: Record<string, string> = {
-      hubspot: 'https://app.hubspot.com/login',
-      salesforce: 'https://login.salesforce.com/',
-      pipedrive: 'https://www.pipedrive.com/login',
-      zoho: 'https://accounts.zoho.com/signin',
-      monday: 'https://auth.monday.com/users/sign_in',
-      asana: 'https://app.asana.com/-/login',
+      hubspot: "https://app.hubspot.com/login",
+      salesforce: "https://login.salesforce.com/",
+      pipedrive: "https://www.pipedrive.com/login",
+      zoho: "https://accounts.zoho.com/signin",
+      monday: "https://auth.monday.com/users/sign_in",
+      asana: "https://app.asana.com/-/login",
     };
 
     const url = crmUrls[crmSystem.toLowerCase()];
     if (url) {
       // Open in new tab
-      window.open(url, '_blank', 'noopener,noreferrer');
+      window.open(url, "_blank", "noopener,noreferrer");
       toast({
         title: "Redirecting to CRM",
         description: `Opening ${crmSystem} login page...`,
@@ -2729,7 +2912,7 @@ const DataSourcesManager: React.FC = () => {
           return;
         }
       }
-    } catch (validationError) {
+    } catch (_validationError) {
       toast({
         title: "Validation error",
         description: "Failed to validate CSV file. Please check the file format.",
@@ -2769,7 +2952,8 @@ const DataSourcesManager: React.FC = () => {
       } else {
         toast({
           title: "Upload completed",
-          description: "No leads were created. Check column layout and try again, or see server messages.",
+          description:
+            "No leads were created. Check column layout and try again, or see server messages.",
           variant: "default",
         });
       }
@@ -2778,9 +2962,10 @@ const DataSourcesManager: React.FC = () => {
       setSelectedLeadFile(null);
       setShowLeadUpload(false);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to upload file. Please try again.";
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to upload file. Please try again.";
       const parsedMessage = parseErrorMessage(errorMessage);
-      
+
       toast({
         title: "Upload failed",
         description: parsedMessage,
@@ -2811,41 +2996,44 @@ const DataSourcesManager: React.FC = () => {
         const authHeader = await getAuthHeader();
         // Use the stored fileId if available, otherwise extract from file_key
         let fileId = sourceToDelete.fileId || extractFileIdFromFileKey(id);
-        
+
         // Validate that fileId is a UUID, not a full path
         const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         if (!uuidPattern.test(fileId)) {
           // If fileId is not a UUID, try extracting again from the id (file_key)
-          console.warn("⚠️ DataSourcesManager - fileId is not a valid UUID, re-extracting from id:", {
-            fileId,
-            id,
-            storedFileId: sourceToDelete.fileId
-          });
+          console.warn(
+            "⚠️ DataSourcesManager - fileId is not a valid UUID, re-extracting from id:",
+            {
+              fileId,
+              id,
+              storedFileId: sourceToDelete.fileId,
+            },
+          );
           fileId = extractFileIdFromFileKey(id);
-          
+
           // If still not a UUID, try extracting from the stored fileId if it exists
           if (!uuidPattern.test(fileId) && sourceToDelete.fileId) {
             fileId = extractFileIdFromFileKey(sourceToDelete.fileId);
           }
         }
-        
+
         console.log("🗑️ DataSourcesManager - Delete file_id resolution:", {
           sourceId: id,
           storedFileId: sourceToDelete.fileId,
           resolvedFileId: fileId,
           isValidUUID: uuidPattern.test(fileId),
-          sourceToDelete: sourceToDelete
+          sourceToDelete: sourceToDelete,
         });
-        
+
         if (!fileId) {
           throw new Error("Unable to determine file_id for deletion");
         }
-        
+
         // Final validation - ensure we have a UUID before making the API call
         if (!uuidPattern.test(fileId)) {
           throw new Error(`Invalid file_id format: ${fileId}. Expected UUID format.`);
         }
-        
+
         // Use singular form /data-source/ to match backend API route
         const url = buildApiUrl(`data-source/${fileId}`);
 
@@ -2860,7 +3048,7 @@ const DataSourcesManager: React.FC = () => {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
-            "accept": "application/json",
+            accept: "application/json",
             ...(authHeader && { Authorization: authHeader }),
           },
         });
@@ -2896,7 +3084,10 @@ const DataSourcesManager: React.FC = () => {
         console.error("Error deleting data source:", error);
         toast({
           title: "Delete failed",
-          description: error instanceof Error ? error.message : "Could not delete data source. Please try again.",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Could not delete data source. Please try again.",
           variant: "destructive",
         });
       }
@@ -2906,43 +3097,45 @@ const DataSourcesManager: React.FC = () => {
         const authHeader = await getAuthHeader();
         // Use the stored fileId - this should be the file_id from backend
         let fileId = sourceToDelete.fileId;
-        
+
         // Validate that fileId is a UUID
         const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        
+
         // If fileId is not valid, try using the id (which should be file_id for URLs)
         if (!fileId || !uuidPattern.test(fileId)) {
           // For URLs loaded from backend, the id should be the file_id
           if (uuidPattern.test(id)) {
             fileId = id;
             console.log("📋 DataSourcesManager - Using URL id as fileId:", fileId);
-    } else {
+          } else {
             console.error("❌ DataSourcesManager - No valid fileId found for URL deletion:", {
               sourceId: id,
               storedFileId: sourceToDelete.fileId,
-              source: sourceToDelete
+              source: sourceToDelete,
             });
-            throw new Error("Unable to determine URL file_id for deletion. URL may not have been saved to backend.");
+            throw new Error(
+              "Unable to determine URL file_id for deletion. URL may not have been saved to backend.",
+            );
           }
         }
-        
+
         console.log("🗑️ DataSourcesManager - Delete URL file_id resolution:", {
           sourceId: id,
           storedFileId: sourceToDelete.fileId,
           resolvedFileId: fileId,
           isValidUUID: uuidPattern.test(fileId),
-          sourceToDelete: sourceToDelete
+          sourceToDelete: sourceToDelete,
         });
-        
+
         if (!fileId) {
           throw new Error("Unable to determine URL file_id for deletion");
         }
-        
+
         // Final validation - ensure we have a UUID before making the API call
         if (!uuidPattern.test(fileId)) {
           throw new Error(`Invalid URL file_id format: ${fileId}. Expected UUID format.`);
         }
-        
+
         // Use singular form /data-source/ to match backend API route
         const url = buildApiUrl(`data-source/${fileId}`);
 
@@ -2957,7 +3150,7 @@ const DataSourcesManager: React.FC = () => {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
-            "accept": "application/json",
+            accept: "application/json",
             ...(authHeader && { Authorization: authHeader }),
           },
         });
@@ -2981,8 +3174,8 @@ const DataSourcesManager: React.FC = () => {
         }
 
         // Remove from local state after successful backend deletion
-      const updatedSources = dataSources.filter((s) => s.id !== id);
-      setDataSources(updatedSources);
+        const updatedSources = dataSources.filter((s) => s.id !== id);
+        setDataSources(updatedSources);
 
         console.log("✅ DataSourcesManager - Delete URL success");
         toast({
@@ -2993,7 +3186,10 @@ const DataSourcesManager: React.FC = () => {
         console.error("Error deleting URL data source:", error);
         toast({
           title: "Delete failed",
-          description: error instanceof Error ? error.message : "Could not delete data source. Please try again.",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Could not delete data source. Please try again.",
           variant: "destructive",
         });
       }
@@ -3014,19 +3210,28 @@ const DataSourcesManager: React.FC = () => {
       case "active":
       case "completed":
         return (
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800">
+          <Badge
+            variant="outline"
+            className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800"
+          >
             🟢 {status === "completed" ? "Completed" : "Active"}
           </Badge>
         );
       case "failed":
         return (
-          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800">
+          <Badge
+            variant="outline"
+            className="bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800"
+          >
             🔴 Failed
           </Badge>
         );
       case "processing":
         return (
-          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-400 dark:border-yellow-800">
+          <Badge
+            variant="outline"
+            className="bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-400 dark:border-yellow-800"
+          >
             🟡 Processing
           </Badge>
         );
@@ -3055,14 +3260,16 @@ const DataSourcesManager: React.FC = () => {
     }
   };
 
-  const canSave = 
-    selectedType && 
-    sourceName.trim() && 
+  const canSave =
+    selectedType &&
+    sourceName.trim() &&
     (selectedType === "system"
       ? true // System type only needs a name
-      : selectedType === "url" 
-        ? editingId ? true : sourceUrl.trim() // When editing URL, URL is optional; when adding new, URL is required
-        : editingId 
+      : selectedType === "url"
+        ? editingId
+          ? true
+          : sourceUrl.trim() // When editing URL, URL is optional; when adding new, URL is required
+        : editingId
           ? true // When editing, file is optional - can update metadata without new file
           : selectedFile); // When adding new, file is required
 
@@ -3073,186 +3280,199 @@ const DataSourcesManager: React.FC = () => {
     return (
       <div ref={formCardRef}>
         <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>{editingId ? "Edit Data Source" : "Add Data Source"}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-6">
-            {/* Row 1: Source Type and Name side by side */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Type Selection - smaller, takes 1/3 width */}
-              <div className="space-y-2">
-                <Label htmlFor="source-type">Source Type *</Label>
-                <Select
-                  value={selectedType}
-                  onValueChange={(value) => handleTypeSelect(value as SourceType)}
-                >
-                  <SelectTrigger id="source-type">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="url">
-                      <div className="flex items-center gap-2">
-                        <LinkIcon className="h-4 w-4" />
-                        <span>Add URL</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="file">
-                      <div className="flex items-center gap-2">
-                        <Upload className="h-4 w-4" />
-                        <span>Upload File</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="system" disabled>
-                      <div className="flex items-center gap-2 opacity-50">
-                        <Database className="h-4 w-4" />
-                        <span>Connect System (Use dropdown)</span>
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Name - takes 2/3 width */}
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="source-name">Name *</Label>
-                <Input
-                  id="source-name"
-                  placeholder="e.g., Competitor Pricing Page"
-                  value={sourceName}
-                  onChange={(e) => setSourceName(e.target.value)}
-                  disabled={!!editingId && selectedType === "url"}
-                  className={editingId && selectedType === "url" ? "bg-gray-100 text-gray-500 cursor-not-allowed" : ""}
-                />
-              </div>
-            </div>
-
-            {/* Row 2: URL or File - full width, more prominent */}
-            {selectedType === "url" && (
-              <div className="space-y-2">
-                <Label htmlFor="source-url" className="text-base font-medium">Website URL *</Label>
-                <Input
-                  id="source-url"
-                  type="url"
-                  placeholder="https://example.com"
-                  value={sourceUrl}
-                  onChange={(e) => setSourceUrl(e.target.value)}
-                  className={`text-base ${editingId ? "bg-gray-100 text-gray-500 cursor-not-allowed" : ""}`}
-                  disabled={!!editingId}
-                />
-                <p className="text-xs text-muted-foreground">Enter the full URL of the website you want to add as a data source</p>
-              </div>
-            )}
-
-            {selectedType === "file" && (
-              <div className="space-y-2">
-                <Label htmlFor="source-file" className="text-base font-medium">Upload File *</Label>
-                <div className="flex items-center gap-2">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    id="source-file"
-                    accept=".pdf,.docx,.pptx,.csv,.xlsx"
-                  />
-                  <label
-                    htmlFor="source-file"
-                    className="flex-1 inline-flex items-center gap-3 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors bg-muted/20"
+          <CardHeader>
+            <CardTitle>{editingId ? "Edit Data Source" : "Add Data Source"}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-6">
+              {/* Row 1: Source Type and Name side by side */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Type Selection - smaller, takes 1/3 width */}
+                <div className="space-y-2">
+                  <Label htmlFor="source-type">Source Type *</Label>
+                  <Select
+                    value={selectedType}
+                    onValueChange={(value) => handleTypeSelect(value as SourceType)}
                   >
-                    <Upload className="h-5 w-5 text-muted-foreground" />
-                    {selectedFile ? (
-                      <span className="text-foreground font-medium">{selectedFile.name}</span>
-                    ) : existingFileName ? (
-                      <span className="text-foreground font-medium">{existingFileName}</span>
-                    ) : (
-                      <span className="text-muted-foreground">Click to browse or drag and drop files here</span>
-                    )}
-                  </label>
+                    <SelectTrigger id="source-type">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="url">
+                        <div className="flex items-center gap-2">
+                          <LinkIcon className="h-4 w-4" />
+                          <span>Add URL</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="file">
+                        <div className="flex items-center gap-2">
+                          <Upload className="h-4 w-4" />
+                          <span>Upload File</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="system" disabled>
+                        <div className="flex items-center gap-2 opacity-50">
+                          <Database className="h-4 w-4" />
+                          <span>Connect System (Use dropdown)</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <p className="text-xs text-muted-foreground">Supported formats: PDF, DOCX, PPTX, CSV, XLSX</p>
-              </div>
-            )}
 
-
-            {/* Description */}
-            <div className="space-y-2">
-              <Label htmlFor="source-description">Description</Label>
-              <Textarea
-                id="source-description"
-                placeholder="Brief description of this data source..."
-                value={sourceDescription}
-                onChange={(e) => setSourceDescription(e.target.value)}
-                rows={3}
-              />
-            </div>
-
-            {/* Tags */}
-            <div className="space-y-2">
-              <Label>Tags</Label>
-              <div className="space-y-3">
-                <div className="flex flex-wrap gap-2">
-                  {SUGGESTED_TAGS.map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant={selectedTags.includes(tag) ? "default" : "outline"}
-                      className="cursor-pointer"
-                      onClick={() => handleTagToggle(tag)}
-                    >
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2">
+                {/* Name - takes 2/3 width */}
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="source-name">Name *</Label>
                   <Input
-                    placeholder="Add custom tag..."
-                    value={customTag}
-                    onChange={(e) => setCustomTag(e.target.value)}
-                    onKeyDown={handleCustomTagKeyDown}
-                    className="max-w-xs"
+                    id="source-name"
+                    placeholder="e.g., Competitor Pricing Page"
+                    value={sourceName}
+                    onChange={(e) => setSourceName(e.target.value)}
+                    disabled={!!editingId && selectedType === "url"}
+                    className={
+                      editingId && selectedType === "url"
+                        ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                        : ""
+                    }
                   />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAddCustomTag}
-                    disabled={!customTag.trim()}
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add
-                  </Button>
                 </div>
-                {selectedTags.filter((t) => !SUGGESTED_TAGS.includes(t)).length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {selectedTags
-                      .filter((tag) => !SUGGESTED_TAGS.includes(tag))
-                      .map((tag) => (
-                        <Badge key={tag} variant="secondary" className="gap-1">
-                          {tag}
-                          <X
-                            className="h-3 w-3 cursor-pointer"
-                            onClick={() => handleTagToggle(tag)}
-                          />
-                        </Badge>
-                      ))}
+              </div>
+
+              {/* Row 2: URL or File - full width, more prominent */}
+              {selectedType === "url" && (
+                <div className="space-y-2">
+                  <Label htmlFor="source-url" className="text-base font-medium">
+                    Website URL *
+                  </Label>
+                  <Input
+                    id="source-url"
+                    type="url"
+                    placeholder="https://example.com"
+                    value={sourceUrl}
+                    onChange={(e) => setSourceUrl(e.target.value)}
+                    className={`text-base ${editingId ? "bg-gray-100 text-gray-500 cursor-not-allowed" : ""}`}
+                    disabled={!!editingId}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter the full URL of the website you want to add as a data source
+                  </p>
+                </div>
+              )}
+
+              {selectedType === "file" && (
+                <div className="space-y-2">
+                  <Label htmlFor="source-file" className="text-base font-medium">
+                    Upload File *
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="source-file"
+                      accept=".pdf,.docx,.pptx,.csv,.xlsx"
+                    />
+                    <label
+                      htmlFor="source-file"
+                      className="flex-1 inline-flex items-center gap-3 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors bg-muted/20"
+                    >
+                      <Upload className="h-5 w-5 text-muted-foreground" />
+                      {selectedFile ? (
+                        <span className="text-foreground font-medium">{selectedFile.name}</span>
+                      ) : existingFileName ? (
+                        <span className="text-foreground font-medium">{existingFileName}</span>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          Click to browse or drag and drop files here
+                        </span>
+                      )}
+                    </label>
                   </div>
-                )}
+                  <p className="text-xs text-muted-foreground">
+                    Supported formats: PDF, DOCX, PPTX, CSV, XLSX
+                  </p>
+                </div>
+              )}
+
+              {/* Description */}
+              <div className="space-y-2">
+                <Label htmlFor="source-description">Description</Label>
+                <Textarea
+                  id="source-description"
+                  placeholder="Brief description of this data source..."
+                  value={sourceDescription}
+                  onChange={(e) => setSourceDescription(e.target.value)}
+                  rows={3}
+                />
+              </div>
+
+              {/* Tags */}
+              <div className="space-y-2">
+                <Label>Tags</Label>
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {SUGGESTED_TAGS.map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant={selectedTags.includes(tag) ? "default" : "outline"}
+                        className="cursor-pointer"
+                        onClick={() => handleTagToggle(tag)}
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      placeholder="Add custom tag..."
+                      value={customTag}
+                      onChange={(e) => setCustomTag(e.target.value)}
+                      onKeyDown={handleCustomTagKeyDown}
+                      className="max-w-xs"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddCustomTag}
+                      disabled={!customTag.trim()}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add
+                    </Button>
+                  </div>
+                  {selectedTags.filter((t) => !SUGGESTED_TAGS.includes(t)).length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedTags
+                        .filter((tag) => !SUGGESTED_TAGS.includes(tag))
+                        .map((tag) => (
+                          <Badge key={tag} variant="secondary" className="gap-1">
+                            {tag}
+                            <X
+                              className="h-3 w-3 cursor-pointer"
+                              onClick={() => handleTagToggle(tag)}
+                            />
+                          </Badge>
+                        ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={handleCancelInline}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveSource} disabled={!canSave}>
-              <Check className="h-4 w-4 mr-2" />
-              {editingId ? "Update" : "Add"} Data Source
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button variant="outline" onClick={handleCancelInline}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveSource} disabled={!canSave}>
+                <Check className="h-4 w-4 mr-2" />
+                {editingId ? "Update" : "Add"} Data Source
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   };
@@ -3261,8 +3481,7 @@ const DataSourcesManager: React.FC = () => {
   const showDataSourcesEmptyState =
     dataSources.length === 0 && leadStreamFiles.length === 0 && !showLeadUpload;
   const showHeaderAddDataSource =
-    !isAddingInline &&
-    (dataSources.length > 0 || leadStreamFiles.length > 0 || showLeadUpload);
+    !isAddingInline && (dataSources.length > 0 || leadStreamFiles.length > 0 || showLeadUpload);
 
   return (
     <div className="space-y-6 relative">
@@ -3270,9 +3489,18 @@ const DataSourcesManager: React.FC = () => {
       {isLoading && (
         <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="flex gap-2">
-            <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1.4s' }}></div>
-            <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '200ms', animationDuration: '1.4s' }}></div>
-            <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '400ms', animationDuration: '1.4s' }}></div>
+            <div
+              className="w-2 h-2 rounded-full bg-primary animate-bounce"
+              style={{ animationDelay: "0ms", animationDuration: "1.4s" }}
+            ></div>
+            <div
+              className="w-2 h-2 rounded-full bg-primary animate-bounce"
+              style={{ animationDelay: "200ms", animationDuration: "1.4s" }}
+            ></div>
+            <div
+              className="w-2 h-2 rounded-full bg-primary animate-bounce"
+              style={{ animationDelay: "400ms", animationDuration: "1.4s" }}
+            ></div>
           </div>
         </div>
       )}
@@ -3308,9 +3536,7 @@ const DataSourcesManager: React.FC = () => {
           {showHeaderAddDataSource && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button 
-                  className="gap-2"
-                >
+                <Button className="gap-2">
                   <Plus className="h-4 w-4" />
                   Add Data Source
                   <ChevronDown className="h-4 w-4" />
@@ -3319,17 +3545,21 @@ const DataSourcesManager: React.FC = () => {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>Add Data Source</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => {
-                  handleStartAdd();
-                  setSelectedType("url");
-                }}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    handleStartAdd();
+                    setSelectedType("url");
+                  }}
+                >
                   <LinkIcon className="mr-2 h-4 w-4" />
                   Add URL
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => {
-                  handleStartAdd();
-                  setSelectedType("file");
-                }}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    handleStartAdd();
+                    setSelectedType("file");
+                  }}
+                >
                   <Upload className="mr-2 h-4 w-4" />
                   Upload File
                 </DropdownMenuItem>
@@ -3340,15 +3570,15 @@ const DataSourcesManager: React.FC = () => {
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent>
                     <DropdownMenuLabel>Connect a system</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => handleConnectToCRM('Salesforce')}>
+                    <DropdownMenuItem onClick={() => handleConnectToCRM("Salesforce")}>
                       <Plug className="mr-2 h-4 w-4" />
                       Salesforce
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleConnectToCRM('HubSpot')}>
+                    <DropdownMenuItem onClick={() => handleConnectToCRM("HubSpot")}>
                       <Plug className="mr-2 h-4 w-4" />
                       HubSpot
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleConnectToCRM('Pipedrive')}>
+                    <DropdownMenuItem onClick={() => handleConnectToCRM("Pipedrive")}>
                       <Plug className="mr-2 h-4 w-4" />
                       Pipedrive
                     </DropdownMenuItem>
@@ -3386,17 +3616,21 @@ const DataSourcesManager: React.FC = () => {
             <DropdownMenuContent align="center" className="w-56">
               <DropdownMenuLabel>Add Data Source</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => {
-                handleStartAdd();
-                setSelectedType("url");
-              }}>
+              <DropdownMenuItem
+                onClick={() => {
+                  handleStartAdd();
+                  setSelectedType("url");
+                }}
+              >
                 <LinkIcon className="mr-2 h-4 w-4" />
                 Add URL
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => {
-                handleStartAdd();
-                setSelectedType("file");
-              }}>
+              <DropdownMenuItem
+                onClick={() => {
+                  handleStartAdd();
+                  setSelectedType("file");
+                }}
+              >
                 <Upload className="mr-2 h-4 w-4" />
                 Upload File
               </DropdownMenuItem>
@@ -3407,15 +3641,15 @@ const DataSourcesManager: React.FC = () => {
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
                   <DropdownMenuLabel>Connect a system</DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => handleConnectToCRM('Salesforce')}>
+                  <DropdownMenuItem onClick={() => handleConnectToCRM("Salesforce")}>
                     <Plug className="mr-2 h-4 w-4" />
                     Salesforce
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleConnectToCRM('HubSpot')}>
+                  <DropdownMenuItem onClick={() => handleConnectToCRM("HubSpot")}>
                     <Plug className="mr-2 h-4 w-4" />
                     HubSpot
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleConnectToCRM('Pipedrive')}>
+                  <DropdownMenuItem onClick={() => handleConnectToCRM("Pipedrive")}>
                     <Plug className="mr-2 h-4 w-4" />
                     Pipedrive
                   </DropdownMenuItem>
@@ -3474,7 +3708,7 @@ const DataSourcesManager: React.FC = () => {
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">
                     {source.tags.length > 0 ? (
-                      <div 
+                      <div
                         className="w-[180px] border rounded-md bg-muted/30 px-2 py-1.5 overflow-x-auto"
                         title={source.tags.length > 2 ? "Scroll to view all tags" : undefined}
                       >
@@ -3532,7 +3766,8 @@ const DataSourcesManager: React.FC = () => {
                 Lead Stream
               </h3>
               <p className="text-sm text-muted-foreground">
-                Import leads from a CSV, XLSX, or XLS file. Status and row counts come from the server while the file is processed.
+                Import leads from a CSV, XLSX, or XLS file. Status and row counts come from the
+                server while the file is processed.
               </p>
               {leadStreamStatusLoading && leadStreamFiles.length > 0 && (
                 <p className="text-xs text-muted-foreground mt-1">Refreshing status…</p>
@@ -3581,7 +3816,9 @@ const DataSourcesManager: React.FC = () => {
                       >
                         <Upload className="h-5 w-5 text-muted-foreground shrink-0" />
                         {selectedLeadFile ? (
-                          <span className="text-foreground font-medium truncate">{selectedLeadFile.name}</span>
+                          <span className="text-foreground font-medium truncate">
+                            {selectedLeadFile.name}
+                          </span>
                         ) : (
                           <span className="text-muted-foreground">
                             Click to browse or drag and drop a CSV, XLSX, or XLS file here
@@ -3590,7 +3827,8 @@ const DataSourcesManager: React.FC = () => {
                       </label>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Excel workbooks are parsed on the server. CSV files are checked in the browser before upload.
+                      Excel workbooks are parsed on the server. CSV files are checked in the browser
+                      before upload.
                     </p>
                   </div>
                   <div className="flex justify-end gap-2 pt-2 border-t">

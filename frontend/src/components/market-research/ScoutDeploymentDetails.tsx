@@ -1,6 +1,6 @@
+import { Search } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search } from "lucide-react";
 
 interface DeploymentDetailsProps {
   deploymentData: {
@@ -55,9 +55,10 @@ export function ScoutDeploymentDetails({ deploymentData }: DeploymentDetailsProp
               </>
             )}
           </div>
-          
+
           <div className="pt-2 text-xs">
-            <span className="text-blue-600 font-medium">Scout is running</span> - Finding leads based on your criteria
+            <span className="text-blue-600 font-medium">Scout is running</span> - Finding leads
+            based on your criteria
           </div>
         </div>
       </CardContent>

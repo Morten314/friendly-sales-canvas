@@ -1,4 +1,4 @@
-import { TEST_USER_ID, TEST_ORG_ID } from './identities';
+import { TEST_USER_ID, TEST_ORG_ID } from "./identities";
 
 /**
  * UID-keyed localStorage entries that AuthContext.tsx and TenantContext.tsx
@@ -12,19 +12,19 @@ import { TEST_USER_ID, TEST_ORG_ID } from './identities';
  */
 export const seededAuthEntries = {
   [`org_id_${TEST_USER_ID}`]: TEST_ORG_ID,
-  [`org_name_${TEST_USER_ID}`]: 'Test Org',
+  [`org_name_${TEST_USER_ID}`]: "Test Org",
   [`selectedTenant_${TEST_USER_ID}`]: JSON.stringify({
     id: TEST_ORG_ID,
-    name: 'Test Org',
+    name: "Test Org",
   }),
-  jwt_token: 'mock_jwt_token',
+  jwt_token: "mock_jwt_token",
 };
 
 export const firebaseSignInResponse = {
-  idToken: 'mock_firebase_token',
-  email: 'test@brewra.test',
+  idToken: "mock_firebase_token",
+  email: "test@brewra.test",
   localId: TEST_USER_ID,
   registered: true,
-  refreshToken: 'mock_refresh_token',
-  expiresIn: '3600',
+  refreshToken: "mock_refresh_token",
+  expiresIn: "3600",
 };

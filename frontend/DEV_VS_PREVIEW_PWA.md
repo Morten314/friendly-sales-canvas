@@ -3,6 +3,7 @@
 ## The Difference
 
 ### `npm run dev` (Development Mode)
+
 - **Service Worker**: Runs in development mode with hot-reload capabilities
 - **Service Worker Activation**: May take longer to activate or may not fully activate
 - **PWA Installation**: The `beforeinstallprompt` event may not fire reliably because:
@@ -12,6 +13,7 @@
 - **Install Button Behavior**: Shows "Install Instructions" if `beforeinstallprompt` doesn't fire
 
 ### `npm run build` + `npm run preview` (Production Preview)
+
 - **Service Worker**: Properly built and optimized service worker
 - **Service Worker Activation**: Activates quickly and reliably
 - **PWA Installation**: The `beforeinstallprompt` event fires reliably because:
@@ -46,9 +48,11 @@ We've improved the `PWAInstallPrompt` component to:
 ## Testing
 
 ### To test in Dev Mode:
+
 ```bash
 npm run dev
 ```
+
 - Open browser console and look for PWA logs
 - Wait for "Service Worker is active" message
 - The install button should appear after 3 seconds
@@ -56,10 +60,12 @@ npm run dev
 - If it doesn't fire, the button will show "Install Instructions"
 
 ### To test in Preview Mode (Recommended):
+
 ```bash
 npm run build
 npm run preview
 ```
+
 - The install button should work immediately
 - The `beforeinstallprompt` event should fire reliably
 - Clicking the button will trigger the native browser install prompt
@@ -88,7 +94,3 @@ If the install button doesn't work in dev mode:
 ## Recommendation
 
 For **development**, use dev mode for regular coding. For **testing PWA installation**, use preview mode (`npm run build && npm run preview`) as it provides a more accurate representation of how the PWA will behave in production.
-
-
-
-

@@ -1,14 +1,14 @@
+import React from "react";
 
-import React from 'react';
-import MarketSizeSection from './MarketSizeSection';
-import IndustryTrendsSection from './IndustryTrendsSection';
-import CompetitorLandscapeSection from './CompetitorLandscapeSection';
-import RegulatoryComplianceSection from './RegulatoryComplianceSection';
-import MarketEntrySection from './MarketEntrySection';
-import ScoutChatPanel from './ScoutChatPanel';
-import { MarketIntelligenceTabProps } from './MarketIntelligenceTabProps';
+import CompetitorLandscapeSection from "./CompetitorLandscapeSection";
+import IndustryTrendsSection from "./IndustryTrendsSection";
+import MarketEntrySection from "./MarketEntrySection";
+import type { MarketIntelligenceTabProps } from "./MarketIntelligenceTabProps";
+import MarketSizeSection from "./MarketSizeSection";
+import RegulatoryComplianceSection from "./RegulatoryComplianceSection";
+import ScoutChatPanel from "./ScoutChatPanel";
 
-interface MarketIntelligenceSectionsProps extends MarketIntelligenceTabProps {}
+type MarketIntelligenceSectionsProps = MarketIntelligenceTabProps;
 
 const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (props) => {
   // Scout Market Intelligence refresh is driven only by MarketResearch.smartRefresh (single
@@ -22,7 +22,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       hasEdits={props.marketSizeHasEdits || false}
       showEditHistory={false}
       editHistory={props.editHistory}
-      lastEditedField={props.marketSizeLastEditedField || ''}
+      lastEditedField={props.marketSizeLastEditedField || ""}
       context="market-size"
       customMessage={props.marketSizeCustomMessage}
       onClose={props.onMarketSizeScoutClose || (() => {})}
@@ -36,7 +36,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       hasEdits={props.industryTrendsHasEdits || false}
       showEditHistory={false}
       editHistory={props.industryTrendsEditHistory || []}
-      lastEditedField={props.industryTrendsLastEditedField || ''}
+      lastEditedField={props.industryTrendsLastEditedField || ""}
       context="industry-trends"
       customMessage={props.industryTrendsCustomMessage}
       onClose={props.onIndustryTrendsScoutClose || (() => {})}
@@ -87,7 +87,6 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
     />
   ) : undefined;
 
-  
   return (
     <>
       {/* Market Size & Opportunity Section */}
@@ -134,8 +133,8 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       />
 
       {/* Industry Trends Section */}
-      <div className={`${props.showIndustryTrendsScoutChat ? 'flex gap-6' : ''}`}>
-        <div className={`${props.showIndustryTrendsScoutChat ? 'w-1/2' : ''}`}>
+      <div className={`${props.showIndustryTrendsScoutChat ? "flex gap-6" : ""}`}>
+        <div className={`${props.showIndustryTrendsScoutChat ? "w-1/2" : ""}`}>
           <IndustryTrendsSection
             isIndustryTrendsEditing={props.isIndustryTrendsEditing}
             isSplitView={props.isSplitView}
@@ -174,140 +173,160 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
           />
         </div>
         {props.showIndustryTrendsScoutChat && industryTrendsScoutChatPanel && (
-          <div className="w-1/2">
-            {industryTrendsScoutChatPanel}
-          </div>
+          <div className="w-1/2">{industryTrendsScoutChatPanel}</div>
         )}
       </div>
 
       {/* Competitor Landscape Section */}
-      <div className={`${props.showCompetitorScoutChat ? 'flex gap-6' : ''}`}>
-        <div className={`${props.showCompetitorScoutChat ? 'w-1/2' : ''}`}>
+      <div className={`${props.showCompetitorScoutChat ? "flex gap-6" : ""}`}>
+        <div className={`${props.showCompetitorScoutChat ? "w-1/2" : ""}`}>
           <CompetitorLandscapeSection
-        key={`competitor-${props.competitorData?.timestamp || Date.now()}-${props.isRefreshing ? 'refreshing' : 'stable'}`}
-        isEditing={props.isCompetitorEditing || false}
-        isSplitView={props.isSplitView}
-        isExpanded={props.competitorExpanded || false}
-        hasEdits={props.competitorHasEdits || false}
-        deletedSections={props.competitorDeletedSections || new Set()}
-        editHistory={props.competitorEditHistory || []}
-         executiveSummary={props.competitorData?.executiveSummary || props.competitorExecutiveSummary || ''}
-         topPlayerShare={props.competitorData?.topPlayerShare || props.competitorTopPlayerShare || ''}
-         emergingPlayers={props.competitorData?.emergingPlayers || props.competitorEmergingPlayers || ''}
-         fundingNews={props.competitorData?.fundingNews || props.competitorFundingNews || []}
-        onToggleEdit={props.onCompetitorToggleEdit || (() => {})}
-        onScoutIconClick={props.onCompetitorScoutIconClick}
-        onEditHistoryOpen={props.onCompetitorEditHistoryOpen || (() => {})}
-        onDeleteSection={props.onCompetitorDeleteSection || (() => {})}
-        onSaveChanges={props.onCompetitorSaveChanges || (() => {})}
-        onCancelEdit={props.onCompetitorCancelEdit || (() => {})}
-        onExpandToggle={props.onCompetitorExpandToggle || (() => {})}
-        onExecutiveSummaryChange={props.onCompetitorExecutiveSummaryChange || (() => {})}
-        onTopPlayerShareChange={props.onCompetitorTopPlayerShareChange || (() => {})}
-        onEmergingPlayersChange={props.onCompetitorEmergingPlayersChange || (() => {})}
-        onFundingNewsChange={props.onCompetitorFundingNewsChange || (() => {})}
-        onExportPDF={props.onExportPDF}
-        onSaveToWorkspace={props.onSaveToWorkspace}
-        onGenerateShareableLink={props.onGenerateShareableLink}
-        isRefreshing={props.isRefreshing}
-        companyProfile={props.companyProfile}
-        competitorData={props.competitorData}
-        error={props.competitorError}
+            key={`competitor-${props.competitorData?.timestamp || Date.now()}-${props.isRefreshing ? "refreshing" : "stable"}`}
+            isEditing={props.isCompetitorEditing || false}
+            isSplitView={props.isSplitView}
+            isExpanded={props.competitorExpanded || false}
+            hasEdits={props.competitorHasEdits || false}
+            deletedSections={props.competitorDeletedSections || new Set()}
+            editHistory={props.competitorEditHistory || []}
+            executiveSummary={
+              props.competitorData?.executiveSummary || props.competitorExecutiveSummary || ""
+            }
+            topPlayerShare={
+              props.competitorData?.topPlayerShare || props.competitorTopPlayerShare || ""
+            }
+            emergingPlayers={
+              props.competitorData?.emergingPlayers || props.competitorEmergingPlayers || ""
+            }
+            fundingNews={props.competitorData?.fundingNews || props.competitorFundingNews || []}
+            onToggleEdit={props.onCompetitorToggleEdit || (() => {})}
+            onScoutIconClick={props.onCompetitorScoutIconClick}
+            onEditHistoryOpen={props.onCompetitorEditHistoryOpen || (() => {})}
+            onDeleteSection={props.onCompetitorDeleteSection || (() => {})}
+            onSaveChanges={props.onCompetitorSaveChanges || (() => {})}
+            onCancelEdit={props.onCompetitorCancelEdit || (() => {})}
+            onExpandToggle={props.onCompetitorExpandToggle || (() => {})}
+            onExecutiveSummaryChange={props.onCompetitorExecutiveSummaryChange || (() => {})}
+            onTopPlayerShareChange={props.onCompetitorTopPlayerShareChange || (() => {})}
+            onEmergingPlayersChange={props.onCompetitorEmergingPlayersChange || (() => {})}
+            onFundingNewsChange={props.onCompetitorFundingNewsChange || (() => {})}
+            onExportPDF={props.onExportPDF}
+            onSaveToWorkspace={props.onSaveToWorkspace}
+            onGenerateShareableLink={props.onGenerateShareableLink}
+            isRefreshing={props.isRefreshing}
+            companyProfile={props.companyProfile}
+            competitorData={props.competitorData}
+            error={props.competitorError}
           />
         </div>
         {props.showCompetitorScoutChat && competitorScoutChatPanel && (
-          <div className="w-1/2">
-            {competitorScoutChatPanel}
-          </div>
+          <div className="w-1/2">{competitorScoutChatPanel}</div>
         )}
       </div>
 
       {/* Regulatory & Compliance Highlights Section */}
-      <div className={`${props.showRegulatoryScoutChat ? 'flex gap-6' : ''}`}>
-        <div className={`${props.showRegulatoryScoutChat ? 'w-1/2' : ''}`}>
+      <div className={`${props.showRegulatoryScoutChat ? "flex gap-6" : ""}`}>
+        <div className={`${props.showRegulatoryScoutChat ? "w-1/2" : ""}`}>
           <RegulatoryComplianceSection
-        isEditing={props.isRegulatoryEditing || false}
-        isSplitView={props.isSplitView}
-        isExpanded={props.regulatoryExpanded || false}
-        hasEdits={props.regulatoryHasEdits || false}
-        deletedSections={props.regulatoryDeletedSections || new Set()}
-        editHistory={props.regulatoryEditHistory || []}
-         executiveSummary={props.regulatoryData?.executiveSummary || props.regulatoryExecutiveSummary || 'The regulatory landscape for SaaS companies continues to evolve rapidly, with new compliance requirements emerging across multiple jurisdictions. Organizations must navigate an increasingly complex web of data protection, AI governance, and industry-specific regulations.'}
-         euAiActDeadline={props.regulatoryData?.euAiActDeadline || props.regulatoryEuAiActDeadline || 'February 2, 2025'}
-         gdprCompliance={props.regulatoryData?.gdprCompliance || props.regulatoryGdprCompliance || '68%'}
-         potentialFines={props.regulatoryData?.potentialFines || props.regulatoryPotentialFines || 'Up to 6% of annual revenue'}
-         dataLocalization={props.regulatoryData?.dataLocalization || props.regulatoryDataLocalization || 'Mandatory for customer data'}
-        onToggleEdit={props.onRegulatoryToggleEdit || (() => {})}
-        onScoutIconClick={props.onRegulatoryScoutIconClick || props.onMarketSizeScoutIconClick}
-        onEditHistoryOpen={props.onRegulatoryEditHistoryOpen || (() => {})}
-        onDeleteSection={props.onRegulatoryDeleteSection || (() => {})}
-        onSaveChanges={props.onRegulatorySaveChanges || (() => {})}
-        onCancelEdit={props.onRegulatoryCancelEdit || (() => {})}
-        onExpandToggle={props.onRegulatoryExpandToggle || (() => {})}
-        onExecutiveSummaryChange={props.onRegulatoryExecutiveSummaryChange || (() => {})}
-        onEuAiActDeadlineChange={props.onRegulatoryEuAiActDeadlineChange || (() => {})}
-        onGdprComplianceChange={props.onRegulatoryGdprComplianceChange || (() => {})}
-        onPotentialFinesChange={props.onRegulatoryPotentialFinesChange || (() => {})}
-        onDataLocalizationChange={props.onRegulatoryDataLocalizationChange || (() => {})}
-        onExportPDF={props.onExportPDF}
-        onSaveToWorkspace={props.onSaveToWorkspace}
-        onGenerateShareableLink={props.onGenerateShareableLink}
-        isRefreshing={props.isRefreshing}
-        companyProfile={props.companyProfile}
-        regulatoryData={props.regulatoryData}
+            isEditing={props.isRegulatoryEditing || false}
+            isSplitView={props.isSplitView}
+            isExpanded={props.regulatoryExpanded || false}
+            hasEdits={props.regulatoryHasEdits || false}
+            deletedSections={props.regulatoryDeletedSections || new Set()}
+            editHistory={props.regulatoryEditHistory || []}
+            executiveSummary={
+              props.regulatoryData?.executiveSummary ||
+              props.regulatoryExecutiveSummary ||
+              "The regulatory landscape for SaaS companies continues to evolve rapidly, with new compliance requirements emerging across multiple jurisdictions. Organizations must navigate an increasingly complex web of data protection, AI governance, and industry-specific regulations."
+            }
+            euAiActDeadline={
+              props.regulatoryData?.euAiActDeadline ||
+              props.regulatoryEuAiActDeadline ||
+              "February 2, 2025"
+            }
+            gdprCompliance={
+              props.regulatoryData?.gdprCompliance || props.regulatoryGdprCompliance || "68%"
+            }
+            potentialFines={
+              props.regulatoryData?.potentialFines ||
+              props.regulatoryPotentialFines ||
+              "Up to 6% of annual revenue"
+            }
+            dataLocalization={
+              props.regulatoryData?.dataLocalization ||
+              props.regulatoryDataLocalization ||
+              "Mandatory for customer data"
+            }
+            onToggleEdit={props.onRegulatoryToggleEdit || (() => {})}
+            onScoutIconClick={props.onRegulatoryScoutIconClick || props.onMarketSizeScoutIconClick}
+            onEditHistoryOpen={props.onRegulatoryEditHistoryOpen || (() => {})}
+            onDeleteSection={props.onRegulatoryDeleteSection || (() => {})}
+            onSaveChanges={props.onRegulatorySaveChanges || (() => {})}
+            onCancelEdit={props.onRegulatoryCancelEdit || (() => {})}
+            onExpandToggle={props.onRegulatoryExpandToggle || (() => {})}
+            onExecutiveSummaryChange={props.onRegulatoryExecutiveSummaryChange || (() => {})}
+            onEuAiActDeadlineChange={props.onRegulatoryEuAiActDeadlineChange || (() => {})}
+            onGdprComplianceChange={props.onRegulatoryGdprComplianceChange || (() => {})}
+            onPotentialFinesChange={props.onRegulatoryPotentialFinesChange || (() => {})}
+            onDataLocalizationChange={props.onRegulatoryDataLocalizationChange || (() => {})}
+            onExportPDF={props.onExportPDF}
+            onSaveToWorkspace={props.onSaveToWorkspace}
+            onGenerateShareableLink={props.onGenerateShareableLink}
+            isRefreshing={props.isRefreshing}
+            companyProfile={props.companyProfile}
+            regulatoryData={props.regulatoryData}
           />
         </div>
         {props.showRegulatoryScoutChat && regulatoryScoutChatPanel && (
-          <div className="w-1/2">
-            {regulatoryScoutChatPanel}
-          </div>
+          <div className="w-1/2">{regulatoryScoutChatPanel}</div>
         )}
       </div>
 
       {/* Market Entry & Growth Strategy Section */}
-      <div className={`${props.showMarketEntryScoutChat ? 'flex gap-6' : ''}`}>
-        <div className={`${props.showMarketEntryScoutChat ? 'w-1/2' : ''}`}>
+      <div className={`${props.showMarketEntryScoutChat ? "flex gap-6" : ""}`}>
+        <div className={`${props.showMarketEntryScoutChat ? "w-1/2" : ""}`}>
           <MarketEntrySection
-        isEditing={props.isMarketEntryEditing || false}
-        isSplitView={props.isSplitView}
-        isExpanded={props.marketEntryExpanded || false}
-        hasEdits={props.marketEntryHasEdits || false}
-        deletedSections={props.marketEntryDeletedSections || new Set()}
-        editHistory={props.marketEntryEditHistory || []}
-        executiveSummary={props.marketEntryExecutiveSummary || ''}
-        entryBarriers={props.marketEntryBarriers || []}
-        recommendedChannel={props.marketEntryRecommendedChannel || ''}
-        timeToMarket={props.marketEntryTimeToMarket || ''}
-        topBarrier={props.marketEntryTopBarrier || ''}
-        competitiveDifferentiation={props.marketEntryCompetitiveDifferentiation || []}
-        strategicRecommendations={props.marketEntryStrategicRecommendations || []}
-        riskAssessment={props.marketEntryRiskAssessment || []}
-        onToggleEdit={props.onMarketEntryToggleEdit || (() => {})}
-        onScoutIconClick={props.onMarketEntryScoutIconClick || props.onMarketSizeScoutIconClick}
-        onEditHistoryOpen={props.onMarketEntryEditHistoryOpen || (() => {})}
-        onDeleteSection={props.onMarketEntryDeleteSection || (() => {})}
-        onSaveChanges={props.onMarketEntrySaveChanges || (() => {})}
-        onCancelEdit={props.onMarketEntryCancelEdit || (() => {})}
-        onExpandToggle={props.onMarketEntryExpandToggle || (() => {})}
-        onExecutiveSummaryChange={props.onMarketEntryExecutiveSummaryChange || (() => {})}
-        onEntryBarriersChange={props.onMarketEntryBarriersChange || (() => {})}
-        onRecommendedChannelChange={props.onMarketEntryRecommendedChannelChange || (() => {})}
-        onTimeToMarketChange={props.onMarketEntryTimeToMarketChange || (() => {})}
-        onTopBarrierChange={props.onMarketEntryTopBarrierChange || (() => {})}
-        onCompetitiveDifferentiationChange={props.onMarketEntryCompetitiveDifferentiationChange || (() => {})}
-        onStrategicRecommendationsChange={props.onMarketEntryStrategicRecommendationsChange || (() => {})}
-        onRiskAssessmentChange={props.onMarketEntryRiskAssessmentChange || (() => {})}
-        onExportPDF={props.onExportPDF}
-        onSaveToWorkspace={props.onSaveToWorkspace}
-        onGenerateShareableLink={props.onGenerateShareableLink}
-        isRefreshing={props.isRefreshing}
-        companyProfile={props.companyProfile}
+            isEditing={props.isMarketEntryEditing || false}
+            isSplitView={props.isSplitView}
+            isExpanded={props.marketEntryExpanded || false}
+            hasEdits={props.marketEntryHasEdits || false}
+            deletedSections={props.marketEntryDeletedSections || new Set()}
+            editHistory={props.marketEntryEditHistory || []}
+            executiveSummary={props.marketEntryExecutiveSummary || ""}
+            entryBarriers={props.marketEntryBarriers || []}
+            recommendedChannel={props.marketEntryRecommendedChannel || ""}
+            timeToMarket={props.marketEntryTimeToMarket || ""}
+            topBarrier={props.marketEntryTopBarrier || ""}
+            competitiveDifferentiation={props.marketEntryCompetitiveDifferentiation || []}
+            strategicRecommendations={props.marketEntryStrategicRecommendations || []}
+            riskAssessment={props.marketEntryRiskAssessment || []}
+            onToggleEdit={props.onMarketEntryToggleEdit || (() => {})}
+            onScoutIconClick={props.onMarketEntryScoutIconClick || props.onMarketSizeScoutIconClick}
+            onEditHistoryOpen={props.onMarketEntryEditHistoryOpen || (() => {})}
+            onDeleteSection={props.onMarketEntryDeleteSection || (() => {})}
+            onSaveChanges={props.onMarketEntrySaveChanges || (() => {})}
+            onCancelEdit={props.onMarketEntryCancelEdit || (() => {})}
+            onExpandToggle={props.onMarketEntryExpandToggle || (() => {})}
+            onExecutiveSummaryChange={props.onMarketEntryExecutiveSummaryChange || (() => {})}
+            onEntryBarriersChange={props.onMarketEntryBarriersChange || (() => {})}
+            onRecommendedChannelChange={props.onMarketEntryRecommendedChannelChange || (() => {})}
+            onTimeToMarketChange={props.onMarketEntryTimeToMarketChange || (() => {})}
+            onTopBarrierChange={props.onMarketEntryTopBarrierChange || (() => {})}
+            onCompetitiveDifferentiationChange={
+              props.onMarketEntryCompetitiveDifferentiationChange || (() => {})
+            }
+            onStrategicRecommendationsChange={
+              props.onMarketEntryStrategicRecommendationsChange || (() => {})
+            }
+            onRiskAssessmentChange={props.onMarketEntryRiskAssessmentChange || (() => {})}
+            onExportPDF={props.onExportPDF}
+            onSaveToWorkspace={props.onSaveToWorkspace}
+            onGenerateShareableLink={props.onGenerateShareableLink}
+            isRefreshing={props.isRefreshing}
+            companyProfile={props.companyProfile}
           />
         </div>
         {props.showMarketEntryScoutChat && marketEntryScoutChatPanel && (
-          <div className="w-1/2">
-            {marketEntryScoutChatPanel}
-          </div>
+          <div className="w-1/2">{marketEntryScoutChatPanel}</div>
         )}
       </div>
     </>

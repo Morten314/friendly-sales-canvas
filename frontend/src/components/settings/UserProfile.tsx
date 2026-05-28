@@ -1,6 +1,6 @@
-
+import { Plus, X } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, X } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import type { UntypedBackendProfile } from "@/lib/types/escape-hatches";
 
 interface SocialMediaUrl {
   platform: string;
@@ -21,10 +22,14 @@ interface SocialMediaUrl {
 interface UserProfileProps {
   onProfileUpdate?: () => void;
   isEditMode?: boolean;
-  profileData?: any;
+  profileData?: UntypedBackendProfile;
 }
 
-export function UserProfile({ onProfileUpdate, isEditMode = false, profileData }: UserProfileProps) {
+export function UserProfile({
+  onProfileUpdate,
+  isEditMode = false,
+  profileData,
+}: UserProfileProps) {
   const { currentUser } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
@@ -49,7 +54,9 @@ export function UserProfile({ onProfileUpdate, isEditMode = false, profileData }
         professionalBackground: profileData.professionalBackground || "",
         personalKPIs: profileData.personalKPIs || "",
       });
-      setSocialMediaUrls(Array.isArray(profileData.socialMediaUrls) ? profileData.socialMediaUrls : []);
+      setSocialMediaUrls(
+        Array.isArray(profileData.socialMediaUrls) ? profileData.socialMediaUrls : [],
+      );
     }
   }, [profileData]);
 
@@ -61,7 +68,7 @@ export function UserProfile({ onProfileUpdate, isEditMode = false, profileData }
   ];
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const addSocialMediaUrl = () => {
@@ -83,7 +90,7 @@ export function UserProfile({ onProfileUpdate, isEditMode = false, profileData }
   };
 
   const getPlatformLabel = (platform: string) => {
-    return socialPlatforms.find(p => p.value === platform)?.label || platform;
+    return socialPlatforms.find((p) => p.value === platform)?.label || platform;
   };
 
   // const handleSave = () => {
@@ -93,8 +100,8 @@ export function UserProfile({ onProfileUpdate, isEditMode = false, profileData }
 
   const handleSave = async () => {
     if (!currentUser?.uid) {
-      console.error('User not authenticated');
-      alert('Please log in to save your profile');
+      console.error("User not authenticated");
+      alert("Please log in to save your profile");
       return;
     }
     const payload = {
@@ -105,10 +112,12 @@ export function UserProfile({ onProfileUpdate, isEditMode = false, profileData }
       experienceLevel: formData.experienceLevel,
       professionalBackground: formData.professionalBackground,
       personalKPIs: formData.personalKPIs,
-      socialMediaUrls: Array.isArray(socialMediaUrls) ? socialMediaUrls.map(url => ({
-        platform: url.platform,
-        url: url.url,
-      })) : [],
+      socialMediaUrls: Array.isArray(socialMediaUrls)
+        ? socialMediaUrls.map((url) => ({
+            platform: url.platform,
+            url: url.url,
+          }))
+        : [],
     };
 
     try {
@@ -144,7 +153,6 @@ export function UserProfile({ onProfileUpdate, isEditMode = false, profileData }
       if (onProfileUpdate) {
         onProfileUpdate();
       }
-
     } catch (error) {
       console.error("Error saving profile:", error);
       alert("Failed to save profile. Please try again.");
@@ -158,7 +166,7 @@ export function UserProfile({ onProfileUpdate, isEditMode = false, profileData }
         <p className="text-sm text-green-700 mb-4">
           Set up your personal profile to customize AI agent interactions and recommendations.
         </p>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <Label htmlFor="name">Name</Label>
@@ -184,7 +192,11 @@ export function UserProfile({ onProfileUpdate, isEditMode = false, profileData }
 
           <div className="space-y-2">
             <Label htmlFor="department">Department</Label>
-            <Select value={formData.department} onValueChange={(value) => handleInputChange("department", value)} disabled={!isEditMode}>
+            <Select
+              value={formData.department}
+              onValueChange={(value) => handleInputChange("department", value)}
+              disabled={!isEditMode}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select department" />
               </SelectTrigger>
@@ -200,7 +212,11 @@ export function UserProfile({ onProfileUpdate, isEditMode = false, profileData }
 
           <div className="space-y-2">
             <Label htmlFor="experienceLevel">Experience Level</Label>
-            <Select value={formData.experienceLevel} onValueChange={(value) => handleInputChange("experienceLevel", value)} disabled={!isEditMode}>
+            <Select
+              value={formData.experienceLevel}
+              onValueChange={(value) => handleInputChange("experienceLevel", value)}
+              disabled={!isEditMode}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select experience level" />
               </SelectTrigger>
@@ -237,29 +253,30 @@ export function UserProfile({ onProfileUpdate, isEditMode = false, profileData }
 
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="socialMediaUrls">Social Media URLs</Label>
-            {Array.isArray(socialMediaUrls) && socialMediaUrls.map((socialUrl, index) => (
-              <div key={index} className="flex gap-2 items-center">
-                <div className="w-24 text-sm font-medium text-gray-600">
-                  {getPlatformLabel(socialUrl.platform)}:
+            {Array.isArray(socialMediaUrls) &&
+              socialMediaUrls.map((socialUrl, index) => (
+                <div key={index} className="flex gap-2 items-center">
+                  <div className="w-24 text-sm font-medium text-gray-600">
+                    {getPlatformLabel(socialUrl.platform)}:
+                  </div>
+                  <Input
+                    value={socialUrl.url}
+                    onChange={(e) => handleSocialMediaUrlChange(index, e.target.value)}
+                    placeholder={`Enter your ${getPlatformLabel(socialUrl.platform)} URL`}
+                    className="flex-1"
+                    disabled={!isEditMode}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => removeSocialMediaUrl(index)}
+                    className="shrink-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
-                <Input
-                  value={socialUrl.url}
-                  onChange={(e) => handleSocialMediaUrlChange(index, e.target.value)}
-                  placeholder={`Enter your ${getPlatformLabel(socialUrl.platform)} URL`}
-                  className="flex-1"
-                  disabled={!isEditMode}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => removeSocialMediaUrl(index)}
-                  className="shrink-0"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+              ))}
             <div className="flex gap-2 items-center">
               <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
                 <SelectTrigger className="w-48">
@@ -267,8 +284,10 @@ export function UserProfile({ onProfileUpdate, isEditMode = false, profileData }
                 </SelectTrigger>
                 <SelectContent>
                   {socialPlatforms
-                    .filter(platform => !socialMediaUrls.some(url => url.platform === platform.value))
-                    .map(platform => (
+                    .filter(
+                      (platform) => !socialMediaUrls.some((url) => url.platform === platform.value),
+                    )
+                    .map((platform) => (
                       <SelectItem key={platform.value} value={platform.value}>
                         {platform.label}
                       </SelectItem>

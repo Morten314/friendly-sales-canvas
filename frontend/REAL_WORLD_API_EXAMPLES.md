@@ -9,6 +9,7 @@ This document provides **actual working APIs** you can use to test the API Integ
 **Real Public API** - Perfect for testing without any setup
 
 ### Form Fields:
+
 - **Source Name**: `JSONPlaceholder Posts API`
 - **Source Type**: `Custom`
 - **API Endpoint URL**: `https://jsonplaceholder.typicode.com/posts`
@@ -29,6 +30,7 @@ This document provides **actual working APIs** you can use to test the API Integ
 ## Example 2: JSONPlaceholder - Get Single Post ✅ WORKS NOW
 
 ### Form Fields:
+
 - **Source Name**: `JSONPlaceholder Single Post`
 - **Source Type**: `Custom`
 - **API Endpoint URL**: `https://jsonplaceholder.typicode.com/posts/1`
@@ -44,6 +46,7 @@ This document provides **actual working APIs** you can use to test the API Integ
 ## Example 3: JSONPlaceholder - Create Post (POST) ✅ WORKS NOW
 
 ### Form Fields:
+
 - **Source Name**: `JSONPlaceholder Create Post`
 - **Source Type**: `Custom`
 - **API Endpoint URL**: `https://jsonplaceholder.typicode.com/posts`
@@ -73,6 +76,7 @@ This document provides **actual working APIs** you can use to test the API Integ
 **Real Public API** for testing HTTP requests
 
 ### Form Fields:
+
 - **Source Name**: `HTTPBin GET Test`
 - **Source Type**: `Custom`
 - **API Endpoint URL**: `https://httpbin.org/get`
@@ -94,6 +98,7 @@ This document provides **actual working APIs** you can use to test the API Integ
 ## Example 5: HTTPBin - Test POST Request ✅ WORKS NOW
 
 ### Form Fields:
+
 - **Source Name**: `HTTPBin POST Test`
 - **Source Type**: `Custom`
 - **API Endpoint URL**: `https://httpbin.org/post`
@@ -123,6 +128,7 @@ This document provides **actual working APIs** you can use to test the API Integ
 **Real Public API** - Get country information
 
 ### Form Fields:
+
 - **Source Name**: `REST Countries API`
 - **Source Type**: `Custom`
 - **API Endpoint URL**: `https://restcountries.com/v3.1/name/usa`
@@ -145,6 +151,7 @@ This document provides **actual working APIs** you can use to test the API Integ
 **Real Public API** - Get random dog images
 
 ### Form Fields:
+
 - **Source Name**: `Dog API Random`
 - **Source Type**: `Custom`
 - **API Endpoint URL**: `https://dog.ceo/api/breeds/image/random`
@@ -162,6 +169,7 @@ This document provides **actual working APIs** you can use to test the API Integ
 **Real Public API** - Get random cat facts
 
 ### Form Fields:
+
 - **Source Name**: `Cat Facts API`
 - **Source Type**: `Custom`
 - **API Endpoint URL**: `https://catfact.ninja/fact`
@@ -179,6 +187,7 @@ This document provides **actual working APIs** you can use to test the API Integ
 **Real Public API** - Get your public IP address
 
 ### Form Fields:
+
 - **Source Name**: `IPify Public IP`
 - **Source Type**: `Custom`
 - **API Endpoint URL**: `https://api.ipify.org?format=json`
@@ -196,11 +205,13 @@ This document provides **actual working APIs** you can use to test the API Integ
 **Real Weather API** - Requires free API key from openweathermap.org
 
 ### How to Get API Key:
+
 1. Go to https://openweathermap.org/api
 2. Sign up for free account
 3. Get your API key from dashboard
 
 ### Form Fields:
+
 - **Source Name**: `OpenWeatherMap API`
 - **Source Type**: `Analytics`
 - **API Endpoint URL**: `https://api.openweathermap.org/data/2.5/weather?q=London&appid=YOUR_API_KEY_HERE`
@@ -218,11 +229,13 @@ This document provides **actual working APIs** you can use to test the API Integ
 **Real News API** - Requires free API key from newsapi.org
 
 ### How to Get API Key:
+
 1. Go to https://newsapi.org/
 2. Sign up for free account
 3. Get your API key
 
 ### Form Fields:
+
 - **Source Name**: `NewsAPI Headlines`
 - **Source Type**: `Custom`
 - **API Endpoint URL**: `https://newsapi.org/v2/top-headlines?country=us&apiKey=YOUR_API_KEY_HERE`
@@ -240,6 +253,7 @@ This document provides **actual working APIs** you can use to test the API Integ
 **Real GitHub API** - Get public repository information
 
 ### Form Fields:
+
 - **Source Name**: `GitHub Public API`
 - **Source Type**: `Custom`
 - **API Endpoint URL**: `https://api.github.com/repos/octocat/Hello-World`
@@ -257,6 +271,7 @@ This document provides **actual working APIs** you can use to test the API Integ
 **Test This**: Returns information about the Hello-World repository.
 
 **Try Other Endpoints**:
+
 - `https://api.github.com/users/octocat` - Get user info
 - `https://api.github.com/zen` - Get random quote
 - `https://api.github.com/emojis` - Get emoji list
@@ -268,11 +283,13 @@ This document provides **actual working APIs** you can use to test the API Integ
 **Real GitHub API** - Requires Personal Access Token for authenticated requests
 
 ### How to Get Token:
+
 1. Go to GitHub → Settings → Developer settings → Personal access tokens
 2. Generate new token with `public_repo` scope
 3. Copy the token (starts with `ghp_`)
 
 ### Form Fields:
+
 - **Source Name**: `GitHub Authenticated API`
 - **Source Type**: `Custom`
 - **API Endpoint URL**: `https://api.github.com/user`
@@ -295,6 +312,7 @@ This document provides **actual working APIs** you can use to test the API Integ
 ## Example 14: JSONPlaceholder - Update Post (PUT) ✅ WORKS NOW
 
 ### Form Fields:
+
 - **Source Name**: `JSONPlaceholder Update Post`
 - **Source Type**: `Custom`
 - **API Endpoint URL**: `https://jsonplaceholder.typicode.com/posts/1`
@@ -323,6 +341,7 @@ This document provides **actual working APIs** you can use to test the API Integ
 ## Example 15: JSONPlaceholder - Patch Post (PATCH) ✅ WORKS NOW
 
 ### Form Fields:
+
 - **Source Name**: `JSONPlaceholder Patch Post`
 - **Source Type**: `Custom`
 - **API Endpoint URL**: `https://jsonplaceholder.typicode.com/posts/1`
@@ -350,6 +369,7 @@ This document provides **actual working APIs** you can use to test the API Integ
 **Real Cryptocurrency API** - Get crypto prices
 
 ### Form Fields:
+
 - **Source Name**: `CoinGecko Bitcoin Price`
 - **Source Type**: `Analytics`
 - **API Endpoint URL**: `https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd`
@@ -366,6 +386,7 @@ This document provides **actual working APIs** you can use to test the API Integ
 **Test This**: Returns Bitcoin price in USD.
 
 **Try Other Coins**:
+
 - Change `ids=bitcoin` to `ids=ethereum` for Ethereum
 - Change `ids=bitcoin` to `ids=dogecoin` for Dogecoin
 
@@ -376,6 +397,7 @@ This document provides **actual working APIs** you can use to test the API Integ
 **Real Public API** - Get random user data
 
 ### Form Fields:
+
 - **Source Name**: `Random User Generator`
 - **Source Type**: `Custom`
 - **API Endpoint URL**: `https://randomuser.me/api/`
@@ -393,6 +415,7 @@ This document provides **actual working APIs** you can use to test the API Integ
 **Real Public API** - Get random quotes
 
 ### Form Fields:
+
 - **Source Name**: `Quote API`
 - **Source Type**: `Custom`
 - **API Endpoint URL**: `https://api.quotable.io/random`
@@ -410,6 +433,7 @@ This document provides **actual working APIs** you can use to test the API Integ
 **Real Public API** - Get random jokes
 
 ### Form Fields:
+
 - **Source Name**: `Joke API`
 - **Source Type**: `Custom`
 - **API Endpoint URL**: `https://official-joke-api.appspot.com/random_joke`
@@ -427,11 +451,13 @@ This document provides **actual working APIs** you can use to test the API Integ
 **Real Payment API** - Stripe uses API keys (not OAuth2 in this flow, but similar pattern)
 
 ### How to Get API Key:
+
 1. Go to https://stripe.com/
 2. Sign up for account
 3. Get API keys from dashboard
 
 ### Form Fields (Using API Key as Bearer):
+
 - **Source Name**: `Stripe API`
 - **Source Type**: `Custom`
 - **API Endpoint URL**: `https://api.stripe.com/v1/charges`
@@ -453,6 +479,7 @@ This document provides **actual working APIs** you can use to test the API Integ
 ## Quick Start: Test These APIs Right Now (No Setup Required)
 
 ### 1. JSONPlaceholder Posts
+
 ```
 Endpoint: https://jsonplaceholder.typicode.com/posts
 Method: GET
@@ -460,6 +487,7 @@ Auth: None
 ```
 
 ### 2. HTTPBin GET
+
 ```
 Endpoint: https://httpbin.org/get
 Method: GET
@@ -467,6 +495,7 @@ Auth: None
 ```
 
 ### 3. REST Countries
+
 ```
 Endpoint: https://restcountries.com/v3.1/name/usa
 Method: GET
@@ -474,6 +503,7 @@ Auth: None
 ```
 
 ### 4. Dog API
+
 ```
 Endpoint: https://dog.ceo/api/breeds/image/random
 Method: GET
@@ -481,6 +511,7 @@ Auth: None
 ```
 
 ### 5. Cat Facts
+
 ```
 Endpoint: https://catfact.ninja/fact
 Method: GET
@@ -488,6 +519,7 @@ Auth: None
 ```
 
 ### 6. GitHub Public
+
 ```
 Endpoint: https://api.github.com/zen
 Method: GET
@@ -495,6 +527,7 @@ Auth: None
 ```
 
 ### 7. Random User
+
 ```
 Endpoint: https://randomuser.me/api/
 Method: GET
@@ -502,6 +535,7 @@ Auth: None
 ```
 
 ### 8. Quote API
+
 ```
 Endpoint: https://api.quotable.io/random
 Method: GET
@@ -552,19 +586,3 @@ Auth: None
 5. **Fifth**: Try OAuth2 form (Example 4 from previous doc) - See OAuth2 UI
 
 All these APIs are real and working. You can test them in your browser or with tools like Postman to verify they work before using them in the integration form.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -8,14 +8,15 @@
 // again post-login redundantly — a minor smell flagged for Phase 1 cleanup
 // (`installCatchAllApiMock` is itself marked @deprecated as a no-op in
 // api-mocks.ts). These new journeys deliberately drop the redundant calls.
-import { expect, test } from '@playwright/test';
-import { loginAsTestUser } from '../helpers/login';
-import { maskDynamic } from '../helpers/mask-dynamic';
+import { expect, test } from "@playwright/test";
 
-test('customers page loads under mocked auth + API', async ({ page }) => {
+import { loginAsTestUser } from "../helpers/login";
+import { maskDynamic } from "../helpers/mask-dynamic";
+
+test("customers page loads under mocked auth + API", async ({ page }) => {
   await loginAsTestUser(page);
 
-  await page.goto('/customers');
+  await page.goto("/customers");
   await expect(page).not.toHaveURL(/\/login/);
 
   // Spec §3.4 — assert a recognizable page element is visible (explicit
@@ -23,11 +24,9 @@ test('customers page loads under mocked auth + API', async ({ page }) => {
   // Page-agnostic selector. If no heading matches at execution time, swap
   // to a page-specific selector (e.g., getByText('Customers')) after
   // inspecting the rendered DOM.
-  await expect(
-    page.locator('h1, h2, h3, [role="heading"]').first(),
-  ).toBeVisible({ timeout: 5000 });
+  await expect(page.locator('h1, h2, h3, [role="heading"]').first()).toBeVisible({ timeout: 5000 });
 
-  await expect(page).toHaveScreenshot('01-customers-page.png', {
+  await expect(page).toHaveScreenshot("01-customers-page.png", {
     mask: maskDynamic(page),
   });
 });

@@ -20,12 +20,14 @@ In **production** (after `npm run build` and deployment), the install prompt wor
 ## How It Works in Production
 
 ### First-Time Users
+
 - User visits your site
 - Service worker activates quickly
 - `beforeinstallprompt` fires reliably
 - Install button shows "Install App" and works directly
 
 ### Users Who Dismissed Before
+
 - If a user previously dismissed the install prompt, the browser may not fire `beforeinstallprompt` again immediately
 - **This is normal browser behavior** - browsers wait before showing the prompt again
 - The install button will show "Install Instructions" and guide users to install manually
@@ -36,16 +38,18 @@ In **production** (after `npm run build` and deployment), the install prompt wor
 ## Best Practices for Production
 
 1. **Test with production build**:
+
    ```bash
    npm run build
    npm run preview
    ```
+
    This gives you the most accurate representation of production behavior.
 
 2. **The install button handles both cases**:
    - If `beforeinstallprompt` fires → Shows "Install App" (works directly)
    - If it doesn't fire → Shows "Install Instructions" (guides manual install)
-   
+
    **Both are valid user experiences** - many successful PWAs work this way.
 
 3. **Don't worry about dev mode limitations**:
@@ -56,11 +60,13 @@ In **production** (after `npm run build` and deployment), the install prompt wor
 ## What Users See
 
 ### Scenario 1: Install Prompt Available
+
 - Install button shows: **"Install App"**
 - Clicking it triggers the native browser install prompt
 - User can install directly
 
 ### Scenario 2: Install Prompt Not Available
+
 - Install button shows: **"Install Instructions"**
 - Clicking it shows helpful instructions
 - User can still install via browser menu or address bar icon
@@ -75,21 +81,3 @@ In **production** (after `npm run build` and deployment), the install prompt wor
 - ⚠️ **Dev mode limitations** - Don't judge production behavior by dev mode
 
 The current setup is correct for production. The install button will work reliably when deployed!
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

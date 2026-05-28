@@ -4,6 +4,7 @@
 // is a report-column → description-text lookup via REPORT_KEY_TO_DESCRIPTION_LABEL.
 // This test characterizes the actual behavior. Spec drift logged for post-merge.
 import { describe, expect, it } from 'vitest';
+
 import {
   REPORT_KEY_TO_DESCRIPTION_LABEL,
   getDescriptionTextForColumn,

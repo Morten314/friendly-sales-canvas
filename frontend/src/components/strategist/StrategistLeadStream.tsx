@@ -1,15 +1,34 @@
+import {
+  Trash2,
+  Plus,
+  MoreVertical,
+  Megaphone,
+  Mail,
+  MessageSquare,
+  Zap,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
+
+import { heatmapLeads, type HeatmapLead } from "@/components/market-research/lead-stream/leadData";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Trash2, Plus, MoreVertical, Megaphone, Mail, MessageSquare, Zap, ChevronDown, ChevronRight } from "lucide-react";
-import { heatmapLeads, type HeatmapLead } from "@/components/market-research/lead-stream/leadData";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const COLUMN_OPTIONS = [
   "LinkedIn URL",
@@ -26,25 +45,31 @@ const TIER_RECOMMENDATIONS: Record<string, { action: string; detail: string; col
   "Tier 1": {
     action: "Direct Outreach",
     detail: "High-priority — personalised outreach with decision-maker engagement",
-    color: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800",
+    color:
+      "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800",
   },
   "Tier 2": {
     action: "Nurture Sequence",
     detail: "Build awareness with value-driven content and trigger-based follow-ups",
-    color: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800",
+    color:
+      "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800",
   },
   "Tier 3": {
     action: "Monitor & Educate",
     detail: "Low-touch awareness campaigns — revisit when signals strengthen",
-    color: "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800",
+    color:
+      "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800",
   },
 };
 
 const PriorityBadge = ({ tier }: { tier: string }) => {
   const styles: Record<string, string> = {
-    "Tier 1": "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800",
-    "Tier 2": "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800",
-    "Tier 3": "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800",
+    "Tier 1":
+      "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800",
+    "Tier 2":
+      "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800",
+    "Tier 3":
+      "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800",
   };
   return (
     <Badge variant="outline" className={`text-[11px] font-semibold ${styles[tier] || ""}`}>
@@ -108,7 +133,9 @@ const TierGroup = ({
                 <TableHead className="text-xs font-semibold">Name</TableHead>
                 <TableHead className="text-xs font-semibold">Company</TableHead>
                 <TableHead className="text-xs font-semibold text-center">Lead Score</TableHead>
-                <TableHead className="text-xs font-semibold text-center">Recommended Action</TableHead>
+                <TableHead className="text-xs font-semibold text-center">
+                  Recommended Action
+                </TableHead>
                 {customColumns.map((col, idx) => (
                   <TableHead key={`custom-${idx}`} className="text-xs text-center min-w-[120px]">
                     {col ? (
@@ -122,19 +149,21 @@ const TierGroup = ({
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="center" className="w-44">
-                          {COLUMN_OPTIONS.filter((opt) => !customColumns.includes(opt)).map((opt) => (
-                            <DropdownMenuItem
-                              key={opt}
-                              className="text-xs cursor-pointer"
-                              onClick={() => {
-                                const updated = [...customColumns];
-                                updated[idx] = opt;
-                                setCustomColumns(updated);
-                              }}
-                            >
-                              {opt}
-                            </DropdownMenuItem>
-                          ))}
+                          {COLUMN_OPTIONS.filter((opt) => !customColumns.includes(opt)).map(
+                            (opt) => (
+                              <DropdownMenuItem
+                                key={opt}
+                                className="text-xs cursor-pointer"
+                                onClick={() => {
+                                  const updated = [...customColumns];
+                                  updated[idx] = opt;
+                                  setCustomColumns(updated);
+                                }}
+                              >
+                                {opt}
+                              </DropdownMenuItem>
+                            ),
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     )}
@@ -153,13 +182,21 @@ const TierGroup = ({
                     <span className="text-sm font-bold text-foreground">{lead.totalScore}</span>
                   </TableCell>
                   <TableCell className="text-center">
-                    <Badge variant="outline" className={`text-[10px] font-semibold ${rec?.color || ""}`}>
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] font-semibold ${rec?.color || ""}`}
+                    >
                       <Zap className="h-2.5 w-2.5 mr-1" />
                       {rec?.action}
                     </Badge>
                   </TableCell>
                   {customColumns.map((_, idx) => (
-                    <TableCell key={`cell-${idx}`} className="text-center text-xs text-muted-foreground/40">—</TableCell>
+                    <TableCell
+                      key={`cell-${idx}`}
+                      className="text-center text-xs text-muted-foreground/40"
+                    >
+                      —
+                    </TableCell>
                   ))}
                   <TableCell className="text-center">
                     <DropdownMenu>
@@ -241,9 +278,30 @@ const StrategistLeadStream = () => {
         </span>
       </div>
 
-      <TierGroup tier="Tier 1" leads={tier1} customColumns={customColumns} setCustomColumns={setCustomColumns} removedLeads={removedLeads} onRemoveLead={handleRemove} />
-      <TierGroup tier="Tier 2" leads={tier2} customColumns={customColumns} setCustomColumns={setCustomColumns} removedLeads={removedLeads} onRemoveLead={handleRemove} />
-      <TierGroup tier="Tier 3" leads={tier3} customColumns={customColumns} setCustomColumns={setCustomColumns} removedLeads={removedLeads} onRemoveLead={handleRemove} />
+      <TierGroup
+        tier="Tier 1"
+        leads={tier1}
+        customColumns={customColumns}
+        setCustomColumns={setCustomColumns}
+        removedLeads={removedLeads}
+        onRemoveLead={handleRemove}
+      />
+      <TierGroup
+        tier="Tier 2"
+        leads={tier2}
+        customColumns={customColumns}
+        setCustomColumns={setCustomColumns}
+        removedLeads={removedLeads}
+        onRemoveLead={handleRemove}
+      />
+      <TierGroup
+        tier="Tier 3"
+        leads={tier3}
+        customColumns={customColumns}
+        setCustomColumns={setCustomColumns}
+        removedLeads={removedLeads}
+        onRemoveLead={handleRemove}
+      />
     </div>
   );
 };

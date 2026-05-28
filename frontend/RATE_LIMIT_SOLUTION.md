@@ -7,8 +7,9 @@ This document describes the comprehensive rate limiting solution implemented to 
 ## Problem Statement
 
 The backend API was returning `500 Internal Server Error` with the following message:
+
 ```
-Error code: 429 - You have reached the rate limit specific to this model deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free. 
+Error code: 429 - You have reached the rate limit specific to this model deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free.
 The maximum rate limit for this model is 6.0 queries and 180000000 tokens per minute.
 ```
 
@@ -19,6 +20,7 @@ The maximum rate limit for this model is 6.0 queries and 180000000 tokens per mi
 A centralized rate limiting system that manages API requests to prevent hitting backend rate limits.
 
 **Key Features:**
+
 - **Request Queuing**: Queues requests when rate limit is reached
 - **Exponential Backoff**: Implements intelligent retry logic with exponential delays
 - **Jitter**: Adds random delays to prevent thundering herd problems
@@ -26,6 +28,7 @@ A centralized rate limiting system that manages API requests to prevent hitting 
 - **Error Detection**: Automatically detects rate limit errors and handles them gracefully
 
 **Configuration:**
+
 ```typescript
 {
   maxRequestsPerMinute: 4,        // Conservative limit
@@ -41,6 +44,7 @@ A centralized rate limiting system that manages API requests to prevent hitting 
 A wrapper around the existing API utilities that integrates with the rate limit manager.
 
 **Key Features:**
+
 - **Automatic Rate Limiting**: All API calls go through the rate limit manager
 - **Caching**: In-memory cache to reduce API calls
 - **Error Handling**: Comprehensive error handling with fallback strategies
@@ -52,6 +56,7 @@ A wrapper around the existing API utilities that integrates with the rate limit 
 A real-time UI component that displays rate limit status and provides user controls.
 
 **Features:**
+
 - **Live Status**: Real-time display of current rate limit usage
 - **Queue Management**: Shows pending requests in queue
 - **Cache Status**: Displays cached responses count
@@ -74,20 +79,16 @@ The existing API calls in `ICPSummaryOpportunity.tsx` have been updated to use t
 ```typescript
 // Before (manual retry logic)
 const response = await fetch(`/api/${endpoint}`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(payload)
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(payload),
 });
 
 // After (rate limited with caching)
-const apiResponse = await callICPresearch(
-  "component_name",
-  selectedICP,
-  {
-    useCache: true,
-    componentName: "Component Name"
-  }
-);
+const apiResponse = await callICPresearch("component_name", selectedICP, {
+  useCache: true,
+  componentName: "Component Name",
+});
 ```
 
 ### Caching Strategy
@@ -102,16 +103,12 @@ const apiResponse = await callICPresearch(
 ### Basic API Call with Rate Limiting
 
 ```typescript
-import { callICPresearch } from '@/lib/enhancedApi';
+import { callICPresearch } from "@/lib/enhancedApi";
 
-const response = await callICPresearch(
-  "buyer map & roles, pain points, triggers",
-  selectedICP,
-  {
-    useCache: true,
-    componentName: "Buyer Map"
-  }
-);
+const response = await callICPresearch("buyer map & roles, pain points, triggers", selectedICP, {
+  useCache: true,
+  componentName: "Buyer Map",
+});
 
 if (response.success) {
   // Handle successful response
@@ -126,7 +123,7 @@ if (response.success) {
 ### Checking Rate Limit Status
 
 ```typescript
-import { rateLimitManager } from '@/lib/rateLimitManager';
+import { rateLimitManager } from "@/lib/rateLimitManager";
 
 const status = rateLimitManager.getQueueStatus();
 console.log(`Requests this minute: ${status.requestsThisMinute}/${status.maxRequestsPerMinute}`);
@@ -136,13 +133,13 @@ console.log(`Queue length: ${status.queueLength}`);
 ### Clearing Cache and Queue
 
 ```typescript
-import { enhancedApi, rateLimitManager } from '@/lib/enhancedApi';
+import { enhancedApi, rateLimitManager } from "@/lib/enhancedApi";
 
 // Clear all cache
 enhancedApi.clearCache();
 
 // Clear specific cache entries
-enhancedApi.clearCache('icp-research');
+enhancedApi.clearCache("icp-research");
 
 // Clear request queue
 rateLimitManager.clearQueue();
@@ -151,21 +148,25 @@ rateLimitManager.clearQueue();
 ## Benefits
 
 ### 1. **Prevents Rate Limit Errors**
+
 - Proactive rate limiting prevents hitting backend limits
 - Automatic retry with exponential backoff
 - Graceful degradation to cached/mock data
 
 ### 2. **Improved User Experience**
+
 - Real-time status indicators
 - Transparent error handling
 - No more 500 errors for users
 
 ### 3. **Better Resource Management**
+
 - Reduced API calls through caching
 - Efficient request queuing
 - Automatic cleanup of expired data
 
 ### 4. **Developer-Friendly**
+
 - Simple API integration
 - Comprehensive logging
 - Easy debugging and monitoring
@@ -186,6 +187,7 @@ The system provides extensive logging for debugging:
 ### Status Monitoring
 
 The RateLimitStatus component provides real-time monitoring:
+
 - Current request count
 - Queue status
 - Cache statistics
@@ -194,6 +196,7 @@ The RateLimitStatus component provides real-time monitoring:
 ### Error Handling
 
 Different error types are handled appropriately:
+
 - **Rate Limit Errors**: Automatic retry with backoff
 - **Network Errors**: Fallback to cached data
 - **Server Errors**: User notification with retry options
@@ -204,11 +207,11 @@ Different error types are handled appropriately:
 
 ```typescript
 const customConfig = {
-  maxRequestsPerMinute: 3,    // More conservative
-  maxRetries: 5,              // More retries
-  baseDelayMs: 30000,         // Longer delays
-  maxDelayMs: 120000,         // 2 minute max delay
-  jitterMs: 10000             // More jitter
+  maxRequestsPerMinute: 3, // More conservative
+  maxRetries: 5, // More retries
+  baseDelayMs: 30000, // Longer delays
+  maxDelayMs: 120000, // 2 minute max delay
+  jitterMs: 10000, // More jitter
 };
 
 const customManager = new RateLimitManager(customConfig);
@@ -217,35 +220,35 @@ const customManager = new RateLimitManager(customConfig);
 ### Enhanced API Configuration
 
 ```typescript
-const apiResponse = await callICPresearch(
-  "component_name",
-  selectedICP,
-  {
-    useCache: false,           // Disable caching
-    timeout: 60000,           // 60 second timeout
-    componentName: "Custom Component"
-  }
-);
+const apiResponse = await callICPresearch("component_name", selectedICP, {
+  useCache: false, // Disable caching
+  timeout: 60000, // 60 second timeout
+  componentName: "Custom Component",
+});
 ```
 
 ## Future Enhancements
 
 ### 1. **Persistent Caching**
+
 - Local storage for longer-term caching
 - IndexedDB for larger datasets
 - Cache synchronization across tabs
 
 ### 2. **Advanced Rate Limiting**
+
 - Per-user rate limiting
 - Dynamic rate limit adjustment
 - Priority queuing for different request types
 
 ### 3. **Analytics and Monitoring**
+
 - Request success/failure metrics
 - Performance monitoring
 - Rate limit usage analytics
 
 ### 4. **Backend Integration**
+
 - Backend rate limit status API
 - Real-time rate limit updates
 - Coordinated rate limiting

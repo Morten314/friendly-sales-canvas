@@ -1,12 +1,16 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+
 import { SuggestedICPCards } from "./SuggestedICPCards";
 
+import { useAuth } from "@/contexts/AuthContext";
+
+// Structural subset of the full SuggestedICP shape defined in `SuggestedICPCards.tsx`.
+// Only the fields this passthrough handler reads are listed; the full shape (extra
+// fields like industry/segment/companySize) flows through opaquely via CustomEvent detail.
 interface SuggestedICP {
   id: string;
   name: string;
-  type: 'refined' | 'new';
-  [key: string]: any;
+  type: "refined" | "new";
 }
 
 export const ICPIntelligence = () => {
@@ -23,10 +27,14 @@ export const ICPIntelligence = () => {
       if (uid) {
         sessionStorage.removeItem(`profiler_icp_refresh_${uid}`);
         if (import.meta.env.DEV) {
-          console.log("[Profiler ICP] Header Refresh → cleared session dedupe key → bump refreshTrigger");
+          console.log(
+            "[Profiler ICP] Header Refresh → cleared session dedupe key → bump refreshTrigger",
+          );
         }
       } else if (import.meta.env.DEV) {
-        console.warn("[Profiler ICP] Refresh clicked but no user id yet — wait for auth; GET /icp will be skipped");
+        console.warn(
+          "[Profiler ICP] Refresh clicked but no user id yet — wait for auth; GET /icp will be skipped",
+        );
       }
       setRefreshTrigger((prev) => prev + 1);
     };
@@ -35,7 +43,7 @@ export const ICPIntelligence = () => {
   }, [currentUser?.uid]);
 
   const handleICPAccepted = (icp: SuggestedICP) => {
-    window.dispatchEvent(new CustomEvent('icpAccepted', { detail: icp }));
+    window.dispatchEvent(new CustomEvent("icpAccepted", { detail: icp }));
   };
 
   const handleICPRejected = (_icp: SuggestedICP) => {

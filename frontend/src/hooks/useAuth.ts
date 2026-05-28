@@ -1,7 +1,8 @@
-import { useAuth as useFirebaseAuth } from '../contexts/AuthContext';
-import { useTenant } from '../contexts/TenantContext';
-import jwtManager from '../lib/jwt';
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
+
+import { useAuth as useFirebaseAuth } from "../contexts/AuthContext";
+import { useTenant } from "../contexts/TenantContext";
+import jwtManager from "../lib/jwt";
 
 export const useAuth = () => {
   const firebaseAuth = useFirebaseAuth();
@@ -15,26 +16,23 @@ export const useAuth = () => {
       if (firebaseAuth.currentUser && selectedTenant && !jwtToken) {
         setIsGeneratingToken(true);
         try {
-          const token = await jwtManager.generateToken(
-            firebaseAuth.currentUser, 
-            selectedTenant.id
-          );
+          const token = await jwtManager.generateToken(firebaseAuth.currentUser, selectedTenant.id);
           // Token generation is optional - null is acceptable
           if (token) {
             setJwtToken(token);
           } else {
-            console.log('JWT token generation skipped (endpoint not available). This is optional.');
+            console.log("JWT token generation skipped (endpoint not available). This is optional.");
           }
         } catch (error) {
           // JWT is optional - don't log as error, just warn
-          console.warn('JWT token generation failed (optional):', error);
+          console.warn("JWT token generation failed (optional):", error);
         } finally {
           setIsGeneratingToken(false);
         }
       }
     };
 
-    generateToken();
+    void generateToken();
   }, [firebaseAuth.currentUser, selectedTenant, jwtToken]);
 
   // Clear JWT token when user logs out or tenant changes
@@ -57,10 +55,6 @@ export const useAuth = () => {
     orgName: firebaseAuth.orgName,
     jwtToken,
     isGeneratingToken,
-    logout
+    logout,
   };
 };
-
-
-
-

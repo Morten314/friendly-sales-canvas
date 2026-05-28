@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
+
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -11,14 +11,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import type { UntypedBackendProfile } from "@/lib/types/escape-hatches";
 
 interface AgentProfileProps {
   onProfileUpdate?: () => void;
   isEditMode?: boolean;
-  profileData?: any;
+  profileData?: UntypedBackendProfile;
 }
 
-export function AgentProfile({ onProfileUpdate, isEditMode = false, profileData }: AgentProfileProps) {
+export function AgentProfile({
+  onProfileUpdate,
+  isEditMode = false,
+  profileData,
+}: AgentProfileProps) {
   const [formData, setFormData] = useState({
     agentName: "",
     assignedTasks: "",
@@ -49,22 +55,24 @@ export function AgentProfile({ onProfileUpdate, isEditMode = false, profileData 
         autonomyLevel: profileData.autonomyLevel || "",
         frequency: profileData.frequency || "",
       });
-      setCheckedItems(profileData.checkedItems || {
-        leadGeneration: false,
-        customerSupport: false,
-        contentCreation: false,
-        dataAnalysis: false,
-        reporting: false,
-      });
+      setCheckedItems(
+        profileData.checkedItems || {
+          leadGeneration: false,
+          customerSupport: false,
+          contentCreation: false,
+          dataAnalysis: false,
+          reporting: false,
+        },
+      );
     }
   }, [profileData]);
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleCheckboxChange = (item: string, checked: boolean) => {
-    setCheckedItems(prev => ({ ...prev, [item]: checked }));
+    setCheckedItems((prev) => ({ ...prev, [item]: checked }));
   };
 
   const handleSave = async () => {
@@ -118,7 +126,6 @@ export function AgentProfile({ onProfileUpdate, isEditMode = false, profileData 
       if (onProfileUpdate) {
         onProfileUpdate();
       }
-
     } catch (error) {
       console.error("Error saving agent profile:", error);
       alert("Failed to save agent profile. Please try again.");
@@ -132,12 +139,16 @@ export function AgentProfile({ onProfileUpdate, isEditMode = false, profileData 
         <p className="text-sm text-purple-700 mb-4">
           Configure how AI agents should behave and operate within your organization.
         </p>
-        
+
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="agentName">Agent Name</Label>
-              <Select value={formData.agentName} onValueChange={(value) => handleInputChange("agentName", value)} disabled={!isEditMode}>
+              <Select
+                value={formData.agentName}
+                onValueChange={(value) => handleInputChange("agentName", value)}
+                disabled={!isEditMode}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select agent" />
                 </SelectTrigger>
@@ -164,7 +175,11 @@ export function AgentProfile({ onProfileUpdate, isEditMode = false, profileData 
 
             <div className="space-y-2">
               <Label htmlFor="tone">Communication Tone</Label>
-              <Select value={formData.tone} onValueChange={(value) => handleInputChange("tone", value)} disabled={!isEditMode}>
+              <Select
+                value={formData.tone}
+                onValueChange={(value) => handleInputChange("tone", value)}
+                disabled={!isEditMode}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select tone" />
                 </SelectTrigger>
@@ -180,7 +195,11 @@ export function AgentProfile({ onProfileUpdate, isEditMode = false, profileData 
 
             <div className="space-y-2">
               <Label htmlFor="autonomyLevel">Autonomy Level</Label>
-              <Select value={formData.autonomyLevel} onValueChange={(value) => handleInputChange("autonomyLevel", value)} disabled={!isEditMode}>
+              <Select
+                value={formData.autonomyLevel}
+                onValueChange={(value) => handleInputChange("autonomyLevel", value)}
+                disabled={!isEditMode}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select autonomy level" />
                 </SelectTrigger>
@@ -194,7 +213,11 @@ export function AgentProfile({ onProfileUpdate, isEditMode = false, profileData 
 
             <div className="space-y-2">
               <Label htmlFor="frequency">Check-in Frequency</Label>
-              <Select value={formData.frequency} onValueChange={(value) => handleInputChange("frequency", value)} disabled={!isEditMode}>
+              <Select
+                value={formData.frequency}
+                onValueChange={(value) => handleInputChange("frequency", value)}
+                disabled={!isEditMode}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select frequency" />
                 </SelectTrigger>
@@ -232,7 +255,7 @@ export function AgentProfile({ onProfileUpdate, isEditMode = false, profileData 
                     disabled={!isEditMode}
                   />
                   <Label htmlFor={key} className="text-sm">
-                    {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                    {key.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())}
                   </Label>
                 </div>
               ))}

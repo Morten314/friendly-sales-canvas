@@ -1,35 +1,42 @@
-
-import { useState } from "react";
-import { Layout } from "@/components/layout/Layout";
-import { usePageTitle } from "@/hooks/usePageTitle";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { MessageSquare, Send, Settings, Play, CheckSquare } from "lucide-react";
+import { useState } from "react";
+
+import { Layout } from "@/components/layout/Layout";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 const Calendar = () => {
   usePageTitle("⚡ Activator - Brewra");
   const [isChatOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { role: "ai", content: "Hello! I'm Activator. How can I help with your tasks and campaigns today?" }
+    {
+      role: "ai",
+      content: "Hello! I'm Activator. How can I help with your tasks and campaigns today?",
+    },
   ]);
   const [inputValue, setInputValue] = useState("");
 
   const handleSendMessage = () => {
     if (!inputValue.trim()) return;
-    
+
     // Add user message
     setMessages([...messages, { role: "user", content: inputValue }]);
-    
+
     // Simulate AI response
     setTimeout(() => {
-      setMessages(current => [...current, { 
-        role: "ai", 
-        content: "I can help automate your campaigns. Would you like me to schedule follow-ups, create email templates, or analyze campaign performance?"
-      }]);
+      setMessages((current) => [
+        ...current,
+        {
+          role: "ai",
+          content:
+            "I can help automate your campaigns. Would you like me to schedule follow-ups, create email templates, or analyze campaign performance?",
+        },
+      ]);
     }, 1000);
-    
+
     setInputValue("");
   };
 
@@ -70,11 +77,11 @@ const Calendar = () => {
                       <div className="bg-white rounded-md border border-gray-200 p-4 flex flex-col gap-3">
                         <div className="space-y-3 max-h-60 overflow-y-auto">
                           {messages.map((message, index) => (
-                            <div 
+                            <div
                               key={index}
                               className={`${
-                                message.role === "ai" 
-                                  ? "bg-blue-50 rounded-lg p-3 self-start max-w-[80%]" 
+                                message.role === "ai"
+                                  ? "bg-blue-50 rounded-lg p-3 self-start max-w-[80%]"
                                   : "bg-gray-100 rounded-lg p-3 self-end max-w-[80%] ml-auto"
                               }`}
                             >
@@ -85,19 +92,19 @@ const Calendar = () => {
                             </div>
                           ))}
                         </div>
-                        
+
                         <div className="flex gap-2 mt-2">
                           <Input
-                            type="text" 
+                            type="text"
                             placeholder="Ask Activator about task automation..."
                             className="flex-1"
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleSendMessage();
+                              if (e.key === "Enter") handleSendMessage();
                             }}
                           />
-                          <Button 
+                          <Button
                             className="bg-sales-blue hover:bg-blue-700 flex items-center gap-2"
                             onClick={handleSendMessage}
                           >
@@ -112,7 +119,9 @@ const Calendar = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle>Execution & Automation</CardTitle>
-                    <CardDescription>Automate your workflow execution and processes</CardDescription>
+                    <CardDescription>
+                      Automate your workflow execution and processes
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <p className="text-gray-500">Execution & Automation tools will appear here</p>
@@ -126,7 +135,9 @@ const Calendar = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle>Campaign Automation</CardTitle>
-                    <CardDescription>Automate your marketing campaigns and sequences</CardDescription>
+                    <CardDescription>
+                      Automate your marketing campaigns and sequences
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <p className="text-gray-500">Campaign automation tools will appear here</p>

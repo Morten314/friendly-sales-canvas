@@ -14,6 +14,7 @@ This document contains the exact request body schemas for all 5 Scout components
 **Component Name:** `"market size & opportunity"`
 
 ### Schema (Primary - from MarketResearch.tsx):
+
 ```json
 {
   "user_id": "string (Firebase UID)",
@@ -24,6 +25,7 @@ This document contains the exact request body schemas for all 5 Scout components
 ```
 
 ### Schema (Alternative - Initial Load):
+
 ```json
 {
   "component_name": "market size & opportunity",
@@ -36,6 +38,7 @@ This document contains the exact request body schemas for all 5 Scout components
 ```
 
 **Fields:**
+
 - `user_id` (required): Firebase user UID
 - `component_name` (required): `"market size & opportunity"`
 - `data` (required): Empty object `{}`
@@ -50,6 +53,7 @@ This document contains the exact request body schemas for all 5 Scout components
 **Component Name:** `"industry trends report"`
 
 ### Schema:
+
 ```json
 {
   "user_id": "string (Firebase UID)",
@@ -63,6 +67,7 @@ This document contains the exact request body schemas for all 5 Scout components
 ```
 
 **Fields:**
+
 - `user_id` (required): Firebase user UID
 - `component_name` (required): `"industry trends report"`
 - `data` (required): Empty object `{}`
@@ -78,6 +83,7 @@ This document contains the exact request body schemas for all 5 Scout components
 **Component Name:** `"regulatory & compliance highlights"`
 
 ### Schema:
+
 ```json
 {
   "user_id": "string (Firebase UID)",
@@ -88,6 +94,7 @@ This document contains the exact request body schemas for all 5 Scout components
 ```
 
 **Fields:**
+
 - `user_id` (required): Firebase user UID
 - `component_name` (required): `"regulatory & compliance highlights"`
 - `data` (required): Empty object `{}`
@@ -100,6 +107,7 @@ This document contains the exact request body schemas for all 5 Scout components
 **Component Name:** `"competitor landscape"`
 
 ### Schema:
+
 ```json
 {
   "user_id": "string (Firebase UID)",
@@ -112,6 +120,7 @@ This document contains the exact request body schemas for all 5 Scout components
 ```
 
 **Fields:**
+
 - `user_id` (required): Firebase user UID
 - `component_name` (required): `"competitor landscape"`
 - `data` (required): Empty object `{}`
@@ -126,6 +135,7 @@ This document contains the exact request body schemas for all 5 Scout components
 **Component Name:** `"market entry & growth strategy"`
 
 ### Schema:
+
 ```json
 {
   "user_id": "string (Firebase UID)",
@@ -139,6 +149,7 @@ This document contains the exact request body schemas for all 5 Scout components
 ```
 
 **Fields:**
+
 - `user_id` (required): Firebase user UID
 - `component_name` (required): `"market entry & growth strategy"`
 - `data` (required): Empty object `{}`
@@ -152,17 +163,20 @@ This document contains the exact request body schemas for all 5 Scout components
 ## Summary
 
 ### Required Fields (All Components):
+
 - `user_id`: Firebase user UID (string)
 - `component_name`: Component name (string) - see above for exact values
 - `data`: Empty object `{}`
 
 ### Optional Fields (Varies by Component):
+
 - `refresh`: Boolean to force refresh
 - `_forceRefresh`: Boolean to force refresh (alternative naming)
 - `_timestamp`: Unix timestamp (number) for cache busting
 - `_cacheBust` / `_cache_bust`: Random string for cache busting
 
 ### Component Name Values:
+
 1. `"market size & opportunity"`
 2. `"industry trends report"`
 3. `"regulatory & compliance highlights"`
@@ -183,12 +197,3 @@ curl -X POST /api/market-research \
     "refresh": false
   }'
 ```
-
-
-
-
-
-
-
-
-

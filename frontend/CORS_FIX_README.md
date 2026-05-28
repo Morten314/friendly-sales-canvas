@@ -1,6 +1,7 @@
 # CORS Fix Implementation
 
 ## Problem
+
 The application was experiencing CORS (Cross-Origin Resource Sharing) errors when making API requests from `http://localhost:8080` to `https://backend-11kr.onrender.com`. The error was:
 
 ```
@@ -8,6 +9,7 @@ Access to fetch at 'https://backend-11kr.onrender.com/market-research' from orig
 ```
 
 ## Solution
+
 Implemented a development proxy in Vite configuration to handle CORS issues during development.
 
 ### Changes Made
@@ -35,19 +37,19 @@ Implemented a development proxy in Vite configuration to handle CORS issues duri
 ### Usage
 
 ```typescript
-import { apiFetchJson } from '@/lib/api';
+import { apiFetchJson } from "@/lib/api";
 
 // Instead of:
-const response = await fetch('https://backend-11kr.onrender.com/market-research', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(data)
+const response = await fetch("https://backend-11kr.onrender.com/market-research", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(data),
 });
 
 // Use:
-const result = await apiFetchJson('market-research', {
-  method: 'POST',
-  body: JSON.stringify(data)
+const result = await apiFetchJson("market-research", {
+  method: "POST",
+  body: JSON.stringify(data),
 });
 ```
 
@@ -64,6 +66,3 @@ const result = await apiFetchJson('market-research', {
 - `src/lib/api.ts` - New API utility file
 - `src/pages/MarketResearch.tsx` - Updated API calls
 - `src/components/market-research/CompetitorLandscapeSection.tsx` - Updated API calls
-
-
-

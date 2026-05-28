@@ -1,4 +1,3 @@
-
 // import { useState } from "react";
 // import { Layout } from "@/components/layout/Layout";
 // import {
@@ -38,7 +37,7 @@
 //     <Layout>
 //       <div className="animate-fade-in">
 //         <h1 className="text-2xl font-bold mb-6">Settings</h1>
-        
+
 //         <div className="bg-white rounded-lg shadow p-6">
 //           <div className="mb-8">
 //             <h2 className="text-xl font-semibold mb-4">Profiling</h2>
@@ -57,7 +56,7 @@
 //                 </SelectContent>
 //               </Select>
 //             </div>
-            
+
 //             {renderProfileContent()}
 //           </div>
 //         </div>
@@ -68,10 +67,14 @@
 
 // export default Settings;
 
-
-
+import { Edit, Save } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+
 import { Layout } from "@/components/layout/Layout";
+import { AgentProfile } from "@/components/settings/AgentProfile";
+import { CompanyProfile } from "@/components/settings/CompanyProfile";
+import { UserProfile } from "@/components/settings/UserProfile";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -79,25 +82,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { CompanyProfile } from "@/components/settings/CompanyProfile";
-import { UserProfile } from "@/components/settings/UserProfile";
-import { AgentProfile } from "@/components/settings/AgentProfile";
-import { Edit, Save } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import type { UntypedBackendProfile } from "@/lib/types/escape-hatches";
 
 const Settings = () => {
   const { currentUser } = useAuth();
   const [selectedProfile, setSelectedProfile] = useState<string>("");
   const [isEditMode, setIsEditMode] = useState<boolean>(false);
-  const [profileData, setProfileData] = useState<any>(null);
+  const [profileData, setProfileData] = useState<UntypedBackendProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
   // Function to handle company profile updates
   const handleCompanyProfileUpdate = () => {
     // Emit custom event to notify other components
-    const event = new CustomEvent('companyProfileUpdated', {
-      detail: { timestamp: new Date().toISOString() }
+    const event = new CustomEvent("companyProfileUpdated", {
+      detail: { timestamp: new Date().toISOString() },
     });
     window.dispatchEvent(event);
   };
@@ -105,7 +104,7 @@ const Settings = () => {
   // Fetch profile data when a profile type is selected
   const fetchProfileData = async (profileType: string) => {
     if (!currentUser?.uid) {
-      console.warn('Cannot fetch profile data - user not authenticated');
+      console.warn("Cannot fetch profile data - user not authenticated");
       setProfileData(null);
       return;
     }
@@ -123,25 +122,30 @@ const Settings = () => {
         const data = await response.json();
         // CRITICAL: Verify the data belongs to the current user - reject if mismatch
         if (data.user_id && data.user_id !== currentUser.uid) {
-          console.error('❌ [SETTINGS] Profile data user_id mismatch! API user_id:', data.user_id, 'Current user:', currentUser.uid);
-          console.error('❌ [SETTINGS] Rejecting data to prevent data leakage');
+          console.error(
+            "❌ [SETTINGS] Profile data user_id mismatch! API user_id:",
+            data.user_id,
+            "Current user:",
+            currentUser.uid,
+          );
+          console.error("❌ [SETTINGS] Rejecting data to prevent data leakage");
           setProfileData(null);
         } else if (!data.user_id) {
           // If no user_id in response, add it to ensure data isolation
-          console.warn('⚠️ [SETTINGS] API response has no user_id, adding current user_id');
+          console.warn("⚠️ [SETTINGS] API response has no user_id, adding current user_id");
           setProfileData({
             ...data,
-            user_id: currentUser.uid
+            user_id: currentUser.uid,
           });
         } else {
           setProfileData(data);
         }
       } else {
-        console.log('No existing profile data found');
+        console.log("No existing profile data found");
         setProfileData(null);
       }
     } catch (error) {
-      console.error('Error fetching profile data:', error);
+      console.error("Error fetching profile data:", error);
       setProfileData(null);
     } finally {
       setLoading(false);
@@ -158,7 +162,13 @@ const Settings = () => {
 
     // CRITICAL: Clear profile data immediately when user changes
     if (previousUserId !== undefined && previousUserId !== currentUserId) {
-      console.log('🔄 [SETTINGS] User changed from', previousUserId, 'to', currentUserId, '- clearing profile data');
+      console.log(
+        "🔄 [SETTINGS] User changed from",
+        previousUserId,
+        "to",
+        currentUserId,
+        "- clearing profile data",
+      );
       setProfileData(null);
       // Keep selectedProfile but clear the data - component will refetch
     }
@@ -168,9 +178,9 @@ const Settings = () => {
       setSelectedProfile("");
     } else if (selectedProfile) {
       // If user changes and a profile is already selected, refetch the data
-      fetchProfileData(selectedProfile);
+      void fetchProfileData(selectedProfile);
     }
-    
+
     previousUserIdRef.current = currentUserId;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.uid]);
@@ -180,7 +190,7 @@ const Settings = () => {
     setSelectedProfile(value);
     setIsEditMode(false);
     if (value) {
-      fetchProfileData(value);
+      void fetchProfileData(value);
     }
   };
 
@@ -225,12 +235,15 @@ const Settings = () => {
     <Layout>
       <div className="animate-fade-in">
         <h1 className="text-2xl font-bold mb-6">Settings</h1>
-        
+
         <div className="bg-white rounded-lg shadow p-6">
           <div className="mb-8">
             <h2 className="text-xl font-semibold mb-4">Profiling</h2>
             <div className="max-w-md">
-              <label htmlFor="profile-select" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="profile-select"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Select Profile Type
               </label>
               <Select value={selectedProfile} onValueChange={handleProfileChange}>
@@ -266,7 +279,7 @@ const Settings = () => {
                 </Button>
               </div>
             )}
-            
+
             {renderProfileContent()}
           </div>
         </div>

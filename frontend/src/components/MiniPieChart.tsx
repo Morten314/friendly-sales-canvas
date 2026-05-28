@@ -1,6 +1,5 @@
-
-import React from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import React from "react";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 
 interface DataPoint {
   name: string;
@@ -36,10 +35,7 @@ const MiniPieChart: React.FC<MiniPieChartProps> = ({ data }) => {
       <div className="flex flex-wrap gap-2 mt-2">
         {data.map((entry, index) => (
           <div key={index} className="flex items-center gap-1">
-            <div 
-              className="w-2 h-2 rounded-full" 
-              style={{ backgroundColor: entry.color }}
-            />
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
             <span className="text-xs text-gray-600">
               {entry.name} ({entry.value}%)
             </span>

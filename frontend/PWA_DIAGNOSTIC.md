@@ -5,15 +5,15 @@ Run this in your browser console (F12 → Console tab) to diagnose PWA installat
 ```javascript
 (async function diagnosePWA() {
   console.group('🔍 PWA Diagnostic Report');
-  
+
   // 1. Check Service Worker Support
   const swSupported = 'serviceWorker' in navigator;
   console.log('1. Service Worker Support:', swSupported ? '✅ Yes' : '❌ No');
-  
+
   // 2. Check HTTPS/Localhost
   const isSecure = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
   console.log('2. Secure Context (HTTPS/Localhost):', isSecure ? '✅ Yes' : '❌ No');
-  
+
   // 3. Check Service Worker Registration
   let swRegistered = false;
   let swActive = false;
@@ -36,7 +36,7 @@ Run this in your browser console (F12 → Console tab) to diagnose PWA installat
       console.error('   Error:', error);
     }
   }
-  
+
   // 6. Check Manifest
   let manifestFound = false;
   let manifestValid = false;
@@ -56,7 +56,7 @@ Run this in your browser console (F12 → Console tab) to diagnose PWA installat
   } catch (error) {
     console.log('6. Manifest Found:', '❌ Error:', error.message);
   }
-  
+
   // 8. Check Icons
   const iconPaths = ['/pwa-192x192.png', '/pwa-512x512.png'];
   console.log('8. Icon Check:');
@@ -68,16 +68,16 @@ Run this in your browser console (F12 → Console tab) to diagnose PWA installat
       console.log(`   ${iconPath}:`, '❌ Error');
     }
   }
-  
+
   // 9. Check if Already Installed
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
   const isIOSStandalone = (window.navigator as any).standalone === true;
   const isInstalled = isStandalone || isIOSStandalone;
   console.log('9. Already Installed:', isInstalled ? '✅ Yes' : '❌ No');
-  
+
   // 10. Check User Engagement (browser requirement)
   console.log('10. User Engagement:', '✅ Required (interact with page)');
-  
+
   // Summary
   console.groupEnd();
   console.group('📊 Summary');
@@ -91,9 +91,9 @@ Run this in your browser console (F12 → Console tab) to diagnose PWA installat
   ];
   const passedChecks = allChecks.filter(Boolean).length;
   const totalChecks = allChecks.length;
-  
+
   console.log(`Passed: ${passedChecks}/${totalChecks} checks`);
-  
+
   if (swActive && manifestValid && isSecure && !isInstalled) {
     console.log('✅ All requirements met! beforeinstallprompt should fire.');
     console.log('⚠️  If it doesn\'t fire, try:');
@@ -128,10 +128,7 @@ Run this in your browser console (F12 → Console tab) to diagnose PWA installat
   - Secure Context: ✅ Yes
 
 If all checks pass but `beforeinstallprompt` still doesn't fire:
+
 - The browser might have dismissed the prompt before (clear browser data)
 - You need to interact with the page first
 - Wait a few seconds after page load
-
-
-
-

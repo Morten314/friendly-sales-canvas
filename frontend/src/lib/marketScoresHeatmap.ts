@@ -102,8 +102,7 @@ export function mapMarketScoresRowToHeatmapLead(row: MarketScoresApiRow): Heatma
   };
   const combined = num(row.combined_score);
   const totalScore = Math.round(combined * 10) / 10;
-  const company =
-    String(row.company_name ?? "").trim() || "—";
+  const company = String(row.company_name ?? "").trim() || "—";
   const name = company;
   return {
     id: String(row.lead_id),
@@ -142,7 +141,8 @@ export function extractMarketScoreRowsFromResponse(data: unknown): Record<string
  * Map one loosely-typed API object to HeatmapLead (never throws).
  */
 export function heatmapLeadFromUnknownRow(raw: Record<string, unknown>): HeatmapLead | null {
-  const leadId = raw.lead_id ?? raw.leadId ?? (raw.lead as Record<string, unknown> | undefined)?.lead_id;
+  const leadId =
+    raw.lead_id ?? raw.leadId ?? (raw.lead as Record<string, unknown> | undefined)?.lead_id;
   if (leadId === undefined || leadId === null || String(leadId).trim() === "") return null;
 
   const company = pickCompanyName(raw) || "—";
@@ -165,13 +165,19 @@ export function heatmapLeadFromUnknownRow(raw: Record<string, unknown>): Heatmap
     lead_id: String(leadId),
     org_id: String(raw.org_id ?? raw.orgId ?? ""),
     company_name: company,
-    score_market_size_opportunity: num(raw.score_market_size_opportunity ?? raw.scoreMarketSizeOpportunity),
-    score_industry_trends_report: num(raw.score_industry_trends_report ?? raw.scoreIndustryTrendsReport),
+    score_market_size_opportunity: num(
+      raw.score_market_size_opportunity ?? raw.scoreMarketSizeOpportunity,
+    ),
+    score_industry_trends_report: num(
+      raw.score_industry_trends_report ?? raw.scoreIndustryTrendsReport,
+    ),
     score_competitor_landscape: num(raw.score_competitor_landscape ?? raw.scoreCompetitorLandscape),
     score_regulatory_compliance_highlights: num(
-      raw.score_regulatory_compliance_highlights ?? raw.scoreRegulatoryComplianceHighlights
+      raw.score_regulatory_compliance_highlights ?? raw.scoreRegulatoryComplianceHighlights,
     ),
-    score_market_entry_growth_strategy: num(raw.score_market_entry_growth_strategy ?? raw.scoreMarketEntryGrowthStrategy),
+    score_market_entry_growth_strategy: num(
+      raw.score_market_entry_growth_strategy ?? raw.scoreMarketEntryGrowthStrategy,
+    ),
     combined_score: num(raw.combined_score ?? raw.combinedScore),
     scoring_status: raw.scoring_status != null ? String(raw.scoring_status) : undefined,
     scored_at: raw.scored_at != null ? String(raw.scored_at) : undefined,

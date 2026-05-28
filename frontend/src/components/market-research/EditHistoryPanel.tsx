@@ -1,8 +1,8 @@
+import { Clock, X, RotateCcw, Eye } from "lucide-react";
+import React from "react";
 
-import React from 'react';
-import { Clock, X, RotateCcw, Eye } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface EditRecord {
   id: string;
@@ -29,31 +29,32 @@ const EditHistoryPanel: React.FC<EditHistoryPanelProps> = ({
   editHistory,
   onRevert,
   onViewDetails,
-  context = 'Market Size & Opportunity'
+  context = "Market Size & Opportunity",
 }) => {
   if (!isOpen) return null;
 
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
-    return date.toLocaleDateString('en-US', { 
-      month: 'long', 
-      day: 'numeric', 
-      year: 'numeric'
-    }) + ' — ' + date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    });
+    return (
+      date.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      }) +
+      " — " +
+      date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      })
+    );
   };
 
   return (
     <>
       {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/20 z-40 animate-fade-in"
-        onClick={onClose}
-      />
-      
+      <div className="fixed inset-0 bg-black/20 z-40 animate-fade-in" onClick={onClose} />
+
       {/* Panel */}
       <div className="fixed right-0 top-0 h-full w-2/5 bg-white border-l border-gray-200 shadow-2xl z-50 animate-slide-in-right">
         <div className="flex flex-col h-full">
@@ -68,12 +69,7 @@ const EditHistoryPanel: React.FC<EditHistoryPanelProps> = ({
                 <p className="text-sm text-gray-600">{context}</p>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              className="hover:bg-gray-200"
-            >
+            <Button variant="ghost" size="sm" onClick={onClose} className="hover:bg-gray-200">
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -84,7 +80,9 @@ const EditHistoryPanel: React.FC<EditHistoryPanelProps> = ({
               <div className="text-center py-12">
                 <Clock className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500">No edits yet</p>
-                <p className="text-sm text-gray-400">Changes will appear here as you edit the report</p>
+                <p className="text-sm text-gray-400">
+                  Changes will appear here as you edit the report
+                </p>
               </div>
             ) : (
               <div className="space-y-4">

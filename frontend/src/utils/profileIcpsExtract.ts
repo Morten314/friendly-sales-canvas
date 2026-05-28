@@ -1,6 +1,6 @@
 /** ICPs may live on GET /profile/company as customer_profiles.icps (org-scoped) or on GET /customer_profile. */
 export function extractIcpsDataFromFlexibleApiResponse(
-  responseData: Record<string, unknown>
+  responseData: Record<string, unknown>,
 ): unknown[] {
   const data = (responseData.data as Record<string, unknown> | undefined) || responseData;
   let icpsData: unknown[] | null = null;
