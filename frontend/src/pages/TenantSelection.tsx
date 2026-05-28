@@ -6,6 +6,7 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { useAuth } from "../contexts/AuthContext";
 import { useTenant } from "../contexts/TenantContext";
+import type { Tenant } from "../contexts/TenantContext";
 
 const TenantSelection: React.FC = () => {
   const { availableTenants, selectTenant, setAvailableTenants, clearTenant } = useTenant();
@@ -39,7 +40,7 @@ const TenantSelection: React.FC = () => {
     setAvailableTenants(mockTenants);
   }, [setAvailableTenants]);
 
-  const handleTenantSelect = async (tenant: any) => {
+  const handleTenantSelect = async (tenant: Tenant) => {
     setLoading(true);
     try {
       selectTenant(tenant);

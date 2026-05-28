@@ -83,12 +83,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
+import type { UntypedBackendProfile } from "@/lib/types/escape-hatches";
 
 const Settings = () => {
   const { currentUser } = useAuth();
   const [selectedProfile, setSelectedProfile] = useState<string>("");
   const [isEditMode, setIsEditMode] = useState<boolean>(false);
-  const [profileData, setProfileData] = useState<any>(null);
+  const [profileData, setProfileData] = useState<UntypedBackendProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
   // Function to handle company profile updates

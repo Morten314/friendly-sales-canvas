@@ -464,7 +464,7 @@ typing (Phase ~10+) would unlock replacing these with proper types.
 **Origin:** Spec 18 Phase 2b (plans/18-frontend-phase-2b-eslint-prettier.md), Step 4 Wave C.
 
 **Current state:**
-`src/lib/types/escape-hatches.ts` grew from 6 entries (TD-FE-9 baseline) to 13 entries during
+`src/lib/types/escape-hatches.ts` grew from 6 entries (TD-FE-9 baseline) to 14 entries during
 Phase 2b's per-file `no-explicit-any` cleanup. New entries:
 - `UntypedProfilerIcpRecord` — customer_profile ICP record consumed by mission-control + customers
   components.
@@ -476,6 +476,8 @@ Phase 2b's per-file `no-explicit-any` cleanup. New entries:
   component fetchers.
 - `UntypedLead` — strategist lead-stream + Chat-with-Scout lead handoff callbacks.
 - `UntypedVisualDataCardRaw` — regulatory visualDataCards raw shape pre-UI transform.
+- `UntypedBackendSignal` — raw signal objects from /api/generate-signals-batch and /api/signals
+  consumed by `buildSignalCardsFromFetchData` and inline console.log mappings on Signals.tsx.
 
 **Pattern:** Same as TD-FE-9 — backend response/payload shapes consumed by FE before contract types
 are written. Phase 2b's per-file pass routed remaining inline `any` through named aliases instead

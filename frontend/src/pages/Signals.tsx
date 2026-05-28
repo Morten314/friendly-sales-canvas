@@ -30,6 +30,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import type { UntypedBackendSignal } from "@/lib/types/escape-hatches";
 import { sanitizeAnswerText } from "@/lib/utils";
 type Agent = "scout" | "profiler";
 type ActionType = "accept" | "dismiss" | "save" | "ask";
@@ -268,9 +269,9 @@ function applyRejectedFilterAndSort(
   return [...filtered].sort((a, b) => parseTimestamp(b.timestamp) - parseTimestamp(a.timestamp));
 }
 
-function buildSignalCardsFromFetchData(data: { signals?: any[] }): SignalCard[] {
+function buildSignalCardsFromFetchData(data: { signals?: UntypedBackendSignal[] }): SignalCard[] {
   const rawSignals = data.signals || [];
-  const signalsWithIds = rawSignals.map((signal: any, index: number) => {
+  const signalsWithIds = rawSignals.map((signal: UntypedBackendSignal, index: number) => {
     let signalId: string;
     if (signal.signal_id) {
       signalId = signal.signal_id;
@@ -573,7 +574,7 @@ const Index = () => {
         const rawSignals = data.signals || [];
         console.log(
           "Raw signals from API:",
-          rawSignals.map((s: any) => ({
+          rawSignals.map((s: UntypedBackendSignal) => ({
             signal_id: s.signal_id,
             id: s.id,
             headline: s.headline,

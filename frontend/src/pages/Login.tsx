@@ -108,8 +108,8 @@ const Login: React.FC = () => {
         // Navigate to mission control after successful login
         navigate("/mission-control");
       }
-    } catch (error: any) {
-      setError(error.message || "Failed to authenticate");
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : "Failed to authenticate");
     } finally {
       setLoading(false);
     }
