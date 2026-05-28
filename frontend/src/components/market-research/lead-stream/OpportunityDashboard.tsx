@@ -1,12 +1,19 @@
 import React, { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid,
-  ResponsiveContainer, PieChart, Pie, Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip as RechartsTooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
 import { Users, BarChart3, Bot } from "lucide-react";
 import { type HeatmapLead, heatmapLeads, computeReportComponentScoresForLeads } from "./leadData";
-
 
 // ─── Custom tooltip ─────────────────────────────────────────────────────────
 
@@ -50,7 +57,7 @@ const OpportunityDashboard: React.FC<OpportunityDashboardProps> = ({
         else acc.tier3++;
         return acc;
       },
-      { tier1: 0, tier2: 0, tier3: 0 }
+      { tier1: 0, tier2: 0, tier3: 0 },
     );
     const td = [
       { name: "Tier 1", value: tierCounts.tier1, color: "hsl(var(--chart-1))" },
@@ -70,8 +77,12 @@ const OpportunityDashboard: React.FC<OpportunityDashboardProps> = ({
     <div className="space-y-4">
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-lg font-bold text-foreground tracking-tight">Opportunity Dashboard</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">Visual overview of your lead intelligence across all Scout report sections</p>
+          <h2 className="text-lg font-bold text-foreground tracking-tight">
+            Opportunity Dashboard
+          </h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Visual overview of your lead intelligence across all Scout report sections
+          </p>
         </div>
         <button
           className="h-8 w-8 rounded-full bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors"
@@ -93,7 +104,16 @@ const OpportunityDashboard: React.FC<OpportunityDashboardProps> = ({
             <div className="w-20 h-20">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={tierData} cx="50%" cy="50%" innerRadius={22} outerRadius={36} paddingAngle={3} dataKey="value" strokeWidth={0}>
+                  <Pie
+                    data={tierData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={22}
+                    outerRadius={36}
+                    paddingAngle={3}
+                    dataKey="value"
+                    strokeWidth={0}
+                  >
                     {tierData.map((entry, i) => (
                       <Cell key={i} fill={entry.color} />
                     ))}
@@ -102,11 +122,15 @@ const OpportunityDashboard: React.FC<OpportunityDashboardProps> = ({
               </ResponsiveContainer>
             </div>
             <div className="space-y-1.5 text-xs">
-              <div className="text-muted-foreground">Total Leads: <span className="font-semibold text-foreground">{totalLeads}</span></div>
+              <div className="text-muted-foreground">
+                Total Leads: <span className="font-semibold text-foreground">{totalLeads}</span>
+              </div>
               {tierData.map((t, i) => (
                 <div key={i} className="flex items-center gap-1.5">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: t.color }} />
-                  <span className="text-muted-foreground">{t.name}: <span className="font-semibold text-foreground">{t.value}</span></span>
+                  <span className="text-muted-foreground">
+                    {t.name}: <span className="font-semibold text-foreground">{t.value}</span>
+                  </span>
                 </div>
               ))}
               <div className="mt-1 text-[11px] text-primary font-medium">
@@ -126,21 +150,42 @@ const OpportunityDashboard: React.FC<OpportunityDashboardProps> = ({
               <h3 className="text-sm font-semibold text-foreground">Leads by Report Section</h3>
             </div>
             <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-500 inline-block" /> High</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-500 inline-block" /> Medium</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-400 inline-block" /> Low</span>
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-sm bg-emerald-500 inline-block" /> High
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-sm bg-amber-500 inline-block" /> Medium
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-sm bg-red-400 inline-block" /> Low
+              </span>
             </div>
           </div>
           <div className="h-[130px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={reportComponentData} layout="vertical" margin={{ top: 0, right: 12, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} horizontal={false} />
+              <BarChart
+                data={reportComponentData}
+                layout="vertical"
+                margin={{ top: 0, right: 12, bottom: 0, left: 0 }}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="hsl(var(--border))"
+                  opacity={0.4}
+                  horizontal={false}
+                />
                 <XAxis
                   type="number"
                   tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
                   axisLine={false}
                   tickLine={false}
-                  label={{ value: "Leads", position: "insideBottomRight", fontSize: 9, fill: "hsl(var(--muted-foreground))", offset: -2 }}
+                  label={{
+                    value: "Leads",
+                    position: "insideBottomRight",
+                    fontSize: 9,
+                    fill: "hsl(var(--muted-foreground))",
+                    offset: -2,
+                  }}
                 />
                 <YAxis
                   type="category"
@@ -151,9 +196,30 @@ const OpportunityDashboard: React.FC<OpportunityDashboardProps> = ({
                   width={80}
                 />
                 <RechartsTooltip content={<ReportTooltip />} />
-                <Bar dataKey="high" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} barSize={14} name="High" />
-                <Bar dataKey="medium" stackId="a" fill="#f59e0b" radius={[0, 0, 0, 0]} barSize={14} name="Medium" />
-                <Bar dataKey="low" stackId="a" fill="#f87171" radius={[0, 4, 4, 0]} barSize={14} name="Low" />
+                <Bar
+                  dataKey="high"
+                  stackId="a"
+                  fill="#10b981"
+                  radius={[0, 0, 0, 0]}
+                  barSize={14}
+                  name="High"
+                />
+                <Bar
+                  dataKey="medium"
+                  stackId="a"
+                  fill="#f59e0b"
+                  radius={[0, 0, 0, 0]}
+                  barSize={14}
+                  name="Medium"
+                />
+                <Bar
+                  dataKey="low"
+                  stackId="a"
+                  fill="#f87171"
+                  radius={[0, 4, 4, 0]}
+                  barSize={14}
+                  name="Low"
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
