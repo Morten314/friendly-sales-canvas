@@ -77,6 +77,7 @@ class ApolloEnrichStatusResponse(BaseModel):
     updated: int
     unmatched: int
     failed: int
+    skipped: int = 0
     progress_percent: float
     errors: List[str]
     started_at: Optional[str] = None

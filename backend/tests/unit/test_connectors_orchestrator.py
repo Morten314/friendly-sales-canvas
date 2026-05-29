@@ -181,6 +181,7 @@ def test_run_enrich_happy_path(monkeypatch, patched):
                              [TEST_LEAD_ID_1], reveal_personal_emails=True, reveal_phone_number=False)
     assert completed["updated"] == 1
     assert completed["status"] == "completed"
+    assert completed.get("skipped", 0) == 0
 
 
 def test_run_enrich_count_mismatch_skips_chunk_no_miswrite(monkeypatch, patched):
@@ -343,3 +344,94 @@ def test_run_enrich_bad_key_fails_run_and_sets_status(monkeypatch, patched):
     assert "msg" in failed, "fail_enrich_run should have been called"
     assert "error" in status_calls, "credentials.set_status should have been called with 'error'"
     assert completed_calls == [], "complete_enrich_run should NOT have been called"
+
+
+# ─── F2: skipped counter for missing leads ───
+
+def test_run_enrich_counts_missing_leads_as_skipped(monkeypatch, patched):
+    """Leads in lead_ids not returned by get_leads_by_ids are counted as skipped,
+    not silently dropped, and complete_enrich_run is called with skipped=1."""
+    monkeypatch.setattr(orchestrator.credentials, "get_api_key", lambda m, o, p="apollo": "good")
+    monkeypatch.setattr(orchestrator.runs, "mark_enrich_processing", lambda *a, **k: None)
+    monkeypatch.setattr(orchestrator.runs, "update_enrich_progress", lambda *a, **k: None)
+    monkeypatch.setattr(orchestrator.ingestion, "enrich_fill_leads",
+                        lambda *a, **k: {"updated": 1, "errors": []})
+
+    # Request 2 ids but only 1 is returned (the other was deleted / foreign)
+    monkeypatch.setattr(orchestrator.ingestion, "get_leads_by_ids",
+                        lambda d, o, ids: [{"lead_id": TEST_LEAD_ID_1, "email": "a@x.com"}])
+
+    completed = {}
+    monkeypatch.setattr(orchestrator.runs, "complete_enrich_run", lambda m, rid, **k: completed.update(k))
+
+    orchestrator._run_enrich(
+        object(), object(), TEST_ORG_ID, TEST_USER_ID, "run-1",
+        [TEST_LEAD_ID_1, TEST_LEAD_ID_2],
+        reveal_personal_emails=True, reveal_phone_number=False,
+    )
+
+    assert completed.get("skipped") == 1, f"expected skipped=1, got {completed.get('skipped')}"
+    assert completed.get("processed", 0) + completed.get("skipped", 0) == 2, (
+        "processed + skipped must equal total (2)"
+    )
+    # errors list should mention the missing lead id
+    all_errors = completed.get("errors", [])
+    assert any(TEST_LEAD_ID_2 in e for e in all_errors), (
+        f"Expected 'not found' error for {TEST_LEAD_ID_2}, got: {all_errors}"
+    )
+
+
+# ─── F3: empty match-entry leads not sent to bulk_match ───
+
+def test_run_enrich_skips_empty_match_entry(monkeypatch, patched):
+    """A lead with no apollo_contact_id / email / name / company produces an empty
+    match entry — it must NOT be sent to bulk_match (no credit burned) and must be
+    counted as unmatched, not as a successful match."""
+    monkeypatch.setattr(orchestrator.credentials, "get_api_key", lambda m, o, p="apollo": "good")
+    monkeypatch.setattr(orchestrator.runs, "mark_enrich_processing", lambda *a, **k: None)
+    monkeypatch.setattr(orchestrator.runs, "update_enrich_progress", lambda *a, **k: None)
+    monkeypatch.setattr(orchestrator.ingestion, "enrich_fill_leads",
+                        lambda *a, **k: {"updated": 1, "errors": []})
+
+    # Two leads: one with no identifiers (empty entry), one normal
+    EMPTY_LEAD_ID = "lead-empty"
+    NORMAL_LEAD_ID = TEST_LEAD_ID_1
+    monkeypatch.setattr(orchestrator.ingestion, "get_leads_by_ids",
+                        lambda d, o, ids: [
+                            {"lead_id": EMPTY_LEAD_ID},  # no email/name/company/apollo_contact_id
+                            {"lead_id": NORMAL_LEAD_ID, "email": "a@x.com"},
+                        ])
+
+    received_entries = []
+
+    class _RecordingConnector(FakeConnector):
+        def bulk_match(self, entries, *, reveal_personal_emails, reveal_phone_number):
+            received_entries.extend(entries)
+            return [{"id": "m0", "email": "a@x.com"}]
+
+    monkeypatch.setattr(orchestrator.apollo_mod, "ApolloConnector", _RecordingConnector)
+
+    completed = {}
+    monkeypatch.setattr(orchestrator.runs, "complete_enrich_run", lambda m, rid, **k: completed.update(k))
+
+    orchestrator._run_enrich(
+        object(), object(), TEST_ORG_ID, TEST_USER_ID, "run-1",
+        [EMPTY_LEAD_ID, NORMAL_LEAD_ID],
+        reveal_personal_emails=True, reveal_phone_number=False,
+    )
+
+    # The empty-entry lead must NOT appear in entries sent to bulk_match
+    assert all("email" in e or "id" in e for e in received_entries), (
+        f"Empty entry was sent to bulk_match: {received_entries}"
+    )
+    assert len(received_entries) == 1, (
+        f"Only 1 entry (the normal lead) should reach bulk_match, got {len(received_entries)}"
+    )
+
+    # The empty-entry lead is counted as unmatched (not as a successful update)
+    assert completed.get("unmatched", 0) >= 1, (
+        f"Expected unmatched >= 1 for empty-entry lead, got {completed.get('unmatched')}"
+    )
+    assert completed.get("updated", 0) == 1, (
+        f"Normal lead should still be updated, got updated={completed.get('updated')}"
+    )

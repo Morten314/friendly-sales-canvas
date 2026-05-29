@@ -178,9 +178,36 @@ def _run_enrich(driver, mongo, org_id, user_id, run_id, lead_ids, reveal_persona
         errors: List[str] = []
         runs.mark_enrich_processing(mongo, run_id)
 
+        # F2: count leads that were requested but not returned by get_leads_by_ids
+        # (deleted/foreign ids silently omitted). These are skipped before any Apollo call.
+        loaded_ids = {lead.get("lead_id") for lead in leads}
+        missing = [lid for lid in lead_ids if lid not in loaded_ids]
+        skipped = len(missing)
+        errors.extend(f"Lead {lid} not found in org" for lid in missing)
+
         for i in range(0, len(leads), apollo_mod.BULK_MATCH_CHUNK):
             chunk = leads[i:i + apollo_mod.BULK_MATCH_CHUNK]
-            entries = [_build_match_entry(lead) for lead in chunk]
+
+            # F3: filter out leads with no identifiers to avoid burning a credit for a
+            # guaranteed no-match (apollo_contact_id / email / name / company all absent).
+            entries = []
+            match_leads = []  # parallel to entries: leads with a non-empty match entry
+            for lead in chunk:
+                entry = _build_match_entry(lead)
+                if not entry:
+                    processed += 1
+                    unmatched += 1
+                    continue
+                entries.append(entry)
+                match_leads.append(lead)
+
+            if not entries:
+                runs.update_enrich_progress(
+                    mongo, run_id, processed=processed, updated=updated,
+                    unmatched=unmatched, failed=failed, errors=errors, skipped=skipped,
+                )
+                continue
+
             try:
                 matches = connector.bulk_match(
                     entries,
@@ -190,28 +217,29 @@ def _run_enrich(driver, mongo, org_id, user_id, run_id, lead_ids, reveal_persona
             except ApolloCreditsExhaustedError:
                 runs.complete_enrich_run(
                     mongo, run_id, processed=processed, updated=updated, unmatched=unmatched,
-                    failed=failed, errors=errors + ["Apollo credits exhausted."], status="partial",
+                    failed=failed, errors=errors + ["Apollo credits exhausted."], skipped=skipped,
+                    status="partial",
                 )
                 return
 
-            # Misalignment guard (review F2): bulk_match returns one slot per input in
-            # request order. If the count differs, do NOT positional-zip (that would
-            # write enrichment onto the WRONG leads) — treat the chunk as unmatched.
-            if len(matches) != len(chunk):
-                processed += len(chunk)
-                unmatched += len(chunk)
+            # Misalignment guard: bulk_match returns one slot per input in request order.
+            # If the count differs, do NOT positional-zip (that would write enrichment onto
+            # the WRONG leads) — treat the matched-entry leads as unmatched.
+            if len(matches) != len(entries):
+                processed += len(match_leads)
+                unmatched += len(match_leads)
                 errors.append(
-                    f"bulk_match returned {len(matches)} results for {len(chunk)} inputs; "
+                    f"bulk_match returned {len(matches)} results for {len(entries)} inputs; "
                     "chunk skipped to avoid miswrite."
                 )
                 runs.update_enrich_progress(
                     mongo, run_id, processed=processed, updated=updated,
-                    unmatched=unmatched, failed=failed, errors=errors,
+                    unmatched=unmatched, failed=failed, errors=errors, skipped=skipped,
                 )
                 continue
 
             enrich_records: List[Dict[str, Any]] = []
-            for lead, match in zip(chunk, matches):
+            for lead, match in zip(match_leads, matches):
                 processed += 1
                 if not match:
                     unmatched += 1
@@ -227,12 +255,12 @@ def _run_enrich(driver, mongo, org_id, user_id, run_id, lead_ids, reveal_persona
                 errors.extend(result["errors"])
 
             runs.update_enrich_progress(
-                mongo, run_id, processed=processed, updated=updated, unmatched=unmatched, failed=failed, errors=errors,
+                mongo, run_id, processed=processed, updated=updated, unmatched=unmatched, failed=failed, errors=errors, skipped=skipped,
             )
 
         runs.complete_enrich_run(
             mongo, run_id, processed=processed, updated=updated, unmatched=unmatched, failed=failed, errors=errors,
-            status="completed",
+            skipped=skipped, status="completed",
         )
     except ConnectorCredentialsInvalidError as e:
         credentials.set_status(mongo, org_id, "apollo", "error")

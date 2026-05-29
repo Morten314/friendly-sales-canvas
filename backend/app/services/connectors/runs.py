@@ -136,6 +136,7 @@ def create_enrich_run(mongo, org_id: str, user_id: str, total: int) -> str:
         "updated": 0,
         "unmatched": 0,
         "failed": 0,
+        "skipped": 0,
         "errors": [],
         "created_at": now,
         "updated_at": now,
@@ -154,14 +155,14 @@ def mark_enrich_processing(mongo, run_id: str) -> None:
     _update_run(mongo, run_id, status="processing", started_at=_now())
 
 
-def update_enrich_progress(mongo, run_id: str, *, processed: int, updated: int, unmatched: int, failed: int, errors: List[str]) -> None:
-    _update_run(mongo, run_id, processed=processed, updated=updated, unmatched=unmatched, failed=failed, errors=errors[:10])
+def update_enrich_progress(mongo, run_id: str, *, processed: int, updated: int, unmatched: int, failed: int, errors: List[str], skipped: int = 0) -> None:
+    _update_run(mongo, run_id, processed=processed, updated=updated, unmatched=unmatched, failed=failed, skipped=skipped, errors=errors[:10])
 
 
-def complete_enrich_run(mongo, run_id: str, *, processed: int, updated: int, unmatched: int, failed: int, errors: List[str], status: str = "completed") -> None:
+def complete_enrich_run(mongo, run_id: str, *, processed: int, updated: int, unmatched: int, failed: int, errors: List[str], skipped: int = 0, status: str = "completed") -> None:
     _update_run(
         mongo, run_id, status=status, processed=processed, updated=updated,
-        unmatched=unmatched, failed=failed, errors=errors[:10], finished_at=_now(),
+        unmatched=unmatched, failed=failed, skipped=skipped, errors=errors[:10], finished_at=_now(),
     )
 
 
@@ -200,6 +201,8 @@ def get_enrich_run(mongo, org_id: str, run_id: Optional[str]) -> Dict[str, Any]:
     doc.pop("_id", None)
     total = int(doc.get("total") or 0)
     processed = int(doc.get("processed") or 0)
+    skipped = int(doc.get("skipped") or 0)
+    doc.setdefault("skipped", skipped)
     denom = max(total, 1)
-    doc["progress_percent"] = round(min(100.0, (processed / denom) * 100.0), 2)
+    doc["progress_percent"] = round(min(100.0, ((processed + skipped) / denom) * 100.0), 2)
     return doc

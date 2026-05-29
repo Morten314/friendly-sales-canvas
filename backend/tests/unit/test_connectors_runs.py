@@ -89,14 +89,20 @@ def test_enrich_run_create_process_complete():
     m = FakeMongo()
     run_id = runs.create_enrich_run(m, TEST_ORG_ID, TEST_USER_ID, total=5)
     assert run_id
+    # new run doc includes skipped=0
+    coll = m["Profiler"]["Connector_Enrich_Runs"]
+    raw = coll.find_one({"run_id": run_id})
+    assert raw["skipped"] == 0
+
     runs.mark_enrich_processing(m, run_id)
-    runs.update_enrich_progress(m, run_id, processed=3, updated=2, unmatched=1, failed=0, errors=[])
-    runs.complete_enrich_run(m, run_id, processed=5, updated=4, unmatched=1, failed=0, errors=[])
+    runs.update_enrich_progress(m, run_id, processed=3, updated=2, unmatched=1, failed=0, errors=[], skipped=0)
+    runs.complete_enrich_run(m, run_id, processed=4, updated=4, unmatched=0, failed=0, errors=[], skipped=1)
     doc = runs.get_enrich_run(m, TEST_ORG_ID, run_id)
     assert doc["status"] == "completed"
-    assert doc["processed"] == 5
+    assert doc["processed"] == 4
     assert doc["updated"] == 4
-    assert doc["unmatched"] == 1
+    assert doc["skipped"] == 1
+    # progress_percent numerator is processed + skipped = 4 + 1 = 5 == total → 100%
     assert doc["progress_percent"] == 100.0
 
 
