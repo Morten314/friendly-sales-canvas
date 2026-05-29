@@ -4,6 +4,12 @@ import { installApiMocks, installCatchAllApiMock } from "../fixtures/api-mocks";
 import { mockFirebaseLogin } from "../helpers/login";
 import { maskDynamic } from "../helpers/mask-dynamic";
 
+test("unauthenticated visit to protected route redirects to /login", async ({ page }) => {
+  await installCatchAllApiMock(page);
+  await page.goto("/mission-control");
+  await expect(page).toHaveURL(/\/login/);
+});
+
 test("login → tenant-selection redirect → mission-control loads", async ({ page }) => {
   await mockFirebaseLogin(page);
   await installApiMocks(page);
