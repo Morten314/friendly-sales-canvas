@@ -6,7 +6,7 @@ import type { EditRecord } from "./types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/shared/auth";
 import { getUserLocalStorage } from "@/utils/cacheUtils";
 
 interface ScoutChatPanelProps {

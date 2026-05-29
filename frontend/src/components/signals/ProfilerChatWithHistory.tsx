@@ -5,7 +5,7 @@ import type { SignalsChatContext, ChatMessage } from "./SignalsContextChat";
 import { SignalsContextChat } from "./SignalsContextChat";
 
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/shared/auth";
 
 const STORAGE_KEY_PREFIX = "profiler_chat_sessions";
 

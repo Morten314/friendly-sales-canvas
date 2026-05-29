@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 
 import { SuggestedICPCards } from "./SuggestedICPCards";
 
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/shared/auth";
 
 // Structural subset of the full SuggestedICP shape defined in `SuggestedICPCards.tsx`.
 // Only the fields this passthrough handler reads are listed; the full shape (extra

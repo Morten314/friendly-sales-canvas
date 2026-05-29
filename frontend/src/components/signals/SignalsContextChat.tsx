@@ -15,9 +15,9 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { sanitizeAnswerText } from "@/lib/utils";
+import { useAuth } from "@/shared/auth";
 
 const signalAction = async (orgId: string, signalId: string, action: "accept" | "reject") => {
   const response = await fetch("/api/signal_action", {

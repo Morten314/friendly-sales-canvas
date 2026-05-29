@@ -28,7 +28,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { buildApiUrl } from "@/lib/api";
@@ -41,6 +40,7 @@ import type {
   UntypedLead,
   UntypedVisualDataCardRaw,
 } from "@/lib/types/escape-hatches";
+import { useAuth } from "@/shared/auth";
 import { logApiCallResult } from "@/utils/apiUtils";
 import {
   getUserLocalStorage,

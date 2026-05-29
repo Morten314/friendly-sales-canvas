@@ -28,10 +28,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Toaster } from "@/components/ui/toaster";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import type { UntypedBackendSignal } from "@/lib/types/escape-hatches";
 import { sanitizeAnswerText } from "@/lib/utils";
+import { useAuth } from "@/shared/auth";
 type Agent = "scout" | "profiler";
 type ActionType = "accept" | "dismiss" | "save" | "ask";
 interface ContextualSuggestion {

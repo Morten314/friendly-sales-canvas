@@ -10,7 +10,7 @@
 // import { toUTCTimestamp, isTimestampNewer } from '@/lib/timestampUtils';
 // import { executeWithRateLimit } from '@/lib/rateLimitManager';
 // import { apiFetchJson } from '@/lib/api';
-// import { useAuth } from '@/contexts/AuthContext';
+// import { useAuth } from '@/shared/auth';
 // import { getUserLocalStorage } from '@/utils/cacheUtils';
 
 // interface MarketEntrySectionProps {
@@ -1993,7 +1993,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetchJson } from "@/lib/api";
 import { executeWithRateLimit } from "@/lib/rateLimitManager";
@@ -2002,6 +2001,7 @@ import type {
   UntypedReportSection,
   UntypedBackendProfile,
 } from "@/lib/types/escape-hatches";
+import { useAuth } from "@/shared/auth";
 import { getUserLocalStorage } from "@/utils/cacheUtils";
 
 interface MarketEntrySectionProps {

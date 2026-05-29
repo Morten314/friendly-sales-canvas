@@ -46,7 +46,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ToastAction } from "@/components/ui/toast";
-import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { buildIcpUrl, buildApiUrl, apiFetchJson, apiFetch } from "@/lib/api";
 import {
@@ -56,6 +55,7 @@ import {
   commitProfilerSnapshot,
 } from "@/lib/missionProfilerSessionCache";
 import type { UntypedProfilerIcpRecord } from "@/lib/types/escape-hatches";
+import { useAuth } from "@/shared/auth";
 import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
 import { fetchIcpsRowsForOrg } from "@/utils/profileIcpsExtract";
 import {

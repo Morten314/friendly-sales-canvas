@@ -1,6 +1,6 @@
 import { Popover, PopoverContent } from "@/components/ui/popover";
-import { useAuth } from "@/contexts/AuthContext";
 import { useTenant } from "@/contexts/TenantContext";
+import { useAuth } from "@/shared/auth";
 
 interface ProfileDialogProps {
   open: boolean;

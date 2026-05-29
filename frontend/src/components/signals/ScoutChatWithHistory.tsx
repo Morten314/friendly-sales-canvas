@@ -16,7 +16,7 @@ import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
 import { SuggestedCompaniesSection } from "@/components/market-research/SuggestedCompaniesSection";
 import type { EditRecord } from "@/components/market-research/types";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/shared/auth";
 import {
   LEAD_STREAM_CHAT_CONTEXT_KEY,
   type LeadStreamChatContext,

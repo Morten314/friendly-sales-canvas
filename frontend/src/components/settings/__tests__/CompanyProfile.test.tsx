@@ -9,7 +9,7 @@ import { CompanyProfile } from "../CompanyProfile";
 import { server } from "@/test/msw/server";
 
 // AuthContext is heavy (Firebase). Mock it to a logged-in user with an org.
-vi.mock("@/contexts/AuthContext", () => ({
+vi.mock("@/shared/auth", () => ({
   useAuth: () => ({ currentUser: { uid: "u1" }, orgId: "brewra" }),
 }));
 

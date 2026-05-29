@@ -14,10 +14,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
-import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../hooks/use-toast";
 
 import { useLogin, useSignup } from "./useLogin";
+
+import { useAuth } from "@/shared/auth";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");

@@ -82,8 +82,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAuth } from "@/contexts/AuthContext";
 import type { UntypedBackendProfile } from "@/lib/types/escape-hatches";
+import { useAuth } from "@/shared/auth";
 
 const Settings = () => {
   const { currentUser } = useAuth();

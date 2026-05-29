@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { buildApiUrl } from "@/lib/api";
 import jwtManager from "@/lib/jwt";
+import { useAuth } from "@/shared/auth";
 
 interface AddLeadFormData {
   fullName: string;

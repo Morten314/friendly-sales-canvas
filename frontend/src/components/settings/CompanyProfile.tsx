@@ -16,8 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useAuth } from "@/contexts/AuthContext";
 import type { CompanyProfileResponse } from "@/shared/api/contracts";
+import { useAuth } from "@/shared/auth";
 import { setUserLocalStorage } from "@/utils/cacheUtils";
 
 interface SocialMediaUrl {

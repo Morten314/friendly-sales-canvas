@@ -21,12 +21,12 @@ import MiniLineChart from "@/components/ui/MiniLineChart";
 import MiniPieChart from "@/components/ui/MiniPieChart";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetchJson } from "@/lib/api";
 import { executeWithRateLimit } from "@/lib/rateLimitManager";
 import { toUTCTimestamp } from "@/lib/timestampUtils";
 import type { UntypedBackendProfile } from "@/lib/types/escape-hatches";
+import { useAuth } from "@/shared/auth";
 import { setUserLocalStorage } from "@/utils/cacheUtils";
 
 interface EditRecord {
