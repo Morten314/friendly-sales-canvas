@@ -1,5 +1,7 @@
 # Brewra — Functionality Inventory
 
+> **Snapshot — pre-backend-refactor.** This document reflects the backend as the flat `api.py`/`services.py` monolith and is preserved as a point-in-time analysis (authored 2026-05-08). For the **current** backend architecture see [`docs/architecture/BACKEND.md`](../../architecture/BACKEND.md). Frontend sections are likewise a snapshot; the frontend refactor is in progress (see specs 14–21).
+
 > Compiled 2026-05-05 from deep code inspection of `backend/api.py` (4,441 LOC at compile time;
 > 4,995 LOC as of 2026-05-09 after Claude-backed endpoints added), `backend/services.py`
 > (2,540 LOC at compile time; 2,632 LOC as of 2026-05-09), `backend/models.py`, `backend/llm_config.py`,

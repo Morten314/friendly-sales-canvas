@@ -1,5 +1,7 @@
 # Brewra — Functionality Inventory
 
+> **Snapshot — pre-backend-refactor.** This document reflects the backend as the flat `api.py`/`services.py` monolith and is preserved as a point-in-time analysis (authored 2026-05-08). For the **current** backend architecture see [`docs/architecture/BACKEND.md`](../../architecture/BACKEND.md). Frontend sections are likewise a snapshot; the frontend refactor is in progress (see specs 14–21).
+
 > Compiled 2026-05-05. Initial pass from code inspection of `backend/api.py`, `backend/services.py`,
 > `PWA-multi-tenancy/development/friendly-sales-canvas/src/`, and the existing analysis docs.
 > Reviewed and corrected (pass 1) 2026-05-05 by 5 parallel code-inspection agents.
