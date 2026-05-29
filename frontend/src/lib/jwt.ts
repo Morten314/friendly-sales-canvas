@@ -62,8 +62,10 @@ class JWTManager {
 
       return this.token;
     } catch (error) {
-      // If it's a network error or 404, JWT is optional - don't fail the app
-      if (error instanceof TypeError || (error instanceof Error && error.message.includes("404"))) {
+      // If it's a network error, JWT is optional - don't fail the app.
+      // (A 404 no longer reaches here — authEndpointRequest returns {ok:false} and
+      // the result.status === 404 branch above handles it without throwing.)
+      if (error instanceof TypeError) {
         console.warn(
           "⚠️ JWT token generation failed (endpoint may not exist). JWT authentication is optional - continuing without JWT token.",
         );

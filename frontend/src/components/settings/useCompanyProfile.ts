@@ -23,7 +23,10 @@ export function useCompanyProfile(orgId: string, enabled = true) {
     enabled,
     queryFn: async () => {
       try {
-        return await apiGet(`profile/company?org_id=${orgId}`, CompanyProfileSchema);
+        return await apiGet(
+          `profile/company?org_id=${encodeURIComponent(orgId)}`,
+          CompanyProfileSchema,
+        );
       } catch (e) {
         if (e instanceof ZodError) throw e;
         return null;
@@ -41,7 +44,11 @@ export function useSaveCompanyProfile(orgId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: Record<string, unknown>) =>
-      apiPost(`profile/company?org_id=${orgId}`, payload, CompanyProfileSaveResponseSchema),
+      apiPost(
+        `profile/company?org_id=${encodeURIComponent(orgId)}`,
+        payload,
+        CompanyProfileSaveResponseSchema,
+      ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: qk.companyProfile(orgId) });
     },
