@@ -557,3 +557,26 @@ duplicate fetch (Settings `user_id` GET vs CompanyProfile `org_id` GET) into the
 orphaned prop flow then.
 
 **Owner:** TBD.
+
+---
+
+## TD-FE-12 — Dead TenantContext.availableTenants/setAvailableTenants after TenantSelection migration
+
+**Date logged:** 2026-05-29
+**Origin:** Plan 20 Phase 3 (plans/20-frontend-phase-3-api-data-layer.md), Task 11.
+
+**Current state:**
+`TenantContext` (`src/contexts/TenantContext.tsx`) declares `availableTenants: Tenant[]` state and
+`setAvailableTenants`, and exposes both on its context value. After Phase 3, `TenantSelection` (the only
+reader/writer) renders from the `useTenants` query instead, so neither is populated or read anymore. They
+remain assigned into the context value, so there is no lint/knip break — just permanently dead state.
+
+**Why deferred:**
+Removing the field from `TenantContextType` + the provider is a context-API change owned by the shell/auth
+phases, not Phase 3 (which only migrates the read pattern). Harmless until then.
+
+**Pull-forward trigger:**
+Phase 10 (introduces the real tenant endpoint — it will repopulate `availableTenants` from the API or drop
+the field) or Phase 4 (shell extraction). Remove the dead field then.
+
+**Owner:** TBD.

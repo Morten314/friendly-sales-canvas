@@ -1,5 +1,5 @@
 import { ArrowRight, LogOut } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "../components/ui/button";
@@ -8,37 +8,18 @@ import { useAuth } from "../contexts/AuthContext";
 import { useTenant } from "../contexts/TenantContext";
 import type { Tenant } from "../contexts/TenantContext";
 
+import { useTenants } from "./useTenants";
+
 const TenantSelection: React.FC = () => {
-  const { availableTenants, selectTenant, setAvailableTenants, clearTenant } = useTenant();
-  const { logout } = useAuth();
+  const { selectTenant, clearTenant } = useTenant();
+  const { logout, currentUser } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-  // Mock data - replace with actual API call
-  useEffect(() => {
-    // Simulate fetching user's tenants
-    const mockTenants = [
-      {
-        id: "1",
-        name: "Acme Corporation",
-        domain: "acme.com",
-        logo: "🏢",
-      },
-      {
-        id: "2",
-        name: "TechStart Inc",
-        domain: "techstart.io",
-        logo: "🚀",
-      },
-      {
-        id: "3",
-        name: "Global Solutions",
-        domain: "globalsolutions.com",
-        logo: "🌍",
-      },
-    ];
-    setAvailableTenants(mockTenants);
-  }, [setAvailableTenants]);
+  // Tenant list comes from useTenants (over the mock); Phase 10 swaps in a real
+  // endpoint by editing only that hook's queryFn (spec 20 §3.7). TenantSelection
+  // is the only reader of the old `availableTenants` context state (verified).
+  const { data: availableTenants = [] } = useTenants(currentUser?.uid);
 
   const handleTenantSelect = async (tenant: Tenant) => {
     setLoading(true);
