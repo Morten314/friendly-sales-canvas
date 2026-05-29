@@ -139,6 +139,9 @@ frontend/src/
 │
 ├── shared/                    # cross-cutting (FE analog of backend's _llm_helpers etc.)
 │   ├── api/                   # apiFetch, contracts, rate-limit, query client config
+│   ├── auth/                  # app-wide auth context primitive (promoted here in Phase 4b; ADR-0002)
+│   ├── tenant/                # app-wide tenant context primitive (promoted here in Phase 4b; ADR-0002)
+│   ├── components/            # cross-cutting components, e.g. FeatureErrorBoundary (added Phase 4a; ADR-0002)
 │   ├── hooks/                 # cross-feature hooks
 │   ├── lib/                   # cross-feature utilities
 │   ├── types/                 # cross-feature types + the documented escape-hatches.ts
@@ -175,6 +178,7 @@ The diagram shows one of two possible final states. Phase 9 may split `scout/` a
 - `features/<X>/` may import from `features/<Y>/` **only via** `features/<Y>/index.ts` (the public surface).
 - `shared/` may not import from `features/`.
 - `components/ui/` may not import from `features/` or `shared/` (it's pure primitives).
+- **Transitional exception (Phases 4b–12):** `features/<X>/` may import from not-yet-migrated legacy dirs (`src/contexts`, `src/hooks`, `src/lib`, `src/utils`, `src/pages`) while extraction is in flight; the lint config does **not** forbid it. Cleanup is verified in Phases 11–12, at which point the rule may be tightened to forbid legacy-dir imports from `features/`.
 - **Circular imports between features are forbidden.** The `index.ts`-only rule prevents *deep* coupling but does not prevent *cyclic* coupling — feature A importing from feature B's index.ts while feature B imports from feature A's index.ts is still a cycle. If two features genuinely need each other's types or utilities, the shared surface moves to `src/shared/types/` (or the appropriate `src/shared/*` subfolder). Enforced by `import/no-cycle` from `eslint-plugin-import`, configured in Phase 4 alongside the other features-specific lint rules.
 - **Enforcement mechanism:** `eslint-plugin-import`'s `import/no-internal-modules` rule (configured to allow `features/<Y>/index` but not deeper paths) is the preferred enforcement for the "index.ts-only" cross-feature constraint. Zone-level restrictions (e.g., `shared/` may not import from `features/`) are enforced by `import/no-restricted-paths`. A heavier alternative is `dependency-cruiser` if the ESLint rules prove insufficient. Exact tool choice is decided in Phase 4's spec (when `src/features/` exists to be enforced against).
 
@@ -199,7 +203,8 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 | 2b — ESLint type-aware + Prettier | done | 2026-05-28 |
 | 2c — Preflight gates + bundle comparator (advisory) | done | 2026-05-29 |
 | 3 — API/data layer consolidation | pending | — |
-| 4 — Feature scaffolding + shell extraction | pending | — |
+| 4a — Scaffolding + conventions | pending | — |
+| 4b — Shell extraction | pending | — |
 | 5 — Feature: market-research | pending | — |
 | 6 — Feature: mission-control | pending | — |
 | 7 — Feature: customers | pending | — |
@@ -342,8 +347,10 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 
 **Mission:** establish the `src/features/` skeleton, the shell that features render inside, and the conventions every later feature phase consumes.
 
-**Scaffolding deliverables:**
-- Create `src/features/` with per-feature template (`pages/`, `components/`, `hooks/`, `services/`, `types.ts`, `README.md`, `index.ts`).
+**Sub-split (4a/4b).** Phase 4 ships as two sequential merges, mirroring the 0a/0b split. **4a — Scaffolding + conventions:** the `src/features/` structure, the per-feature template + lazy scaffolder, the `features/`/`shared/`/`ui`-lock READMEs, the ADR set, `<FeatureErrorBoundary>` in `src/shared/components/`, and the cross-zone lint rules. **4b — Shell extraction:** moves the shell into `src/features/shell/` and promotes `AuthContext`/`TenantContext` into `src/shared/`. 4b begins only after 4a merges to `master`.
+
+**Scaffolding deliverables (4a):**
+- Create `src/features/` whose per-feature folders are generated **on demand** by the scaffolder. The always-present files are `types.ts`, `index.ts`, `README.md`; `pages/`, `components/`, `hooks/`, `services/` are created lazily by the owning phase when first needed (no empty dirs, no `.gitkeep`).
 - Create `src/features/README.md` documenting:
   - the per-feature template
   - dependency rules (§3.3)
@@ -355,16 +362,16 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 - Create `frontend/scripts/scaffold-feature.sh` (or equivalent) — a script that generates a new feature folder from the template.
 
 **Shell extraction deliverables (folded in from former Phase 11 — see §4 sequencing note):**
-- Extract `src/components/layout/Sidebar.tsx` (816), `src/components/layout/Header.tsx` (554), and the route shell into `src/features/shell/`. Extract `src/contexts/AuthContext.tsx` into `src/features/shell/` or `src/features/auth/` — Phase 4 spec decides (see §8 Q1).
+- Extract `src/components/layout/Sidebar.tsx` (816), `src/components/layout/Header.tsx` (554), and the **route shell** — the `ProtectedRoute` guard plus the `Layout`/`Header`/`Sidebar` frame, **not** the `<Routes>` table (which stays in `App.tsx`) — into `src/features/shell/`. Per ADR-0002 (§8 Q11, resolved), `src/contexts/AuthContext.tsx` moves to `src/shared/auth/` (app-wide cross-cutting state), not into a feature.
 - The shell is the app frame features render inside; pulling it before Phase 5 avoids forcing features to create local layout adapters that get unwound later.
-- `src/contexts/TenantContext.tsx` stays where it is for now — it moves with `src/features/tenant/` in Phase 10. AuthContext's final home (shell vs auth) is a Phase 4 spec decision (see §8 Q1).
+- Per ADR-0002, `src/contexts/TenantContext.tsx` also moves to `src/shared/tenant/` in **4b** — promoted once now rather than deferred to Phase 10 (it depends on `AuthContext`, so both live in `shared/`, making that a `shared → shared` import). `SidebarContext` is the exception: shell-local UI state, so it moves into `src/features/shell/`. (Spec 14's original Phase-10 context-move narrative is superseded by ADR-0002; the Phase 10/11 blocks receive dated annotations on the 4b branch, not here.)
 
 **Error-boundary deliverable:**
-- Define a feature-scoped `<FeatureErrorBoundary>` component in `src/features/shell/` (or `src/shared/components/` — Phase 4 spec decides). From Phase 5 onward, each feature's top-level routed component is wrapped in this boundary. Prevents one feature's runtime error from crashing the whole app.
+- Define a feature-scoped `<FeatureErrorBoundary>` component in `src/shared/components/` (per ADR-0002, §8 Q13 resolved — built in **4a**). From Phase 5 onward, each feature's top-level routed component is wrapped in this boundary. Prevents one feature's runtime error from crashing the whole app.
 - **Unit tests** for `<FeatureErrorBoundary>` verifying: (a) catches and renders fallback for thrown errors in children, (b) does not intercept errors outside its subtree, (c) logs error information for debugging. The boundary's whole purpose is fault isolation; an untested one defeats the goal.
 
 **Lint deliverables (the features-specific dependency rules deferred from Phase 2b):**
-- Add `import/no-internal-modules` (or `dependency-cruiser` if richer rules are needed — Phase 4 spec decides) configured to allow `features/<Y>/index` but not deeper paths.
+- Tooling: `eslint-plugin-import-x` plus a resolver dependency (`eslint-import-resolver-typescript`, so the rules resolve the `@/*` alias). 4a ships the zone-boundary rules + `import-x/no-cycle`; the `index.ts`-only rule (`import-x/no-internal-modules`) is **deferred** to Phase 5/6 (TD-FE-15) after a 4a spike found its allow-list could not cleanly separate deep-feature imports from legitimate relative/external deep imports.
 - Add `import/no-restricted-paths` zone rules: `shared/` may not import from `features/`; `components/ui/` may not import from `features/` or `shared/`.
 - Rules are dormant until Phase 5 produces the first feature, but they're in place so the first extraction trips violations immediately.
 
@@ -685,18 +692,18 @@ These don't block the master plan — each becomes the appropriate phase's spec 
 2. **Visual regression exact threshold — RESOLVED (Phase 2c, 2026-05-28).** Phase 0 settled at 1% (top of the original 0.5–1.0% range). Phase 2c widened to **2%** (`maxDiffPixelRatio: 0.02`) to reduce sub-pixel false positives — a deliberate deviation past the original range. Re-baseline workflow is local-only via `npm run test:e2e:update-snapshots`, documented in `frontend/scripts/README.md`.
 3. **Bundle-size and NFR budget values — PARTIALLY RESOLVED (Phase 2c, 2026-05-28).** Bundle comparator landed in advisory mode (no hard-fail threshold; prints deltas and exits 0). NFR wall-time enforcement dropped from Phase 2c scope — for a pre-launch MVP, machine-dependent wall-time gates erode trust faster than they catch regressions. Phase 14's watcher reconsiders both gates with post-launch data.
 4. **API contract types source — RESOLVED (Phase 3, 2026-05-29):** hand-authored **zod** schemas (source of truth; static types via `z.infer`; `.parse` at the fetch boundary). No OpenAPI codegen. See spec 20 §1.3.1.
-5. **`src/shared/` promotion criteria** — what triggers promotion of a hook/util from a feature into shared? → Phase 4 spec, refined as features land
-6. **Feature naming canonicalization** — final kebab-case map (market-research, mission-control, customer-profile, etc.) → Phase 4 spec
-7. **ADR template** — MADR, Nygard's classic, or a custom slim form? → Phase 4 spec
+5. **`src/shared/` promotion criteria — RESOLVED (Phase 4a, 2026-05-29):** the **≥2-feature rule** — a hook/util/type graduates to `shared/` only once two or more features import it; no speculative promotion (the later phase that introduces the second consumer does the move). `shared/api/` is shared by definition. Documented in `src/shared/README.md`.
+6. **Feature naming canonicalization — RESOLVED (Phase 4a, 2026-05-29):** kebab-case map (living, authoritative) in `src/features/README.md`. `profiler` is **reserved** pending Q10; Phase 12 appends its small-page names.
+7. **ADR template — RESOLVED (Phase 4a, 2026-05-29):** slim 3-part form (Context / Decision / Consequences); MADR and Nygard rejected as too heavy for a pre-launch MVP. Template at `docs/adr/0001-adr-template.md`.
 8. **CI choice — RESOLVED:** no external CI in this repo. Pre-merge quality gate is the local `npm run preflight` chain run by the controller agent (§5.3). No GitHub Actions, no other runner.
 9. **TanStack Query persistence strategy — PARTIALLY RESOLVED (Phase 3, 2026-05-29):** memory-only (no persister) for Phase 3's endpoints. The repo-wide policy (whether to persist expensive results such as market-research output) is deferred to an ADR, expected when Phase 5 migrates that data. See spec 20 §1.3.2.
-10. **`scout` vs `scout + profiler` split** — one feature or two? → Phase 9 spec
-11. **Where does `AuthContext` live** — extracted in Phase 4 into `features/shell/` or `features/auth/`? → Phase 4 spec (now the phase that owns shell extraction)
+10. **`scout` vs `scout + profiler` split** — one feature or two? → Phase 9 spec. (Phase 4a's naming map **reserves** `profiler` pending this decision.)
+11. **Where does `AuthContext` live — RESOLVED (Phase 4a, ADR-0002, 2026-05-29):** `src/shared/auth/` — it is app-wide cross-cutting state, not a feature's property; placing it in a feature would invert the `shared ↛ features` rule. The physical move happens in Phase 4b; Phase 10 builds the consuming auth UI (Login).
 12. **`src/styles/`** — stays at root, moves to `src/shared/styles/`, or distributes into features? → Phase 11 spec
-13. **Feature-error-boundary location** — `src/features/shell/` (alongside the shell) or `src/shared/components/`? → Phase 4 spec
+13. **Feature-error-boundary location — RESOLVED (Phase 4a, ADR-0002, 2026-05-29):** `src/shared/components/` (built in 4a; consumed from Phase 5).
 14. **Phase 11 standalone vs absorbed** — with shell extraction moved to Phase 4, the narrowed Phase 11 (shared utility extraction only) could fold into the Phase 13 cleanup audit. → Decided based on what Phases 5–10 surface as shared
 15. **Codemod candidacy criteria** — Phase 13 produces codemods only for patterns that are "likely to recur" and "mechanically transformable" — what does the spec author use to decide? → Phase 13 spec, with examples from Phases 5–12 work to ground the criteria
-16. **Lint rule for `index.ts`-only enforcement** — `import/no-internal-modules` (preferred) vs `dependency-cruiser` for richer rules? → Phase 4 spec
+16. **Lint rule for `index.ts`-only enforcement — RESOLVED (Phase 4a, 2026-05-29):** tooling is `eslint-plugin-import-x` + `eslint-import-resolver-typescript`. 4a enforces the cross-zone boundaries (`import-x/no-restricted-paths`) and `import-x/no-cycle`; the `index.ts`-only rule (`import-x/no-internal-modules`) is **deferred** (TD-FE-15) after a spike — revisited in Phase 5/6, with the `forbid`-form inversion or `dependency-cruiser` as candidates.
 
 ---
 
