@@ -1,6 +1,6 @@
 ---
 synthesizes_review: docs/reviews/2026-05-29-apollo-lead-integration-design-spec-review-2.md
-artifact: specs/2026-05-29-apollo-lead-integration-design.md
+artifact: specs/23-apollo-lead-integration-design.md
 artifact_type: spec
 reactor_model: claude-opus-4-8
 date: 2026-05-29

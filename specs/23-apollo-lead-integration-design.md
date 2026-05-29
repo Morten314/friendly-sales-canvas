@@ -2,7 +2,7 @@
 
 **Status:** Design (approved in brainstorming 2026-05-29)
 **Date:** 2026-05-29
-**Paired plans:** split by stack — `plans/apollo-lead-integration-backend.md` (to be written now) and `plans/apollo-lead-integration-frontend.md` (**deferred** until the frontend refactor completes — see §12)
+**Paired plans:** split by stack — `plans/23a-apollo-lead-integration-backend.md` (to be written now) and `plans/23b-apollo-lead-integration-frontend.md` (**deferred** until the frontend refactor completes — see §12)
 **Author:** brainstorming session (re-grounded against the post-refactor codebase, not the pre-refactor analysis docs)
 
 > **Grounding note:** The `docs/analysis/**` documents predate a large backend/frontend
@@ -354,7 +354,7 @@ deliberate (Decision §10.9); it is *not* an invitation to land the frontend mid
 
 ### 12.1 Backend plan — written now
 
-- Plan: `plans/apollo-lead-integration-backend.md`.
+- Plan: `plans/23a-apollo-lead-integration-backend.md`.
 - Scope: everything in §4–§6, §8, and the backend portions of §9, plus the net-new primitives in
   §5.3 (dedup-by-email upsert, fill-only-empty merge), credential storage (§5.4), and run tracking
   (§5.5).
@@ -368,7 +368,7 @@ deliberate (Decision §10.9); it is *not* an invitation to land the frontend mid
 
 ### 12.2 Frontend plan — deferred
 
-- Plan: `plans/apollo-lead-integration-frontend.md` — **not written yet.**
+- Plan: `plans/23b-apollo-lead-integration-frontend.md` — **not written yet.**
 - **Why deferred:** the frontend refactor (Spec 14) explicitly assumes *"No new product features …
   Agents must not 'improve' mid-refactor"* (§2.2), and the Apollo UI touches surfaces owned by
   pending, parity-preserving extraction phases that have not run yet:
