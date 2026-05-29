@@ -69,9 +69,10 @@ seam so a deferred HubSpot adapter can slot in later — **without** building a 
 
 - FastAPI app factory in `app/main.py`; `lifespan` builds `app.state.clients`
   (`ClientBundle{driver, graph, client=Mongo, s3_client, pc}`) and registers routers via
-  `include_router`. **No global `/api` prefix**; domain routers use their own prefix
-  (`/leads`, …); v2 routers mount at `prefix="/v2"`. The modern paginated read path is
-  `GET /v2/leads`.
+  `include_router`. **No global `/api` prefix on the app itself**; domain routers use their own
+  prefix (`/leads`, …); v2 routers mount at `prefix="/v2"`. The modern paginated read path is
+  `GET /v2/leads`. (The frontend reaches the backend through the `vite.config.ts` `/api/*` proxy,
+  so a FE call to `/api/connectors/...` maps to backend route `/connectors/...`.)
 - Dependency injection: `app.core.dependencies.get_neo4j_driver`, `get_mongo`, `get_s3`,
   `get_pinecone` (FastAPI `Depends`, sourced from `app.state.clients`).
 - Async work: **FastAPI `BackgroundTasks` only** (market-scoring, doc embedding). No queue exists.
@@ -97,10 +98,10 @@ New backend package `app/services/connectors/` (sibling to `leads/`, `market_sco
 
 | Module | Responsibility | Key dependencies |
 |---|---|---|
-| `base.py` | `LeadSource` interface (ABC/Protocol): `validate_credentials()`, `fetch_contacts(filters)`, `enrich(records)`, `list_collections()`. The single seam a future HubSpot adapter implements. | — |
-| `apollo.py` | `ApolloConnector(LeadSource)` — the only code that knows Apollo exists. `requests` to `https://api.apollo.io/api/v1` with `x-api-key`; `/contacts/search` pagination; `/people/bulk_match` (≤10/call) for enrichment; lists via Apollo labels; 429 backoff; credit-exhausted detection; maps Apollo's raw JSON. | `requests`, `app.core.config` |
+| *(no `base.py` in v1)* | The connector "seam" is a **documented method surface** on `ApolloConnector` (`validate_credentials()`, `fetch_contacts(filters)`, `enrich(records, reveal)`, `list_collections()`) — **not a formal ABC**. A `typing.Protocol` is the ceiling if a type is wanted (no registry/loader). A formal interface is extracted only when a second adapter (HubSpot) is specced. | — |
+| `apollo.py` | `ApolloConnector` (concrete) — the only code that knows Apollo exists. `requests` to a module-constant base URL `https://api.apollo.io/api/v1` with `x-api-key`; `/contacts/search` pagination; `/people/bulk_match` (≤10/call) for enrichment; lists via Apollo labels; 429 backoff; credit-exhausted detection; maps Apollo's raw JSON. The API key is **passed in** (from `credentials.py`), not read from config. | `requests` |
 | `normalize.py` | Raw Apollo record → Brewra **canonical** lead dict (see §5.1); preserves the raw record; derives normalized dedup keys (email, domain). | — |
-| `ingestion.py` | Provider-agnostic: `upsert_lead_by_email` (dedup + fill-only-empty), `MERGE` company-by-domain, register/update the import batch in `Lead_Stream_Files`, and the enrichment run-doc lifecycle. Reuses `_neo4j_helpers.upsert_node` + leads persistence. | Neo4j, Mongo |
+| `ingestion.py` | Provider-agnostic (operates on the normalized canonical dict, not on a connector type): the atomic `upsert_lead_by_email` (match-hierarchy dedup + coalesce fill-only-empty, §5.3), `MERGE` company-by-domain, register/update the import batch in `Lead_Stream_Files`, and the enrichment run-doc lifecycle. Reuses leads persistence; uses `_neo4j_helpers` for the company `MERGE` and new-lead create. | Neo4j, Mongo |
 | `credentials.py` | Per-org credential get/set/validate against `Connector_Credentials` (Mongo). | Mongo |
 | `__init__.py` | Re-exports the public service functions (house pattern). | — |
 
@@ -125,25 +126,47 @@ A Neo4j `Lead` node (same type CSV `batch-upload` produces) so it flows into the
 scoring and ICP tagging. Additionally `MERGE` a `Company` node by normalized **domain** and link
 `(Company)-[:Has_Lead]->(Lead)` (existing relationship vocabulary).
 
-### 5.3 Dedup & merge — one uniform rule (import **and** enrichment)
+### 5.3 Identity, dedup & merge — one uniform rule (import **and** enrichment)
 
-- **Match a person by normalized email** (`lower(trim(email))`) within the `org_id`. No email →
-  create a new lead (new `lead_id` UUID), as today.
-- On a match, **only populate empty fields — never overwrite an existing value.** Implemented as a
-  new `upsert_lead_by_email` primitive (coalesce-style Cypher, e.g. `SET l.x = coalesce(l.x, $x)`,
-  or read-modify-write) — because the existing `upsert_node` *overwrites* set keys. Bookkeeping
-  fields (`apollo_contact_id`, `file_id`, `last_imported_at`/`last_enriched_at`) always refresh.
-- **Company** dedup is by normalized registrable **domain** (strip scheme/path/`www`, lowercase).
-- Net effect: re-importing the same contacts updates rather than duplicates; neither import nor
-  enrichment ever clobbers customer/CSV-entered data. No provenance tracking needed.
+**Match-key hierarchy** (applied within `org_id`, in order) — used identically by import and enrichment:
+1. normalized **email** (`lower(trim(email))`);
+2. else **`apollo_contact_id`** (Apollo's stable per-contact id) — covers email-less Apollo
+   contacts so they dedup on re-import instead of duplicating (closes the success-criterion-4 hole);
+3. else **create a new lead** (new `lead_id` UUID).
+
+*(CSV-origin leads have no `apollo_contact_id`, so enrichment matches them on email only. A selected
+lead with neither key is reported as **unmatched** in the run — never duplicated.)*
+
+**Merge = fill-only-empty, atomic.** On a match, only populate empty fields — never overwrite an
+existing value. Implemented as a new `upsert_lead_by_email` primitive using **per-property atomic
+Cypher** in a single write transaction: `SET l.<prop> = coalesce(l.<prop>, $val)` per canonical
+field. **Read-modify-write is explicitly rejected** — its read→write round-trip is not atomic and
+would let two concurrent runs (import + CSV upload, or two enrich runs) clobber each other,
+violating the contract. (`upsert_node` is unsuitable for the merge because it *overwrites* set
+keys.) Bookkeeping fields (`apollo_contact_id`, `file_id`, `last_imported_at`/`last_enriched_at`)
+always refresh.
+
+**Company** dedup is by normalized registrable **domain** (strip scheme/path/`www`, lowercase).
+
+Net effect: re-importing the same contacts updates rather than duplicates (with or without email);
+neither import nor enrichment ever clobbers customer/CSV-entered data, even under concurrency. No
+provenance tracking needed.
 
 ### 5.4 Storage of customer credentials
 
 Mongo `Profiler.Connector_Credentials`, one doc per `(org_id, provider)`:
 `{org_id, provider:"apollo", api_key, status, connected_at, updated_at}`. Validated by a cheap
-authenticated Apollo call on save. **Stored as-is (unencrypted), matching the current posture**
-(all existing keys are plaintext env/config). Deliberately *not* hardened — recorded here as a
-known limitation for HubSpot/scale work to revisit. Index on `(org_id, provider)`.
+authenticated Apollo call on save. Index on `(org_id, provider)`.
+
+**Stored as-is (unencrypted) — a conscious risk acceptance, not a no-op.** This is a *different*
+threat model from the existing Brewra-global keys: those are operator secrets in env/config — not
+user-supplied, not API-readable, not tenant-scoped. `Connector_Credentials` holds a *customer's*
+key in a collection reachable by any caller who supplies the matching `org_id`, and the backend
+does not validate the caller's right to that `org_id` (the standing unauthenticated-tenant posture).
+We accept this for v1 under the deliberate MVP security posture (§2.2; 0 users). **Hardening
+trigger:** the first external/paying users, the pre-launch security pass, or the HubSpot OAuth work
+— whichever lands first — at which point at-rest encryption and/or restricting which endpoints can
+read the `api_key` field are revisited alongside tenant authz.
 
 ### 5.5 Run tracking
 
@@ -153,12 +176,18 @@ known limitation for HubSpot/scale work to revisit. Index on `(org_id, provider)
   existing `GET /leads/stream/status`, `GET /leads/by-file`, `DELETE /leads/by-file/{file_id}`
   with **no new CRUD**. The optional `label` becomes the batch's display `filename`.
 - **Enrichment run** = its own Mongo doc `Profiler.Connector_Enrich_Runs`
-  (`run_id, org_id, user_id, status, total, processed, updated, failed, errors[capped], started_at,
-  finished_at`), following the market-scoring run-doc + **stale-run failover** pattern.
+  (`run_id, org_id, user_id, status, total, processed, updated, failed, errors[capped at 10],
+  started_at, finished_at`), following the market-scoring run-doc + **stale-run failover** pattern.
+  It is a *separate* collection from the import's `Lead_Stream_Files` on purpose: import reuses the
+  file-batch surface to inherit its by-file CRUD + stream-status UI for free, whereas enrichment has
+  no file/lead-set artifact to list — unifying would mean re-implementing that surface for no gain.
 
 ## 6. API surface
 
-All under `app/routers/connectors.py` (`prefix="/connectors"`).
+All under `app/routers/connectors.py` (`prefix="/connectors"`). Endpoints that make a blocking
+Apollo call (`/connect` validation, `/lists`) are defined as sync `def` handlers so FastAPI runs
+them in its threadpool — `requests` must not block the event loop. Import/enrich execute as sync
+background-task functions.
 
 *Connection*
 - `POST /connectors/apollo/connect` `{org_id, user_id, api_key}` → validates via Apollo, stores
@@ -166,6 +195,8 @@ All under `app/routers/connectors.py` (`prefix="/connectors"`).
 - `GET /connectors/apollo/status?org_id=` → `{connected, connected_at, status}`.
 - `DELETE /connectors/apollo/connect?org_id=&user_id=` → disconnect (remove creds).
 - `GET /connectors/apollo/lists?org_id=` → the customer's Apollo lists (labels) for the picker.
+  `ApolloConnector` paginates the labels endpoint internally and returns the full set (a customer's
+  own lists are typically few).
 
 *Import (on-demand pull)*
 - `POST /connectors/apollo/import` `{org_id, user_id, list_id?, label?}` → mints `file_id`, writes
@@ -175,8 +206,10 @@ All under `app/routers/connectors.py` (`prefix="/connectors"`).
   separate import-status endpoint — import deliberately reuses the file-batch lifecycle).
 
 *Enrichment (manual, on a selection)*
-- `POST /connectors/apollo/enrich` `{org_id, user_id, lead_ids[]}` → creates an enrich run, queues
-  a `BackgroundTask`, returns `{run_id, status:"queued"}`.
+- `POST /connectors/apollo/enrich` `{org_id, user_id, lead_ids[], reveal_personal_emails?=true, reveal_phone_number?=false}`
+  → creates an enrich run, queues a `BackgroundTask`, returns `{run_id, status:"queued"}`. The two
+  `reveal_*` flags are optional request fields (defaults shown) so the credit-spending choice sits
+  with the caller — no global config, no new settings surface in v1.
 - `GET /connectors/apollo/enrich/status?org_id=&run_id=` → run-doc progress counters.
 
 *Reused as-is:* `GET /v2/leads` (read), `GET /leads/stream/status`, `GET /leads/by-file`,
@@ -191,10 +224,11 @@ fill-only-empty) → increment `Lead_Stream_Files` counters → mark `completed`
 stream as written.
 
 **Enrichment:** FE sends selected `lead_ids` → background task loads those leads from Neo4j →
-builds match keys (email / `apollo_contact_id`) → calls `/people/bulk_match` in batches of 10,
-with **`reveal_personal_emails=true`, `reveal_phone_number=false`** (a config knob; phones cost
-extra credits and stay opt-in) → `normalize` results → `upsert_lead_by_email` fill-only-empty
-write-back → update run-doc counters → mark `completed`.
+applies the §5.3 match hierarchy (email → `apollo_contact_id`) → calls `/people/bulk_match` in
+batches of 10, passing the request's `reveal_personal_emails` / `reveal_phone_number` flags
+(defaults `true` / `false`; phones cost extra credits and stay opt-in) → `normalize` results →
+`upsert_lead_by_email` fill-only-empty write-back → update run-doc counters → mark `completed`.
+Leads matching neither key are recorded as `unmatched` (not duplicated).
 
 ## 7. Frontend
 
@@ -228,8 +262,12 @@ zod contracts in `src/shared/api/contracts/`; hook pattern per `useCompanyProfil
 
 - **Bad/expired key:** `/connect` validation returns a clear error; a runtime 401 flips connection
   `status="error"` and prompts reconnect; the run ends gracefully with a recorded reason.
-- **Rate limit (429):** exponential backoff + retry in-task; if persistent, the run records counters
-  and ends `status="partial"`.
+- **Disconnect mid-run:** `DELETE /connect` is non-blocking and does **not** cancel running tasks
+  (BackgroundTasks aren't cancellable). An in-flight run detects the missing/invalid credentials at
+  its next Apollo call and ends `partial`/`failed` with a recorded reason — same path as a bad key.
+- **Rate limit (429):** exponential backoff + retry in-task (base 1s, factor 2, max 30s, with
+  jitter, ≤5 retries per request); if it still fails, the run records counters and ends
+  `status="partial"`.
 - **Credits exhausted:** enrich run stops, `status="partial"`, message "Apollo credits exhausted;
   X of Y enriched."
 - **Per-row failures:** isolated `try/except`; `failed` counter increments; run continues; a capped
@@ -238,8 +276,11 @@ zod contracts in `src/shared/api/contracts/`; hook pattern per `useCompanyProfil
   is **idempotency** — dedup + fill-only-empty mean re-clicking Import/Enrich after an interruption
   converges and never duplicates. Stale queued/processing runs are failed by the next run
   (market-scoring pattern). Durable queue = named fast-follow.
-- **Caps / no silent truncation:** imports page up to a sane maximum and **surface when capped** in
-  the batch status (per the team's gate-posture preference against silent truncation).
+- **Caps / no silent truncation:** imports page up to a hard cap of **25,000 records per import
+  run** (one product constant). On reaching it, paging stops and the batch ends `completed` with
+  `capped=true` and a message ("Reached the 25,000-record import cap; narrow by Apollo list to
+  import the rest"), surfaced through `GET /leads/stream/status`. No silent truncation (per the
+  team's gate-posture preference).
 - **Tenancy:** all reads/writes scoped by `org_id` (+ `user_id` where the existing code verifies it).
   Parameter-based, unhardened — unchanged from current posture.
 
@@ -264,13 +305,13 @@ zod contracts in `src/shared/api/contracts/`; hook pattern per `useCompanyProfil
 | # | Decision | Rationale |
 |---|---|---|
 | 1 | Apollo only; Clay + HubSpot deferred | Clay has no read API (push-to-webhook only), contradicting the chosen pull-only model; HubSpot deferred by the user. |
-| 2 | Import + enrichment | Both tools are prospecting/enrichment, not a system-of-record; matches "pull their leads data". |
+| 2 | Import + enrichment | Import supplies the initial lead pool; enrichment extends leads the customer already has (incl. CSV-uploaded) — both are needed for the Apollo connector to be useful without a second design round. |
 | 3 | On-demand pull, no webhook/scheduler | Smallest infra; fits current `BackgroundTasks` reality; Apollo fully supports synchronous pull + enrich. |
 | 4 | Import = existing Apollo Contacts (optional list), not net-new People Search | Truest "their leads data"; arrives usable; avoids burning enrichment credits at import. |
 | 5 | Dedup by email (people) / domain (companies) | Industry-standard, predictable; enables clean re-sync + enrichment matching. |
 | 6 | Enrichment manual on a selection; fill-only-empty | Keeps credit spend in the customer's control; never clobbers existing data; no provenance needed. |
 | 7 | Auto-map to a canonical set; extras in `apollo_raw` | Leverages the flexible schema; no mapping wizard; consistent dedup keys. |
-| 8 | Connector module + reuse + `BackgroundTasks`; wire `LeadStream` + multi-select | Clean seam for future HubSpot without a plugin system; reuses lead-write + stream-file + run-doc patterns; the selectable real lead list is required for enrichment. |
+| 8 | Connector module + reuse + `BackgroundTasks`; **no formal ABC in v1** (concrete `ApolloConnector` + documented method surface); wire `LeadStream` + multi-select | Reuses lead-write + stream-file + run-doc patterns; a documented surface keeps the HubSpot seam without a speculative interface for one implementation (extract the ABC when HubSpot is specced); the selectable real lead list is required for enrichment. |
 | 9 | Split implementation: backend plan now, frontend plan deferred until the FE refactor completes | Backend refactor is done (additive, conflict-free); the FE refactor (Spec 14 §2.2) bars new features mid-flight, and the Apollo UI lands in pending parity-preserving extraction phases (6/7/10) before `src/features/` exists. See §12. |
 
 ## 11. Known limitations (carried forward)
