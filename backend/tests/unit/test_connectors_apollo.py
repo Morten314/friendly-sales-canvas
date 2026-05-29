@@ -95,6 +95,27 @@ def test_bulk_match_rejects_oversized_chunk(monkeypatch):
         )
 
 
+def test_422_credit_body_raises_credits_exhausted(monkeypatch):
+    monkeypatch.setattr(apollo_mod, "_http_request",
+        lambda *a, **k: FakeResp(422, text="insufficient credit balance"))
+    with pytest.raises(ApolloCreditsExhaustedError):
+        ApolloConnector("key").validate_credentials()
+
+
+def test_429_exhausts_makes_max_plus_one_calls(monkeypatch):
+    from app.services.connectors.apollo import _MAX_RETRIES
+    calls = []
+
+    def fake_http(*a, **k):
+        calls.append(1)
+        return FakeResp(429)
+
+    monkeypatch.setattr(apollo_mod, "_http_request", fake_http)
+    with pytest.raises(ApolloAPIError):
+        ApolloConnector("key").list_collections()
+    assert len(calls) == _MAX_RETRIES + 1
+
+
 def test_bulk_match_sends_reveal_flags_and_details(monkeypatch):
     captured = {}
 

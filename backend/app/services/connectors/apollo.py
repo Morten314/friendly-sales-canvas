@@ -100,7 +100,12 @@ class ApolloConnector:
                 raise ApolloAPIError(
                     f"Apollo API error ({resp.status_code}) on {path}: {(resp.text or '')[:300]}"
                 )
-            return resp.json() or {}
+            try:
+                return resp.json() or {}
+            except ValueError:
+                raise ApolloAPIError(
+                    f"Apollo returned a non-JSON body (status {resp.status_code}): {(resp.text or '')[:200]}"
+                )
         raise ApolloAPIError(
             f"Apollo API still rate-limited after {_MAX_RETRIES} retries on {path} (last status {last_status})."
         )
