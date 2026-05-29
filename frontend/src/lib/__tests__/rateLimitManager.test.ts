@@ -1,14 +1,14 @@
-// Spec 15 §3.3 — characterization for src/lib/rateLimitManager.ts.
-// Stateful singleton; uses vi.useFakeTimers() exclusively per spec §6 R0b-2.
-// vi.resetModules() per test re-imports a fresh singleton (otherwise the
-// requestHistory leaks between tests via the module-level `rateLimitManager`
-// instance).
+// Spec 15 §3.3 — characterization for the shared rate limiter. The implementation
+// moved to src/shared/api/rateLimiter.ts (spec 20 §3.2); src/lib/rateLimitManager.ts
+// is now a re-export shim. This test still imports from "@/lib/rateLimitManager"
+// (the shim) to prove the public surface is unchanged. vi.resetModules() re-imports
+// a fresh singleton through the shim (resetting the transitively-imported shared
+// module), so requestHistory does not leak between tests.
 //
-// IMPORTANT: spec §3.3 asserts the cap is "4 req/min." The constructor default
-// at src/lib/rateLimitManager.ts:27 is maxRequestsPerMinute: 30 (with a code
-// comment "Increased limit for faster processing"). Tests below assert the
-// ACTUAL behavior (30 default), and exercise the boundary on a custom-config
-// instance at low cap for clean assertions.
+// IMPORTANT: spec 15 §3.3 asserts the cap is "4 req/min." The actual default is
+// RATE_LIMIT_RPM = 30 (src/shared/api/rateLimiter.ts). Tests below assert the ACTUAL
+// behavior (30 default), and exercise the boundary on a custom-config instance at
+// low cap for clean assertions.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 describe("rateLimitManager", () => {
