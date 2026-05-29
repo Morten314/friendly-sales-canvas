@@ -4,7 +4,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import { SidebarProvider } from "./contexts/SidebarContext";
-import { TenantProvider } from "./contexts/TenantContext";
 import Artifacts from "./pages/Artifacts";
 import Calendar from "./pages/Calendar";
 import Customers from "./pages/Customers";
@@ -25,6 +24,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { queryClient } from "@/shared/api/queryClient";
 import { AuthProvider } from "@/shared/auth";
+import { TenantProvider } from "@/shared/tenant";
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

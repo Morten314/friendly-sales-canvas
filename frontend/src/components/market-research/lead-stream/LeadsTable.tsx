@@ -42,7 +42,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useTenant } from "@/contexts/TenantContext";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { buildApiUrl } from "@/lib/api";
@@ -59,6 +58,7 @@ import {
   extractMarketScoreRowsFromResponse,
   heatmapLeadFromUnknownRow,
 } from "@/lib/marketScoresHeatmap";
+import { useTenant } from "@/shared/tenant";
 
 // ─── Score Breakdown Popover ────────────────────────────────────────────────
 

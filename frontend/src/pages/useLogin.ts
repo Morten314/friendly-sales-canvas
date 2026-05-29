@@ -1,8 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
 
-import { useTenant } from "@/contexts/TenantContext";
 import { auth } from "@/lib/firebase";
 import { useAuth } from "@/shared/auth";
+import { useTenant } from "@/shared/tenant";
 
 // Wraps the existing Login.tsx post-login sequence verbatim. AuthContext is NOT
 // restructured (Phase 4/10 owns that); this just gives the component isPending /

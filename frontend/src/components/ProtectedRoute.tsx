@@ -1,9 +1,9 @@
 import React, { useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 
-import { useTenant } from "../contexts/TenantContext";
-
 import { useAuth } from "@/shared/auth";
+import { useTenant } from "@/shared/tenant";
+
 
 interface ProtectedRouteProps {
   children: React.ReactNode;

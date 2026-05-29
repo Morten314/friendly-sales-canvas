@@ -4,12 +4,14 @@ import { useNavigate } from "react-router-dom";
 
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { useTenant } from "../contexts/TenantContext";
-import type { Tenant } from "../contexts/TenantContext";
 
 import { useTenants } from "./useTenants";
 
 import { useAuth } from "@/shared/auth";
+import { useTenant } from "@/shared/tenant";
+import type { Tenant } from "@/shared/tenant";
+
+
 
 const TenantSelection: React.FC = () => {
   const { selectTenant, clearTenant } = useTenant();

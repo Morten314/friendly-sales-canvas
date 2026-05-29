@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 
-import { useTenant } from "../contexts/TenantContext";
 import jwtManager from "../lib/jwt";
 
 import { useAuth as useFirebaseAuth } from "@/shared/auth";
+import { useTenant } from "@/shared/tenant";
 
 export const useAuth = () => {
   const firebaseAuth = useFirebaseAuth();

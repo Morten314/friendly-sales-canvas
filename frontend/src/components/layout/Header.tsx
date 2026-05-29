@@ -29,9 +29,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useSidebar } from "@/contexts/SidebarContext";
-import { useTenant } from "@/contexts/TenantContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { useTenant } from "@/shared/tenant";
 // import { AskBrewra } from "@/components/agent-hub/AskBrewra"; // Commented out - removed Ask button
 // import { ViewToggle } from "@/components/market-research/ViewToggle"; // Commented out - removed User/AI toggle
 
