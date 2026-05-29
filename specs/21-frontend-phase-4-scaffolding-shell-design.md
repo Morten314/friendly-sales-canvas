@@ -1,7 +1,7 @@
 # Spec 21 — Frontend Phase 4: Feature Scaffolding + Shell Extraction
 
-**Status:** Design — round 3 (round-1 reviews glm-5.1 + opus → synthesis-2; round-2 re-review glm-5.1 → `docs/reviews/21-frontend-phase-4-scaffolding-shell-design-synthesis-3.md`)
-**Date:** 2026-05-29 (round 1), 2026-05-29 (round 2 + round 3 revisions)
+**Status:** Design — round 4, **converged** (rounds 1–3 reviews/syntheses; round-3 re-review glm-5.1 → `docs/reviews/21-frontend-phase-4-scaffolding-shell-design-synthesis-4.md` found no Critical/High — spec is plan-ready)
+**Date:** 2026-05-29 (rounds 1–4, same day)
 **Type:** Phase spec (sub-split into 4a + 4b)
 **Paired plan:** _none yet — Phase 4a and 4b each ship their own plan (`plans/21a-frontend-phase-4a-scaffolding.md`, `plans/21b-frontend-phase-4b-shell-extraction.md`)_
 **Parent:** `specs/14-frontend-refactoring-master-plan-design.md` (§4 Phase 4)
@@ -123,7 +123,7 @@ A new shared-root README (distinct from `src/shared/api/README.md`) documenting 
 `frontend/scripts/scaffold-feature.ts`, run via `tsx` (already in deps; matches `scripts/check-bundle-budget.ts`, `scripts/capture-bundle-baseline.ts`).
 
 - **Invocation:** `npm run scaffold:feature -- <kebab-name>` (script entry added to `package.json`).
-- **Behavior:** creates `src/features/<name>/` with `types.ts` (header comment only), `index.ts` (empty re-export stub), and `README.md` filled from a template with the feature name. It does **not** create `pages/components/hooks/services/` (lazy — §2.1).
+- **Behavior:** creates `src/features/<name>/` with `types.ts` (header comment only), `index.ts` (empty re-export stub), and `README.md` from a template that **reproduces §2.2's section structure** (purpose / public surface / key files / dependency notes) as stub placeholders, with the feature name filled in. It does **not** create `pages/components/hooks/services/` (lazy — §2.1).
 - **Guard rails:** refuses to overwrite an existing feature folder; validates kebab-case; **warns (does not block)** if the name is not on the living naming map.
 - Documented in `frontend/scripts/README.md` (extends the Phase 2c file).
 
@@ -131,7 +131,7 @@ A new shared-root README (distinct from `src/shared/api/README.md`) documenting 
 
 Create `src/shared/components/FeatureErrorBoundary.tsx` (a React class error boundary) and `src/shared/components/index.ts`.
 
-- **Contract:** wraps a feature's top-level routed component; on a thrown render error it renders a feature-scoped fallback (one feature's crash does not blank the app) and logs error info.
+- **Contract:** wraps a feature's top-level routed component; on a thrown render error it renders a feature-scoped fallback (one feature's crash does not blank the app) and logs error info via `console.error` in `componentDidCatch` (the `error` + `errorInfo` pair). An optional `onError` callback prop for pluggable reporting is the 21a plan's call — not required for the MVP.
 - **Usage:** defined in 4a, **first used in Phase 5**. 4b does not wrap the shell in it (the shell is the frame, not a wrapped feature).
 - **knip handling (required, else 4a preflight goes RED).** Because `FeatureErrorBoundary` has no consumer until Phase 5 and `knip --strict` runs in production mode (§1.2), 4a **adds `src/shared/components/**` to `knip.json`'s `ignore`** and logs a `TD-FE` to remove that ignore when Phase 5 imports the boundary. (Vitest tests exercise it, but test files are knip-excluded, so they don't satisfy knip's "used" check.)
 - **Unit tests** (Vitest + RTL, existing `test` step) verifying: (a) catches a thrown child error and renders the fallback; (b) renders children normally and does **not** intercept errors outside its subtree; (c) invokes the error-logging hook.
@@ -231,7 +231,7 @@ Move into `src/features/shell/` (preserving content; adjust only import paths):
 - **`useAuth` name hazard (H2).** `contexts/AuthContext.tsx` and `hooks/useAuth.ts` both export a `useAuth` — different behaviors (the context hook vs. the composed JWT/session hook). After the move, `shared/auth/index.ts` exposes the *context* `useAuth`; the composed hook stays at `@/hooks/useAuth`. Logged as a `TD-FE` so consumers know which they import. 4b does not worsen it (it becomes intra-directory only if a later phase moves the composed hook into `shared/`).
 - **Dead-code strip (H3).** `AuthContext.tsx` carries ~185 lines of commented-out legacy implementation (lines 1–186). The move **strips that block** (comment-only → zero behavior change); only the active implementation (line 187+) moves. This is the one deliberate exception to "preserve content."
 - **Lint coverage.** The moved context files co-export provider + hook, so the move relies on 4a's `react-refresh/only-export-components` override (§2.6 item 4) already covering `src/shared/**` + `src/features/**`; otherwise `--max-warnings 0` reds.
-- `shared/auth/index.ts` exposes `AuthProvider`, `useAuth` (the AuthContext hook), auth types. `shared/tenant/index.ts` exposes `TenantProvider`, `useTenant`, tenant types.
+- `shared/auth/index.ts` exposes `AuthProvider`, `useAuth` (the AuthContext hook), plus any types the auth context file already exports. `shared/tenant/index.ts` exposes `TenantProvider`, `useTenant`, plus any types the tenant context file already exports. (The barrels re-export whatever the moved files expose; 21b reads the source to enumerate.)
 - `TenantContext` imports `AuthContext`; both in `shared/` makes that `shared → shared` (allowed).
 - **Scope note (from R2:H1):** several "consumers" of these contexts are files 4b moves into `shell/` (`ProtectedRoute`, `Header`, `Sidebar`, `ProfileDialog`) — their imports become intra-shell/`@/shared` and are handled by the move, not separate rewrites. The true external-rewrite set (files that stay put and only change an import path) is smaller than the raw importer count; 21b enumerates it. The rewrite is mechanical and `tsc --noEmit`-checked; staged move→rewrite→delete so each commit stays green.
 
@@ -251,7 +251,7 @@ The `<Routes>` table **stays in `App.tsx`**. It references every feature's page,
 
 ### 3.5 Parity constraints & safety net
 
-- **Visual regression (2%, Phase 2c)** guards the shell's *rendering* — pixel-identical. A VR failure is a regression, not a re-baseline trigger (Spec 14 §2.2). Note the shell renders only on authenticated screens (Login/TenantSelection don't use `Layout`).
+- **Visual regression (2% pixel-diff threshold, per the Phase 2c VR config)** guards the shell's *rendering* — pixel-identical. A VR failure is a regression, not a re-baseline trigger (Spec 14 §2.2). Note the shell renders only on authenticated screens (Login/TenantSelection don't use `Layout`).
 - **Guard *behavior* parity is a Playwright-journey concern, not VR.** A wrong `requireTenant` redirect won't show in pixels. 21b confirms the existing journeys (login → tenant → mission-control) assert the auth/tenant redirect behavior, and adds a step if the redirect isn't covered.
 - **Routes frozen** (Spec 14 §2.3): URLs unchanged; only the modules behind them move.
 - The full preflight chain gates the merge; the import-rewrite is type-checked end-to-end.
@@ -274,7 +274,7 @@ The `<Routes>` table **stays in `App.tsx`**. It references every feature's page,
 | `src/contexts/` | Deleted (empty) |
 | `src/App.tsx` | Edit — imports only; `<Routes>` table unchanged in place |
 | External import sites (per §3.2) | Edit — `@/contexts/...` → `@/shared/...` path rewrite |
-| `knip.json` | Edit — remove the `src/shared/components/**` ignore **only if** Phase 5 (not 4b) consumes the boundary; otherwise unchanged in 4b |
+| `knip.json` | **No change in 4b** — the `src/shared/components/**` ignore-removal is deferred to Phase 5 (when the boundary gains a consumer). Listed for traceability, not a 4b edit. |
 | `docs/TECH_DEBT.md` | Edit — `TD-FE` (sidebar name twin; next free number after 4a's knip entry) |
 | `specs/14-frontend-refactoring-master-plan-design.md` | Edit — 4b-branch amendments (§4) |
 
@@ -400,5 +400,5 @@ The template is defined before a non-shell feature exercises it.
 - `specs/15-frontend-phase-0-inventory-and-safety-net-design.md` — the one-spec/two-plans sub-split precedent (0a/0b) this spec mirrors.
 - `specs/20-frontend-phase-3-api-data-layer-design.md` — predecessor; established `src/shared/api/` and the shared-layer conventions Phase 4 extends.
 - **Review-pipeline artifacts (this spec's own cycle):** `…-spec-review-1.md` + `…-review-2.md` (round 1: glm-5.1 + opus) → `…-synthesis-2.md`; `…-spec-review-3.md` (round 2: glm-5.1) → `…-synthesis-3.md`. These drove the round-2 and round-3 revisions.
-- `docs/TECH_DEBT.md` — gains the knip-ignore (4a) and `TD-FE-14` sidebar-name-twin (4b) entries.
+- `docs/TECH_DEBT.md` — gains the knip-ignore (4a) and the sidebar-name-twin + `useAuth`-collision (4b) entries, at the next free `TD-FE` numbers.
 - Backend Phase K/L specs — the converged per-feature + `_helpers` shape the frontend `features/` + `shared/` mirror.
