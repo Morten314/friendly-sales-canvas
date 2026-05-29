@@ -29,7 +29,7 @@ The backend just completed a multi-phase modularization (Phases A–L on `backen
 | Tests | Playwright E2E only (`frontend/e2e/`). No Vitest. No RTL. No MSW. |
 | Linting | ESLint flat-config v9, react-hooks plugin, react-refresh. No Prettier config. No type-aware rules. No `knip`. |
 | Layout | Flat `src/components/`, `src/pages/`, `src/contexts/`, `src/hooks/`, `src/lib/`, `src/services/`, `src/utils/`. `src/components/ui/` holds shadcn primitives. `src/components/` has weak feature subfolders (`customers/`, `market-research/`, `mission-control/`, `signals/`, `strategist/`). |
-| Data layer | Manual `fetch` via three-layer client: `apiFetch` → `enhancedApi` (5-min in-memory map, rate-limit) → `authenticatedApi` (JWT). TanStack Query not used. Three caching layers: `localStorage`, `enhancedApi` map, `sessionStorage`. |
+| Data layer | Manual `fetch`. Base transport `apiFetch`/`apiFetchJson` (`src/lib/api.ts`) injects JWT and throws on non-2xx. `rateLimitManager` (30/min) is an opt-in wrapper, not middleware. **No `enhancedApi`/`authenticatedApi` and no 5-min in-memory map exist** (those labels in earlier drafts were aspirational). Caching is manual `localStorage` (no TTL) + `sessionStorage`. TanStack Query installed but inert. (Corrected by Phase 3 — see spec 20 §1.2/§1.4.) |
 | Build artifacts | Lovable provenance: `lovable-tagger` in `vite.config.ts`. Originally Lovable-generated. |
 | Branch model | `master` is trunk (recently shifted from working-branch — commit `adacae4`). Feature work on short-lived branches with review for non-trivial changes, then merge back. |
 | Backend coordination | Backend `app/services/` is the reference shape for the frontend's `src/features/` target. See backend Phase K/L specs for the converged pattern. |
@@ -104,7 +104,7 @@ These do not change as a result of this refactor (covered by characterization te
 - HTTP API contract with the backend (request/response shapes, headers, status codes)
 - Routes (`/`, `/tenant-selection`, `/your-ai-team/scout/:tab`, `/your-ai-team/strategist/:tab`, `/mission-control`, `/customers`, etc.)
 - Auth flow (Firebase email/password → JWT → tenant selection → protected routes)
-- Rate-limit boundary value (4 req/min) — implementation moves, value stays
+- Rate-limit boundary value (**30 req/min** — the code is authoritative; the earlier "4 req/min" was inaccurate) — implementation moves, value stays
 - Existing E2E Playwright suite behavior (the suite itself may be expanded but existing tests must remain green)
 - E2E test suite location: stays centralized at `frontend/e2e/` (not co-located inside `src/features/`)
 - Bundle output format (PWA via vite-plugin-pwa with Workbox)
@@ -327,16 +327,16 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 
 **Mission:** TanStack Query becomes the single source of server-state truth.
 
-- Wire `QueryClient` and `QueryClientProvider` at app root.
-- Replace `enhancedApi`'s 5-min in-memory map with TanStack Query's cache.
+- Configure the already-mounted `QueryClient` at app root (`QueryClientProvider` is already present in `App.tsx`; Phase 3 supplies a configured client, it does not mount fresh).
+- Collapse the manual `localStorage`-as-fetch-cache (there is no `enhancedApi` map) into TanStack Query's in-memory cache for the migrated endpoints.
 - Migrate `localStorage` and `sessionStorage` **caching** usage to TanStack Query persistence (or document why a specific case stays on `localStorage`). Features using `sessionStorage` as a primary data store — explicitly Strategist's `sessionStorage.strategistContext` per root `CLAUDE.md` — are **out of scope** for this migration; they hold persistent state, not cache.
-- Centralize rate-limit (4 req/min) into a single fetch-middleware layer used by every `useQuery`/`useMutation`.
+- Centralize rate-limit (**30 req/min**) into a single shared `RateLimiter` instance drawn from by both `client.ts` and the legacy `executeWithRateLimit` shim (one budget).
 - Define API contract types in `src/shared/api/contracts.ts` (hand-written initially; OpenAPI codegen deferred unless surfaced as needed). API infrastructure is unambiguously shared (every feature consumes it); Phase 4's promotion criteria formalize the general rule that this placement already follows.
 - **`src/services/` disposition.** Identify every file under `src/services/` and assign each to a destination: API-related services move to `src/shared/api/` as part of this phase; feature-local services move with their feature in Phases 5–10. The disposition list lives in the Phase 3 spec so later phases can claim their items.
 
 **Per-call-site migration:** *not* all in this phase. This phase establishes the infrastructure and migrates the lowest-coupled call sites (auth, tenant, settings). Per-feature TanStack adoption happens inside each feature's extraction phase (5–10), where context is local.
 
-**Done when:** `QueryClientProvider` mounted; `src/shared/api/` exists with contract types and the rate-limited fetcher; auth/tenant/settings paths use TanStack Query.
+**Done when:** the `QueryClient` is configured and consumed; `src/shared/api/` exists with zod contract types and the rate-limited fetcher; CompanyProfile/tenant/auth/Login paths use TanStack Query as the proof-of-pattern.
 
 ### Phase 4 — Feature scaffolding + shell extraction
 
@@ -684,12 +684,12 @@ These don't block the master plan — each becomes the appropriate phase's spec 
 1. **Vitest test methodology for stable utilities** — behavior-only assertions vs DOM snapshots vs both? → Phase 0 spec
 2. **Visual regression exact threshold — RESOLVED (Phase 2c, 2026-05-28).** Phase 0 settled at 1% (top of the original 0.5–1.0% range). Phase 2c widened to **2%** (`maxDiffPixelRatio: 0.02`) to reduce sub-pixel false positives — a deliberate deviation past the original range. Re-baseline workflow is local-only via `npm run test:e2e:update-snapshots`, documented in `frontend/scripts/README.md`.
 3. **Bundle-size and NFR budget values — PARTIALLY RESOLVED (Phase 2c, 2026-05-28).** Bundle comparator landed in advisory mode (no hard-fail threshold; prints deltas and exits 0). NFR wall-time enforcement dropped from Phase 2c scope — for a pre-launch MVP, machine-dependent wall-time gates erode trust faster than they catch regressions. Phase 14's watcher reconsiders both gates with post-launch data.
-4. **API contract types source** — hand-written, OpenAPI codegen, or zod schemas? → Phase 3 spec
+4. **API contract types source — RESOLVED (Phase 3, 2026-05-29):** hand-authored **zod** schemas (source of truth; static types via `z.infer`; `.parse` at the fetch boundary). No OpenAPI codegen. See spec 20 §1.3.1.
 5. **`src/shared/` promotion criteria** — what triggers promotion of a hook/util from a feature into shared? → Phase 4 spec, refined as features land
 6. **Feature naming canonicalization** — final kebab-case map (market-research, mission-control, customer-profile, etc.) → Phase 4 spec
 7. **ADR template** — MADR, Nygard's classic, or a custom slim form? → Phase 4 spec
 8. **CI choice — RESOLVED:** no external CI in this repo. Pre-merge quality gate is the local `npm run preflight` chain run by the controller agent (§5.3). No GitHub Actions, no other runner.
-9. **TanStack Query persistence strategy** — `localStorage` plugin or no persistence by default? → Phase 3 spec
+9. **TanStack Query persistence strategy — PARTIALLY RESOLVED (Phase 3, 2026-05-29):** memory-only (no persister) for Phase 3's endpoints. The repo-wide policy (whether to persist expensive results such as market-research output) is deferred to an ADR, expected when Phase 5 migrates that data. See spec 20 §1.3.2.
 10. **`scout` vs `scout + profiler` split** — one feature or two? → Phase 9 spec
 11. **Where does `AuthContext` live** — extracted in Phase 4 into `features/shell/` or `features/auth/`? → Phase 4 spec (now the phase that owns shell extraction)
 12. **`src/styles/`** — stays at root, moves to `src/shared/styles/`, or distributes into features? → Phase 11 spec
