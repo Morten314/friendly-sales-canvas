@@ -15,9 +15,9 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { useAuth } from "../contexts/AuthContext";
-import { useTenant } from "../contexts/TenantContext";
 import { useToast } from "../hooks/use-toast";
-import { auth } from "../lib/firebase";
+
+import { useLogin, useSignup } from "./useLogin";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -28,10 +28,11 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
 
-  const { login, signup, fetchOrgId, loading: authLoading } = useAuth();
-  const { selectTenant } = useTenant();
+  const { loading: authLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const loginMutation = useLogin();
+  const signupMutation = useSignup();
 
   // Don't auto-redirect authenticated users - let them see the login page if they visit it directly
   // The ProtectedRoute will handle redirecting unauthenticated users trying to access protected routes
@@ -69,10 +70,7 @@ const Login: React.FC = () => {
       setLoading(true);
 
       if (isSignUp) {
-        await signup(email, password);
-        // Store full name in localStorage (will be associated with user after login)
-        // We'll store it temporarily and associate it with the user ID after they log in
-        localStorage.setItem("pendingFullName", fullName);
+        await signupMutation.mutateAsync({ email, password, fullName });
         // After successful signup, show success message and switch to login
         toast({
           title: "Account Created Successfully!",
@@ -85,26 +83,7 @@ const Login: React.FC = () => {
         setPassword("");
         setFullName("");
       } else {
-        await login(email, password);
-        // Fetch org_id and org_name after successful login
-        const user = auth.currentUser;
-        if (user?.uid) {
-          const { orgId: fetchedOrgId, orgName: fetchedOrgName } = await fetchOrgId(user.uid);
-          // Auto-select organization after login using fetched org_id and org_name or fallback to brewra
-          const orgIdToUse = fetchedOrgId || "brewra";
-          const orgNameToUse = fetchedOrgName || "Brewra";
-          selectTenant({
-            id: orgIdToUse,
-            name: orgNameToUse,
-            domain: `${orgIdToUse}.com`,
-          });
-          // Store full name if it was pending from signup, or retrieve existing
-          const pendingFullName = localStorage.getItem("pendingFullName");
-          if (pendingFullName) {
-            localStorage.setItem(`userFullName_${user.uid}`, pendingFullName);
-            localStorage.removeItem("pendingFullName");
-          }
-        }
+        await loginMutation.mutateAsync({ email, password });
         // Navigate to mission control after successful login
         navigate("/mission-control");
       }
