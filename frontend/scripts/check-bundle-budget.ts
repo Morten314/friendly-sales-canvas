@@ -139,8 +139,94 @@ export async function loadBaseline(path: string): Promise<LoadResult> {
 }
 
 export function compareAndPrint(
-  _baseline: Baseline,
-  _current: ChunkEntry[],
+  baseline: Baseline,
+  current: ChunkEntry[],
 ): void {
-  throw new Error("not implemented");
+  const currentTotalRaw = current.reduce((acc, c) => acc + c.size_bytes, 0);
+  const currentTotalGzip = current.reduce((acc, c) => acc + c.gzip_bytes, 0);
+
+  const rawDelta = computeDelta(baseline.total_size_bytes, currentTotalRaw);
+  const gzipDelta = computeDelta(
+    baseline.total_size_gzip_bytes,
+    currentTotalGzip,
+  );
+
+  console.log("");
+  console.log("                  Baseline       Current        Delta");
+  console.log(
+    `Total (raw)       ${formatBytes(baseline.total_size_bytes).padEnd(14)} ${formatBytes(currentTotalRaw).padEnd(14)} ${formatDelta(rawDelta.absolute, rawDelta.percent)}`,
+  );
+  console.log(
+    `Total (gzip)      ${formatBytes(baseline.total_size_gzip_bytes).padEnd(14)} ${formatBytes(currentTotalGzip).padEnd(14)} ${formatDelta(gzipDelta.absolute, gzipDelta.percent)}`,
+  );
+
+  // Bucket by hash-stripped base name. Bail to totals-only on collisions.
+  const baselineByKey = new Map<string, ChunkEntry>();
+  for (const chunk of baseline.chunks) {
+    const key = baseName(chunk.file);
+    if (baselineByKey.has(key)) {
+      console.log("");
+      console.log(
+        "(per-chunk matching unavailable: duplicate base name in baseline; only totals shown)",
+      );
+      console.log("");
+      console.log("(advisory — exit 0)");
+      return;
+    }
+    baselineByKey.set(key, chunk);
+  }
+  const currentByKey = new Map<string, ChunkEntry>();
+  for (const chunk of current) {
+    const key = baseName(chunk.file);
+    if (currentByKey.has(key)) {
+      console.log("");
+      console.log(
+        "(per-chunk matching unavailable: duplicate base name in current; only totals shown)",
+      );
+      console.log("");
+      console.log("(advisory — exit 0)");
+      return;
+    }
+    currentByKey.set(key, chunk);
+  }
+
+  const largeMatched: Array<[string, ChunkEntry, ChunkEntry]> = [];
+  for (const [key, baseChunk] of baselineByKey) {
+    const cur = currentByKey.get(key);
+    if (!cur) continue;
+    if (
+      baseChunk.size_bytes >= CHUNK_REPORT_THRESHOLD_BYTES ||
+      cur.size_bytes >= CHUNK_REPORT_THRESHOLD_BYTES
+    ) {
+      largeMatched.push([key, baseChunk, cur]);
+    }
+  }
+
+  if (largeMatched.length > 0) {
+    console.log("");
+    console.log("Chunks > 10KB:");
+    for (const [key, baseChunk, cur] of largeMatched) {
+      const delta = computeDelta(baseChunk.size_bytes, cur.size_bytes);
+      console.log(
+        `  ${key.padEnd(14)} ${formatBytes(baseChunk.size_bytes).padEnd(13)} ${formatBytes(cur.size_bytes).padEnd(14)} ${formatDelta(delta.absolute, delta.percent)}`,
+      );
+    }
+  }
+
+  const added = current.filter((c) => !baselineByKey.has(baseName(c.file)));
+  const removed = baseline.chunks.filter(
+    (c) => !currentByKey.has(baseName(c.file)),
+  );
+  if (added.length || removed.length) {
+    console.log("");
+    if (added.length) {
+      console.log(`Added: ${added.map((c) => c.file).join(", ")}`);
+    }
+    if (removed.length) {
+      console.log(`Removed: ${removed.map((c) => c.file).join(", ")}`);
+    }
+  }
+
+  console.log("");
+  console.log("(advisory — exit 0)");
 }
