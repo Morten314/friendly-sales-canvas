@@ -2,7 +2,7 @@
 
 **Status:** Design (approved in brainstorming 2026-05-29)
 **Date:** 2026-05-29
-**Paired plan:** `plans/apollo-lead-integration.md` (to be written)
+**Paired plans:** split by stack — `plans/apollo-lead-integration-backend.md` (to be written now) and `plans/apollo-lead-integration-frontend.md` (**deferred** until the frontend refactor completes — see §12)
 **Author:** brainstorming session (re-grounded against the post-refactor codebase, not the pre-refactor analysis docs)
 
 > **Grounding note:** The `docs/analysis/**` documents predate a large backend/frontend
@@ -198,6 +198,12 @@ write-back → update run-doc counters → mark `completed`.
 
 ## 7. Frontend
 
+> **Deferred — design intent only (see §12.2).** This section is the input to the *frontend*
+> implementation plan, which is **not written until the frontend refactor (Spec 14) completes**.
+> The file paths below are accurate to *today's* `src/components/**` / `src/pages/**` layout; they
+> will be re-grounded into the `src/features/**` structure (per Spec 14 Phase 4 conventions) when
+> the FE plan is authored. Do not implement from this section while the refactor is in flight.
+
 Stack (verified): React + TanStack Query v5 + zod; shared API client at `src/shared/api/client.ts`
 (`apiGet`/`apiPost`, JWT + rate-limit + zod-validate); query keys in `src/shared/api/queryKeys.ts`;
 zod contracts in `src/shared/api/contracts/`; hook pattern per `useCompanyProfile`.
@@ -265,6 +271,7 @@ zod contracts in `src/shared/api/contracts/`; hook pattern per `useCompanyProfil
 | 6 | Enrichment manual on a selection; fill-only-empty | Keeps credit spend in the customer's control; never clobbers existing data; no provenance needed. |
 | 7 | Auto-map to a canonical set; extras in `apollo_raw` | Leverages the flexible schema; no mapping wizard; consistent dedup keys. |
 | 8 | Connector module + reuse + `BackgroundTasks`; wire `LeadStream` + multi-select | Clean seam for future HubSpot without a plugin system; reuses lead-write + stream-file + run-doc patterns; the selectable real lead list is required for enrichment. |
+| 9 | Split implementation: backend plan now, frontend plan deferred until the FE refactor completes | Backend refactor is done (additive, conflict-free); the FE refactor (Spec 14 §2.2) bars new features mid-flight, and the Apollo UI lands in pending parity-preserving extraction phases (6/7/10) before `src/features/` exists. See §12. |
 
 ## 11. Known limitations (carried forward)
 
@@ -274,3 +281,42 @@ zod contracts in `src/shared/api/contracts/`; hook pattern per `useCompanyProfil
   synchronous match/reveal is in scope.
 - `LeadStream` wiring replaces mock data on that one surface only; other mock lead surfaces
   (e.g. market-research/strategist streams) are untouched.
+
+## 12. Implementation sequencing & plan creation
+
+This spec is implemented in **two separately-planned stages, split by stack**, because the backend
+refactor is complete but the frontend refactor (Spec 14) is still in progress. The split is
+deliberate (Decision §10.9); it is *not* an invitation to land the frontend mid-refactor.
+
+### 12.1 Backend plan — written now
+
+- Plan: `plans/apollo-lead-integration-backend.md`.
+- Scope: everything in §4–§6, §8, and the backend portions of §9, plus the net-new primitives in
+  §5.3 (dedup-by-email upsert, fill-only-empty merge), credential storage (§5.4), and run tracking
+  (§5.5).
+- Safe to build now: **purely additive** to the finished, settled `app/services/*` / `app/routers/*`
+  structure (the only edit to an existing file is a one-line `include_router` in `main.py`). No
+  frontend changes; no breaking API change. Spec 14 §2.2 explicitly allows this — *"Per-feature
+  deviations require their own backend spec."*
+- Delivers a usable, independently-verifiable import + enrich API, validated via `/docs`/curl per
+  CLAUDE.md's "update the backend first, verify the response shape with a live call, then implement
+  the frontend" rule.
+
+### 12.2 Frontend plan — deferred
+
+- Plan: `plans/apollo-lead-integration-frontend.md` — **not written yet.**
+- **Why deferred:** the frontend refactor (Spec 14) explicitly assumes *"No new product features …
+  Agents must not 'improve' mid-refactor"* (§2.2), and the Apollo UI touches surfaces owned by
+  pending, parity-preserving extraction phases that have not run yet:
+  - `DataSourcesManager.tsx` → Phase 6 (mission-control)
+  - `LeadStream.tsx` → Phase 7 (customers)
+  - `Settings` / `IntegrationSettings.tsx` → Phase 10 (settings)
+  The target `src/features/` structure does not exist yet (Phase 4 is specced but unbuilt), so any
+  FE code written now would land in the old `src/components/**` layout and have to be migrated
+  again later — double work that also disturbs the visual/behavioral baseline those phases must
+  preserve.
+- **Trigger to write it:** the frontend refactor has completed (or, at minimum, Phase 4 plus the
+  relevant feature-extraction phases 6/7/10 have landed). At that point §7 is re-grounded against
+  the then-current structure (paths move from `src/components/**` / `src/pages/**` into
+  `src/features/**`) before the FE plan is authored.
+- Until then, §7 stands as **frontend design intent**, not a current-structure build guide.
