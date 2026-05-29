@@ -101,7 +101,8 @@ New backend package `app/services/connectors/` (sibling to `leads/`, `market_sco
 | *(no `base.py` in v1)* | The connector "seam" is a **documented method surface** on `ApolloConnector` (`validate_credentials()`, `fetch_contacts(filters)`, `enrich(records, reveal)`, `list_collections()`) — **not a formal ABC**. A `typing.Protocol` is the ceiling if a type is wanted (no registry/loader). A formal interface is extracted only when a second adapter (HubSpot) is specced. | — |
 | `apollo.py` | `ApolloConnector` (concrete) — the only code that knows Apollo exists. `requests` to a module-constant base URL `https://api.apollo.io/api/v1` with `x-api-key`; `/contacts/search` pagination; `/people/bulk_match` (≤10/call) for enrichment; lists via Apollo labels; 429 backoff; credit-exhausted detection; maps Apollo's raw JSON. The API key is **passed in** (from `credentials.py`), not read from config. | `requests` |
 | `normalize.py` | Raw Apollo record → Brewra **canonical** lead dict (see §5.1); preserves the raw record; derives normalized dedup keys (email, domain). | — |
-| `ingestion.py` | Provider-agnostic (operates on the normalized canonical dict, not on a connector type): the atomic `upsert_lead_by_email` (match-hierarchy dedup + coalesce fill-only-empty, §5.3), `MERGE` company-by-domain, register/update the import batch in `Lead_Stream_Files`, and the enrichment run-doc lifecycle. Reuses leads persistence; uses `_neo4j_helpers` for the company `MERGE` and new-lead create. | Neo4j, Mongo |
+| `ingestion.py` | **Pure lead/company writes, provider-agnostic** (operates on the normalized canonical dict, not on a connector type): the UNWIND-batched atomic `upsert_lead_by_email` (match-hierarchy dedup + coalesce fill-only-empty, §5.3) and `MERGE` company-by-domain. Reuses leads persistence; uses `_neo4j_helpers` for the company `MERGE` and new-lead create. Holds **no** run-doc/connector state. | Neo4j |
+| `runs.py` | Run-tracking lifecycle, separate from writes: import batches in `Lead_Stream_Files` and enrich runs in `Connector_Enrich_Runs` (create / progress counters / stale-run failover). Keeps connector-orchestration state out of `ingestion.py`. | Mongo |
 | `credentials.py` | Per-org credential get/set/validate against `Connector_Credentials` (Mongo). | Mongo |
 | `__init__.py` | Re-exports the public service functions (house pattern). | — |
 
@@ -124,39 +125,49 @@ record** is stored under `apollo_raw` (a dict → JSON via `upsert_node`; re-par
 
 A Neo4j `Lead` node (same type CSV `batch-upload` produces) so it flows into the existing stream,
 scoring and ICP tagging. Additionally `MERGE` a `Company` node by normalized **domain** and link
-`(Company)-[:Has_Lead]->(Lead)` (existing relationship vocabulary).
+`(Company)-[:Has_Lead]->(Lead)` (existing relationship vocabulary). Enrichment uses the **same
+`ingestion` upsert path**, so this Company `MERGE` + link applies identically when enrichment fills a
+previously-empty `company_domain`; existing `Company` node properties are not separately enriched in
+v1 (the write-back is lead-centric).
 
-### 5.3 Identity, dedup & merge — one uniform rule (import **and** enrichment)
+### 5.3 Identity, dedup & merge — shared match keys, divergent fallback
 
-**Match-key hierarchy** (applied within `org_id`, in order) — used identically by import and enrichment:
+**Match-key hierarchy** (applied within `org_id`, in order) — the *keys* are shared by import and
+enrichment; the *fallback* differs:
 1. normalized **email** (`lower(trim(email))`);
 2. else **`apollo_contact_id`** (Apollo's stable per-contact id) — covers email-less Apollo
    contacts so they dedup on re-import instead of duplicating (closes the success-criterion-4 hole);
-3. else **create a new lead** (new `lead_id` UUID).
+3. **fallback (diverges by flow):** *import* creates a new lead (new `lead_id` UUID); *enrichment*
+   records the lead as **`unmatched`** in the run and writes nothing. (CSV-origin leads have no
+   `apollo_contact_id`, so they only ever match on email.)
 
-*(CSV-origin leads have no `apollo_contact_id`, so enrichment matches them on email only. A selected
-lead with neither key is reported as **unmatched** in the run — never duplicated.)*
+**Merge = fill-only-empty, atomic, batched.** On a match, only populate empty fields — never
+overwrite an existing value. Implemented as `upsert_lead_by_email` using **UNWIND-batched coalesce
+Cypher** (chunks of ~500 leads per write transaction) over the fixed canonical field set —
+`SET l.<prop> = coalesce(l.<prop>, $val)` per field — so each property write is atomic *and* a large
+import doesn't become tens of thousands of single-row transactions (see §6.1). **Read-modify-write
+is explicitly rejected** — its read→write round-trip is not atomic and would let two concurrent runs
+(import + CSV upload, or two enrich runs) clobber each other. (`upsert_node` is unsuitable for the
+merge because it *overwrites* set keys.)
 
-**Merge = fill-only-empty, atomic.** On a match, only populate empty fields — never overwrite an
-existing value. Implemented as a new `upsert_lead_by_email` primitive using **per-property atomic
-Cypher** in a single write transaction: `SET l.<prop> = coalesce(l.<prop>, $val)` per canonical
-field. **Read-modify-write is explicitly rejected** — its read→write round-trip is not atomic and
-would let two concurrent runs (import + CSV upload, or two enrich runs) clobber each other,
-violating the contract. (`upsert_node` is unsuitable for the merge because it *overwrites* set
-keys.) Bookkeeping fields (`apollo_contact_id`, `file_id`, `last_imported_at`/`last_enriched_at`)
-always refresh.
+**`file_id` is set only on newly-created leads — never overwritten on a match.** A dedup match
+leaves the lead attributed to the batch that *created* it, so `DELETE /leads/by-file/{file_id}` only
+ever removes leads that batch actually produced (no cross-source data-loss surprise — e.g. an Apollo
+import that matches CSV leads by email does not "steal" them into the Apollo batch). Other
+bookkeeping (`apollo_contact_id`, `last_imported_at`/`last_enriched_at`) refreshes on every touch.
 
 **Company** dedup is by normalized registrable **domain** (strip scheme/path/`www`, lowercase).
 
 Net effect: re-importing the same contacts updates rather than duplicates (with or without email);
-neither import nor enrichment ever clobbers customer/CSV-entered data, even under concurrency. No
-provenance tracking needed.
+neither import nor enrichment ever clobbers customer/CSV-entered data, even under concurrency; and
+batch-delete semantics stay intuitive. No provenance tracking needed.
 
 ### 5.4 Storage of customer credentials
 
 Mongo `Profiler.Connector_Credentials`, one doc per `(org_id, provider)`:
-`{org_id, provider:"apollo", api_key, status, connected_at, updated_at}`. Validated by a cheap
-authenticated Apollo call on save. Index on `(org_id, provider)`.
+`{org_id, provider:"apollo", api_key, status, connected_at, updated_at}`. Validated on save by a
+**credit-free** authenticated Apollo call — `GET /labels` (or `/contacts/search?per_page=1`),
+**never** an enrichment/match call (those consume credits). Index on `(org_id, provider)`.
 
 **Stored as-is (unencrypted) — a conscious risk acceptance, not a no-op.** This is a *different*
 threat model from the existing Brewra-global keys: those are operator secrets in env/config — not
@@ -171,10 +182,12 @@ read the `api_key` field are revisited alongside tenant authz.
 ### 5.5 Run tracking
 
 - **Import batch = a synthetic "file".** The import mints a `file_id`, writes it onto every
-  imported `Lead`, and inserts/updates a `Lead_Stream_Files` doc exactly like `batch_upload_leads`
-  (`processing → completed`, with `total_rows / created_count / error_count`). This lights up the
-  existing `GET /leads/stream/status`, `GET /leads/by-file`, `DELETE /leads/by-file/{file_id}`
-  with **no new CRUD**. The optional `label` becomes the batch's display `filename`.
+  **newly-created** `Lead` (matched leads keep their original batch — §5.3), and inserts/updates a
+  `Lead_Stream_Files` doc like `batch_upload_leads` (`processing → completed`, with
+  `total_rows / created_count / matched_count / error_count`). This lights up the existing
+  `GET /leads/stream/status`, `GET /leads/by-file`, `DELETE /leads/by-file/{file_id}` with **no new
+  CRUD**. The optional `label` becomes the batch's display `filename`. (A re-import that only matches
+  existing leads has `created_count=0` and an empty by-file view; its `matched_count` reflects the work.)
 - **Enrichment run** = its own Mongo doc `Profiler.Connector_Enrich_Runs`
   (`run_id, org_id, user_id, status, total, processed, updated, failed, errors[capped at 10],
   started_at, finished_at`), following the market-scoring run-doc + **stale-run failover** pattern.
@@ -193,7 +206,9 @@ background-task functions.
 - `POST /connectors/apollo/connect` `{org_id, user_id, api_key}` → validates via Apollo, stores
   creds, returns `{connected, status}`.
 - `GET /connectors/apollo/status?org_id=` → `{connected, connected_at, status}`.
-- `DELETE /connectors/apollo/connect?org_id=&user_id=` → disconnect (remove creds).
+- `DELETE /connectors/apollo/connect?org_id=` → disconnect (remove creds). No `user_id`: credentials
+  are keyed by `(org_id, provider)`, and the param would imply an ownership check the
+  unauthenticated-tenant posture doesn't perform.
 - `GET /connectors/apollo/lists?org_id=` → the customer's Apollo lists (labels) for the picker.
   `ApolloConnector` paginates the labels endpoint internally and returns the full set (a customer's
   own lists are typically few).
@@ -204,6 +219,10 @@ background-task functions.
   `{file_id, status:"queued"}` immediately. The batch is tracked by `file_id` in
   `Lead_Stream_Files`; **progress is polled via the existing `GET /leads/stream/status`** (no
   separate import-status endpoint — import deliberately reuses the file-batch lifecycle).
+  **Parameters:** `list_id` (optional) is the **Apollo list/label ID that filters** the contact
+  search — omit it to import all of the org's Apollo contacts; `label` (optional) is the **display
+  name** for the Brewra batch (becomes `Lead_Stream_Files.filename`) — omit it and the name is
+  derived (the Apollo list's name, else `"Apollo import <timestamp>"`).
 
 *Enrichment (manual, on a selection)*
 - `POST /connectors/apollo/enrich` `{org_id, user_id, lead_ids[], reveal_personal_emails?=true, reveal_phone_number?=false}`
@@ -219,16 +238,20 @@ background-task functions.
 
 **Import:** FE → `/import` returns instantly → background task loads creds → `ApolloConnector
 .fetch_contacts(list_id)` paginates `/contacts/search` (100/page, backoff on HTTP 429) →
-`normalize` each row → `ingestion.upsert_lead_by_email` (dedup, `MERGE` company-by-domain,
-fill-only-empty) → increment `Lead_Stream_Files` counters → mark `completed`. Leads appear in the
-stream as written.
+`normalize` each row → `ingestion.upsert_lead_by_email` applied in **UNWIND-batched chunks (~500
+leads/transaction)**, not per row (dedup, `MERGE` company-by-domain, fill-only-empty) → update
+`Lead_Stream_Files` counters (`created` vs `matched`) → mark `completed`. Leads appear in the stream
+as chunks land.
 
 **Enrichment:** FE sends selected `lead_ids` → background task loads those leads from Neo4j →
-applies the §5.3 match hierarchy (email → `apollo_contact_id`) → calls `/people/bulk_match` in
-batches of 10, passing the request's `reveal_personal_emails` / `reveal_phone_number` flags
-(defaults `true` / `false`; phones cost extra credits and stay opt-in) → `normalize` results →
-`upsert_lead_by_email` fill-only-empty write-back → update run-doc counters → mark `completed`.
-Leads matching neither key are recorded as `unmatched` (not duplicated).
+builds each `/people/bulk_match` entry from the lead's strongest identifier — **`id=apollo_contact_id`
+when present (exact match), else `{email, first_name, last_name, organization_name/domain}`** from the
+canonical fields → calls `/people/bulk_match` in batches of 10, passing the request's
+`reveal_personal_emails` / `reveal_phone_number` flags (defaults `true` / `false`; phones cost extra
+credits and stay opt-in) → `normalize` results → write back through the **same `ingestion` upsert as
+import** (fill-only-empty, UNWIND-chunked), so the Company `MERGE`-by-domain + link applies
+identically when enrichment fills a previously-empty `company_domain` → update run-doc counters →
+mark `completed`. Leads matching neither key are recorded as `unmatched` (not duplicated).
 
 ## 7. Frontend
 
