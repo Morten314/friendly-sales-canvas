@@ -24,6 +24,14 @@ export default tseslint.config(
       "react-refresh": reactRefresh,
       "import-x": importX,
     },
+    settings: {
+      "import-x/resolver": {
+        typescript: {
+          alwaysTryTypes: true,
+          project: "./tsconfig.app.json",
+        },
+      },
+    },
     rules: {
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
@@ -44,14 +52,44 @@ export default tseslint.config(
           checksVoidReturn: { attributes: false },
         },
       ],
+      // NOTE: "internal" (the `@/*` alias, now resolvable via the import-x/resolver
+      // added in Phase 4a) is ordered LAST, after the relative groups. This matches
+      // the repo's pre-existing, consistent convention (external → relative → `@/`)
+      // and keeps Phase 4a additive — pinning the resolver-induced reclassification
+      // in config rather than reordering source imports (Plan 21a Task 5 Step 3).
       "import-x/order": [
         "error",
         {
-          groups: ["builtin", "external", "internal", "parent", "sibling", "index"],
+          groups: ["builtin", "external", "parent", "sibling", "index", "internal"],
           "newlines-between": "always",
           alphabetize: { order: "asc", caseInsensitive: true },
         },
       ],
+      // Phase 4a — cross-zone dependency boundaries (require the import-x/resolver above).
+      "import-x/no-restricted-paths": [
+        "error",
+        {
+          zones: [
+            {
+              target: "./src/shared",
+              from: "./src/features",
+              message:
+                "src/shared must not import from src/features — shared is consumed by features, not the reverse.",
+            },
+            {
+              target: "./src/components/ui",
+              from: "./src/features",
+              message: "src/components/ui (shadcn primitives) must not import from src/features.",
+            },
+            {
+              target: "./src/components/ui",
+              from: "./src/shared",
+              message: "src/components/ui (shadcn primitives) must not import from src/shared.",
+            },
+          ],
+        },
+      ],
+      "import-x/no-cycle": "error",
     },
   },
   // Override zone: shadcn primitives — locked from Phase 4.
@@ -83,7 +121,12 @@ export default tseslint.config(
   // (`getLeadCountForICP`) alongside its panel for the same single-call-site
   // reason.
   {
-    files: ["src/contexts/**", "src/components/customers/LeadStream.tsx"],
+    files: [
+      "src/contexts/**",
+      "src/components/customers/LeadStream.tsx",
+      "src/shared/**",
+      "src/features/**",
+    ],
     rules: {
       "react-refresh/only-export-components": "off",
     },
