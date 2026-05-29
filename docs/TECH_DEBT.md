@@ -648,3 +648,28 @@ rather than this repoint.
 - Bundle with removal of the `sbx policy allow network backend-11kr.onrender.com` sandbox rule.
 
 **Owner:** TBD (deploy owner).
+
+---
+
+## TD-FE-14 — knip-ignore on `src/shared/components/**` until Phase 5 consumes `FeatureErrorBoundary`
+
+**Date logged:** 2026-05-29
+**Origin:** Plan 21a Phase 4a (plans/21a-frontend-phase-4a-scaffolding.md), Task 3.
+
+**Current state:**
+`src/shared/components/**` is in `knip.json`'s `ignore` array. `FeatureErrorBoundary` and its `index.ts`
+re-export have **no production consumer** until Phase 5 wraps the first feature route in it. Under
+`knip --strict` (production mode, `src/**/*.{ts,tsx}!` entries), an exported-but-unconsumed symbol fails the
+gate. Vitest tests exercise the boundary, but test files are knip-excluded, so they do not satisfy knip's
+"used" check. The ignore suppresses the false positive until a real consumer exists.
+
+**What it should be:**
+Remove `"src/shared/components/**"` from `knip.json`'s `ignore` once Phase 5 imports `FeatureErrorBoundary`
+to wrap a feature's top-level routed component. The export then has a production consumer and knip passes
+without the ignore.
+
+**Pull-forward trigger:**
+Phase 5 (first feature extraction) — its plan's done-when removes this ignore and confirms `knip --strict`
+stays green.
+
+**Owner:** TBD.
