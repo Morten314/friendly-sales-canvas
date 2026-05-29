@@ -213,7 +213,10 @@ def get_stream_status(mongo, org_id: str) -> Dict[str, Any]:
             "total_rows": doc.get("total_rows", 0),
             "created_count": doc.get("created_count", 0),
             "error_count": doc.get("error_count", 0),
-            "processing_status": doc.get("processing_status", "completed")
+            "processing_status": doc.get("processing_status", "completed"),
+            "source": doc.get("source"),
+            "matched_count": doc.get("matched_count", 0),
+            "capped": doc.get("capped", False),
         }
         files.append(item)
     return {"files": files}

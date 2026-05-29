@@ -74,6 +74,9 @@ class StreamFileEntry(BaseModel):
     created_count: int = 0
     error_count: int = 0
     processing_status: str = "completed"
+    source: Optional[str] = None
+    matched_count: int = 0
+    capped: bool = False
 
 
 class StreamStatusResponse(BaseModel):
