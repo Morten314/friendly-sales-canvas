@@ -20,7 +20,7 @@ Canonical, living map of the FastAPI backend at `backend/app/`. Source of truth 
 - `app/models/` — per-domain Pydantic request/response models, plus `pagination.py`.
 - `app/routers/` — per-domain routers; `app/routers/v2/` holds the versioned successors.
 - `app/services/<domain>/` — business logic, split into per-domain sub-modules (each applied as relevant):
-  - canonical sub-modules: `orchestrator`, `persistence`, `llm`, `parsing`, `normalization`, `scoring`.
+  - common sub-module names: `orchestrator`, `persistence`, `llm`, `parsing`, `normalization`, `scoring`.
   - some domains use domain-specific module names instead, e.g. `signals/{ask,batch,search}`, `graph_chat/{neo4j,prospect_pipeline}`, `data_sources/{loaders,pipeline}`.
   - shared `_`-prefixed helpers: `_claude_budget`, `_llm_helpers`, `_neo4j_helpers`, `_retrieval`.
 - `backend/prompts/<svc>/` — Jinja2 prompt bodies served by `app/core/prompts.py` (see `docs/PROMPTS.md`).
@@ -32,7 +32,7 @@ Router (`app/routers/<domain>` or `app/routers/v2/`) → service orchestrator (`
 `icp`, `signals`, `leads`, `market_research`, `market_scoring`, `customer_profile`, `data_sources`, `org_auth`, `graph_chat`, `pipeline`, `profiles` (eleven domain service packages under `app/services/`, each with a v1 router). Plus `health` — a service module (`app/services/health.py`) with no dedicated router; see §Health below.
 
 ## v1 vs v2 routers
-`app/routers/` is the original surface; `app/routers/v2/` is the versioned successor and contains exactly: `data_sources`, `icp`, `leads`, `org_auth`, `signals`. Each v2 router is mounted with `prefix="/v2"` in `app/main.py`. This v2 set are versioned successors that sit alongside their v1 routers — no exception for `org_auth` (its v1 router, `app/routers/org_auth.py`, is mounted in `app/main.py` like every other v1 domain). The versioning convention implies that a router and its model are updated together, and that an endpoint change targets the version its FE consumer uses.
+`app/routers/` is the original surface; `app/routers/v2/` is the versioned successor and contains exactly: `data_sources`, `icp`, `leads`, `org_auth`, `signals`. Each v2 router is mounted with `prefix="/v2"` in `app/main.py`. These v2 routers are versioned successors that sit alongside their v1 counterparts. The versioning convention implies that a router and its model are updated together, and that an endpoint change targets the version its FE consumer uses.
 
 ## Health
 No dedicated health router or standard probe routes (`/healthz`, `/livez`, `/readyz`) exist; there is also no root route. `app/services/health.py` exposes a single smoke probe, `probe_llm(llm2)`, which invokes the Together LLM and returns a `{"status": ...}` dict. It is surfaced as a diagnostic `GET /test-llm` endpoint on the `pipeline` router (`app/routers/pipeline.py`). Liveness/readiness is therefore not formally wired — process health is implicit (the app is "up" once `lifespan` startup completes); the only health-style endpoint is this ad-hoc LLM probe.
