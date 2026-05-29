@@ -709,3 +709,33 @@ Phase 5 or 6 (second real feature exists, so a genuine cross-feature import can 
 adds a feature that imports another feature.
 
 **Owner:** TBD.
+
+---
+
+## TD-FE-16 — Sidebar export-name twins + `useAuth` name collision
+
+**Date logged:** 2026-05-29
+**Origin:** Plan 21b Phase 4b (plans/21b-frontend-phase-4b-shell-extraction.md), Task 5.
+
+**Current state:**
+Two name twins remain after the shell extraction:
+1. **Sidebar twins.** shadcn's `src/components/ui/sidebar.tsx` exports `SidebarProvider` (line 730) and
+   `useSidebar` (line 734) — the same names the app's own sidebar state (`src/features/shell/SidebarContext.tsx`)
+   exports. 4b resolves the hazard *at the shell's public surface*: the app hook is re-exported as
+   `useAppSidebar` from `@/features/shell`, and the app `SidebarProvider` flows through the shell barrel. The
+   **internal** `SidebarContext.tsx` symbol is still named `useSidebar` (internal rename deferred). The
+   collision stays *inactive* — nothing imports `useSidebar`/`SidebarProvider` from `@/components/ui/sidebar`.
+2. **`useAuth` collision.** `src/shared/auth/AuthContext.tsx` and `src/hooks/useAuth.ts` both export `useAuth`
+   with different behavior — the context hook vs. the composed JWT/session hook. `@/shared/auth` exposes the
+   *context* `useAuth`; the composed hook stays at `@/hooks/useAuth`. 4b does not worsen this.
+
+**What it should be:**
+Rename the internal `SidebarContext.tsx` hook to `useAppSidebar` (and drop the barrel alias) the next time the
+shell internals are touched. Rename the composed `hooks/useAuth.ts` to something unambiguous (e.g.
+`useSession`) when it finds its final home.
+
+**Pull-forward trigger:**
+`useAuth` collision → Phase 10/11, when `hooks/useAuth.ts` is rehomed (Spec 21 §8.2 item 6). Sidebar internal
+rename → whenever the shadcn twin becomes active, or the shell internals are next refactored.
+
+**Owner:** TBD.

@@ -2,22 +2,29 @@
 
 ## Purpose
 
-_TODO: one paragraph — what this feature does and the user-facing surface it owns._
+The application frame that authenticated features render inside: the sidebar, header, page layout, and profile dialog, plus the route guard. The shell renders only on authenticated screens — Login and TenantSelection do not use `Layout`.
 
 ## Public surface
 
-_The cross-feature API, re-exported from `index.ts`. Other features import only these, only via `@/features/shell`._
+Re-exported from `index.ts`; consume only these, only via `@/features/shell`:
 
-- _TODO_
+- `Layout` — the page frame (header + sidebar + content slot). Composed per-page by feature pages.
+- `ProtectedRoute` — route guard; redirects unauthenticated users to `/login` and auto-selects a tenant when `requireTenant` is set but none is chosen.
+- `SidebarProvider` — provides the app sidebar (mobile-open) state. Nested in `App.tsx`.
+- `useAppSidebar` — the app sidebar hook (renamed from the internal `useSidebar` to avoid the shadcn `ui/sidebar` name-twin — see TECH_DEBT TD-FE).
+- `DeploymentData` (type) — surfaced for `MarketResearch` until that page migrates (Phase 5).
+
+Internals (`components/Header`, `components/Sidebar`, `components/ProfileDialog`, `SidebarContext`) are **not** re-exported. The `<Routes>` table is **not** here — it stays in `App.tsx` (it must know every feature's page; putting it in the shell would invert the dependency rule).
 
 ## Key files
 
-- `index.ts` — public re-exports (the cross-feature surface)
+- `index.ts` — public re-exports (the cross-feature surface above)
+- `components/Layout.tsx`, `components/Header.tsx`, `components/Sidebar.tsx`, `components/ProfileDialog.tsx` — the frame
+- `ProtectedRoute.tsx` — route guard
+- `SidebarContext.tsx` — sidebar (mobile-open) state
 - `types.ts` — feature-local types
-- _TODO: pages/, components/, hooks/, services/ as they are added_
 
 ## Dependency notes
 
-- May import from: `@/features/shell/*` (self), `@/shared/*`, `@/components/ui/*`, npm packages.
-- May import another feature **only** via its `index.ts` (`@/features/<other>`), never a deep path.
-- Transitional (Phases 4b–12): may import not-yet-migrated legacy dirs (`@/contexts`, `@/hooks`, `@/lib`, `@/utils`, `@/pages`).
+- Consumes `@/shared/auth` (`useAuth`), `@/shared/tenant` (`useTenant`, `Tenant`), `@/components/ui/*`, and npm packages.
+- Does **not** import from other features. App-wide state lives in `@/shared`, not here (ADR-0002).
