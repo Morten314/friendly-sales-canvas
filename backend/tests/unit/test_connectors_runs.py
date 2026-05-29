@@ -107,7 +107,39 @@ def test_get_enrich_run_missing_raises():
 
 
 def test_stale_queued_run_detection():
-    assert runs._is_stale_queued_run(
+    assert runs._is_stale_run(
         {"status": "queued", "started_at": None, "created_at": "2000-01-01T00:00:00+00:00", "updated_at": None}
     ) is True
-    assert runs._is_stale_queued_run({"status": "processing"}) is False
+    # queued run with a fresh updated_at is NOT stale
+    from datetime import datetime, timezone
+    fresh = datetime.now(timezone.utc).isoformat()
+    assert runs._is_stale_run(
+        {"status": "queued", "started_at": None, "updated_at": fresh, "created_at": "2000-01-01T00:00:00+00:00"}
+    ) is False
+
+
+def test_stale_processing_run_detected():
+    # processing run with an ancient updated_at (and started_at) is stale
+    assert runs._is_stale_run(
+        {
+            "status": "processing",
+            "started_at": "2000-01-01T00:00:00+00:00",
+            "updated_at": "2000-01-01T00:01:00+00:00",
+        }
+    ) is True
+    # processing run with a fresh updated_at is NOT stale (live run advancing its timestamp)
+    from datetime import datetime, timezone
+    fresh = datetime.now(timezone.utc).isoformat()
+    assert runs._is_stale_run(
+        {
+            "status": "processing",
+            "started_at": "2000-01-01T00:00:00+00:00",
+            "updated_at": fresh,
+        }
+    ) is False
+
+
+def test_stale_run_ignores_terminal_statuses():
+    # completed and failed runs are never considered stale
+    assert runs._is_stale_run({"status": "completed", "updated_at": "2000-01-01T00:00:00+00:00"}) is False
+    assert runs._is_stale_run({"status": "failed", "updated_at": "2000-01-01T00:00:00+00:00"}) is False

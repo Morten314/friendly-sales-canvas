@@ -107,12 +107,17 @@ def _runs_coll(mongo):
     return mongo["Profiler"][ENRICH_RUNS_COLLECTION]
 
 
-def _is_stale_queued_run(run_doc: Dict[str, Any], stale_after_seconds: int = _STALE_AFTER_SECONDS) -> bool:
-    if str(run_doc.get("status", "")).lower() != "queued":
+def _is_stale_run(run_doc: Dict[str, Any], stale_after_seconds: int = _STALE_AFTER_SECONDS) -> bool:
+    """A queued OR processing run is stale when its most-recent activity timestamp
+    is older than the window (or absent). A healthy processing run advances
+    `updated_at` every chunk, so this never reclaims a live run."""
+    if str(run_doc.get("status", "")).lower() not in ("queued", "processing"):
         return False
-    if run_doc.get("started_at"):
-        return False
-    reference = _parse_iso(run_doc.get("updated_at")) or _parse_iso(run_doc.get("created_at"))
+    reference = (
+        _parse_iso(run_doc.get("updated_at"))
+        or _parse_iso(run_doc.get("started_at"))
+        or _parse_iso(run_doc.get("created_at"))
+    )
     if reference is None:
         return True
     return (datetime.now(timezone.utc) - reference).total_seconds() >= stale_after_seconds
@@ -171,13 +176,13 @@ def fail_stale_enrich_runs(mongo, org_id: str) -> None:
         {"org_id": org_id, "status": {"$in": ["queued", "processing"]}},
         sort=[("created_at", -1)],
     )
-    if active and _is_stale_queued_run(active):
+    if active and _is_stale_run(active):
         now = _now()
         coll.update_one(
             {"run_id": active["run_id"]},
             {"$set": {
                 "status": "failed",
-                "errors": ["Run auto-failed: remained queued without starting."],
+                "errors": ["Run auto-failed: stale with no progress within the staleness window."],
                 "updated_at": now,
                 "finished_at": now,
             }},
