@@ -29,6 +29,7 @@ from app.core.logging import logger  # noqa: F401
 from app.services.market_scoring import _ensure_market_scoring_indexes
 from app.services.leads import _ensure_leads_indexes
 from app.services.icp import _ensure_icp_indexes
+from app.services.connectors import _ensure_connectors_indexes
 
 
 @asynccontextmanager
@@ -53,6 +54,7 @@ async def lifespan(app: FastAPI):
         _ensure_market_scoring_indexes(app.state.clients.client)
         _ensure_leads_indexes(app.state.clients.client)
         _ensure_icp_indexes(app.state.clients.client)
+        _ensure_connectors_indexes(app.state.clients.client)
 
     yield
     # No teardown — clients are process-lifetime singletons.
@@ -189,3 +191,7 @@ app.include_router(org_auth_v2.router, prefix="/v2")
 from app.routers import market_scoring
 
 app.include_router(market_scoring.router)
+
+from app.routers import connectors
+
+app.include_router(connectors.router)

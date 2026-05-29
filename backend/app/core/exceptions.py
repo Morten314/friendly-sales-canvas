@@ -159,3 +159,26 @@ class ScoringPostProcessingError(ServiceError):
     def __init__(self, message: str, prompt_meta: dict):
         super().__init__(message)
         self.prompt_meta = prompt_meta
+
+
+# ─── Connector leaves (Apollo + future adapters) ───
+
+class ConnectorNotConnectedError(NotFoundError):
+    """No stored credentials for the given (org_id, provider). → 404."""
+
+
+class ConnectorEnrichRunNotFoundError(NotFoundError):
+    """No connector enrichment run found for the given org_id/run_id. → 404."""
+
+
+class ConnectorCredentialsInvalidError(ValidationError):
+    """A supplied connector API key was rejected by the provider on validation. → 400."""
+
+
+class ApolloAPIError(ServiceError):
+    """Unexpected failure talking to the Apollo API (non-credit, non-auth). → 500."""
+
+
+class ApolloCreditsExhaustedError(ServiceError):
+    """Apollo reported the account is out of enrichment credits. → 500.
+    Background tasks catch this and end the run `partial` rather than surfacing 500."""

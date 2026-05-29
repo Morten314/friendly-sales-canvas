@@ -2,7 +2,7 @@
 
 **Status:** Design (approved in brainstorming 2026-05-29)
 **Date:** 2026-05-29
-**Paired plans:** split by stack — `plans/apollo-lead-integration-backend.md` (to be written now) and `plans/apollo-lead-integration-frontend.md` (**deferred** until the frontend refactor completes — see §12)
+**Paired plans:** split by stack — `plans/23a-apollo-lead-integration-backend.md` (to be written now) and `plans/23b-apollo-lead-integration-frontend.md` (**deferred** until the frontend refactor completes — see §12)
 **Author:** brainstorming session (re-grounded against the post-refactor codebase, not the pre-refactor analysis docs)
 
 > **Grounding note:** The `docs/analysis/**` documents predate a large backend/frontend
@@ -189,8 +189,13 @@ read the `api_key` field are revisited alongside tenant authz.
   CRUD**. The optional `label` becomes the batch's display `filename`. (A re-import that only matches
   existing leads has `created_count=0` and an empty by-file view; its `matched_count` reflects the work.)
 - **Enrichment run** = its own Mongo doc `Profiler.Connector_Enrich_Runs`
-  (`run_id, org_id, user_id, status, total, processed, updated, failed, errors[capped at 10],
-  started_at, finished_at`), following the market-scoring run-doc + **stale-run failover** pattern.
+  (`run_id, org_id, user_id, status, total, processed, updated, unmatched, failed, skipped,
+  errors[capped at 10], started_at, finished_at`), following the market-scoring run-doc +
+  **stale-run failover** pattern. `total` is the count of selected `lead_ids`; the per-lead
+  outcomes partition it as `processed + skipped == total` (and `processed == updated + unmatched +
+  failed`). **`skipped`** counts selected leads that no longer exist in the graph (a `lead_id`
+  deleted or foreign between selection and processing) — surfaced rather than silently dropped, so a
+  finished run reconciles to 100%.
   It is a *separate* collection from the import's `Lead_Stream_Files` on purpose: import reuses the
   file-batch surface to inherit its by-file CRUD + stream-status UI for free, whereas enrichment has
   no file/lead-set artifact to list — unifying would mean re-implementing that surface for no gain.
@@ -229,7 +234,9 @@ background-task functions.
   → creates an enrich run, queues a `BackgroundTask`, returns `{run_id, status:"queued"}`. The two
   `reveal_*` flags are optional request fields (defaults shown) so the credit-spending choice sits
   with the caller — no global config, no new settings surface in v1.
-- `GET /connectors/apollo/enrich/status?org_id=&run_id=` → run-doc progress counters.
+- `GET /connectors/apollo/enrich/status?org_id=&run_id=` → run-doc progress counters
+  (`total, processed, updated, unmatched, failed, skipped, progress_percent, errors, started_at,
+  finished_at`).
 
 *Reused as-is:* `GET /v2/leads` (read), `GET /leads/stream/status`, `GET /leads/by-file`,
 `DELETE /leads/by-file/{file_id}`.
@@ -243,10 +250,13 @@ leads/transaction)**, not per row (dedup, `MERGE` company-by-domain, fill-only-e
 `Lead_Stream_Files` counters (`created` vs `matched`) → mark `completed`. Leads appear in the stream
 as chunks land.
 
-**Enrichment:** FE sends selected `lead_ids` → background task loads those leads from Neo4j →
+**Enrichment:** FE sends selected `lead_ids` → background task loads those leads from Neo4j
+(selected `lead_ids` no longer present are counted **`skipped`**, not silently dropped) →
 builds each `/people/bulk_match` entry from the lead's strongest identifier — **`id=apollo_contact_id`
 when present (exact match), else `{email, first_name, last_name, organization_name/domain}`** from the
-canonical fields → calls `/people/bulk_match` in batches of 10, passing the request's
+canonical fields (a lead with **no** usable identifier yields an empty entry — it is counted
+**`unmatched`** and **not** sent to `/people/bulk_match`, so it costs no credit) → calls
+`/people/bulk_match` in batches of 10, passing the request's
 `reveal_personal_emails` / `reveal_phone_number` flags (defaults `true` / `false`; phones cost extra
 credits and stay opt-in) → `normalize` results → write back through the **same `ingestion` upsert as
 import** (fill-only-empty, UNWIND-chunked), so the Company `MERGE`-by-domain + link applies
@@ -295,6 +305,11 @@ zod contracts in `src/shared/api/contracts/`; hook pattern per `useCompanyProfil
   X of Y enriched."
 - **Per-row failures:** isolated `try/except`; `failed` counter increments; run continues; a capped
   sample of errors is stored on the run doc (mirrors `batch_upload`'s `errors[:10]`).
+- **Enrichment accounting (no silent drops):** selected leads no longer present in the graph are
+  counted **`skipped`** (with a recorded reason), and leads with no usable match identifier are
+  counted **`unmatched`** without calling `/people/bulk_match` (no wasted credit). Counters reconcile
+  to `total` (`processed + skipped == total`), so a completed run reads 100% rather than a confusing
+  partial percentage.
 - **Durability (known limit):** `BackgroundTasks` die on Render restart with no checkpoint. Mitigation
   is **idempotency** — dedup + fill-only-empty mean re-clicking Import/Enrich after an interruption
   converges and never duplicates. Stale queued/processing runs are failed by the next run
@@ -354,7 +369,7 @@ deliberate (Decision §10.9); it is *not* an invitation to land the frontend mid
 
 ### 12.1 Backend plan — written now
 
-- Plan: `plans/apollo-lead-integration-backend.md`.
+- Plan: `plans/23a-apollo-lead-integration-backend.md`.
 - Scope: everything in §4–§6, §8, and the backend portions of §9, plus the net-new primitives in
   §5.3 (dedup-by-email upsert, fill-only-empty merge), credential storage (§5.4), and run tracking
   (§5.5).
@@ -368,7 +383,7 @@ deliberate (Decision §10.9); it is *not* an invitation to land the frontend mid
 
 ### 12.2 Frontend plan — deferred
 
-- Plan: `plans/apollo-lead-integration-frontend.md` — **not written yet.**
+- Plan: `plans/23b-apollo-lead-integration-frontend.md` — **not written yet.**
 - **Why deferred:** the frontend refactor (Spec 14) explicitly assumes *"No new product features …
   Agents must not 'improve' mid-refactor"* (§2.2), and the Apollo UI touches surfaces owned by
   pending, parity-preserving extraction phases that have not run yet:
