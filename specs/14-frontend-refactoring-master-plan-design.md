@@ -197,7 +197,7 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 | 1 — LOC reduction pass #1 | done | 2026-05-27 |
 | 2a — Strict TS turn-on | done | 2026-05-28 |
 | 2b — ESLint type-aware + Prettier | done | 2026-05-28 |
-| 2c — Preflight gates + bundle budget | pending | — |
+| 2c — Preflight gates + bundle comparator (advisory) | done | 2026-05-29 |
 | 3 — API/data layer consolidation | pending | — |
 | 4 — Feature scaffolding + shell extraction | pending | — |
 | 5 — Feature: market-research | pending | — |
