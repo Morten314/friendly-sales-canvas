@@ -2,11 +2,11 @@ import { MessageSquare, Users } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { Layout } from "@/components/layout/Layout";
 import StrategistWorkspace from "@/components/market-research/StrategistWorkspace";
 import StrategistLeadStream from "@/components/strategist/StrategistLeadStream";
 import StrategistRecommendations from "@/components/strategist/StrategistRecommendations";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Layout } from "@/features/shell";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface StrategistContext {

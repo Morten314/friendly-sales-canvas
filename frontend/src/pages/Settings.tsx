@@ -1,5 +1,5 @@
 // import { useState } from "react";
-// import { Layout } from "@/components/layout/Layout";
+// import { Layout } from "@/features/shell";
 // import {
 //   Select,
 //   SelectContent,
@@ -70,7 +70,6 @@
 import { Edit, Save } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 
-import { Layout } from "@/components/layout/Layout";
 import { AgentProfile } from "@/components/settings/AgentProfile";
 import { CompanyProfile } from "@/components/settings/CompanyProfile";
 import { UserProfile } from "@/components/settings/UserProfile";
@@ -82,6 +81,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Layout } from "@/features/shell";
 import type { UntypedBackendProfile } from "@/lib/types/escape-hatches";
 import { useAuth } from "@/shared/auth";
 

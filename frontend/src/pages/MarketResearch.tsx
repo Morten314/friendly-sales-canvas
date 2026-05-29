@@ -11,8 +11,6 @@ import {
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
-import type { DeploymentData } from "@/components/layout/Header";
-import { Layout } from "@/components/layout/Layout";
 import { ChatWithScout } from "@/components/market-research/ChatWithScout";
 import EditHistoryPanel from "@/components/market-research/EditHistoryPanel";
 import { MarketDetailDrawer } from "@/components/market-research/MarketDetailDrawer";
@@ -28,6 +26,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Layout } from "@/features/shell";
+import type { DeploymentData } from "@/features/shell";
 import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { buildApiUrl } from "@/lib/api";

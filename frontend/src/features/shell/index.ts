@@ -1,4 +1,4 @@
-// Public surface for the `shell` feature.
-// Re-export ONLY what other features may consume; internals stay unexported.
-// Cross-feature consumers import from "@/features/shell", never a deep path.
-export {};
+export { Layout } from "./components/Layout";
+export { default as ProtectedRoute } from "./ProtectedRoute";
+export { SidebarProvider, useSidebar as useAppSidebar } from "./SidebarContext";
+export type { DeploymentData } from "./components/Header";

@@ -15,7 +15,6 @@ import {
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { Layout } from "@/components/layout/Layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Toaster } from "@/components/ui/toaster";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Layout } from "@/features/shell";
 import { useToast } from "@/hooks/use-toast";
 import type { UntypedBackendSignal } from "@/lib/types/escape-hatches";
 import { sanitizeAnswerText } from "@/lib/utils";

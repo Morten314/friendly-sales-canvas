@@ -18,12 +18,12 @@ import {
 } from "lucide-react";
 import React, { useState, useEffect } from "react";
 
-import { Layout } from "@/components/layout/Layout";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Layout } from "@/features/shell";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface ArtefactItem {

@@ -1,9 +1,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
-import ProtectedRoute from "./components/ProtectedRoute";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
-import { SidebarProvider } from "./contexts/SidebarContext";
 import Artifacts from "./pages/Artifacts";
 import Calendar from "./pages/Calendar";
 import Customers from "./pages/Customers";
@@ -22,6 +20,7 @@ import TenantSelection from "./pages/TenantSelection";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ProtectedRoute, SidebarProvider } from "@/features/shell";
 import { queryClient } from "@/shared/api/queryClient";
 import { AuthProvider } from "@/shared/auth";
 import { TenantProvider } from "@/shared/tenant";

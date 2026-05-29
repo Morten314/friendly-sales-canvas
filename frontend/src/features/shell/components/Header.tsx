@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
+import { useSidebar } from "../SidebarContext";
+
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -28,7 +30,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useSidebar } from "@/contexts/SidebarContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useTenant } from "@/shared/tenant";

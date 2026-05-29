@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
-import { Layout } from "@/components/layout/Layout";
 import DataSourcesManager from "@/components/mission-control/DataSourcesManager";
 import ICPManager from "@/components/mission-control/ICPManager";
 import {
@@ -58,6 +57,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { Layout } from "@/features/shell";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import {

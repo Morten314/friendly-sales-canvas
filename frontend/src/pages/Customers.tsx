@@ -5,10 +5,10 @@ import { useLocation } from "react-router-dom";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { ICPIntelligence } from "@/components/customers/ICPIntelligence";
 import { LeadStreamPanel } from "@/components/customers/LeadStream";
-import { Layout } from "@/components/layout/Layout";
 import { ProfilerChatWithHistory } from "@/components/signals/ProfilerChatWithHistory";
 import type { SignalsChatContext } from "@/components/signals/SignalsContextChat";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Layout } from "@/features/shell";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 const Customers = () => {
