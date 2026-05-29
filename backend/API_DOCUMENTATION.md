@@ -51,16 +51,17 @@ parameters and response shapes, see `API_ENDPOINTS_SUMMARY.md`.
 
 ## Research and Signals
 
-Each of the research/signal generators has a Groq-backed default and a
+Each of the research/signal *generator* endpoints has a Groq-backed default and a
 Claude-backed `_claude` twin (same request/response shape; the `_claude` variant
 uses Tavily + Anthropic and returns HTTP 500 if `ANTHROPIC_API_KEY` is unset).
+`GET /test-llm` is a separate diagnostic utility and does not follow this pattern.
 
 - `POST /market-research`  
   Runs market research workflow (Groq backend) and returns structured output.
 - `POST /market-research_claude`  
   Same as `/market-research`, generated with the Claude backend.
 - `GET /icp`  
-  Retrieves ICP (Ideal Customer Profile) data. **Deprecated** — emits `Deprecation`/`Link` headers pointing to `GET /api/v2/icp` (successor for the list portion only; the route's lazy generate/create behavior has no v2 successor).
+  Retrieves ICP (Ideal Customer Profile) data. **Deprecated** — see `GET /api/v2/icp`; only the list portion is replaced (the lazy generate/create behavior has no v2 successor).
 - `POST /icp-research`  
   Generates/refines ICP research results (Groq backend).
 - `POST /icp-research_claude`  

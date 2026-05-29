@@ -11,7 +11,11 @@ reaches them through its `/api/*` Vite proxy, so the same routes appear as
 `response_model`; for those the response is described by purpose rather than a
 fabricated JSON body.
 
-See the **v2 (paginated) Endpoints** section at the end for the versioned list
+Entries added during the router reconciliation use sub-numbers (5a, 5b, …) under
+their nearest base entry; these are full production routes, not lower-priority
+supplements.
+
+See the **v2 (Paginated) Endpoints** section at the end for the versioned list
 routes and the shared `PaginatedResponse` envelope.
 
 ---
@@ -537,7 +541,8 @@ min 0), unless noted.
   bare paths with no version prefix. Several v1 list routes (`/leads`,
   `/leads/by-file`, `/fetch-signals`, `/icp`, `/user-documents`, `/registration`)
   are now **deprecated** in favor of their `/v2` successors and emit `Deprecation` /
-  `Link` response headers. (For `/icp`, the `/v2` successor replaces only the list
+  `Link` response headers (the `Link` headers use proxy-form paths, e.g.
+  `/api/v2/leads`). (For `/icp`, the `/v2` successor replaces only the list
   portion; the route's lazy generate/create behavior has no v2 successor.)
 - **v2** — paginated successors under `app/routers/v2/`, mounted at the `/v2`
   prefix, returning the shared `PaginatedResponse` envelope. See the
