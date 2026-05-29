@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -24,8 +24,7 @@ import TenantSelection from "./pages/TenantSelection";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-
-const queryClient = new QueryClient();
+import { queryClient } from "@/shared/api/queryClient";
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
