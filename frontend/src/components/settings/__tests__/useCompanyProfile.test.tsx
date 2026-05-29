@@ -4,9 +4,9 @@ import { http, HttpResponse } from "msw";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { server } from "@/test/msw/server";
-
 import { useCompanyProfile, useSaveCompanyProfile } from "../useCompanyProfile";
+
+import { server } from "@/test/msw/server";
 
 function wrapper() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
