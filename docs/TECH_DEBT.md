@@ -673,3 +673,39 @@ Phase 5 (first feature extraction) — its plan's done-when removes this ignore 
 stays green.
 
 **Owner:** TBD.
+
+---
+
+## TD-FE-15 — Cross-feature index-only lint enforcement deferred (zone boundaries only)
+
+**Date logged:** 2026-05-29
+**Origin:** Plan 21a Phase 4a (plans/21a-frontend-phase-4a-scaffolding.md), Task 6.
+
+**Current state:**
+`eslint.config.js` enforces the cross-zone boundaries (`shared ↛ features`, `ui ↛ features|shared`) but **not**
+the "import feature B only via `B/index.ts`" rule. The Task 6 spike tried `import-x/no-internal-modules` with an
+allow-list: the **positive probe passed** (it flagged a deep `@/features/<x>/internal` import while allowing the
+`@/features/<x>` index import), but the **no-regression check failed** — the rule forbids _all_ deep imports by
+default, so it flagged 95 pre-existing, legitimate imports: ~85 relative deep paths (`./pages/Login`,
+`../helpers/login`, `../fixtures/*`, …) plus external package subpaths (`firebase/auth`, `react-dom/client`,
+`vitest/config`, `msw/node`, `@testing-library/jest-dom/vitest`). The allow-list cannot enumerate those cleanly
+— external subpaths are unbounded. Per Spec 21 §2.6 item 2, 4a ships zone boundaries only rather than blocking
+on an uncertain mechanism. (The positive probe did confirm the import-x engine + resolver evaluate
+`src/features/**` — the rule fired there — so the zone rules are vacuous only for lack of real features, not
+silently disabled.)
+
+**What it should be:**
+Express "cross-feature imports go only through `index.ts`". Re-attempt once real features exist (Phases 5–6),
+gating on the same positive probe. Angles surfaced by this spike:
+
+- Invert `import-x/no-internal-modules` to its **`forbid`** form (e.g. `forbid: ["@/features/*/*",
+  "@/features/*/**"]`), which forbids only deep-feature paths and leaves other deep imports (relative, external
+  subpaths) alone — sidestepping the unbounded allow-list. Confirm it does not also catch the `@/features/<x>`
+  index.
+- Or adopt `dependency-cruiser` for this one constraint (Spec 14 §3.3 fallback).
+
+**Pull-forward trigger:**
+Phase 5 or 6 (second real feature exists, so a genuine cross-feature import can be tested) — whichever first
+adds a feature that imports another feature.
+
+**Owner:** TBD.
