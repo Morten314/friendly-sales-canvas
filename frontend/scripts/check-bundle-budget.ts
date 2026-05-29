@@ -126,11 +126,12 @@ export async function loadBaseline(path: string): Promise<LoadResult> {
     !parsed ||
     typeof parsed !== "object" ||
     typeof (parsed as Baseline).total_size_bytes !== "number" ||
+    typeof (parsed as Baseline).total_size_gzip_bytes !== "number" ||
     !Array.isArray((parsed as Baseline).chunks)
   ) {
     return {
       ok: false,
-      reason: `baseline JSON at ${path} missing expected fields (total_size_bytes, chunks)`,
+      reason: `baseline JSON at ${path} missing expected fields (total_size_bytes, total_size_gzip_bytes, chunks)`,
     };
   }
   return { ok: true, baseline: parsed as Baseline };
