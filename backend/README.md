@@ -1,27 +1,21 @@
-# Deploy FastAPI on Render
+# Brewra Backend
 
-Use this repo as a template to deploy a Python [FastAPI](https://fastapi.tiangolo.com) service on Render.
+FastAPI service for the Brewra GTM/sales-intelligence product. Layered app under `app/` (core, models, routers + v2, services); prompts under `prompts/`; tests under `tests/`.
 
-See https://render.com/docs/deploy-fastapi or follow the steps below:
+## Run locally
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --reload        # serves on http://127.0.0.1:8000 ; docs at /docs
+```
+Configuration is read by `app/core/config.py` (env vars with fallbacks). See `docs/Deployment Infrastructure and Notes.md` for the shared-prod-data warning before running against live credentials.
 
-## Manual Steps
+## Test
+```bash
+pip install -r requirements-test.txt
+pytest                 # unit + integration; see TESTING.md
+pytest tests/unit      # unit suite only
+```
 
-1. You may use this repository directly or [create your own repository from this template](https://github.com/render-examples/fastapi/generate) if you'd like to customize the code.
-2. Create a new Web Service on Render.
-3. Specify the URL to your new repository or this repository.
-4. Render will automatically detect that you are deploying a Python service and use `pip` to download the dependencies.
-5. Specify the following as the Start Command.
-
-    ```shell
-    uvicorn main:app --host 0.0.0.0 --port $PORT
-    ```
-
-6. Click Create Web Service.
-
-Or simply click:
-
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/render-examples/fastapi)
-
-## Thanks
-
-Thanks to [Harish](https://harishgarg.com) for the [inspiration to create a FastAPI quickstart for Render](https://twitter.com/harishkgarg/status/1435084018677010434) and for some sample code!
+## Architecture
+See [`docs/architecture/BACKEND.md`](../docs/architecture/BACKEND.md) for the current backend map.
