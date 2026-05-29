@@ -189,3 +189,7 @@ app.include_router(org_auth_v2.router, prefix="/v2")
 from app.routers import market_scoring
 
 app.include_router(market_scoring.router)
+
+from app.routers import connectors
+
+app.include_router(connectors.router)
