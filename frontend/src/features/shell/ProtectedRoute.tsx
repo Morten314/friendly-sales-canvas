@@ -4,7 +4,6 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/shared/auth";
 import { useTenant } from "@/shared/tenant";
 
-
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireTenant?: boolean;

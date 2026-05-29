@@ -11,8 +11,6 @@ import { useAuth } from "@/shared/auth";
 import { useTenant } from "@/shared/tenant";
 import type { Tenant } from "@/shared/tenant";
 
-
-
 const TenantSelection: React.FC = () => {
   const { selectTenant, clearTenant } = useTenant();
   const { logout, currentUser } = useAuth();
