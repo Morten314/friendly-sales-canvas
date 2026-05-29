@@ -480,6 +480,8 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 
 **Per-phase deliverables:** see Phase 5's deliverables block.
 
+> *Amended by Spec 21 (2026-05-29): `AuthContext`/`TenantContext` relocated to `src/shared/` in Phase 4b; this block's original Phase-10 context move is superseded — see ADR-0002. Phase 10 builds the Login/TenantSelection UIs that consume the shared primitives.*
+
 ### Phase 11 — Shared utility extraction
 
 **Mission:** with all major features extracted (Phases 5–10), identify cross-cutting code that genuinely belongs in `src/shared/` rather than inside any single feature. Phase 12's small-pages sweep follows after; any additional shared utilities surfaced there are pulled into `src/shared/` at the time Phase 12 needs them.
@@ -503,6 +505,8 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 - Route imports all resolve to feature folders (no `src/pages/*` references remain in `App.tsx`).
 
 **Done when:** the above verifications pass; `src/shared/` is populated with the genuinely-shared utilities discovered in Phases 5–10. Phase 12 handles any additional shared-utility surface inline as it runs (per the description text above).
+
+> *Amended by Spec 21 (2026-05-29): `shared/{auth,tenant,components}` already exist from Phase 4; Phase 11 promotes the remaining hooks/lib/types and verifies that `features/` hold no legacy-dir imports (see Spec 21 §2.2).*
 
 ### Phase 12 — Small-pages sweep
 
