@@ -1,12 +1,7 @@
 import type { User } from "firebase/auth";
 
-const getApiBaseUrl = () => {
-  const isDev = import.meta.env.DEV;
-  const isVercel =
-    import.meta.env.VITE_VERCEL ||
-    (typeof window !== "undefined" && window.location.hostname.includes("vercel.app"));
-  return isDev || isVercel ? "/api" : "https://backend-11kr.onrender.com";
-};
+import { authEndpointRequest } from "@/shared/api/client";
+import { AuthRefreshResponseSchema, AuthTokenResponseSchema } from "@/shared/api/contracts";
 
 interface JWTPayload {
   userId: string;
@@ -37,29 +32,25 @@ class JWTManager {
 
       // In a real implementation, you would send this to your backend
       // which would generate a JWT with tenant context
-      const response = await fetch(`${getApiBaseUrl()}/auth/token`, {
+      const result = await authEndpointRequest("auth/token", AuthTokenResponseSchema, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${firebaseToken}`,
-        },
-        body: JSON.stringify({ tenantId }),
+        headers: { Authorization: `Bearer ${firebaseToken}` },
+        body: { tenantId },
       });
 
-      if (!response.ok) {
+      if (!result.ok) {
         // If endpoint doesn't exist (404), JWT is optional - don't fail
-        if (response.status === 404) {
+        if (result.status === 404) {
           console.warn(
             "⚠️ JWT token endpoint not found (404). JWT authentication is optional - continuing without JWT token.",
           );
           return null;
         }
-        throw new Error(`Failed to generate JWT token: ${response.status} ${response.statusText}`);
+        throw new Error(`Failed to generate JWT token: ${result.status}`);
       }
 
-      const data = await response.json();
-      this.token = data.token ?? null;
-      this.refreshToken = data.refreshToken ?? null;
+      this.token = result.data?.token ?? null;
+      this.refreshToken = result.data?.refreshToken ?? null;
 
       // Store in localStorage
       if (this.token) {
@@ -125,20 +116,16 @@ class JWTManager {
     }
 
     try {
-      const response = await fetch(`${getApiBaseUrl()}/auth/refresh`, {
+      const result = await authEndpointRequest("auth/refresh", AuthRefreshResponseSchema, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ refreshToken: this.refreshToken }),
+        body: { refreshToken: this.refreshToken },
       });
 
-      if (!response.ok) {
+      if (!result.ok) {
         throw new Error("Failed to refresh token");
       }
 
-      const data = await response.json();
-      this.token = data.token ?? null;
+      this.token = result.data?.token ?? null;
       if (this.token) {
         localStorage.setItem("jwt_token", this.token);
       }
