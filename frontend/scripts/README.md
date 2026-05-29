@@ -11,7 +11,19 @@ This folder holds standalone TypeScript scripts invoked by `npm run …` from `f
 - `check-bundle-budget.ts` — compares current `dist/` against the bundle baseline; advisory mode (always exits 0 on the comparator-success path)
 - `measure-baselines.sh` — Phase 0 baseline orchestrator (NFR)
 - `preflight.sh` — wrapper for `npm run preflight`
+- `scaffold-feature.ts` — Phase 4a feature scaffolder; creates `src/features/<kebab-name>/` with `types.ts`, `index.ts`, `README.md`
 - `scan-inline-blocks.ts` — utility for detecting repeated inline code patterns
+
+## Scaffolding a feature
+
+```bash
+cd frontend
+npm run scaffold:feature -- <kebab-name>
+```
+
+Creates `src/features/<kebab-name>/` with the canonical always-present files (`types.ts`, `index.ts`, `README.md`) from the per-feature template. It does **not** create `pages/components/hooks/services/` — add those on demand (no empty dirs, no `.gitkeep`).
+
+Guard rails: refuses to overwrite an existing feature folder; rejects non-kebab-case names; **warns but does not block** if the name is not on the living naming map in `src/features/README.md`. Add the feature's name to that map before scaffolding a planned feature.
 
 ## Bundle re-baseline workflow
 
