@@ -59,7 +59,7 @@ sbx policy allow network backend-11kr.onrender.com
 
 There is **no dev / staging environment**. The repo points at exactly one
 Neo4j cluster and one MongoDB cluster, and the credentials are baked into
-`backend/config.py` as fallback literals next to `os.getenv(...)`. Any local
+`app/core/config.py` as fallback literals next to `os.getenv(...)`. Any local
 backend started from this repo writes to the same data the Render backend
 serves.
 
@@ -68,13 +68,12 @@ serves.
 | item           | value                                                |
 | -------------- | ---------------------------------------------------- |
 | URI            | `neo4j+s://29adf28f.databases.neo4j.io`              |
-| Source of truth | `backend/config.py` + `backend/backend.env` (identical) |
-| Connected on import | `backend/database.py` — `driver.verify_connectivity()` runs at module load |
-| Schema refresh on import | `backend/main.py:10` — `graph.refresh_schema()` runs at module load |
+| Source of truth | `app/core/config.py` (env vars + fallback literals) |
+| Connected at startup | `app/core/clients` — `verify_connectivity()` runs in the `app/main.py` lifespan handler |
+| Schema refresh at startup | `app.main` lifespan handler — guarded `graph.refresh_schema()` runs after client init (no module-load import-order contract) |
 
 No `dev`/`stage`/`test` instance string was found anywhere in
-`backend/config.py`, `backend/database.py`, `backend/backend.env`, or any other
-config. The `tvly-dev-...` prefix on the Tavily key is Tavily's naming
+`app/core/config.py` or any other config. The `tvly-dev-...` prefix on the Tavily key is Tavily's naming
 convention for dev-tier API keys; it does **not** imply a separate Neo4j or
 Mongo instance.
 
@@ -84,7 +83,7 @@ Mongo instance.
 | ------------------- | -------------------------------------------------------------------------------------------------------- |
 | Cluster (single)    | `brewra-db.d3hvuf8.mongodb.net`                                                                          |
 | Connection string   | `mongodb+srv://<user>:<pw>@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db` |
-| Source of truth     | `backend/config.py` (literal credentials as fallback) — repeated inline ~15× in `backend/api.py`        |
+| Source of truth     | `app/core/config.py` (env vars + literal credentials as fallbacks) |
 
 **Logical databases on this cluster** (no physical separation between dev/prod):
 
