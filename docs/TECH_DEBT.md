@@ -580,3 +580,71 @@ Phase 10 (introduces the real tenant endpoint — it will repopulate `availableT
 the field) or Phase 4 (shell extraction). Remove the dead field then.
 
 **Owner:** TBD.
+
+---
+
+## TD-FE-13 — Repoint hardcoded backend host `backend-11kr` → `brewra-gtm-intelligence`
+
+**Date logged:** 2026-05-29
+**Origin:** Plan 20 Phase 3 manual smoke (plans/20-frontend-phase-3-api-data-layer.md, Task 16 Step 2). The
+live capture confirmed `https://brewra-gtm-intelligence.onrender.com` is the working backend
+(`GET /profile/company?org_id=brewra` → 200, body validates against `CompanyProfileSchema`), while the
+hardcoded `https://backend-11kr.onrender.com` is **suspended** (HTTP 503). The frontend still points every
+backend reference at the suspended old host.
+
+**Current state:**
+`backend-11kr.onrender.com` is hardcoded in **12 live spots** (frontend-scoped grep, excludes
+`node_modules`/`dist`/tests), in three tiers:
+
+- **Config / proxy** (routes the whole app) — 5:
+  - `frontend/vercel.json:5` — production Vercel rewrite `/api/$1 → <host>/$1`
+  - `frontend/vite.config.ts:27` — dev-server `/api` proxy target
+  - `frontend/vite.config.ts:52` — `vite preview` `/api` proxy target
+  - `frontend/src/lib/api.ts:13` — `API_BASE_URL` production direct fallback
+  - `frontend/src/lib/api.ts:25` — `ICP_BACKEND_URL` (feeds `buildIcpUrl`)
+- **Hardcoded direct fetches** (bypass the Phase 3 shared data layer) — 5:
+  - `frontend/src/components/market-research/ChatWithScout.tsx:89` — `GET /chat/`
+  - `frontend/src/components/market-research/StrategistWorkspace.tsx:855` — `GET /chat/`
+  - `frontend/src/components/market-research/AIPromptingInterface.tsx:215` — `GET /ask`
+  - `frontend/src/components/market-research/DataHistoryDialog.tsx:950` — local `API_BASE_URL` const
+  - `frontend/src/components/market-research/RegulatoryComplianceSection.tsx:729` — direct
+    `GET /profile/company` (duplicates `useCompanyProfile`)
+- **Cosmetic** — 1: `frontend/src/pages/MarketResearch.tsx:4002` (error-message string).
+- Plus 2 commented-out occurrences in `DataHistoryDialog.tsx:29,616` (dead, deletable).
+
+Smoke evidence (2026-05-29): the new host serves `/profile/company` (200, contract-valid). `/auth/token`
+and `/auth/refresh` return 404 on the new host (and did on the old) — the JWT endpoints never existed, so
+the "JWT optional" path already absorbs this; **repointing introduces no auth regression**.
+
+**What it should be:**
+Replace all 12 active references with `https://brewra-gtm-intelligence.onrender.com`. Prefer collapsing the
+host to a **single source of truth** (one env var, e.g. `VITE_API_BACKEND_URL`, or one exported const)
+rather than re-duplicating a literal across `vercel.json`, `vite.config.ts` (×2), `lib/api.ts` (×2), and the
+5 call sites — so the next host move is a one-line change. Verify after: dev proxy, `vite preview` proxy,
+Vercel rewrite, `/icp`, `/chat/`, `/ask`, and the direct `RegulatoryComplianceSection` profile fetch all
+resolve to the new host. Then remove the now-obsolete `sbx` sandbox allow rule for `backend-11kr` (sandbox
+hygiene only — it never affected production).
+
+Deeper debt surfaced alongside: the 5 direct fetches bypass `src/shared/api/`; repointing them is a stopgap.
+They should eventually route through the shared client (the `RegulatoryComplianceSection` `/profile/company`
+fetch in particular duplicates `useCompanyProfile`). Fold into the Phase 5–7 market-research migrations
+rather than this repoint.
+
+**Why we deferred:**
+- Out of scope for Plan 20 Phase 3, which consolidated only the CompanyProfile/tenant/auth/Login data layer
+  and explicitly left `lib/api.ts`'s hardcoded host unchanged.
+- The repoint is a cross-cutting infra change (production Vercel rewrite + two proxy configs + 5 call sites)
+  that warrants its own focused commit and a decision on whether `brewra-gtm-intelligence.onrender.com` is
+  the permanent home or an interim before a `brewra.com`-backed custom domain.
+
+**What we lose by staying as-is:**
+- The deployed frontend (Vercel) and local `npm run dev`/`preview` all proxy to a **suspended** backend, so
+  every API call currently fails end-to-end. Pre-launch (0 live users) this is not a user-facing outage, but
+  the deployed app is non-functional against its API until either the old host is un-suspended or this lands.
+
+**Pull-forward trigger:**
+- Before any real use of the deployed app, and **before launch** — the current host is suspended.
+- When `brewra-gtm-intelligence.onrender.com` is confirmed the permanent backend home (vs a custom domain).
+- Bundle with removal of the `sbx policy allow network backend-11kr.onrender.com` sandbox rule.
+
+**Owner:** TBD (deploy owner).
