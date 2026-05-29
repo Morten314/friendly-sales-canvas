@@ -311,17 +311,17 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 
 **Done when:** `eslint . --max-warnings 0` green; `prettier --check .` green.
 
-### Phase 2c — Foundation: preflight gates + bundle budget
+### Phase 2c — Foundation: preflight gates + bundle comparator (advisory)
 
-**Mission:** every gate runs as part of `npm run preflight`, blocks merge on failure.
+**Mission:** every gate runs as part of `npm run preflight`, blocks merge on failure (except bundle comparator, which is advisory).
 
-- `npm run preflight` chain in `frontend/package.json` (and `frontend/scripts/preflight.sh` wrapper) runs: typecheck → lint → test (Vitest) → build → Playwright → visual regression → bundle-size budget → `knip --strict` (dead-code). Local-only; no GitHub Actions.
-- Bundle-size budget thresholds set from Phase 0 baseline + agreed headroom (spec author proposes; user approves). Comparator script committed to `frontend/scripts/check-bundle-budget.ts`.
-- **NFR thresholds set from Phase 0 baselines + agreed headroom.** Budgets cover: `tsc --noEmit` cold wall time, Vitest full-suite wall time, preflight total wall time. Round-2 ballparks (refined by Phase 2c spec against actual numbers): typecheck cold ≤ 30s, Vitest full ≤ 60s, preflight total ≤ 8 min. The ballparks are starting anchors, not fixed mandates — Phase 2c's spec sets the actual budget values from Phase 0 measurements. Slow feedback loops defeat the agent-readiness goal, so these NFRs are first-class gates, not nice-to-haves.
-- `knip.json` config locked. Watcher: any new file with no inbound imports fails preflight (via `knip --strict`).
-- Visual regression diff threshold codified at the exact value chosen in Phase 0 (within the 0.5–1.0% range). A "re-baseline approved" workflow exists for accepted intentional UI changes: the author runs `npm run test:e2e:update-snapshots` locally and commits the refreshed PNGs as a deliberate change (no CI-side automation).
+- `npm run preflight` chain in `frontend/package.json` runs: typecheck → lint → format:check → test (Vitest) → build → bundle:check (advisory) → test:e2e (Playwright + visual regression) → knip --strict --no-progress. Local-only; no GitHub Actions.
+- **Bundle comparator (advisory).** Comparator script `frontend/scripts/check-bundle-budget.ts` prints raw and gzip deltas from the Phase 0 baseline (`docs/audits/2026-05-26-frontend-bundle-baseline.json`) and always exits 0 in the comparator-success path. No hard-fail threshold. Re-baselining via `npm run bundle:rebaseline`; conventions in `frontend/scripts/README.md`. Future hardening (Phase 14's watcher) starts from this advisory placement.
+- **NFR wall-time enforcement: dropped from Phase 2c scope.** No `tsc` / Vitest / preflight-total gating. Reasoning: noisy and machine-dependent; for a pre-launch MVP, flaky gates erode trust faster than they catch regressions. Phase 14 reconsiders post-launch.
+- `knip.json` config already locked at Phase 1. Watcher: `knip --strict --no-progress` runs as part of preflight.
+- **Visual regression threshold codified at 2%** in `frontend/playwright.config.ts` (`expect.toHaveScreenshot.maxDiffPixelRatio: 0.02`). Up from Phase 0's 1% (which sat at the top of this section's original 0.5–1.0% range); 2% widens past that range. The re-baseline workflow (`npm run test:e2e:update-snapshots`) is documented in `frontend/scripts/README.md`. Deviation rationale: 1% over-fires on sub-pixel rendering differences; 2% still catches a moved button, recolored header, or shifted card grid.
 
-**Done when:** `npm run preflight` green on the phase branch immediately before merge; gates required to pass for any merge to `master`.
+**Done when:** `npm run preflight` green on the phase branch immediately before merge; gates required to pass for any merge to `master` (excluding the advisory bundle comparator, which never blocks).
 
 ### Phase 3 — API/data layer consolidation
 
@@ -639,7 +639,7 @@ The master plan is "done" when **all** of these hold on `master`:
 3. **Type strictness.** `tsconfig.app.json` has `strict: true`, `noImplicitAny`, `strictNullChecks`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`. `any` confined to a documented `src/shared/types/escape-hatches.ts` — each entry requires documented justification and a call-site reference. Phase 2a's spec sets the initial count cap from actual error measurements; Phase 13's audit re-evaluates every entry. No hard cap mandated by the master plan.
 4. **Tests.** Vitest + RTL + MSW running. Every feature has unit tests. Stable utilities under `src/shared/` have characterization tests carried forward from Phase 0. Behavioral E2E coverage (Playwright) for the user journeys the originally-monster files participate in is green. Visual regression green at the threshold set in Phase 0.
 5. **Lints.** ESLint flat-config with type-aware rules, `import/order`, `import/no-restricted-paths` (per §3.3). Prettier check. `knip` dead-code gate.
-6. **Preflight.** `npm run preflight` runs typecheck + lint + Vitest + Playwright + visual regression + build + bundle-size budget + `knip --strict` and is required to pass before any `git merge` to `master`. Local-only (no GitHub Actions); the controller agent runs it as part of the user-approved merge step (§5.3, §5.6).
+6. **Preflight.** `npm run preflight` runs typecheck + lint + format:check + Vitest + build + Playwright + visual regression + `knip --strict --no-progress` and is required to pass before any `git merge` to `master`. The bundle comparator (`bundle:check`) also runs in the preflight chain but is **advisory** — it prints deltas and never blocks merge. NFR wall-time gating was dropped during Phase 2c (Phase 14 reconsiders). Local-only (no GitHub Actions); the controller agent runs preflight as part of the user-approved merge step (§5.3, §5.6).
 7. **Per-feature docs.** Every `src/features/<feature>/` has a `README.md`. `src/features/README.md` documents conventions. ADRs captured in `docs/adr/` for non-trivial decisions made across phases.
 8. **LOC trajectory.** Two LOC reduction passes complete (Phases 1 and 13). Final LOC reflects what was safely removable without behavior change — no hard target.
 9. **Data layer.** TanStack Query is the single source of server-state truth. Three caching layers collapsed into one. Rate-limit boundary centralized.
@@ -682,8 +682,8 @@ A phase is "done" when its spec, plan, impl, and ≥1 review round of each are m
 These don't block the master plan — each becomes the appropriate phase's spec decision:
 
 1. **Vitest test methodology for stable utilities** — behavior-only assertions vs DOM snapshots vs both? → Phase 0 spec
-2. **Visual regression exact threshold** — within the 0.5–1.0% default range, what's the precise value? Re-baseline workflow details (local-only via `npm run test:e2e:update-snapshots`; no CI-side automation). → Phase 0 spec
-3. **Bundle-size and NFR budget values** — measured in Phase 0, codified in Phase 2c. Round-2 ballparks (typecheck cold ≤ 30s, Vitest full ≤ 60s, preflight total ≤ 8 min) are anchors, not fixed mandates.
+2. **Visual regression exact threshold — RESOLVED (Phase 2c, 2026-05-28).** Phase 0 settled at 1% (top of the original 0.5–1.0% range). Phase 2c widened to **2%** (`maxDiffPixelRatio: 0.02`) to reduce sub-pixel false positives — a deliberate deviation past the original range. Re-baseline workflow is local-only via `npm run test:e2e:update-snapshots`, documented in `frontend/scripts/README.md`.
+3. **Bundle-size and NFR budget values — PARTIALLY RESOLVED (Phase 2c, 2026-05-28).** Bundle comparator landed in advisory mode (no hard-fail threshold; prints deltas and exits 0). NFR wall-time enforcement dropped from Phase 2c scope — for a pre-launch MVP, machine-dependent wall-time gates erode trust faster than they catch regressions. Phase 14's watcher reconsiders both gates with post-launch data.
 4. **API contract types source** — hand-written, OpenAPI codegen, or zod schemas? → Phase 3 spec
 5. **`src/shared/` promotion criteria** — what triggers promotion of a hook/util from a feature into shared? → Phase 4 spec, refined as features land
 6. **Feature naming canonicalization** — final kebab-case map (market-research, mission-control, customer-profile, etc.) → Phase 4 spec
