@@ -1,7 +1,9 @@
-// Legacy commented implementation - using the new implementation below
+// Company profile settings — migrated to TanStack Query (spec 20 §3.6).
 
 import { Plus, X } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
+
+import { useCompanyProfile, useSaveCompanyProfile } from "./useCompanyProfile";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,12 +17,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
-import type { UntypedBackendProfile } from "@/lib/types/escape-hatches";
-import {
-  getUserLocalStorage,
-  setUserLocalStorage,
-  removeUserLocalStorage,
-} from "@/utils/cacheUtils";
+import type { CompanyProfileResponse } from "@/shared/api/contracts";
+import { setUserLocalStorage } from "@/utils/cacheUtils";
 
 interface SocialMediaUrl {
   platform: string;
@@ -30,264 +28,69 @@ interface SocialMediaUrl {
 interface CompanyProfileProps {
   onProfileUpdate?: () => void;
   isEditMode?: boolean;
-  profileData?: UntypedBackendProfile;
+  // Retained so Settings' `commonProps` spread stays type-safe, but the form is
+  // now driven by useCompanyProfile (the query supersedes the prop — spec 20 §3.6).
+  // Re-typed off the `any` escape-hatch onto the zod contract (DoD item 6).
+  profileData?: CompanyProfileResponse | null;
 }
 
-export function CompanyProfile({ profileData }: CompanyProfileProps) {
+const EMPTY_FORM = {
+  industry: "",
+  companySize: "",
+  companyUrl: "",
+  strategicGoals: "",
+  primaryGTMModel: "",
+  revenueStage: "",
+  keyBuyerPersona: "",
+};
+
+export function CompanyProfile(_props: CompanyProfileProps) {
   const { currentUser, orgId } = useAuth();
   const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
-  const [formData, setFormData] = useState({
-    industry: "",
-    companySize: "",
-    companyUrl: "",
-    strategicGoals: "",
-    primaryGTMModel: "",
-    revenueStage: "",
-    keyBuyerPersona: "",
-  });
 
+  const [formData, setFormData] = useState(EMPTY_FORM);
   const [targetMarkets, setTargetMarkets] = useState<string[]>([""]);
   const [socialMediaUrls, setSocialMediaUrls] = useState<SocialMediaUrl[]>([]);
   const [selectedPlatform, setSelectedPlatform] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch company profile from API (similar to Signals pattern)
-  const fetchCompanyProfile = async (_userId: string) => {
-    try {
-      const response = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+  const { data: profile, isLoading } = useCompanyProfile(orgIdToUse, !!currentUser?.uid);
+  const saveMutation = useSaveCompanyProfile(orgIdToUse);
 
-      if (!response.ok) {
-        console.log("No existing company profile found in API");
-        return null;
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error("Error fetching company profile:", error);
-      return null;
-    }
-  };
-
-  // Track previous user to detect user changes
-  const previousUserIdRef = useRef<string | null | undefined>(currentUser?.uid);
-
-  // Load user-specific company profile from localStorage and API on mount or when user changes
+  // Seed the form from the query result. Replaces the old "read localStorage,
+  // then fetch on miss" cache on mount. When the query key changes (org switch)
+  // or the user logs out, `profile` resets and the form clears — preserving the
+  // old clear-on-user-change behavior.
   useEffect(() => {
-    const previousUserId = previousUserIdRef.current;
-    const currentUserId = currentUser?.uid;
-
-    // CRITICAL: Clear form immediately when user changes (before loading new data)
-    if (previousUserId !== undefined && previousUserId !== currentUserId) {
-      console.log(
-        "🔄 [COMPANY PROFILE] User changed from",
-        previousUserId,
-        "to",
-        currentUserId,
-        "- clearing form immediately",
-      );
-      setFormData({
-        industry: "",
-        companySize: "",
-        companyUrl: "",
-        strategicGoals: "",
-        primaryGTMModel: "",
-        revenueStage: "",
-        keyBuyerPersona: "",
-      });
+    if (!currentUser?.uid || !profile) {
+      setFormData(EMPTY_FORM);
       setTargetMarkets([""]);
       setSocialMediaUrls([]);
-    }
-
-    if (!currentUserId) {
-      // User logged out - clear form
-      console.log("🔄 [COMPANY PROFILE] User logged out, clearing form");
-      setFormData({
-        industry: "",
-        companySize: "",
-        companyUrl: "",
-        strategicGoals: "",
-        primaryGTMModel: "",
-        revenueStage: "",
-        keyBuyerPersona: "",
-      });
-      setTargetMarkets([""]);
-      setSocialMediaUrls([]);
-      previousUserIdRef.current = currentUserId;
       return;
     }
 
-    const loadProfile = async () => {
-      console.log("🔄 [COMPANY PROFILE] Loading profile for user:", currentUserId);
+    setFormData({
+      industry: profile.industry || "",
+      companySize: profile.companySize || "",
+      companyUrl: profile.companyUrl || "",
+      strategicGoals: profile.strategicGoals || "",
+      primaryGTMModel: profile.primaryGTMModel || "",
+      revenueStage: profile.revenueStage || "",
+      keyBuyerPersona: profile.keyBuyerPersona || "",
+    });
+    setTargetMarkets(
+      Array.isArray(profile.targetMarkets) && profile.targetMarkets.length > 0
+        ? profile.targetMarkets
+        : [""],
+    );
+    setSocialMediaUrls(Array.isArray(profile.socialMediaUrls) ? profile.socialMediaUrls : []);
 
-      // First, try to load from localStorage
-      const storedProfile = getUserLocalStorage("companyProfile", currentUserId);
-      if (storedProfile) {
-        try {
-          const parsedProfile = JSON.parse(storedProfile);
-          // CRITICAL: Only load if user_id matches exactly - reject data without user_id
-          if (parsedProfile.user_id === currentUserId) {
-            console.log("✅ [COMPANY PROFILE] Found stored profile for user:", currentUserId);
-            setFormData({
-              industry: parsedProfile.industry || "",
-              companySize: parsedProfile.companySize || "",
-              companyUrl: parsedProfile.companyUrl || "",
-              strategicGoals: parsedProfile.strategicGoals || "",
-              primaryGTMModel: parsedProfile.primaryGTMModel || "",
-              revenueStage: parsedProfile.revenueStage || "",
-              keyBuyerPersona: parsedProfile.keyBuyerPersona || "",
-            });
-            setTargetMarkets(
-              Array.isArray(parsedProfile.targetMarkets) && parsedProfile.targetMarkets.length > 0
-                ? parsedProfile.targetMarkets
-                : [""],
-            );
-            setSocialMediaUrls(
-              Array.isArray(parsedProfile.socialMediaUrls) ? parsedProfile.socialMediaUrls : [],
-            );
-            previousUserIdRef.current = currentUserId;
-            return; // Don't fetch from API if we have valid localStorage data
-          } else {
-            // Data belongs to different user or has no user_id - clear it
-            console.warn(
-              "⚠️ [COMPANY PROFILE] Stored profile user_id mismatch or missing! Stored:",
-              parsedProfile.user_id,
-              "Current:",
-              currentUserId,
-            );
-            console.warn("⚠️ [COMPANY PROFILE] Clearing invalid data to prevent data leakage");
-            removeUserLocalStorage("companyProfile", currentUserId);
-            removeUserLocalStorage("companyProfileForRefresh", currentUserId);
-            // Also clear old format if it exists
-            localStorage.removeItem("companyProfile");
-            localStorage.removeItem("companyProfileForRefresh");
-          }
-        } catch (error) {
-          console.error("❌ [COMPANY PROFILE] Error parsing stored profile:", error);
-          // Clear corrupted data
-          removeUserLocalStorage("companyProfile", currentUserId);
-          removeUserLocalStorage("companyProfileForRefresh", currentUserId);
-        }
-      }
-
-      // If no localStorage data or it was invalid, fetch from API
-      console.log(
-        "📝 [COMPANY PROFILE] No valid stored profile found, fetching from API for user:",
-        currentUserId,
-      );
-      setIsLoading(true);
-      const apiData = await fetchCompanyProfile(currentUserId);
-
-      if (apiData) {
-        console.log("✅ [COMPANY PROFILE] Loaded profile from API");
-        // Store in localStorage for future use
-        const profileToSave = {
-          ...apiData,
-          org_id: orgIdToUse, // Ensure org_id is always included
-        };
-        setUserLocalStorage("companyProfile", JSON.stringify(profileToSave), currentUserId);
-        setUserLocalStorage(
-          "companyProfileForRefresh",
-          JSON.stringify(profileToSave),
-          currentUserId,
-        );
-
-        // Update form with API data
-        setFormData({
-          industry: apiData.industry || "",
-          companySize: apiData.companySize || "",
-          companyUrl: apiData.companyUrl || "",
-          strategicGoals: apiData.strategicGoals || "",
-          primaryGTMModel: apiData.primaryGTMModel || "",
-          revenueStage: apiData.revenueStage || "",
-          keyBuyerPersona: apiData.keyBuyerPersona || "",
-        });
-        setTargetMarkets(
-          Array.isArray(apiData.targetMarkets) && apiData.targetMarkets.length > 0
-            ? apiData.targetMarkets
-            : [""],
-        );
-        setSocialMediaUrls(Array.isArray(apiData.socialMediaUrls) ? apiData.socialMediaUrls : []);
-      } else {
-        console.log(
-          "📝 [COMPANY PROFILE] No profile data found in API for user:",
-          currentUserId,
-          "- using empty form",
-        );
-      }
-
-      setIsLoading(false);
-      previousUserIdRef.current = currentUserId;
-    };
-
-    void loadProfile();
-    // fetchCompanyProfile + orgIdToUse intentionally omitted: profile load is
-    // keyed on user identity only; fetchCompanyProfile is an inline closure
-    // (not stable across renders) and orgIdToUse re-derives every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser?.uid]);
-
-  // Update form data when profileData prop changes (from API)
-  useEffect(() => {
-    if (!currentUser?.uid) {
-      return; // Don't update if no user logged in
-    }
-
-    if (profileData) {
-      // CRITICAL: Verify profileData belongs to current user
-      if (profileData.user_id && profileData.user_id !== currentUser.uid) {
-        console.warn(
-          "⚠️ [COMPANY PROFILE] profileData user_id mismatch, ignoring. Stored:",
-          profileData.user_id,
-          "Current:",
-          currentUser.uid,
-        );
-        return;
-      }
-
-      // Also save to localStorage if it came from API (has user_id)
-      if (profileData.user_id === currentUser.uid) {
-        console.log(
-          "🔄 [COMPANY PROFILE] Updating form from profileData prop and saving to localStorage",
-        );
-        const profileToSave = {
-          ...profileData,
-          user_id: currentUser.uid,
-        };
-        setUserLocalStorage("companyProfile", JSON.stringify(profileToSave), currentUser.uid);
-        setUserLocalStorage(
-          "companyProfileForRefresh",
-          JSON.stringify(profileToSave),
-          currentUser.uid,
-        );
-      } else {
-        console.log("🔄 [COMPANY PROFILE] Updating form from profileData prop");
-      }
-
-      setFormData({
-        industry: profileData.industry || "",
-        companySize: profileData.companySize || "",
-        companyUrl: profileData.companyUrl || "",
-        strategicGoals: profileData.strategicGoals || "",
-        primaryGTMModel: profileData.primaryGTMModel || "",
-        revenueStage: profileData.revenueStage || "",
-        keyBuyerPersona: profileData.keyBuyerPersona || "",
-      });
-      setTargetMarkets(
-        Array.isArray(profileData.targetMarkets) && profileData.targetMarkets.length > 0
-          ? profileData.targetMarkets
-          : [""],
-      );
-      setSocialMediaUrls(
-        Array.isArray(profileData.socialMediaUrls) ? profileData.socialMediaUrls : [],
-      );
-    }
-  }, [profileData, currentUser?.uid]);
+    // Cross-component publish (preserved): MarketResearch + MissionControl still
+    // read these localStorage keys (not migrated until Phases 5–7), so keep them
+    // populated from the query result. Retire when those consumers migrate.
+    const profileToSave = JSON.stringify({ ...profile, org_id: orgIdToUse });
+    setUserLocalStorage("companyProfile", profileToSave, currentUser.uid);
+    setUserLocalStorage("companyProfileForRefresh", profileToSave, currentUser.uid);
+  }, [profile, currentUser?.uid, orgIdToUse]);
 
   const socialPlatforms = [
     { value: "linkedin", label: "LinkedIn" },
@@ -347,11 +150,6 @@ export function CompanyProfile({ profileData }: CompanyProfileProps) {
   };
 
   const handleSave = async () => {
-    console.log("=== COMPANY PROFILE SAVE TRIGGERED ===");
-    console.log("Form data:", formData);
-    console.log("Target markets:", targetMarkets);
-    console.log("Social media URLs:", socialMediaUrls);
-
     if (!currentUser?.uid) {
       console.error("User not authenticated");
       alert("Please log in to save your company profile");
@@ -379,49 +177,18 @@ export function CompanyProfile({ profileData }: CompanyProfileProps) {
         : [],
     };
 
-    console.log("=== PAYLOAD TO SEND ===", payload);
-
     try {
-      // Include org_id in URL query parameter
-      const apiUrl = `/api/profile/company?org_id=${orgIdToUse}`;
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      console.log("=== COMPANY PROFILE API RESPONSE ===");
-      console.log("Status:", response.status);
-      console.log("OK:", response.ok);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("=== API ERROR DETAILS ===");
-        console.error("Status:", response.status);
-        console.error("Status Text:", response.statusText);
-        console.error("Error Response:", errorText);
-        throw new Error(`API error: ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
-      console.log("Company profile saved successfully:", data);
+      // POST via the shared client (throws on non-2xx) + invalidate the query.
+      await saveMutation.mutateAsync(payload);
       alert("Company profile saved successfully!");
 
-      // Store the updated profile data immediately in user-specific localStorage
-      console.log("=== STORING UPDATED PROFILE DATA (USER-SPECIFIC) ===");
-      console.log("User ID:", currentUser?.uid);
-      setUserLocalStorage("companyProfile", JSON.stringify(payload), currentUser?.uid);
-      setUserLocalStorage("companyProfileForRefresh", JSON.stringify(payload), currentUser?.uid);
+      // Cross-component publish (preserved — see the note in the seed effect and
+      // the listeners in DataSourcesManager / MarketResearch / Regulatory).
+      setUserLocalStorage("companyProfile", JSON.stringify(payload), currentUser.uid);
+      setUserLocalStorage("companyProfileForRefresh", JSON.stringify(payload), currentUser.uid);
+      setUserLocalStorage("companyProfileUpdated", "1", currentUser.uid);
 
-      // Set flag to indicate new company profile data is available (user-specific)
-      setUserLocalStorage("companyProfileUpdated", "1", currentUser?.uid);
-      console.log(
-        "🏁 Company profile update flag set to 1 - new data will persist until next profile update",
-      );
-
-      // Clear market data cache
+      // Clear the legacy in-memory market data cache.
       if (typeof window !== "undefined") {
         const w = window as unknown as Record<string, unknown>;
         if (w.cachedMarketData) {
@@ -430,9 +197,7 @@ export function CompanyProfile({ profileData }: CompanyProfileProps) {
         }
       }
 
-      // Dispatch a global event to notify other components
-      console.log("=== DISPATCHING COMPANY PROFILE UPDATE EVENT ===");
-      console.log("Profile data being dispatched:", payload);
+      // Notify other components.
       const event = new CustomEvent("companyProfileUpdated", {
         detail: {
           profileData: payload,
@@ -443,7 +208,6 @@ export function CompanyProfile({ profileData }: CompanyProfileProps) {
         },
       });
       window.dispatchEvent(event);
-      console.log("Company profile event dispatched");
     } catch (error) {
       console.error("Error saving company profile:", error);
       alert("Failed to save company profile. Please try again.");

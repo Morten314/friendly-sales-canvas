@@ -529,3 +529,31 @@ are still out of scope.
 typing (Phase ~10+) would unlock replacing these with proper types.
 
 **Owner:** TBD.
+
+---
+
+## TD-FE-11 — Orphaned Settings company-profile fetch after CompanyProfile TanStack migration
+
+**Date logged:** 2026-05-29
+**Origin:** Plan 20 Phase 3 (plans/20-frontend-phase-3-api-data-layer.md), Task 9.
+
+**Current state:**
+`Settings.tsx` fetches profile data generically via `fetchProfileData(profileType)` (`:105`), called on
+profile selection (`:193`) and user change (`:181`), and passes the result to the rendered profile
+component via `commonProps.profileData` (`:218,:224`). After Phase 3, `CompanyProfile` reads its data from
+`useCompanyProfile` (a TanStack query keyed on `org_id`) and ignores the `profileData` prop, so for the
+"company" selection `fetchProfileData("company")` (a `GET /api/profile/company?user_id=…`) still runs but
+its result is discarded — a redundant network call. The same generic prop still feeds the non-migrated
+`UserProfile`/`AgentProfile`, so `Settings.tsx` is left unchanged.
+
+**Why deferred:**
+Removing the company branch / lifting it into the shared query requires `UserProfile` and `AgentProfile` to
+also migrate off the shared `profileData` prop — out of Phase 3's stated scope (CompanyProfile/tenant/auth/
+Login only). Behavior is correct, only wasteful; at MVP scale (0 users) the cost is negligible.
+
+**Pull-forward trigger:**
+Settings extraction (Phase 4), or the phase that migrates `UserProfile`/`AgentProfile` — collapse the
+duplicate fetch (Settings `user_id` GET vs CompanyProfile `org_id` GET) into the shared query and drop the
+orphaned prop flow then.
+
+**Owner:** TBD.
