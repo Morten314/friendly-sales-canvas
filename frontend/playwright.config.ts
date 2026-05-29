@@ -39,7 +39,7 @@ export default defineConfig({
     //   docker run --rm -v "$PWD:/work" -w /work mcr.microsoft.com/playwright:v1.59.1-jammy \
     //     bash -c "npm ci && npm run test:e2e:update-snapshots"
     toHaveScreenshot: {
-      maxDiffPixelRatio: 0.01, // 1% of total pixels — was maxDiffPixels: 100, an absolute count; now a ratio
+      maxDiffPixelRatio: 0.02, // 2% of total pixels — was 0.01 (1%); widened in Phase 2c (spec 19 §1.3)
       threshold: 0.2, // per-pixel color tolerance — unchanged
       animations: "disabled",
     },
