@@ -233,6 +233,44 @@ Design questions to resolve during the spec session: (a) template engine choice 
 
 ---
 
+## TD-011 — Backend pins a stale Claude Sonnet model snapshot (`claude-sonnet-4-20250514`)
+
+**Date logged:** 2026-05-29
+**Origin:** Incidental finding during the Claude Code Opus 4.8 upgrade. A sweep for outdated `claude-opus-*` IDs in config/scripts found none (every `claude-opus-4-7` hit was a historical `docs/reviews/` artifact), but surfaced this Sonnet pin as the only Claude model ID in runtime config.
+
+**Current state:**
+The Claude model behind the signals feature is pinned to a dated snapshot:
+
+```python
+# backend/app/core/config.py:13
+claude_sonnet_model = os.getenv("CLAUDE_SONNET_MODEL") or "claude-sonnet-4-20250514"
+```
+
+`claude-sonnet-4-20250514` is the original Claude Sonnet 4 snapshot (2025-05-14); the current Sonnet generation is 4.6 (`claude-sonnet-4-6`). The hardcoded fallback is what runs whenever `CLAUDE_SONNET_MODEL` is unset — it is unset in the committed config; whether the Render env overrides it is unverified. The pin feeds the `claude_signal_*` knobs (`config.py:14-16` — window seconds, 5-minute token limit, max output tokens) and the Anthropic call path (keyed by `ANTHROPIC_API_KEY` in `backend/api.py`). The same stale fallback string also lives in the upstream standalone `backend` repo (`config.py:13`); reconcile both when fixing.
+
+**What it should be:**
+Pin to the current Sonnet generation (`claude-sonnet-4-6`) — or a deliberately chosen explicit snapshot — in both config copies. When bumping, verify the signals call path for model-version-specific behavior (response shape, token accounting against `claude_signal_token_limit_5m` / `claude_signal_max_output_tokens`) and consider adding prompt caching while the call site is open.
+
+**Why we deferred:**
+- Out of scope for the trigger: the Opus 4.8 change was a Claude Code (dev-tool) upgrade with zero codebase footprint; this Sonnet pin is a *product runtime* model choice, surfaced only incidentally.
+- Bumping a runtime model changes behavior and cost for a customer-facing feature — a deliberate product decision, not a mechanical version bump, even at 0 live users.
+- Nothing is broken today: `claude-sonnet-4-20250514` is still a served model.
+
+**What we lose by staying as-is:**
+- The signals feature runs on the original Sonnet 4, missing quality/latency/cost improvements in later releases (current 4.6).
+- Dated snapshots eventually retire; when Anthropic deprecates `claude-sonnet-4-20250514`, signals calls fail with no in-app warning unless the pin is bumped first.
+- Drift risk between the two config copies if one is updated and the other is not.
+
+**Pull-forward triggers:**
+- Any deliberate review of the signals feature's model quality / latency / cost.
+- Anthropic announces deprecation or retirement of `claude-sonnet-4-20250514`.
+- The standalone `backend` repo is folded into the monorepo (reconcile to one config at that point).
+- A token-budget tuning pass on the `claude_signal_*` knobs, or a signals output-quality complaint.
+
+**Owner:** TBD.
+
+---
+
 ## TD-FE-3 — Deferred unused exports: src/lib/ (firebase, api, leadStreamHeatmapSession, missionProfilerSessionCache)
 
 **Date logged:** 2026-05-27
