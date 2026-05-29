@@ -1,7 +1,7 @@
 # Spec 21 — Frontend Phase 4: Feature Scaffolding + Shell Extraction
 
-**Status:** Design — round 2 (round-1 reviews by glm-5.1 + opus synthesized at `docs/reviews/21-frontend-phase-4-scaffolding-shell-design-synthesis-2.md`)
-**Date:** 2026-05-29 (round 1), 2026-05-29 (round 2 revisions)
+**Status:** Design — round 3 (round-1 reviews glm-5.1 + opus → synthesis-2; round-2 re-review glm-5.1 → `docs/reviews/21-frontend-phase-4-scaffolding-shell-design-synthesis-3.md`)
+**Date:** 2026-05-29 (round 1), 2026-05-29 (round 2 + round 3 revisions)
 **Type:** Phase spec (sub-split into 4a + 4b)
 **Paired plan:** _none yet — Phase 4a and 4b each ship their own plan (`plans/21a-frontend-phase-4a-scaffolding.md`, `plans/21b-frontend-phase-4b-shell-extraction.md`)_
 **Parent:** `specs/14-frontend-refactoring-master-plan-design.md` (§4 Phase 4)
@@ -32,11 +32,11 @@ Phase 3 landed `src/shared/api/` (the fetch client, zod contracts, `queryClient`
 | Contexts | `src/contexts/{AuthContext,SidebarContext,TenantContext}.tsx` (exactly 3 files). `TenantContext` imports `AuthContext` (Tenant depends on Auth). |
 | `useAuth` hook | `src/hooks/useAuth.ts` is **not** a thin AuthContext wrapper — it composes `useFirebaseAuth` (AuthContext) **+ `useTenant` (TenantContext) + `jwtManager`** to mint the session JWT. (Drives the §3.2 decision to leave it in `src/hooks/` for Phase 4.) |
 | Context consumer spread | `AuthContext` importers ≈ **25** (incl. `App.tsx` and `useAuth.ts`); `useTenant` references ≈ **12**; direct `TenantContext` importers ≈ **9**. The two sets overlap (e.g. `ProtectedRoute`, `Header`, `Sidebar`, `ProfileDialog`, `useAuth.ts`, `TenantSelection`). `SidebarContext`: ~2 real consumers. Exact site list is enumerated by 21b's plan. |
-| `App.tsx` | Root nests `QueryClientProvider > AuthProvider > TenantProvider > SidebarProvider > TooltipProvider`; inside that, `<BrowserRouter>` wraps a flat `<Routes>` table; after `</BrowserRouter>` (still inside `TooltipProvider`) render `Toaster`/`Sonner`/`PWAInstallPrompt`. Protected routes wrap in `<ProtectedRoute requireTenant>`. **`Layout.tsx` is not referenced in `App.tsx`** — it is imported by ~11 page files and composed per-page, not at the route level. |
-| `src/components/ui/` | shadcn primitives. `ui/sidebar.tsx` declares a **module-private** `useSidebar()` (not exported) — a name twin of the app's exported `useSidebar` (`contexts/SidebarContext.tsx`). No import-site collision is possible; the trap is only editing the wrong one inside `ui/sidebar.tsx` (logged `TD-FE` in 4b). |
+| `App.tsx` | Root nests `QueryClientProvider > AuthProvider > TenantProvider > SidebarProvider > TooltipProvider`; inside that, `<BrowserRouter>` wraps a flat `<Routes>` table; after `</BrowserRouter>` (still inside `TooltipProvider`) render `Toaster`/`Sonner`/`PWAInstallPrompt`. Protected routes wrap in `<ProtectedRoute requireTenant>`. **`Layout.tsx` is not referenced in `App.tsx`** — it is imported by 11 page files and composed per-page, not at the route level. |
+| `src/components/ui/` | shadcn primitives. `ui/sidebar.tsx` **exports** both `useSidebar` (line 734) and `SidebarProvider` (line 730) — real name-twins of the app's `SidebarContext` exports. The collision is currently *inactive* (no file imports those names from `ui/sidebar`) but real; resolved at the shell's public surface by the `useAppSidebar` rename (§3.6), logged `TD-FE` in 4b. |
 | Lint | ESLint flat-config with `import-x/order` (Phase 2b), via the installed **`eslint-plugin-import-x`** (registered under the `import-x` plugin key). **No `import-x/resolver` is configured.** No cross-feature dependency rules yet. |
 | Preflight | Chain wired (Phase 2c) as `typecheck → lint → format:check → test → build → bundle:check → test:e2e → knip --strict` (verified against `package.json`). 21a re-runs it as its step 0. |
-| knip | `knip.json` uses production-mode entries (`"src/**/*.{ts,tsx}!"`) and ignores only `src/components/ui/**`. Under `knip --strict`, an exported symbol that nothing consumes fails the gate (see §2.5). |
+| knip | `knip.json` uses production-mode entries (`"src/**/*.{ts,tsx}!"`, with test/`__tests__`/spec excludes + `e2e/**/*.spec.ts` + `scripts/*.ts`), ignores `src/components/ui/**`, and sets `ignoreDependencies: ["tailwindcss-animate","tsx"]`. Under `knip --strict`, an exported symbol that nothing consumes fails the gate (see §2.5). |
 
 ### 1.3 Decisions reached during brainstorming
 
@@ -140,7 +140,7 @@ Create `src/shared/components/FeatureErrorBoundary.tsx` (a React class error bou
 
 Add to `eslint.config.js`, using the installed `eslint-plugin-import-x` (registered as `import-x`; already provides `import-x/order` from Phase 2b).
 
-**Prerequisite — resolver (load-bearing).** The config currently has **no `import-x/resolver`**. The path-based rules below must resolve `@/` aliases (and relatives) to real files; without a resolver they silently match nothing and pass as a false green. So 4a installs **`eslint-import-resolver-typescript`** (a new dev-dep — this corrects §1.3.6's earlier "no new tool" framing) and sets `settings['import-x/resolver']` against `tsconfig.app.json`. 21a's plan validates the resolver works alongside the existing flat-config `import-x/order` before relying on the new rules.
+**Prerequisite — resolver (load-bearing).** The config currently has **no `import-x/resolver`**. The path-based rules below must resolve `@/` aliases (and relatives) to real files; without a resolver they silently match nothing and pass as a false green. So 4a installs **`eslint-import-resolver-typescript`** (a new dev-dep) and sets `settings['import-x/resolver']` against `tsconfig.app.json`. 21a's plan validates the resolver works alongside the existing flat-config `import-x/order` before relying on the new rules.
 
 **Rules:**
 
@@ -148,14 +148,15 @@ Add to `eslint.config.js`, using the installed `eslint-plugin-import-x` (registe
    - `src/shared/**` may **not** import from `src/features/**`.
    - `src/components/ui/**` may **not** import from `src/features/**` or `src/shared/**`.
    - Deliberately asymmetric: nothing here restricts `features → legacy-dir` (the §2.2 transitional exception).
-2. **Cross-feature index-only — mechanism is a 21a spike, not a given.** The constraint "feature A imports feature B only via `B/index`" is the intended enforcement, but expressing it generically is fiddly: `import-x/no-internal-modules` is a *global* forbid-deep rule needing an exhaustive `allow`-list for every other deep-import shape (`@/components/ui/*`, `@/shared/api/*`, `@/lib/*`, …), and a per-feature-pair `no-restricted-paths` zone is verbose. 21a's plan picks the mechanism (or falls back to `dependency-cruiser` for this one constraint, per Spec 14 §3.3). **Acceptance gate (in 4a done-when): a positive enforcement test** — a deliberate `@/features/<X>/<deep>` cross-feature import is flagged — AND no regression on any existing import.
+2. **Cross-feature index-only — mechanism is a 21a spike, not a given.** The constraint "feature A imports feature B only via `B/index`" is the intended enforcement, but expressing it generically is fiddly: `import-x/no-internal-modules` is a *global* forbid-deep rule needing an exhaustive `allow`-list for every other deep-import shape (`@/components/ui/*`, `@/shared/api/*`, `@/lib/*`, …), and a per-feature-pair `no-restricted-paths` zone is verbose. 21a's plan picks the mechanism (or falls back to `dependency-cruiser` for this one constraint, per Spec 14 §3.3). **Acceptance gate (in 4a done-when): a positive enforcement test** — a deliberate `@/features/<X>/<deep>` cross-feature import is flagged — AND no regression on any existing import. **Fallback:** if none of the three mechanisms passes the positive test cleanly, 4a ships with the zone boundaries (item 1) only and logs a `TD-FE` for index-only enforcement — it does **not** block 4a on an uncertain lint mechanism.
 3. **`import-x/no-cycle`** — forbids circular imports (depends on the resolver, item above). **Pre-check (21a):** run with only this rule in report mode against the current tree; pre-existing cycles are fixed-if-trivial or logged `TD-FE` and the rule scoped/deferred so **4a merges green**.
+4. **`react-refresh/only-export-components` override expansion (load-bearing for 4b).** `eslint.config.js` currently disables this `warn`-level rule **only** for `src/contexts/**` (context files intentionally co-export a provider component + a hook; `lint` runs `--max-warnings 0`). 4a **extends that override zone to `src/shared/**` and `src/features/**`**, because the moved context files (4b) and feature barrels (`shell/index.ts` co-exports `Layout` + `useAppSidebar` + `ProtectedRoute` + `SidebarProvider`) co-export components and hooks the same way. Without this, 4b's moves would emit warnings and fail `--max-warnings 0`. Same pattern as the existing contexts override; the zone can be configured in 4a before the target files exist.
 
 Lint stays in the existing `lint` step (`eslint . --max-warnings 0`); 4a adds rules + a resolver + a positive test, not a new gate. Rules are vacuous until `features/shell/` exists (4b); the positive test guarantees they are not silently no-op.
 
 ### 2.7 Lock `src/components/ui/`
 
-Add `src/components/ui/README.md` (short): shadcn/Radix primitives only, owned by no feature, may not import from `features/` or `shared/` (enforced by §2.6 zone). Note the `ui/sidebar.tsx` `useSidebar` name-twin (module-private; no import collision — see §3.6) so a future editor doesn't conflate it with the app hook.
+Add `src/components/ui/README.md` (short): shadcn/Radix primitives only, owned by no feature, may not import from `features/` or `shared/` (enforced by §2.6 zone). Note that `ui/sidebar.tsx` **exports** `useSidebar` and `SidebarProvider` (lines 734/730) — real name-twins of the app's `SidebarContext` exports (see §3.6) — so a future editor doesn't import or conflate the wrong one.
 
 ### 2.8 ADR template + first ADRs
 
@@ -178,7 +179,7 @@ Create `docs/adr/` (new directory) with:
 | `frontend/scripts/README.md` | Edit — document `scaffold:feature` |
 | `docs/adr/0001-adr-template.md` | New (creates `docs/adr/`) — slim ADR template |
 | `docs/adr/0002-cross-cutting-client-state-and-components-live-in-shared.md` | New — canonical placement ADR + alternatives |
-| `frontend/eslint.config.js` | Edit — add `import-x/no-restricted-paths`, index-only rule, `import-x/no-cycle`, **and `settings['import-x/resolver']`** |
+| `frontend/eslint.config.js` | Edit — add `import-x/no-restricted-paths`, index-only rule, `import-x/no-cycle`, **`settings['import-x/resolver']`**, and **extend the `react-refresh/only-export-components` override to `src/shared/**` + `src/features/**`** (§2.6 item 4) |
 | `frontend/knip.json` | Edit — add `src/shared/components/**` to `ignore` (until Phase 5; TD-FE to revert) |
 | `frontend/package.json` | Edit — add `scaffold:feature` script + `eslint-import-resolver-typescript` dev-dep |
 | `docs/TECH_DEBT.md` | Edit — `TD-FE` for the knip-ignore-to-remove-at-Phase-5 |
@@ -189,7 +190,7 @@ Create `docs/adr/` (new directory) with:
 1. `src/features/README.md` and `src/shared/README.md` exist per §2.2–§2.3.
 2. `scaffold-feature.ts` works; `npm run scaffold:feature -- <name>` documented.
 3. `FeatureErrorBoundary` exists with passing unit tests (§2.5); `knip --strict` green (boundary ignored, TD-FE logged).
-4. ESLint dependency rules + resolver added; `eslint . --max-warnings 0` green; **a positive enforcement test confirms a deliberate cross-feature deep import is flagged** (not merely "lint passes"); `no-cycle` pre-check resolved.
+4. ESLint dependency rules + resolver added; the `react-refresh` override covers `src/shared/**` + `src/features/**` (§2.6 item 4); `eslint . --max-warnings 0` green; **a positive enforcement test confirms a deliberate cross-feature deep import is flagged** (not merely "lint passes") — or, if no mechanism passes cleanly, zone boundaries ship with a `TD-FE` for index-only (§2.6 item 2); `no-cycle` pre-check resolved.
 5. `src/components/ui/README.md` declares the lock.
 6. `docs/adr/0001` + `0002` written.
 7. `npm run preflight` green on `phase-4a-scaffolding` immediately before merge.
@@ -227,6 +228,9 @@ Move into `src/features/shell/` (preserving content; adjust only import paths):
 | `src/contexts/TenantContext.tsx` | `src/shared/tenant/TenantContext.tsx` (+ `src/shared/tenant/index.ts`) | the TenantContext importers not moving into shell |
 
 - **`src/hooks/useAuth.ts` is NOT moved.** It composes `AuthContext` + `TenantContext` + `jwtManager` (§1.2), so it belongs in neither `shared/auth/` nor `shared/tenant/` without creating a bidirectional folder coupling. It stays in `src/hooks/` for Phase 4, updating its imports to `@/shared/auth` + `@/shared/tenant` (a legacy→shared import, allowed transitionally). Its final home is deferred to Phase 10/11 (§8.2).
+- **`useAuth` name hazard (H2).** `contexts/AuthContext.tsx` and `hooks/useAuth.ts` both export a `useAuth` — different behaviors (the context hook vs. the composed JWT/session hook). After the move, `shared/auth/index.ts` exposes the *context* `useAuth`; the composed hook stays at `@/hooks/useAuth`. Logged as a `TD-FE` so consumers know which they import. 4b does not worsen it (it becomes intra-directory only if a later phase moves the composed hook into `shared/`).
+- **Dead-code strip (H3).** `AuthContext.tsx` carries ~185 lines of commented-out legacy implementation (lines 1–186). The move **strips that block** (comment-only → zero behavior change); only the active implementation (line 187+) moves. This is the one deliberate exception to "preserve content."
+- **Lint coverage.** The moved context files co-export provider + hook, so the move relies on 4a's `react-refresh/only-export-components` override (§2.6 item 4) already covering `src/shared/**` + `src/features/**`; otherwise `--max-warnings 0` reds.
 - `shared/auth/index.ts` exposes `AuthProvider`, `useAuth` (the AuthContext hook), auth types. `shared/tenant/index.ts` exposes `TenantProvider`, `useTenant`, tenant types.
 - `TenantContext` imports `AuthContext`; both in `shared/` makes that `shared → shared` (allowed).
 - **Scope note (from R2:H1):** several "consumers" of these contexts are files 4b moves into `shell/` (`ProtectedRoute`, `Header`, `Sidebar`, `ProfileDialog`) — their imports become intra-shell/`@/shared` and are handled by the move, not separate rewrites. The true external-rewrite set (files that stay put and only change an import path) is smaller than the raw importer count; 21b enumerates it. The rewrite is mechanical and `tsc --noEmit`-checked; staged move→rewrite→delete so each commit stays green.
@@ -255,14 +259,14 @@ The `<Routes>` table **stays in `App.tsx`**. It references every feature's page,
 ### 3.6 `shell/README.md` + `TD-FE` (naming twin)
 
 - Populate `src/features/shell/README.md`: purpose (the app frame features render inside), public surface (§3.4), key files, dependency notes (consumes `@/shared/auth`, `@/shared/tenant`, `@/components/ui`).
-- Export the app sidebar hook as **`useAppSidebar`** from `shell/index.ts` (cheap clarity), even though there is no hard collision: shadcn's `ui/sidebar.tsx` `useSidebar` is module-private and cannot be imported. Log a **`TD-FE`** entry (next free number — 4a's knip-ignore entry claims the prior one) recording the name twin and that the rename to `useAppSidebar` is done at the barrel while the internal `SidebarContext.tsx` symbol rename is deferred.
+- Export the app sidebar hook as **`useAppSidebar`** from `shell/index.ts` — this resolves a **real** export-name collision: shadcn's `ui/sidebar.tsx` exports both `useSidebar` (734) and `SidebarProvider` (730), the same names the app's `SidebarContext` exports. The collision is currently *inactive* (no file imports those names from `ui/sidebar`), but the rename removes the hazard at the shell's public surface. (The app's `SidebarProvider`, re-exported by `shell/index.ts`, is the second twin; consumers import it from `@/features/shell`, not `@/components/ui/sidebar`.) Log a **`TD-FE`** entry (next free number — 4a's knip-ignore entry claims the prior one) recording both name twins and that the barrel rename to `useAppSidebar` is done while the internal `SidebarContext.tsx` symbol rename is deferred.
 
 ### 3.7 Files touched (4b)
 
 | File | Change |
 |---|---|
 | `src/features/shell/**` | New — `components/{Sidebar,Header,Layout,ProfileDialog}.tsx`, `ProtectedRoute.tsx`, `SidebarContext.tsx`, `index.ts`, `README.md` (moved-in content + barrel + doc). No `AppRoutes.tsx`. |
-| `src/shared/auth/**` | New — `AuthContext.tsx`, `index.ts` (moved in) |
+| `src/shared/auth/**` | New — `AuthContext.tsx` (185-line commented-out dead block stripped during move — §3.2), `index.ts` (moved in) |
 | `src/shared/tenant/**` | New — `TenantContext.tsx`, `index.ts` (moved in) |
 | `src/hooks/useAuth.ts` | Edit — imports now from `@/shared/auth` + `@/shared/tenant` (file stays) |
 | `src/components/layout/` | Deleted (emptied) |
@@ -281,7 +285,7 @@ The `<Routes>` table **stays in `App.tsx`**. It references every feature's page,
 3. All import sites resolve to new locations; `tsc --noEmit` green.
 4. `App.tsx` rewired (imports only); `<Routes>` table and provider nesting order unchanged; routes unchanged.
 5. `shell/index.ts` exports `useAppSidebar`; cross-feature lint rules enforce against `shell/` with no violations.
-6. `TD-FE-14` logged for the sidebar name twin.
+6. A `TD-FE` (next free number) logged for the sidebar name twins (`useSidebar` + `SidebarProvider`) and the `useAuth` collision (§3.2).
 7. `npm run preflight` green on `phase-4b-shell-extraction` immediately before merge — including pixel-parity visual regression and the guard-behavior journey assertions (§3.5).
 
 ---
@@ -395,6 +399,6 @@ The template is defined before a non-shell feature exercises it.
 - `specs/14-frontend-refactoring-master-plan-design.md` — master plan; this phase amends §3.1, §3.3, §4 (status table + Phase 4 block; dated annotations on Phase 10/11), and §8 (Q5/Q6/Q7/Q11/Q13/Q16).
 - `specs/15-frontend-phase-0-inventory-and-safety-net-design.md` — the one-spec/two-plans sub-split precedent (0a/0b) this spec mirrors.
 - `specs/20-frontend-phase-3-api-data-layer-design.md` — predecessor; established `src/shared/api/` and the shared-layer conventions Phase 4 extends.
-- `docs/reviews/21-frontend-phase-4-scaffolding-shell-design-spec-review-1.md`, `…-review-2.md`, `…-synthesis-2.md` — round-1 reviews (glm-5.1 + opus) and synthesis driving this round-2 revision.
+- **Review-pipeline artifacts (this spec's own cycle):** `…-spec-review-1.md` + `…-review-2.md` (round 1: glm-5.1 + opus) → `…-synthesis-2.md`; `…-spec-review-3.md` (round 2: glm-5.1) → `…-synthesis-3.md`. These drove the round-2 and round-3 revisions.
 - `docs/TECH_DEBT.md` — gains the knip-ignore (4a) and `TD-FE-14` sidebar-name-twin (4b) entries.
 - Backend Phase K/L specs — the converged per-feature + `_helpers` shape the frontend `features/` + `shared/` mirror.
