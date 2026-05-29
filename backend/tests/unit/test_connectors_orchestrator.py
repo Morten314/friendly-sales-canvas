@@ -1,7 +1,11 @@
 """Orchestrator service functions + task bodies with fakes for every sibling seam."""
 import pytest
 
-from app.core.exceptions import ConnectorCredentialsInvalidError, ConnectorNotConnectedError
+from app.core.exceptions import (
+    ApolloCreditsExhaustedError,
+    ConnectorCredentialsInvalidError,
+    ConnectorNotConnectedError,
+)
 from app.services.connectors import orchestrator
 from app.models.connectors import (
     ApolloConnectRequest,
@@ -203,3 +207,139 @@ def test_run_enrich_count_mismatch_skips_chunk_no_miswrite(monkeypatch, patched)
     assert completed["unmatched"] == 2
     assert completed["updated"] == 0
     assert wrote == []  # never attempted a write
+
+
+# ─── C1 regression ───
+
+def test_run_import_label_lookup_network_error_does_not_fail_batch(monkeypatch, patched):
+    """A non-BrewraError (e.g. network blip) during cosmetic list-name lookup must NOT fail the batch."""
+    monkeypatch.setattr(orchestrator.credentials, "get_api_key", lambda m, o, p="apollo": "good")
+
+    class _NetworkErrorConnector(FakeConnector):
+        def list_collections(self):
+            raise RuntimeError("boom")  # simulates a transient network error, not a BrewraError
+
+    monkeypatch.setattr(orchestrator.apollo_mod, "ApolloConnector", _NetworkErrorConnector)
+
+    monkeypatch.setattr(orchestrator.runs, "update_import_progress", lambda *a, **k: None)
+    monkeypatch.setattr(orchestrator.runs, "update_import_filename", lambda *a, **k: None)
+
+    fail_calls = []
+    monkeypatch.setattr(orchestrator.runs, "fail_import_batch",
+                        lambda m, fid, msg: fail_calls.append(msg))
+
+    completed = {}
+    monkeypatch.setattr(orchestrator.runs, "complete_import_batch",
+                        lambda m, fid, **k: completed.update(k))
+
+    upsert_calls = []
+    monkeypatch.setattr(orchestrator.ingestion, "upsert_imported_leads",
+                        lambda *a, **k: upsert_calls.append(1) or {"created": 2, "matched": 0, "errors": []})
+
+    # list_id set + no label → label-resolution branch runs (and blows up with RuntimeError)
+    orchestrator._run_import(object(), object(), TEST_ORG_ID, TEST_USER_ID, "file-1", list_id="L1", label=None)
+
+    assert fail_calls == [], f"fail_import_batch should NOT have been called, but got: {fail_calls}"
+    assert completed, "complete_import_batch should have been called"
+    assert completed.get("created_count") == 2
+    assert upsert_calls, "ingestion.upsert_imported_leads should have been called"
+
+
+# ─── I2: credits → partial ───
+
+def test_run_enrich_credits_exhausted_marks_partial(monkeypatch, patched):
+    """ApolloCreditsExhaustedError during bulk_match should mark the run partial, not failed."""
+    monkeypatch.setattr(orchestrator.credentials, "get_api_key", lambda m, o, p="apollo": "good")
+    monkeypatch.setattr(orchestrator.runs, "mark_enrich_processing", lambda *a, **k: None)
+    monkeypatch.setattr(orchestrator.runs, "update_enrich_progress", lambda *a, **k: None)
+
+    completed = {}
+    monkeypatch.setattr(orchestrator.runs, "complete_enrich_run",
+                        lambda m, rid, **k: completed.update(k))
+
+    fail_calls = []
+    monkeypatch.setattr(orchestrator.runs, "fail_enrich_run",
+                        lambda m, rid, msg: fail_calls.append(msg))
+
+    monkeypatch.setattr(orchestrator.ingestion, "get_leads_by_ids",
+                        lambda d, o, ids: [{"lead_id": TEST_LEAD_ID_1, "email": "a@x.com"}])
+
+    class _CreditsConnector(FakeConnector):
+        def bulk_match(self, entries, *, reveal_personal_emails, reveal_phone_number):
+            raise ApolloCreditsExhaustedError("no credits")
+
+    monkeypatch.setattr(orchestrator.apollo_mod, "ApolloConnector", _CreditsConnector)
+
+    orchestrator._run_enrich(object(), object(), TEST_ORG_ID, TEST_USER_ID, "run-1",
+                             [TEST_LEAD_ID_1], reveal_personal_emails=True, reveal_phone_number=False)
+
+    assert fail_calls == [], f"fail_enrich_run should NOT have been called, got: {fail_calls}"
+    assert completed.get("status") == "partial"
+
+
+# ─── I4: import cap ───
+
+def test_run_import_cap_stops_and_marks_capped(monkeypatch, patched):
+    """When IMPORT_RECORD_CAP is hit, batch completes with capped=True and cap message."""
+    monkeypatch.setattr(orchestrator, "IMPORT_RECORD_CAP", 3)
+    monkeypatch.setattr(orchestrator.credentials, "get_api_key", lambda m, o, p="apollo": "good")
+
+    class _ManyPagesConnector(FakeConnector):
+        def fetch_contacts(self, list_id=None):
+            # Yield 3 pages of 2 records each → 6 total, cap is 3
+            for _ in range(3):
+                yield [{"id": "c1", "email": "a@x.com"}, {"id": "c2", "email": "b@x.com"}]
+
+    monkeypatch.setattr(orchestrator.apollo_mod, "ApolloConnector", _ManyPagesConnector)
+    monkeypatch.setattr(orchestrator.runs, "update_import_progress", lambda *a, **k: None)
+    monkeypatch.setattr(orchestrator.runs, "update_import_filename", lambda *a, **k: None)
+
+    completed = {}
+    monkeypatch.setattr(orchestrator.runs, "complete_import_batch",
+                        lambda m, fid, **k: completed.update(k))
+    monkeypatch.setattr(orchestrator.ingestion, "upsert_imported_leads",
+                        lambda *a, **k: {"created": len(k.get("records", [])) if "records" in k else 2, "matched": 0, "errors": []})
+
+    orchestrator._run_import(object(), object(), TEST_ORG_ID, TEST_USER_ID, "file-1", list_id=None, label="X")
+
+    assert completed.get("capped") is True
+    assert completed.get("total_rows", 0) <= 3
+    message = completed.get("message") or ""
+    assert "cap" in message.lower() or "3" in message
+
+
+# ─── I3: enrich bad-key → failed + credentials error status ───
+
+def test_run_enrich_bad_key_fails_run_and_sets_status(monkeypatch, patched):
+    """ConnectorCredentialsInvalidError during enrich should fail the run and set cred status=error."""
+    monkeypatch.setattr(orchestrator.credentials, "get_api_key", lambda m, o, p="apollo": "good")
+
+    class _BadKeyConnector(FakeConnector):
+        def bulk_match(self, entries, *, reveal_personal_emails, reveal_phone_number):
+            raise ConnectorCredentialsInvalidError("bad key")
+
+    monkeypatch.setattr(orchestrator.apollo_mod, "ApolloConnector", _BadKeyConnector)
+
+    monkeypatch.setattr(orchestrator.runs, "mark_enrich_processing", lambda *a, **k: None)
+    monkeypatch.setattr(orchestrator.runs, "update_enrich_progress", lambda *a, **k: None)
+    monkeypatch.setattr(orchestrator.ingestion, "get_leads_by_ids",
+                        lambda d, o, ids: [{"lead_id": TEST_LEAD_ID_1, "email": "a@x.com"}])
+
+    status_calls = []
+    monkeypatch.setattr(orchestrator.credentials, "set_status",
+                        lambda m, o, p, s: status_calls.append(s))
+
+    failed = {}
+    monkeypatch.setattr(orchestrator.runs, "fail_enrich_run",
+                        lambda m, rid, msg: failed.update({"msg": msg}))
+
+    completed_calls = []
+    monkeypatch.setattr(orchestrator.runs, "complete_enrich_run",
+                        lambda *a, **k: completed_calls.append(k))
+
+    orchestrator._run_enrich(object(), object(), TEST_ORG_ID, TEST_USER_ID, "run-1",
+                             [TEST_LEAD_ID_1], reveal_personal_emails=True, reveal_phone_number=False)
+
+    assert "msg" in failed, "fail_enrich_run should have been called"
+    assert "error" in status_calls, "credentials.set_status should have been called with 'error'"
+    assert completed_calls == [], "complete_enrich_run should NOT have been called"

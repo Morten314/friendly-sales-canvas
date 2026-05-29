@@ -94,7 +94,7 @@ def _run_import(driver, mongo, org_id, user_id, file_id, list_id, label) -> None
                     if lst["id"] == str(list_id):
                         runs.update_import_filename(mongo, file_id, lst["name"])
                         break
-            except BrewraError as e:
+            except Exception as e:
                 logger.warning("Could not resolve Apollo list name (file_id=%s): %s", file_id, e)
 
         total_rows = created = matched = error_count = 0
