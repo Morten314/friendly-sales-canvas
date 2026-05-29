@@ -304,6 +304,7 @@ class ApolloEnrichStatusResponse(BaseModel):
     updated: int
     unmatched: int
     failed: int
+    skipped: int = 0
     progress_percent: float
     errors: List[str]
     started_at: Optional[str] = None
@@ -2982,6 +2983,18 @@ Checked against `specs/23-apollo-lead-integration-design.md`:
 
 ---
 
+## Post-implementation amendments (impl review round 1)
+
+After execution, `/review-impl` (glm-5.1) produced `docs/reviews/apollo-lead-integration-backend-impl-review-1.md`; the synthesis is `docs/reviews/apollo-lead-integration-backend-impl-synthesis-1.md` (recommendation: no further round). Three findings were agreed and applied on this branch — they refine the code beyond the verbatim task blocks above:
+
+- **F1 — stale failover covers `processing`, not just `queued`** (`runs.py`, commit `1093fa7`). The spec (§3/§5.5/§8) requires a new run to reclaim an abandoned **queued OR processing** run, but Task 7's `_is_stale_queued_run` only handled `queued`. Renamed to `_is_stale_run`; it now treats a `queued` or `processing` run stale when its most-recent-activity timestamp (`updated_at`→`started_at`→`created_at`) exceeds `_STALE_AFTER_SECONDS`. A healthy `processing` run advances `updated_at` per chunk, so a live run is never reclaimed.
+- **F2 — distinct `skipped` counter** (`models/connectors.py`, `runs.py`, `orchestrator.py`, commit `5c33c6d`). `ApolloEnrichStatusResponse` and the `Connector_Enrich_Runs` doc gain `skipped: int` (added to the Task 2 model block above and `create_enrich_run`/`update_enrich_progress`/`complete_enrich_run`). `_run_enrich` counts selected `lead_ids` that no longer exist in the graph as `skipped` (with a recorded reason) instead of silently dropping them; `get_enrich_run`'s `progress_percent` numerator becomes `processed + skipped`, so the invariant `processed + skipped == total` holds and a finished run reads 100%. (Spec §5.5/§6/§6.1/§8 updated to match.)
+- **F3 — skip empty match entries** (`orchestrator.py`, commit `5c33c6d`). A lead whose `_build_match_entry` is empty (no `apollo_contact_id`/email/name/company) is counted `unmatched` and **not** sent to `/people/bulk_match`, avoiding a wasted Apollo credit. The length-mismatch guard and the result→lead pairing operate on the filtered entry list (`entries`/`match_leads`), preserving the no-positional-miswrite guarantee.
+
+Reviewer findings deliberately **not** applied (disagreed / deferred): narrowing the `_run_import` cosmetic list-name catch back to `BrewraError` (disagreed — would reintroduce the import-failure bug fixed in `69fd7a3`); `_now()` consolidation into `normalize.py` and shared test-fake fixtures (deferred Nits). See the synthesis for rationale.
+
+---
+
 ## Execution Handoff
 
-(Filled in by the controller after the user picks an execution approach — subagent-driven vs inline.)
+Executed via **subagent-driven-development** on `feat/apollo-lead-integration-backend` (worktree `/projects/Brewra/wt-apollo23a`, branched off the `docs/23a` commit). All 14 tasks landed as conventional `feat(be):` commits — each a fresh implementer subagent + independent spec/quality review + full-suite regression gate. Baseline 319 → 393 tests passing. A whole-feature review and `/review-impl` round 1 (+ synthesis) followed; the three agreed fixes are recorded above. Task 14 confirmed the 7-endpoint OpenAPI surface; the live-Apollo/live-DB curl is an operator step pending a running backend + customer key. Frontend plan `23b` remains deferred (spec §12.2). Merge to `master` pending operator decision.
