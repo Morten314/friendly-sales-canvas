@@ -145,6 +145,23 @@ Backend test conventions live in `backend/TESTING.md` — patch-where-used is th
 - **Frontend duplicates the Scout/Profiler split**: `ScoutChatWithHistory` and `ProfilerChatWithHistory` are 90% the same component.
 - **Tracker branch hygiene.** `develop` and `production` are sync targets, not commit targets. If `git status` ever shows you on one of those with staged changes, you're on the wrong branch — `git stash`, switch to your feature branch (creating one off `master` if needed), then re-apply.
 
+## Tool Usage Pitfalls
+
+### Glob patterns are NOT regex
+
+The `Glob` tool uses **glob syntax**, not regex. This has caused real bugs in this repo (overwriting `docs/reviews/…-review-1.md` because a glob pattern returned zero matches and N was computed as 1 instead of 3).
+
+**Wrong (regex syntax — silently matches nothing or wrong files):**
+- `docs/reviews/some-slug-review-[0-9]+.md` — the `+` is a literal character in glob, not a quantifier
+- `docs/reviews/some-slug-review-\d+.md` — `\d` is not a glob character class
+
+**Correct (glob syntax):**
+- `docs/reviews/some-slug-review-*.md` — matches any suffix (then inspect results to find max N)
+- `docs/reviews/some-slug-review-[0-9].md` — matches a single digit (fine for N < 10)
+- `docs/reviews/*review*.md` — broad match, filter in post
+
+**When determining N for numbered file series (reviews, syntheses, etc.):** use a broad glob like `docs/reviews/<slug>*` to list all matching files, then compute max+1 from the results. Never assume "no matches" means N=1 without double-checking with a wider pattern.
+
 ## Pre-existing Analyses
 
 If asked to reason about architecture, product scope, or design system, **read these first** — they're more current than any inference from the code:
