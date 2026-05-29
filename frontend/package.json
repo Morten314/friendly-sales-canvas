@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
+    "bundle:check": "tsx scripts/check-bundle-budget.ts",
+    "bundle:rebaseline": "vite build && tsx scripts/capture-bundle-baseline.ts",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
