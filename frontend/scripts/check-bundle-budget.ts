@@ -30,9 +30,7 @@ export interface Baseline {
   chunks: ChunkEntry[];
 }
 
-export type LoadResult =
-  | { ok: true; baseline: Baseline }
-  | { ok: false; reason: string };
+export type LoadResult = { ok: true; baseline: Baseline } | { ok: false; reason: string };
 
 // Assumption: every hyphenated filename in `dist/` is Vite-hashed (the current
 // 5-file baseline satisfies this). A hand-named file like `my-component.js`
@@ -138,18 +136,12 @@ export async function loadBaseline(path: string): Promise<LoadResult> {
   return { ok: true, baseline: parsed as Baseline };
 }
 
-export function compareAndPrint(
-  baseline: Baseline,
-  current: ChunkEntry[],
-): void {
+export function compareAndPrint(baseline: Baseline, current: ChunkEntry[]): void {
   const currentTotalRaw = current.reduce((acc, c) => acc + c.size_bytes, 0);
   const currentTotalGzip = current.reduce((acc, c) => acc + c.gzip_bytes, 0);
 
   const rawDelta = computeDelta(baseline.total_size_bytes, currentTotalRaw);
-  const gzipDelta = computeDelta(
-    baseline.total_size_gzip_bytes,
-    currentTotalGzip,
-  );
+  const gzipDelta = computeDelta(baseline.total_size_gzip_bytes, currentTotalGzip);
 
   console.log("");
   console.log("                  Baseline       Current        Delta");
@@ -214,9 +206,7 @@ export function compareAndPrint(
   }
 
   const added = current.filter((c) => !baselineByKey.has(baseName(c.file)));
-  const removed = baseline.chunks.filter(
-    (c) => !currentByKey.has(baseName(c.file)),
-  );
+  const removed = baseline.chunks.filter((c) => !currentByKey.has(baseName(c.file)));
   if (added.length || removed.length) {
     console.log("");
     if (added.length) {
@@ -230,3 +220,28 @@ export function compareAndPrint(
   console.log("");
   console.log("(advisory — exit 0)");
 }
+
+async function main(): Promise<void> {
+  const baselinePath = process.env.BUNDLE_BASELINE_PATH || DEFAULT_BASELINE_PATH;
+
+  if (!existsSync(DIST_DIR)) {
+    console.error("no dist/ found; run npm run build first");
+    process.exit(1);
+  }
+
+  const loadResult = await loadBaseline(baselinePath);
+  if (!loadResult.ok) {
+    console.error(loadResult.reason);
+    process.exit(1);
+  }
+
+  const current = await walkDist(DIST_DIR);
+  const displayPath = relative(FRONTEND_DIR, baselinePath);
+  console.log(`Bundle vs baseline (${displayPath})`);
+  compareAndPrint(loadResult.baseline, current);
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

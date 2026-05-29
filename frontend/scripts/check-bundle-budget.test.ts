@@ -102,9 +102,7 @@ describe("formatDelta", () => {
 
 describe("loadBaseline", () => {
   it("returns ok with parsed baseline for a valid file", async () => {
-    const result = await loadBaseline(
-      resolve(FIXTURE_DIR, "baseline-valid.json"),
-    );
+    const result = await loadBaseline(resolve(FIXTURE_DIR, "baseline-valid.json"));
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.baseline.total_size_bytes).toBe(2092063);
@@ -113,9 +111,7 @@ describe("loadBaseline", () => {
   });
 
   it("returns not-ok with actionable reason when file missing", async () => {
-    const result = await loadBaseline(
-      resolve(FIXTURE_DIR, "does-not-exist.json"),
-    );
+    const result = await loadBaseline(resolve(FIXTURE_DIR, "does-not-exist.json"));
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.reason).toContain("baseline not found");
@@ -124,9 +120,7 @@ describe("loadBaseline", () => {
   });
 
   it("returns not-ok when JSON is malformed", async () => {
-    const result = await loadBaseline(
-      resolve(FIXTURE_DIR, "baseline-malformed.json"),
-    );
+    const result = await loadBaseline(resolve(FIXTURE_DIR, "baseline-malformed.json"));
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.reason).toContain("malformed");
@@ -134,9 +128,7 @@ describe("loadBaseline", () => {
   });
 
   it("returns not-ok when required fields are missing", async () => {
-    const result = await loadBaseline(
-      resolve(FIXTURE_DIR, "baseline-missing-fields.json"),
-    );
+    const result = await loadBaseline(resolve(FIXTURE_DIR, "baseline-missing-fields.json"));
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.reason).toContain("missing expected fields");
