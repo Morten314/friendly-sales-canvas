@@ -60,7 +60,7 @@ uses Tavily + Anthropic and returns HTTP 500 if `ANTHROPIC_API_KEY` is unset).
 - `POST /market-research_claude`  
   Same as `/market-research`, generated with the Claude backend.
 - `GET /icp`  
-  Retrieves ICP (Ideal Customer Profile) data.
+  Retrieves ICP (Ideal Customer Profile) data. **Deprecated** — emits `Deprecation`/`Link` headers pointing to `GET /api/v2/icp` (successor for the list portion only; the route's lazy generate/create behavior has no v2 successor).
 - `POST /icp-research`  
   Generates/refines ICP research results (Groq backend).
 - `POST /icp-research_claude`  

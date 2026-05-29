@@ -25,6 +25,7 @@ routes and the shared `PaginatedResponse` envelope.
   - `org_id` (Query, required)
 - **Returns**: List of Lead objects with company, contact, and tech stack information
 - **Multitenancy**: ✅ Yes (filters by user_id and org_id)
+- **Deprecation**: ⚠️ Deprecated — responds with `Deprecation: true` and a `Link` header to the paginated successor `GET /api/v2/leads`
 
 ### 2. **POST `/leads`** - Add Single Lead
 - **Description**: Add a single lead manually with flexible key-value pairs. Automatically maps and stores in Neo4j with user_id and org_id
@@ -223,6 +224,7 @@ routes and the shared `PaginatedResponse` envelope.
   - Caches in MongoDB
   - Generates from shared company profile
   - Multitenant (user_id)
+- **Deprecation**: ⚠️ Deprecated — responds with `Deprecation: true` and a `Link` header to the paginated successor `GET /api/v2/icp`, which is the successor for the list portion only (the lazy generate/create behavior has no v2 successor)
 
 ### 16. **POST `/icp-research`** - ICP Research
 - **Description**: Research specific ICP components (summary, buyer map, competitive overlap, regulatory)
@@ -533,9 +535,10 @@ min 0), unless noted.
 ## 🔄 API Versions
 - **v1** — the original surface (the bulk of the endpoints above). Mounted at the
   bare paths with no version prefix. Several v1 list routes (`/leads`,
-  `/leads/by-file`, `/fetch-signals`, `/user-documents`, `/registration`) are now
-  **deprecated** in favor of their `/v2` successors and emit `Deprecation` / `Link`
-  response headers.
+  `/leads/by-file`, `/fetch-signals`, `/icp`, `/user-documents`, `/registration`)
+  are now **deprecated** in favor of their `/v2` successors and emit `Deprecation` /
+  `Link` response headers. (For `/icp`, the `/v2` successor replaces only the list
+  portion; the route's lazy generate/create behavior has no v2 successor.)
 - **v2** — paginated successors under `app/routers/v2/`, mounted at the `/v2`
   prefix, returning the shared `PaginatedResponse` envelope. See the
   **v2 (Paginated) Endpoints** section above.
