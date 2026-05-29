@@ -1,5 +1,7 @@
 # Brewra — Product Specification
 
+> **Snapshot — pre-backend-refactor.** This document reflects the backend as the flat `api.py`/`services.py` monolith and is preserved as a point-in-time analysis (authored 2026-05-08). For the **current** backend architecture see [`docs/architecture/BACKEND.md`](../../architecture/BACKEND.md). Frontend sections are likewise a snapshot; the frontend refactor is in progress (see specs 14–21).
+
 > Reverse-engineered from `backend/` and `PWA-multi-tenancy/development/friendly-sales-canvas/` on 2026-05-04.
 > Marketing copy on brewra.com is client-rendered; positioning here is taken from the user's product brief and verified against the built UI (page subtitles, sidebar labels, agent prompts).
 

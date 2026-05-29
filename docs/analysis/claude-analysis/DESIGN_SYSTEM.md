@@ -1,5 +1,7 @@
 # Brewra — Frontend Design System
 
+> **Snapshot — pre-backend-refactor.** This document reflects the backend as the flat `api.py`/`services.py` monolith and is preserved as a point-in-time analysis (authored 2026-05-08). For the **current** backend architecture see [`docs/architecture/BACKEND.md`](../../architecture/BACKEND.md). Frontend sections are likewise a snapshot; the frontend refactor is in progress (see specs 14–21).
+
 > Source: `PWA-multi-tenancy/development/friendly-sales-canvas/`. Tokens + patterns depth.
 > The system is shadcn-ui defaults extended with a small "sales" palette. It is **80% token-driven, 20% ad-hoc** — most divergence is in agent surfaces.
 

@@ -2,6 +2,22 @@
 
 Complete list of all API endpoints with descriptions and usage.
 
+The backend is a layered FastAPI service: endpoints live in per-domain routers
+under `app/routers/`, with paginated successors under `app/routers/v2/` (mounted
+at the `/v2` prefix). They are not in a single `api.py` file. Paths below are the
+routes as served by the backend process (bare, no app-level prefix). The frontend
+reaches them through its `/api/*` Vite proxy, so the same routes appear as
+`/api/...` (and `/api/v2/...`) from the browser. Several handlers lack a
+`response_model`; for those the response is described by purpose rather than a
+fabricated JSON body.
+
+Entries added during the router reconciliation use sub-numbers (5a, 5b, …) under
+their nearest base entry; these are full production routes, not lower-priority
+supplements.
+
+See the **v2 (Paginated) Endpoints** section at the end for the versioned list
+routes and the shared `PaginatedResponse` envelope.
+
 ---
 
 ## 📋 Lead Management Endpoints
@@ -13,6 +29,7 @@ Complete list of all API endpoints with descriptions and usage.
   - `org_id` (Query, required)
 - **Returns**: List of Lead objects with company, contact, and tech stack information
 - **Multitenancy**: ✅ Yes (filters by user_id and org_id)
+- **Deprecation**: ⚠️ Deprecated — responds with `Deprecation: true` and a `Link` header to the paginated successor `GET /api/v2/leads`
 
 ### 2. **POST `/leads`** - Add Single Lead
 - **Description**: Add a single lead manually with flexible key-value pairs. Automatically maps and stores in Neo4j with user_id and org_id
@@ -73,6 +90,44 @@ Complete list of all API endpoints with descriptions and usage.
 - **Returns**: Success message with lead_id
 - **Security**: Verifies ownership before deletion
 - **Multitenancy**: ✅ Yes
+
+### 5a. **GET `/leads/by-file`** - List Leads by Source File
+- **Description**: List leads associated with a specific uploaded file, ordered by `created_at DESC`
+- **Parameters**: 
+  - `org_id` (Query, required)
+  - `file_id` (Query, required)
+- **Returns**: List of lead objects (returns up to 500; silent cap)
+- **Deprecation**: ⚠️ Deprecated — responds with `Deprecation: true` and a `Link` header to the paginated successor `GET /api/v2/leads/by-file`
+
+### 5b. **GET `/leads/stream/status`** - Lead Stream Upload Status
+- **Description**: List lead-stream uploads (the file_id registry / processing status) for an org
+- **Parameters**: 
+  - `org_id` (Query, required)
+- **Returns**: `StreamStatusResponse` — list of stream file entries with status
+
+### 5c. **DELETE `/leads/by-file/{file_id}`** - Delete Leads by Source File
+- **Description**: Delete all leads belonging to a specific `file_id`
+- **Parameters**: 
+  - `file_id` (Path, required)
+  - `user_id` (Query, required)
+  - `org_id` (Query, required)
+- **Returns**: `DeleteLeadsByFileResponse` — deletion summary
+- **Multitenancy**: ✅ Yes
+
+### 5d. **POST `/leads/market-scores`** - Compute Lead Market Scores
+- **Description**: Compute/return market scores for one or more leads. Scoring runs as a background task
+- **Request Body**: `LeadMarketScoresRequest`
+- **Returns**: `LeadMarketScoresResponse`
+
+### 5e. **GET `/leads/market-scores/status`** - Market Scoring Progress
+- **Description**: Return live scoring progress (`processed/total`), run status, and recent scored-lead description previews
+- **Returns**: `LeadMarketScoringStatusResponse`
+
+### 5f. **GET `/leads/{lead_id}/market-score-descriptions`** - Lead Score Descriptions
+- **Description**: Return score explanation/description metadata for a single lead
+- **Parameters**: 
+  - `lead_id` (Path, required)
+- **Returns**: `LeadMarketScoreDescriptionsResponse`
 
 ---
 
@@ -173,6 +228,7 @@ Complete list of all API endpoints with descriptions and usage.
   - Caches in MongoDB
   - Generates from shared company profile
   - Multitenant (user_id)
+- **Deprecation**: ⚠️ Deprecated — responds with `Deprecation: true` and a `Link` header to the paginated successor `GET /api/v2/icp`, which is the successor for the list portion only (the lazy generate/create behavior has no v2 successor)
 
 ### 16. **POST `/icp-research`** - ICP Research
 - **Description**: Research specific ICP components (summary, buyer map, competitive overlap, regulatory)
@@ -182,6 +238,25 @@ Complete list of all API endpoints with descriptions and usage.
   - Multiple component types supported
   - Caches results
   - Multitenant (user_id)
+
+### 16a. **POST `/market-research_claude`** - Market Research (Claude backend)
+- **Description**: Same as `POST /market-research`, but research is generated with Claude (Tavily + Anthropic) instead of Groq
+- **Request Body**: MarketRequest
+- **Returns**: `MarketResponse` (same shape as `/market-research`)
+- **Notes**: Returns HTTP 500 if `ANTHROPIC_API_KEY` is not configured
+
+### 16b. **POST `/icp-research_claude`** - ICP Research (Claude backend)
+- **Description**: Same as `POST /icp-research`, but research is generated with Claude (Tavily + Anthropic) instead of Groq
+- **Request Body**: MarketRequest
+- **Returns**: `ICPResearchResponse` (same shape as `/icp-research`)
+- **Notes**: Returns HTTP 500 if `ANTHROPIC_API_KEY` is not configured
+
+### 16c. **DELETE `/icp/recommended/{icp_id}`** - Delete Recommended ICP
+- **Description**: Delete a single recommended ICP from `ICP_config` by `icp_id` for a given user
+- **Parameters**: 
+  - `icp_id` (Path, required)
+  - `user_id` (Query, required)
+- **Returns**: `ICPDeleteResponse`
 
 ---
 
@@ -199,46 +274,84 @@ Complete list of all API endpoints with descriptions and usage.
 ### 18. **POST `/generate-signals-batch`** - Generate Signals Batch
 - **Description**: Generate 2 signals for scout and 2 signals for profiler in one batch
 - **Request Body**: MarketRequest (user_id, org_id, data)
-- **Returns**: Array of 4 generated signals
+- **Returns**: `GenerateSignalsBatchResponse` (status, message, `data` array of generated signals)
 - **Features**: 
   - Batch processing
-  - Includes batch_id for tracking
   - Multitenant (user_id)
+
+### 18a. **POST `/generate-signals-batch_claude`** - Generate Signals Batch (Claude backend)
+- **Description**: Same as `POST /generate-signals-batch`, but signal text is produced with Claude (Tavily + Anthropic) instead of Groq
+- **Request Body**: MarketRequest
+- **Returns**: `GenerateSignalsBatchResponse` (same shape)
+- **Notes**: Returns HTTP 500 if `ANTHROPIC_API_KEY` is not configured
 
 ### 19. **GET `/fetch-signals`** - Fetch Signals
 - **Description**: Fetch signals for a user, ordered by timestamp (newest first)
 - **Parameters**: 
   - `user_id` (Query, required)
   - `limit` (Query, default: 10)
-- **Returns**: List of signals
+- **Returns**: `FetchSignalsResponse` (status, count, `signals` array)
 - **Multitenancy**: ✅ Yes (user_id)
+- **Deprecation**: ⚠️ Deprecated — responds with `Deprecation: true` and a `Link` header to the paginated successor `GET /api/v2/fetch-signals`
+
+### 19a. **POST `/signal_action`** - Accept/Reject Signal
+- **Description**: Record a user/system action (accept or reject) on a signal
+- **Request Body**: `SignalActionRequest`
+- **Returns**: `SignalActionResponse` (status, message, signal_id, action, optional org_id)
+
+### 19b. **POST `/signal_Ask`** - Ask About Signals
+- **Description**: Answer a question about signals using company profile, customer profile, history, and WebSearch (Groq + agent chain)
+- **Request Body**: `SignalAskRequest`
+- **Returns**: `SignalAskResponse` (status, answer, org_id, user_id, question, optional prompt_meta)
+
+### 19c. **POST `/signal_ask_claude`** - Ask About Signals (Claude backend)
+- **Description**: Claude-powered variant of `POST /signal_Ask`, with a local token/run limiter
+- **Request Body**: `SignalAskRequest`
+- **Returns**: `SignalAskResponse` (same shape as `/signal_Ask`)
 
 ---
 
 ## 📄 Document Management Endpoints
 
 ### 20. **POST `/upload-document`** - Upload Document
-- **Description**: Upload PDF or TXT file to S3 and start background task to convert to embeddings
-- **Parameters**: 
-  - `file` (File, required) - PDF or TXT
+- **Description**: Upload a document (or register a URL) to S3 and start a background task to convert it to embeddings in Pinecone
+- **Parameters** (multipart form): 
+  - `file` (File, optional) - document file
   - `user_id` (Form, required)
-- **Returns**: Upload status with file_key
+  - `org_id` (Form, required)
+  - `url` (Form, optional)
+  - `name`, `tags`, `description` (Form, optional)
+- **Returns**: Upload status (no `response_model`; shape varies by code path — described by purpose)
 - **Features**: 
   - Stores in S3
-  - Background processing to Pinecone
+  - Background processing to Pinecone (namespaced by org_id)
   - Status tracking in MongoDB
 
 ### 21. **GET `/document-status/{file_key}`** - Get Document Status
 - **Description**: Get processing status of a document (processing, completed, failed)
 - **Parameters**: 
-  - `file_key` (Path, required)
-- **Returns**: Document status with chunks_count, timestamps
+  - `file_key` (Path, required; matches the full remaining path)
+- **Returns**: `DocumentStatusResponse` with status, chunks_count, timestamps
 
 ### 22. **GET `/user-documents`** - List User Documents
-- **Description**: Get all files uploaded by a user
+- **Description**: Get all files uploaded for an org
 - **Parameters**: 
-  - `user_id` (Query, required)
-- **Returns**: List of files with file_name, status, uploaded_at
+  - `org_id` (Query, required)
+- **Returns**: `ListUserDocumentsResponse` (status, count, `files` array)
+- **Deprecation**: ⚠️ Deprecated — responds with `Deprecation: true` and a `Link` header to the paginated successor `GET /api/v2/user-documents`
+
+### 22a. **DELETE `/data-source/{file_id}`** - Delete Data Source
+- **Description**: Delete a data source/document by ID (removes the S3 object, Mongo record, and Pinecone vectors)
+- **Parameters**: 
+  - `file_id` (Path, required)
+- **Returns**: `DataSourceDeleteResponse`
+
+### 22b. **PUT `/data-source/{file_id}`** - Update Data Source
+- **Description**: Update metadata/configuration of a data source by ID
+- **Parameters**: 
+  - `file_id` (Path, required)
+- **Request Body**: JSON object of fields to update
+- **Returns**: `DataSourceUpdateResponse`
 
 ---
 
@@ -255,8 +368,52 @@ Complete list of all API endpoints with descriptions and usage.
 
 ### 24. **GET `/customer_profile`** - Get Customer Profile
 - **Description**: Get customer profiles (ICPs) from MongoDB
-- **Returns**: Customer profiles with ICPs array
+- **Parameters**: 
+  - `org_id` (Query, required)
+- **Returns**: `CustomerProfileResponse` — company profile plus customer profiles with ICPs array
 - **Features**: Returns both company profile and customer profiles
+
+### 24a. **POST `/customer_profile/from_suggested_icp`** - Save Suggested ICP as Customer Profile
+- **Description**: Create a customer profile from a suggested ICP
+- **Request Body**: `SuggestedICPToCustomerProfileRequest`
+- **Returns**: `SuggestedICPResponse`
+
+### 24b. **DELETE `/customer_profile/icp/{icp_id}`** - Remove ICP from Customer Profile
+- **Description**: Remove an ICP from the customer-profile context
+- **Parameters**: 
+  - `icp_id` (Path, required)
+  - `org_id` (Query, required)
+- **Returns**: `CustomerProfileDeleteResponse`
+
+---
+
+## 🏢 Organization & Registration Endpoints
+
+### 24c. **GET `/org`** - Get Organization(s) by User
+- **Description**: Fetch organization details/configuration for a user
+- **Parameters**: 
+  - `user_id` (Query, required)
+- **Returns**: `OrgResponse` (flexible shape; `extra="allow"`)
+
+### 24d. **POST `/org`** - Create/Update Organization
+- **Description**: Create or update organization metadata
+- **Request Body**: JSON object (flexible)
+- **Returns**: `OrgResponse`
+
+### 24e. **POST `/connect_org`** - Connect User to Organization
+- **Description**: Link a user to an organization
+- **Request Body**: `user_id` and `org_id` (JSON body fields, both required)
+- **Returns**: `OrgResponse`
+
+### 24f. **POST `/registration`** - Create Registration
+- **Description**: Register a new entity/user entry
+- **Request Body**: `RegistrationRequest` (`name`, `email`)
+- **Returns**: `RegistrationResponse` (id, name, email, timestamp)
+
+### 24g. **GET `/registration`** - List Registrations
+- **Description**: List registration records (admin-only cross-tenant view; no org_id filter). Reads from the `Registration_DB` database
+- **Returns**: List of `RegistrationResponse` (returns up to 500; silent cap)
+- **Deprecation**: ⚠️ Deprecated — responds with `Deprecation: true` and a `Link` header to the paginated successor `GET /api/v2/registration`
 
 ---
 
@@ -301,6 +458,58 @@ Complete list of all API endpoints with descriptions and usage.
 
 ---
 
+## 🔢 v2 (Paginated) Endpoints
+
+These live under `app/routers/v2/` and are mounted at the `/v2` prefix (so
+the backend serves them at `/v2/...`; the frontend proxy form is `/api/v2/...`).
+They are the paginated successors to the deprecated v1 list routes noted above.
+All of them return the shared **`PaginatedResponse[T]`** envelope from
+`app/models/pagination.py`:
+
+```json
+{
+  "items": [ /* T */ ],
+  "total": 0,
+  "limit": 50,
+  "offset": 0
+}
+```
+
+Common query params: `limit` (default 50, range 1–500) and `offset` (default 0,
+min 0), unless noted.
+
+### v2-1. **GET `/v2/leads`** - List Leads (paginated)
+- **Successor to**: `GET /leads`
+- **Parameters**: `org_id` (Query, required), `limit`, `offset`
+- **Returns**: `PaginatedResponse` of lead objects
+
+### v2-2. **GET `/v2/leads/by-file`** - List Leads by File (paginated)
+- **Successor to**: `GET /leads/by-file`
+- **Parameters**: `org_id` (Query, required), `file_id` (Query, required), `limit`, `offset`
+- **Returns**: `PaginatedResponse` of lead objects
+
+### v2-3. **GET `/v2/fetch-signals`** - Fetch Signals (paginated)
+- **Successor to**: `GET /fetch-signals`
+- **Parameters**: `user_id` (Query, required), `limit` (default 10), `offset`
+- **Returns**: `PaginatedResponse` of signal objects
+
+### v2-4. **GET `/v2/icp`** - List ICPs (paginated)
+- **Successor to**: `GET /icp` (list portion)
+- **Parameters**: `user_id` (Query, required), `refresh` (Query, default false), `limit`, `offset`
+- **Returns**: `PaginatedResponse` of ICP objects
+
+### v2-5. **GET `/v2/user-documents`** - List User Documents (paginated)
+- **Successor to**: `GET /user-documents`
+- **Parameters**: `org_id` (Query, required), `limit`, `offset`
+- **Returns**: `PaginatedResponse` of `UserDocumentEntry`
+
+### v2-6. **GET `/v2/registration`** - List Registrations (paginated)
+- **Successor to**: `GET /registration`
+- **Parameters**: `limit`, `offset`
+- **Returns**: `PaginatedResponse` of `RegistrationResponse`
+
+---
+
 ## 📝 Notes
 
 ### Multitenancy
@@ -311,9 +520,9 @@ Complete list of all API endpoints with descriptions and usage.
 
 ### Data Storage
 - **Neo4j**: Leads, Companies, Contacts, Prospects, Engagements, Profiles
-- **MongoDB**: Market Intelligence, ICP Configs, Signals, File Processing Status, Customer Profiles
+- **MongoDB**: Market Intelligence, Lead Market Scores, ICP Configs, Signals, File Processing Status, Customer Profiles. Registrations live in a separate `Registration_DB`
 - **S3**: Uploaded documents
-- **Pinecone**: Document embeddings
+- **Pinecone**: Document embeddings (namespaced by org_id)
 
 ### Authentication
 - Currently no authentication middleware
@@ -327,8 +536,17 @@ Complete list of all API endpoints with descriptions and usage.
 
 ---
 
-## 🔄 API Version
-Current version: v1 (no versioning prefix)
+## 🔄 API Versions
+- **v1** — the original surface (the bulk of the endpoints above). Mounted at the
+  bare paths with no version prefix. Several v1 list routes (`/leads`,
+  `/leads/by-file`, `/fetch-signals`, `/icp`, `/user-documents`, `/registration`)
+  are now **deprecated** in favor of their `/v2` successors and emit `Deprecation` /
+  `Link` response headers (the `Link` headers use proxy-form paths, e.g.
+  `/api/v2/leads`). (For `/icp`, the `/v2` successor replaces only the list
+  portion; the route's lazy generate/create behavior has no v2 successor.)
+- **v2** — paginated successors under `app/routers/v2/`, mounted at the `/v2`
+  prefix, returning the shared `PaginatedResponse` envelope. See the
+  **v2 (Paginated) Endpoints** section above.
 
 ## 📦 Dependencies
 All dependencies are listed in `requirements.txt`
