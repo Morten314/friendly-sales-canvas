@@ -3,6 +3,7 @@
 // This file only imports `server` for one-off handler overrides.
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ZodError } from "zod";
 
 import {
   fetchResearchComponent,
@@ -16,7 +17,7 @@ afterEach(() => {
 });
 
 describe("fetchResearchComponent", () => {
-  it("POSTs to /api/market-research with user_id, component_name, and data, and returns a parsed ResearchComponentResponse", async () => {
+  it("returns a parsed ResearchComponentResponse from the shipped MSW handler", async () => {
     const result = await fetchResearchComponent(
       "user-abc",
       RESEARCH_COMPONENTS.marketSize,
@@ -83,6 +84,6 @@ describe("fetchResearchComponent", () => {
 
     await expect(
       fetchResearchComponent("user-bad", RESEARCH_COMPONENTS.competitor),
-    ).rejects.toThrow();
+    ).rejects.toThrow(ZodError);
   });
 });

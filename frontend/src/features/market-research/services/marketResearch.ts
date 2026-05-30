@@ -27,7 +27,7 @@ export function fetchResearchComponent(
     "market-research",
     {
       user_id: userId,
-      org_id: opts.orgId,
+      ...(opts.orgId !== undefined && { org_id: opts.orgId }),
       component_name: componentName,
       data: opts.data ?? {},
       refresh: opts.refresh ?? false,
