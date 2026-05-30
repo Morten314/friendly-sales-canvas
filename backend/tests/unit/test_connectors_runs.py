@@ -149,3 +149,31 @@ def test_stale_run_ignores_terminal_statuses():
     # completed and failed runs are never considered stale
     assert runs._is_stale_run({"status": "completed", "updated_at": "2000-01-01T00:00:00+00:00"}) is False
     assert runs._is_stale_run({"status": "failed", "updated_at": "2000-01-01T00:00:00+00:00"}) is False
+
+
+def test_fail_stale_enrich_runs_sets_updated_at():
+    """fail_stale_enrich_runs must route through _update_run so updated_at is auto-stamped."""
+    m = FakeMongo()
+    run_id = runs.create_enrich_run(m, TEST_ORG_ID, TEST_USER_ID, total=3)
+    # Force the run's updated_at to an ancient timestamp so _is_stale_run triggers.
+    coll = m["Profiler"]["Connector_Enrich_Runs"]
+    doc = coll.find_one({"run_id": run_id})
+    doc["updated_at"] = "2000-01-01T00:00:00+00:00"
+    doc["created_at"] = "2000-01-01T00:00:00+00:00"
+    # Patch it back directly.
+    for d in coll.docs:
+        if d.get("run_id") == run_id:
+            d["updated_at"] = "2000-01-01T00:00:00+00:00"
+            d["created_at"] = "2000-01-01T00:00:00+00:00"
+
+    runs.fail_stale_enrich_runs(m, TEST_ORG_ID)
+
+    after = coll.find_one({"run_id": run_id})
+    assert after["status"] == "failed"
+    assert after.get("finished_at") is not None, "finished_at must be set"
+    # _update_run always stamps updated_at; verify it's no longer the ancient value
+    assert after.get("updated_at") != "2000-01-01T00:00:00+00:00", (
+        "updated_at must be refreshed by _update_run"
+    )
+    assert any("stale" in e.lower() or "auto-failed" in e.lower()
+               for e in after.get("errors", [])), "errors must mention stale/auto-failed"

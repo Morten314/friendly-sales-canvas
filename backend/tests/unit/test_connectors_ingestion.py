@@ -119,21 +119,48 @@ def test_enrich_fill_updates_by_lead_id():
 
 
 def test_get_leads_by_ids_builds_query(monkeypatch):
+    """get_leads_by_ids must use execute_read (managed read transaction), not bare session.run."""
     captured = {}
 
-    class _Sess:
-        def __enter__(self): return self
-        def __exit__(self, *a): return False
+    class _FakeTxR:
         def run(self, q, **p):
             captured["q"] = q
             captured["p"] = p
             return []
 
+    class _Sess:
+        def __init__(self):
+            self._tx = _FakeTxR()
+            self.read_called = False
+
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+        def execute_read(self, fn, *a, **k):
+            self.read_called = True
+            return fn(self._tx, *a, **k)
+
+    _sess_instance = _Sess()
+
     class _Drv:
-        def session(self): return _Sess()
+        def session(self): return _sess_instance
 
     # _records_to_dicts is defined in ingestion; patch where used.
     monkeypatch.setattr(ingestion, "_records_to_dicts", lambda r: [])
     get_leads_by_ids(_Drv(), TEST_ORG_ID, ["l1", "l2"])
+    assert _sess_instance.read_called, "execute_read must be used (not bare session.run)"
     assert captured["p"]["org_id"] == TEST_ORG_ID
     assert captured["p"]["lead_ids"] == ["l1", "l2"]
+
+
+def test_dedupe_email_and_contact_id_second_contact_only():
+    """A record with BOTH email and apollo_contact_id must register the contact_id in
+    seen_contact so a later record with the same contact_id (but no email) is deduped."""
+    # rec A: has email E + apollo_contact_id K
+    # rec B: has apollo_contact_id K, no email
+    # Expected: only rec A survives (rec B deduped as same contact)
+    rec_a = _rec(0, email_norm="e@x.com", apollo_id="K")
+    rec_b = _rec(1, apollo_id="K")
+    out = _dedupe_import_records([rec_a, rec_b])
+    assert len(out) == 1, f"expected 1 record after dedup, got {len(out)}"
+    assert out[0]["email_norm"] == "e@x.com"

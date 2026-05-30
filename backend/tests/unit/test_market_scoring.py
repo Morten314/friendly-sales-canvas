@@ -566,3 +566,58 @@ def test_get_latest_market_score_rows_default_limit_is_500():
         _get_latest_market_score_rows(driver=MagicMock(), mongo=MagicMock(), org_id="org_1")
     fake_cursor.sort.return_value.skip.assert_called_with(0)
     fake_cursor.sort.return_value.skip.return_value.limit.assert_called_with(500)
+
+
+# ---------------------------------------------------------------------------
+# _is_stale_run — stale predicate unit tests (scoring.py)
+# ---------------------------------------------------------------------------
+
+from datetime import datetime, timezone  # noqa: E402
+
+from app.services.market_scoring.scoring import _is_stale_run  # noqa: E402
+
+
+def test_is_stale_run_queued_ancient_updated_at_is_stale():
+    """A queued run with a year-2000 updated_at is stale."""
+    assert _is_stale_run(
+        {"status": "queued", "updated_at": "2000-01-01T00:00:00+00:00", "created_at": None}
+    ) is True
+
+
+def test_is_stale_run_queued_fresh_updated_at_is_not_stale():
+    """A queued run with a current updated_at is healthy — not reclaimed."""
+    fresh = datetime.now(timezone.utc).isoformat()
+    assert _is_stale_run(
+        {"status": "queued", "updated_at": fresh, "created_at": "2000-01-01T00:00:00+00:00"}
+    ) is False
+
+
+def test_is_stale_run_processing_ancient_updated_and_started_is_stale():
+    """A processing run with an ancient updated_at (and started_at) is stale.
+    This is the new behavior that was missing — it unblocks crashed processing runs.
+    """
+    assert _is_stale_run(
+        {
+            "status": "processing",
+            "started_at": "2000-01-01T00:00:00+00:00",
+            "updated_at": "2000-01-01T00:01:00+00:00",
+        }
+    ) is True
+
+
+def test_is_stale_run_processing_fresh_updated_at_is_not_stale():
+    """A processing run with a fresh updated_at is live — must NOT be reclaimed."""
+    fresh = datetime.now(timezone.utc).isoformat()
+    assert _is_stale_run(
+        {
+            "status": "processing",
+            "started_at": "2000-01-01T00:00:00+00:00",
+            "updated_at": fresh,
+        }
+    ) is False
+
+
+def test_is_stale_run_terminal_statuses_never_stale():
+    """Completed and failed runs are terminal — _is_stale_run always returns False."""
+    assert _is_stale_run({"status": "completed", "updated_at": "2000-01-01T00:00:00+00:00"}) is False
+    assert _is_stale_run({"status": "failed", "updated_at": "2000-01-01T00:00:00+00:00"}) is False

@@ -31,7 +31,7 @@ from app.services.market_scoring.normalization import (
     _extract_description_preview,
 )
 from app.services.market_scoring.scoring import (
-    _is_stale_queued_run,
+    _is_stale_run,
     _run_market_scoring_for_org,
 )
 
@@ -60,7 +60,7 @@ def trigger_or_get_market_scores(
         sort=[("created_at", -1)],
     )
 
-    if active_run and _is_stale_queued_run(active_run):
+    if active_run and _is_stale_run(active_run):
         stale_run_id = str(active_run.get("run_id"))
         now_iso = datetime.now(timezone.utc).isoformat()
         run_coll.update_one(
@@ -68,14 +68,14 @@ def trigger_or_get_market_scores(
             {
                 "$set": {
                     "status": "failed",
-                    "error": "Run auto-failed because it remained queued without starting.",
+                    "error": "Run auto-failed: stale with no progress within the staleness window.",
                     "updated_at": now_iso,
                     "completed_at": now_iso,
                 }
             },
         )
         logger.warning(
-            "Marked stale queued market scoring run as failed. org_id=%s run_id=%s",
+            "Marked stale market scoring run as failed. org_id=%s run_id=%s",
             request.org_id,
             stale_run_id,
         )

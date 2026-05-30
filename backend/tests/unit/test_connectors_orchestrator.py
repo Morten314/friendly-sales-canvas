@@ -435,3 +435,64 @@ def test_run_enrich_skips_empty_match_entry(monkeypatch, patched):
     assert completed.get("updated", 0) == 1, (
         f"Normal lead should still be updated, got updated={completed.get('updated')}"
     )
+
+
+# ─── skipped preservation across multi-chunk runs ───
+
+def test_run_enrich_multi_chunk_skipped_preserved(monkeypatch, patched):
+    """skipped (from missing leads) must carry through every update_enrich_progress call
+    and the final complete_enrich_run across a multi-chunk run.
+
+    Setup: BULK_MATCH_CHUNK leads returned + 1 extra missing lead_id (skipped=1).
+    We request BULK_MATCH_CHUNK+1 lead_ids, but get_leads_by_ids returns only
+    BULK_MATCH_CHUNK leads, producing 2 chunks and skipped=1.
+    """
+    chunk_size = orchestrator.apollo_mod.BULK_MATCH_CHUNK
+
+    # Build BULK_MATCH_CHUNK lead records (enough for exactly 2 chunks when apollo
+    # processes them, but we need at least chunk_size+1 to force 2 API chunks — so
+    # we use chunk_size + 1 returned leads to force 2 iterations).
+    base_leads = [
+        {"lead_id": f"lead-{i}", "email": f"u{i}@x.com"}
+        for i in range(chunk_size + 1)
+    ]
+    # One extra id that is NOT returned by get_leads_by_ids (the missing/skipped one).
+    missing_id = "lead-missing"
+    all_requested_ids = [ld["lead_id"] for ld in base_leads] + [missing_id]
+
+    monkeypatch.setattr(orchestrator.credentials, "get_api_key", lambda m, o, p="apollo": "good")
+    monkeypatch.setattr(orchestrator.runs, "mark_enrich_processing", lambda *a, **k: None)
+    monkeypatch.setattr(orchestrator.ingestion, "get_leads_by_ids",
+                        lambda d, o, ids: base_leads)
+    monkeypatch.setattr(orchestrator.ingestion, "enrich_fill_leads",
+                        lambda *a, **k: {"updated": 1, "errors": []})
+
+    progress_calls = []
+    monkeypatch.setattr(orchestrator.runs, "update_enrich_progress",
+                        lambda m, rid, **k: progress_calls.append(dict(k)))
+
+    completed = {}
+    monkeypatch.setattr(orchestrator.runs, "complete_enrich_run",
+                        lambda m, rid, **k: completed.update(k))
+
+    orchestrator._run_enrich(
+        object(), object(), TEST_ORG_ID, TEST_USER_ID, "run-multi",
+        all_requested_ids,
+        reveal_personal_emails=True, reveal_phone_number=False,
+    )
+
+    # Must have produced at least 2 update_enrich_progress calls (one per chunk).
+    assert len(progress_calls) >= 2, (
+        f"Expected >= 2 update_enrich_progress calls for multi-chunk, got {len(progress_calls)}"
+    )
+
+    # Every intermediate progress call must carry skipped=1 (not reset to 0).
+    for i, call in enumerate(progress_calls):
+        assert call.get("skipped") == 1, (
+            f"update_enrich_progress call {i} has skipped={call.get('skipped')}, expected 1"
+        )
+
+    # Final complete_enrich_run must also carry skipped=1.
+    assert completed.get("skipped") == 1, (
+        f"complete_enrich_run has skipped={completed.get('skipped')}, expected 1"
+    )

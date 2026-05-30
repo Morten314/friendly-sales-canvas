@@ -17,6 +17,8 @@ LEAD_STREAM_FILES_COLLECTION = "Lead_Stream_Files"
 ENRICH_RUNS_COLLECTION = "Connector_Enrich_Runs"
 
 _STALE_AFTER_SECONDS = 300
+_MAX_ERRORS = 10
+_MAX_ERROR_MESSAGE_LEN = 300
 
 
 def _now() -> str:
@@ -156,18 +158,18 @@ def mark_enrich_processing(mongo, run_id: str) -> None:
 
 
 def update_enrich_progress(mongo, run_id: str, *, processed: int, updated: int, unmatched: int, failed: int, errors: List[str], skipped: int = 0) -> None:
-    _update_run(mongo, run_id, processed=processed, updated=updated, unmatched=unmatched, failed=failed, skipped=skipped, errors=errors[:10])
+    _update_run(mongo, run_id, processed=processed, updated=updated, unmatched=unmatched, failed=failed, skipped=skipped, errors=errors[:_MAX_ERRORS])
 
 
 def complete_enrich_run(mongo, run_id: str, *, processed: int, updated: int, unmatched: int, failed: int, errors: List[str], skipped: int = 0, status: str = "completed") -> None:
     _update_run(
         mongo, run_id, status=status, processed=processed, updated=updated,
-        unmatched=unmatched, failed=failed, skipped=skipped, errors=errors[:10], finished_at=_now(),
+        unmatched=unmatched, failed=failed, skipped=skipped, errors=errors[:_MAX_ERRORS], finished_at=_now(),
     )
 
 
 def fail_enrich_run(mongo, run_id: str, message: str) -> None:
-    _update_run(mongo, run_id, status="failed", errors=[message[:300]], finished_at=_now())
+    _update_run(mongo, run_id, status="failed", errors=[message[:_MAX_ERROR_MESSAGE_LEN]], finished_at=_now())
 
 
 def fail_stale_enrich_runs(mongo, org_id: str) -> None:
@@ -178,16 +180,9 @@ def fail_stale_enrich_runs(mongo, org_id: str) -> None:
         sort=[("created_at", -1)],
     )
     if active and _is_stale_run(active):
-        now = _now()
-        coll.update_one(
-            {"run_id": active["run_id"]},
-            {"$set": {
-                "status": "failed",
-                "errors": ["Run auto-failed: stale with no progress within the staleness window."],
-                "updated_at": now,
-                "finished_at": now,
-            }},
-        )
+        _update_run(mongo, active["run_id"], status="failed",
+                    errors=["Run auto-failed: stale with no progress within the staleness window."],
+                    finished_at=_now())
         logger.warning("Failed stale enrich run org_id=%s run_id=%s", org_id, active.get("run_id"))
 
 
@@ -202,7 +197,7 @@ def get_enrich_run(mongo, org_id: str, run_id: Optional[str]) -> Dict[str, Any]:
     total = int(doc.get("total") or 0)
     processed = int(doc.get("processed") or 0)
     skipped = int(doc.get("skipped") or 0)
-    doc.setdefault("skipped", skipped)
+    doc["skipped"] = skipped
     denom = max(total, 1)
     doc["progress_percent"] = round(min(100.0, ((processed + skipped) / denom) * 100.0), 2)
     return doc
