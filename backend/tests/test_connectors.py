@@ -95,3 +95,14 @@ def test_connect_validation_error_maps_to_400(client, monkeypatch):
     r = client.post("/connectors/apollo/connect",
                     json={"org_id": TEST_ORG_ID, "user_id": TEST_USER_ID, "api_key": "bad"})
     assert r.status_code == 400
+
+
+def test_status_not_connected_maps_to_404(client, monkeypatch):
+    from app.core.exceptions import ConnectorNotConnectedError
+
+    def _raise(mongo, org_id):
+        raise ConnectorNotConnectedError("no credentials")
+
+    monkeypatch.setattr(connectors_service, "get_apollo_status", _raise)
+    r = client.get(f"/connectors/apollo/status?org_id={TEST_ORG_ID}")
+    assert r.status_code == 404

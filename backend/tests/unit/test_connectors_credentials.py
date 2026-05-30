@@ -18,7 +18,7 @@ class FakeCollection:
         for d in self.docs:
             if all(d.get(k) == v for k, v in flt.items()):
                 d.update(update.get("$set", {}))
-                d.update(update.get("$setOnInsert", {}))
+                # $setOnInsert is ignored on existing docs (real MongoDB behaviour)
                 return
         if upsert:
             doc = dict(flt)
@@ -97,3 +97,18 @@ def test_ensure_indexes_idempotent():
     m = FakeMongo()
     credentials._ensure_connectors_indexes(m)  # should not raise
     credentials._ensure_connectors_indexes(m)
+
+
+def test_save_credentials_update_returns_original_connected_at(monkeypatch):
+    """Second save (update) must return the PERSISTED connected_at, not the new now."""
+    times = iter(["2020-01-01T00:00:00+00:00", "2030-06-15T12:00:00+00:00"])
+    monkeypatch.setattr(credentials, "_now", lambda: next(times))
+
+    m = FakeMongo()
+    first = credentials.save_credentials(m, TEST_ORG_ID, "apollo", "k1")
+    second = credentials.save_credentials(m, TEST_ORG_ID, "apollo", "k1-updated")
+
+    assert first["connected_at"] == "2020-01-01T00:00:00+00:00"
+    # The second save is an UPDATE — connected_at must equal the original insert time
+    assert second["connected_at"] == "2020-01-01T00:00:00+00:00"
+    assert second["connected_at"] != "2030-06-15T12:00:00+00:00"

@@ -34,6 +34,7 @@ def connect_apollo(request: ApolloConnectRequest, mongo=Depends(get_mongo)):
 
 @router.get("/apollo/status", response_model=ApolloStatusResponse)
 def apollo_status(org_id: str = Query(...), mongo=Depends(get_mongo)):
+    """Return the Apollo connection status and connected_at timestamp for the org."""
     return connectors_service.get_apollo_status(mongo, org_id)
 
 
@@ -77,4 +78,5 @@ async def apollo_enrich_status(
     run_id: Optional[str] = Query(None),
     mongo=Depends(get_mongo),
 ):
+    """Return progress and result summary for an Apollo enrichment run."""
     return connectors_service.get_apollo_enrich_status(mongo, org_id, run_id)
