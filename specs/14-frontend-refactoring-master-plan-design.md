@@ -202,10 +202,10 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 | 2a — Strict TS turn-on | done | 2026-05-28 |
 | 2b — ESLint type-aware + Prettier | done | 2026-05-28 |
 | 2c — Preflight gates + bundle comparator (advisory) | done | 2026-05-29 |
-| 3 — API/data layer consolidation | pending | — |
-| 4a — Scaffolding + conventions | pending | — |
-| 4b — Shell extraction | pending | — |
-| 5 — Feature: market-research | pending | — |
+| 3 — API/data layer consolidation | done | 2026-05-29 |
+| 4a — Scaffolding + conventions | done | 2026-05-29 |
+| 4b — Shell extraction | done | 2026-05-29 |
+| 5 — Feature: market-research | in progress | — |
 | 6 — Feature: mission-control | pending | — |
 | 7 — Feature: customers | pending | — |
 | 8 — Feature: signals + strategist | pending | — |
