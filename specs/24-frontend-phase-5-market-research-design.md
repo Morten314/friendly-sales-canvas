@@ -209,16 +209,22 @@ The 9 raw fetches resolve to **2 endpoints** (via the existing `buildApiUrl(...)
 - Backfill `README.md`: purpose, public surface, key files, dependency notes, **Pending handoffs** table.
 - Dead-code sweep within the feature (`knip --strict` clean).
 
-**Leaving components — stay in `src/components/market-research/` (LOC per the §1.2 point-in-time anchor):**
+**Leaving components — stay in `src/components/market-research/` (LOC anchored to §1.2; this table is reconciled with the 5a whole-dir import trace — see §9 delta 6):**
 
 | Component(s) (stay-put under `src/components/market-research/`) | LOC | Target feature | Claiming phase |
 |---|---|---|---|
 | `StrategistWorkspace.tsx` | 959 | **strategist** | per naming map |
 | `lead-stream/*` (LeadsTable 770, leadData 676, OpportunityDashboard 243) + extracted `analysis`-tab code | ~1.7k | **customers** | per naming map |
+| `EditDropdownMenu.tsx` (5a trace: sole importer `customers/SuggestedICPCards`) | 41 | **customers** | per naming map |
 | `ScoutChatPanel.tsx` 678, `ChatWithScout.tsx` 251 | ~0.9k | **scout** | per naming map |
-| `Scout*` config cluster (`ScoutSettingsForm` 134, `ScoutDeploymentDetails` 67, `ScoutLeadStream` 62, `ScoutCapabilities` 46) | ~0.3k | **scout** (candidate) | confirm per-file in 5a |
+| `Scout*` config cluster (`ScoutSettingsForm` 134, `ScoutDeploymentDetails` 67, `ScoutLeadStream` 62) — **5a-confirmed scout** | ~0.26k | **scout** | per naming map |
+| `AddLeadModal.tsx` 198, `SuggestedCompaniesSection.tsx` 53 (5a trace: sole importer `signals/ScoutChatWithHistory`) | ~0.25k | **scout** | per naming map |
 
-> Annotations name the **target feature**, not a phase number, because master §4 and the Phase 4b naming map disagree on numbers (§9.4). The claiming phase reads this table before planning (master §4 Phase 5's 5c handoff mechanism). 5a confirms the `Scout*` config cluster's stay/leave per-file by tracing imports. `src/components/market-research/` is **deleted once empty** (≤ Phase 9).
+> Annotations name the **target feature**, not a phase number, because master §4 and the Phase 4b naming map disagree on numbers (§9.4). The claiming phase reads this table before planning (master §4 Phase 5's 5c handoff mechanism). The `Scout*` config cluster's stay/leave **was confirmed per-file by the 5a import trace** (§9 delta 6); `ScoutCapabilities.tsx` (46) had been a scout *candidate* here, but the trace found it has **zero importers** — it is reclassified **dead code** (below), not a scout leaver. `EditDropdownMenu`, `AddLeadModal`, `SuggestedCompaniesSection` were **not** in this table pre-5a — the trace found each is imported only from another feature, so they leave too. `src/components/market-research/` is **deleted once empty** (≤ Phase 9).
+
+**Dead code in legacy found by the 5a trace (zero live importers; deleted in 5i, TD-FE-18 — NOT handoffs, they belong to no feature):** `CompetitorAnalysis` 151, `CompetitorAnalysisDrawer` 333 (only importer is dead `CompetitorAnalysis`), `ComponentStatusLoadingScreen` 366, `DataHistoryDialog` 1258, `EmergingTrends` 108, `EmergingTrendsDrawer` 258 (only importer is dead `EmergingTrends`), `RecentMarketResearch` 142, `ScoutCapabilities` 46. They stay annotated `// DEAD CODE → delete in 5i` until 5i's sweep removes them. (Knip does not flag them: `knip.json` `entry` makes every `src/**` file a production entry, so it never reports unused *files*.)
+
+> **Genuine, not leaving (5a trace):** `AIPromptingInterface.tsx` (500) is genuine market-research (rendered via `MarketDetailDrawer`); 5a moved it into the feature as the **12th** genuine file (the §3-implied 11 + AIPI). `types.ts` (`EditRecord`/`TrendSnapshot`/`IndustryTrendsRecommendations`) is shared by the moved sections **and** `signals`, so it stays in legacy as transitional shared infra — moved files import it via `@/components/market-research/types`; promotion to `shared/` is Phase 11, not a 5a handoff.
 
 **Done when:** `index.ts` + `README.md` complete; handoff table is authoritative; `knip --strict` clean; preflight green.
 
@@ -290,7 +296,7 @@ Applied at sub-phase merges via the synthesize-impl-review "master-plan deltas" 
 - Whether `MarketResearchContext` is needed at all (per §5 criteria) and, if so, its shape (`24c`).
 - **Search/filter state → URL vs local** policy + history mode, per the §5 constraint (`24c`, once the actual filters are known).
 - The partition of the 9 fetch sites into market-research-proper vs lead-stream (`24b`, tagged by owning tab); **lead-stream's data-layer migration is deferred to Phase 7** (customers).
-- The `Scout*` config cluster's per-file stay/leave (`24a`, by import tracing).
+- ~~The `Scout*` config cluster's per-file stay/leave (`24a`, by import tracing).~~ **RESOLVED in 5a** (§9 delta 6): the trace confirmed `ScoutSettingsForm`/`ScoutDeploymentDetails`/`ScoutLeadStream` → **scout**; `ScoutCapabilities` has zero importers → **dead** (TD-FE-18), not a scout leaver. The §7 table is reconciled accordingly.
 - The final `index.ts` public surface (`24i`, once internals are stable, informed by Phase 8).
 
 ---
