@@ -739,3 +739,28 @@ shell internals are touched. Rename the composed `hooks/useAuth.ts` to something
 rename → whenever the shadcn twin becomes active, or the shell internals are next refactored.
 
 **Owner:** TBD.
+
+---
+
+## TD-012 — Apollo connector router: async handlers do blocking Mongo I/O on the event loop
+
+**Date logged:** 2026-05-30
+**Origin:** Apollo lead-integration impl review round 1 (`docs/reviews/apollo-lead-integration-backend-impl-review-1.md`, finding E) + the triage synthesis. Deliberately deferred during the post-merge hardening pass on `fix/backend-impl-review-followups` (the other agreed fixes A/B/C/F/H/J landed there).
+
+**Current state:**
+In `app/routers/connectors.py`, the Apollo-calling handlers (`POST /connectors/apollo/connect` validation, `GET /connectors/apollo/lists`) are correctly sync `def`, so FastAPI runs them in its threadpool (spec §6 / spec-review F13 — `requests` must not block the event loop). But `POST /connectors/apollo/import`, `POST /connectors/apollo/enrich`, and `GET /connectors/apollo/enrich/status` are `async def` while the work they do before returning is blocking PyMongo I/O (credential read, run-doc create, run-doc read) executed directly on the event loop. `import`/`enrich` also schedule a `BackgroundTask` (the reason they were made async), but the pre-schedule Mongo calls still run inline on the loop; `enrich/status` is a pure blocking Mongo read in an async handler.
+
+**What it should be:**
+Either make the blocking handlers sync `def` (FastAPI dispatches them to the threadpool, matching `/connect` and `/lists`; `BackgroundTasks` works fine from a sync handler) or move the connector's Mongo access to an async driver (motor). This is a router-wide concurrency-model decision, not a one-line change, and should be decided once rather than per-handler.
+
+**Why we deferred:**
+- 0 live users and single-doc, sub-millisecond Mongo ops — event-loop stall is immaterial at current concurrency.
+- The sync/async split was already deliberated in spec-review F13; relitigating the router's concurrency model during a hardening pass would be scope creep on a non-issue.
+
+**What we lose by staying as-is:**
+- Under real concurrent load, each `async` handler's inline blocking Mongo call briefly stalls the event loop for all other requests — a latency/throughput ceiling that won't surface until traffic arrives.
+
+**Pull-forward trigger:**
+- A pre-launch load/performance pass, or the first measured event-loop contention / p99 latency anomaly traced to blocking I/O in async handlers. Decide sync-handlers-vs-motor for the connector router then, and apply the same lens to any other async handler doing blocking I/O.
+
+**Owner:** TBD.
