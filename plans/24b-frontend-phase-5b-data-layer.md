@@ -4,7 +4,7 @@
 
 **Goal:** Replace market-research's raw `fetch()` calls + hand-rolled localStorage cache with the Phase 3 data-layer pattern — feature-local zod contracts (`.parse` at the boundary), typed service fns over the shared `client.ts` + single `RateLimiter`, and `useQuery`/`useMutation` hooks keyed through the central `qk` factory with a **memory-only** TanStack cache — so section decomposition (5d–5h) reads from clean hooks instead of prop-drilled fetch results. Plus the two phase ADRs.
 
-**Architecture:** New `services/`, `hooks/`, `contracts.ts` under `features/market-research/`; the response **envelope is authoritatively `{ status, data }`** (backend `MarketResponse`, `app/models/market_research.py`); the inner `data` report is `Dict[str, Any]` (opaque, varies per `component_name`), so its per-component internals are **captured before the zod contract is finalized** (Spec 24 R2; the inner doc has no `response_model`). The still-monolithic `MarketResearchPage.tsx` is rewired to consume the hooks; the raw `fetch` sites, the `CACHE_DURATION` localStorage cache, and the localStorage refs backing it are deleted. Company-profile reads route through Phase 3's existing `useCompanyProfile` (no new hook). The intelligence sites all migrate; the `analysis`/lead-stream tab has **no** fetch sites of its own (confirmed in 5a — see §"Endpoint reality"), so there is nothing to exclude there. **Scope note (discovered in 5a section reads):** the five section components *also* self-fetch the same `market-research` endpoint + keep their own localStorage cache — not just the page. 5b builds the data layer (`services`/`hooks`/`contracts`/`qk`/MSW) and migrates the **page-level** fetch sites + cache; each **section's in-component fetch migrates with its 5d–5h decomposition** (which reads these hooks). The hooks therefore exist *before* sections convert (Spec 24 R3 satisfied).
+**Architecture:** New `services/`, `hooks/`, `contracts.ts` under `features/market-research/`; the response **envelope is authoritatively `{ status, data }`** (backend `MarketResponse`, `app/models/market_research.py`); the inner `data` report is `Dict[str, Any]` (opaque, varies per `component_name`), so its per-component internals are **captured before the zod contract is finalized** (Spec 24 R2; the inner doc has no `response_model`). The still-monolithic `MarketResearchPage.tsx` is rewired to consume the hooks; the raw `fetch` sites, the `CACHE_DURATION` localStorage cache, and the localStorage refs backing it are deleted. Company-profile reads route through Phase 3's existing `useCompanyProfile` (no new hook). The intelligence sites all migrate; the `analysis`/lead-stream tab has **no** fetch sites of its own (confirmed in 5a — see §"Endpoint reality"), so there is nothing to exclude there. **Scope note (discovered in 5a section reads):** **4 of 5** section components *also* self-fetch the same `market-research` endpoint + keep their own localStorage cache — not just the page. **CompetitorLandscapeSection is the exception: it calls `/api/ask` + `/api/market_intelligence` (different request/response shapes), not `market-research`** — so 5f must do its own endpoint analysis rather than assume it can swap to `fetchResearchComponent` (the page-level competitor fetch *is* `market-research` POST and is in 5b scope; only the section-internal fetch differs). 5b builds the data layer (`services`/`hooks`/`contracts`/`qk`/MSW) and migrates the **page-level** fetch sites + cache; each **section's in-component fetch migrates with its 5d–5h decomposition** (which reads these hooks). The hooks therefore exist *before* sections convert (Spec 24 R3 satisfied).
 
 **Tech Stack:** React 18 + TS (strict), `@tanstack/react-query` (provider already mounted at `App.tsx`), `zod`, the shared `@/shared/api/{client,rateLimiter,queryClient,queryKeys,contracts}`, Vitest + RTL + **MSW** (`src/test/msw/handlers.ts`), knip `--strict`.
 
@@ -23,7 +23,7 @@
 | Per-component research (load / generate / refresh) | `market-research` | **POST only** | one `component_name` per call; **initial hydrate fires this 5×** (no load-all endpoint). `refresh: true` regenerates; competitor has a retry loop |
 | Company profile | `profile/company?org_id=` | GET | **already migrated** — reuse `useCompanyProfile` |
 
-**There is no GET / "load latest" / array / keyed-object response.** Each POST returns `MarketResponse = { status: str, data: Dict[str, Any] }` (`app/models/market_research.py:15-25`) — the page's own parser already reads `{ status, data }`. The request is `MarketRequest = { user_id, org_id?, component_name, data, refresh }` (`:7-12`); `user_id` and `data` are **required** (Task 1 captures what `data` carries). The route HAS `response_model=MarketResponse`, so the **envelope is authoritative**; only the inner `data` doc is opaque. ⚠️ The 5a E2E mock (`e2e/fixtures/api-mocks.ts` — `{ component_name, status:"completed", result, cached }`) is the WRONG shape; do not use it as the contract source. The `analysis` (lead-stream) and `trends` (Scout-chat) tabs perform **no** market-research fetches — so Spec 24 §4.2's "exclude analysis-tab fetch sites from migration" is moot (record as a §9 delta in Task 7 Step 6). **The 5 section components each ALSO hold their own `market-research` POST + cache** (not only the page) — 5b migrates the page sites and creates the hooks; the section-internal fetches migrate per-section in 5d–5h. The canonical `component_name` strings (verified in 5a code): `"market size & opportunity"`, `"industry trends report"`, `"regulatory & compliance highlights"`, `"competitor landscape"`, `"market entry & growth strategy"`.
+**There is no GET / "load latest" / array / keyed-object response.** Each POST returns `MarketResponse = { status: str, data: Dict[str, Any] }` (`app/models/market_research.py:15-25`) — the page's own parser already reads `{ status, data }`. The request is `MarketRequest = { user_id, org_id?, component_name, data, refresh }` (`:7-12`); `user_id` and `data` are **required** (Task 1 captures what `data` carries). The route HAS `response_model=MarketResponse`, so the **envelope is authoritative**; only the inner `data` doc is opaque. ⚠️ The 5a E2E mock (`e2e/fixtures/api-mocks.ts` — `{ component_name, status:"completed", result, cached }`) is the WRONG shape; do not use it as the contract source. The `analysis` (lead-stream) and `trends` (Scout-chat) tabs perform **no** market-research fetches — so Spec 24 §4.2's "exclude analysis-tab fetch sites from migration" is moot (record as a §9 delta in Task 7 Step 6). **4 of the 5 section components each ALSO hold their own `market-research` POST + cache** (not only the page) — 5b migrates the page sites and creates the hooks; the section-internal fetches migrate per-section in 5d–5h. **CompetitorLandscapeSection is the exception** — its section-internal fetches hit `/api/ask` + `/api/market_intelligence`, not `market-research`, so 5f must analyze those endpoints itself rather than assume the 5b data layer covers them. The canonical `component_name` strings (verified in 5a code): `"market size & opportunity"`, `"industry trends report"`, `"regulatory & compliance highlights"`, `"competitor landscape"`, `"market entry & growth strategy"`.
 
 **Abort criteria (whole-branch — halt + report):** (1) 5a not merged. (2) Task 0 baseline RED before any change. (3) The `MarketRequest` body the page must send cannot be confirmed (from live page behavior or the backend), so the POST would 422 — STOP and capture it. (The response envelope `{ status, data }` is known from `MarketResponse`; the opaque inner `data` per component is captured for 5d–5h, recorded as `z.unknown()` if a section's fields can't be obtained — not a whole-branch blocker.) (4) Behavioral `journeys/04` can't be made green after rewire and the cause is unfound after investigation (Task 7).
 
@@ -67,7 +67,7 @@ Then inventory the **section-internal** fetches (these migrate in 5d–5h, but c
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
 grep -rn 'fetch(\|apiFetchJson\|executeWithRateLimit' src/features/market-research/components --include=*.tsx | grep -iv 'test'
 ```
-Record: the fetch line numbers (current), the two endpoints, the `CACHE_DURATION` cache read/write helpers, the count of `localStorage` refs (spec anchor: ~68), **and which section files carry their own fetch** (expected: MarketEntry/Regulatory/Competitor/IndustryTrends/MarketSize all self-fetch `market-research` + cache — those convert in 5d–5h). Confirm every `fetch(` resolves to `market-research` or `profile/company`. `sessionStorage` used as cross-tab handoff (`leadStreamChatContext`, `signalsChatContext`) is **primary state, not cache — leave it alone** (spec §4.2).
+Record: the fetch line numbers (current), the two endpoints, the `CACHE_DURATION` cache read/write helpers, the count of `localStorage` refs (spec anchor: ~68), **and which section files carry their own fetch** (expected: MarketEntry/Regulatory/IndustryTrends/MarketSize self-fetch `market-research` + cache; **CompetitorLandscapeSection self-fetches `/api/ask` + `/api/market_intelligence` instead** — all convert in 5d–5h, but 5f must analyze its own endpoints). Confirm every `fetch(` resolves to `market-research` or `profile/company`. `sessionStorage` used as cross-tab handoff (`leadStreamChatContext`, `signalsChatContext`) is **primary state, not cache — leave it alone** (spec §4.2).
 
 No commit.
 
@@ -200,7 +200,7 @@ http.post("/api/market-research", async ({ request }) => {
 - [ ] **Step 2: Verify the harness still loads + commit**
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
-npx vitest run src/features/market-research   # contracts test stays green; the service/hook tests (Tasks 4–5) consume these handlers next
+npx vitest run src/features/market-research   # existing tests still pass; the new handlers are NOT exercised here (the contracts test parses a hardcoded fixture, no MSW) — they are first exercised by the service/hook tests in Tasks 4–5
 ```
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
@@ -230,7 +230,15 @@ Expected: `client.ts`'s `apiRequest` (used by `apiGet`/`apiPost`) draws on the s
 
 Create `services/__tests__/marketResearch.test.ts` asserting `fetchResearchComponent` hits `POST /api/market-research` with a valid `MarketRequest` body (`user_id` + `component_name` + `data`) and returns a parsed `ResearchComponentResponse` (`{ status, data }`) (MSW handlers already exist from Task 3; the test is red only until the service fn is implemented in Step 4). Include a `.parse`-failure case (handler returns junk → throws).
 
-- [ ] **Step 3: Run it red**, then **Step 4: implement `services/marketResearch.ts`:**
+- [ ] **Step 3: Run it red**
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence/frontend
+npx vitest run src/features/market-research/services/__tests__/marketResearch.test.ts
+```
+Expected: FAIL — `services/marketResearch.ts` does not exist yet.
+
+- [ ] **Step 4: implement `services/marketResearch.ts`:**
 
 ```ts
 import { apiPost } from "@/shared/api/client";
@@ -275,6 +283,12 @@ export function fetchResearchComponent(
 
 - [ ] **Step 5: Green + commit** (the Task 3 MSW handlers back the test — it goes green once the service fn is implemented):
 ```bash
+cd /projects/Brewra/brewra-gtm-intelligence/frontend
+npx vitest run src/features/market-research/services/__tests__/marketResearch.test.ts
+npm run lint && npx tsc --noEmit -p tsconfig.app.json
+```
+Expected: PASS — confirm the test is actually green before committing (matches Task 2 Step 4's convention; don't commit on assumption).
+```bash
 cd /projects/Brewra/brewra-gtm-intelligence
 git add frontend/src/features/market-research/services
 git commit -m "feat(fe): add market-research service fns over shared client + rate limiter"
@@ -297,9 +311,17 @@ git commit -m "feat(fe): add market-research service fns over shared client + ra
     ["market-research", "component", orgId, componentName] as const,
 ```
 
-- [ ] **Step 2: Write the failing hook test** (RTL + `QueryClientProvider` + MSW) asserting `useResearchComponent` returns parsed data and `useRegenerateResearch` invalidates the component key.
+- [ ] **Step 2: Write the failing hook test** (RTL + `QueryClientProvider` + MSW) asserting `useResearchComponent` returns parsed data and `useRegenerateResearch` writes the regenerated result into the component's cache (`queryClient.getQueryData(qk.marketResearchComponent(orgId, name))` reflects the mutation result) **without** issuing a second background GET/POST for that key.
 
-- [ ] **Step 3: Run red, then Step 4: implement `hooks/useMarketResearch.ts`:**
+- [ ] **Step 3: Run it red**
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence/frontend
+npx vitest run src/features/market-research/hooks/__tests__/useMarketResearch.test.tsx
+```
+Expected: FAIL — `hooks/useMarketResearch.ts` does not exist yet.
+
+- [ ] **Step 4: implement `hooks/useMarketResearch.ts`:**
 ```ts
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -326,16 +348,22 @@ export function useResearchComponent(
   });
 }
 
-/** Force-regenerate a component, then invalidate its cache. */
+/** Force-regenerate a component, then write the result straight into its cache. */
 export function useRegenerateResearch(userId: string, orgId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (componentName: ResearchComponentName) =>
       fetchResearchComponent(userId, componentName, { orgId, refresh: true }),
-    onSuccess: (_data, componentName) => {
-      void queryClient.invalidateQueries({
-        queryKey: qk.marketResearchComponent(orgId, componentName),
-      });
+    onSuccess: (data, componentName) => {
+      // Populate the cache directly from the mutation result — NOT
+      // invalidateQueries. The component's useResearchComponent is mounted and
+      // active, so invalidate would mark it stale and fire a SECOND background
+      // POST (`refresh:false`) through the 30/min limiter, which can also
+      // overwrite the just-regenerated report with a server-stale one. See ADR-0004.
+      queryClient.setQueryData(
+        qk.marketResearchComponent(orgId, componentName),
+        data,
+      );
     },
   });
 }
@@ -364,6 +392,8 @@ git commit -m "feat(fe): add market-research query keys + useQuery/useMutation h
 
 Working from Task 0 Step 3's site list, in a single pass: (a) wire the per-component hooks — `useResearchComponent(userId, orgId, name)` for each of the 5 components, `useRegenerateResearch` for refresh buttons, `useCompanyProfile` for the profile GET (there is **no** `useLatestResearch` — hydrate per-component); (b) delete the per-component fetch fns (`fetchMarketSizeData`, `fetchIndustryTrendsData`, `fetchRegulatoryData`, `fetchCompetitorData`, `fetchMarketEntryData`, the cascade/load) **and** the on-mount cache-read effects that call their `setX` setters; (c) remove the server-data `useState`s those setters filled (the hook now owns that data). `userId`/`orgId` come from the existing auth/tenant context. After this step the page compiles and renders from hooks; the `saveXToLocalStorage` helpers + `CACHE_DURATION` + cache-bust are now **dead but still present** (harmless — swept in Step 3).
 
+**Incremental verification (bisectability):** where a component's hook-in / fetch-fn-out / cache-read-out / `useState`-out are independent of the other four, run `npx tsc --noEmit -p tsconfig.app.json` after wiring **each** component before moving to the next — a type error then attributes to one component rather than the whole 5-way diff. Caveat: the page has a shared cascade/smart-refresh orchestration (the `result.results.forEach` cascade + `componentStatus` tracking) that references several setters at once; where it does, those components are mutually coupled and land together, with `tsc` run after that batch. The per-component split applies only to the genuinely independent sites — do not force it where the cascade couples them.
+
 - [ ] **Step 2: Checkpoint — compile + render before the sweep (bisection point)**
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
@@ -382,6 +412,27 @@ grep -c 'fetch(' "$P"                                       # expect: 0 (the PAG
 grep -c 'localStorage' "$P"                                 # expect: near 0 — only non-cache survivors, if any
 ```
 Expected: no cache machinery, no raw `fetch` in the **page**. (Section components still self-fetch the same endpoint — those migrate with their 5d–5h decomposition, reading these hooks. The legacy lead-stream tab 5c extracts carries its own access — but 5a found the analysis tab has none.)
+
+- [ ] **Step 3b: Correct the E2E mock envelopes + give `journeys/04` a render assertion**
+
+> The rewired page parses every response through `ResearchComponentSchema` (`apiPost` → `apiRequest` does `schema.parse` — a loud throw on mismatch). Two E2E mocks return the **wrong** envelope `{ component_name, status, result, cached }` (no top-level `data`): the **inline** `page.route("**/api/market-research")` in `e2e/journeys/04-market-research-5-components.spec.ts` **and** the `/api/market-research` entry in `e2e/fixtures/api-mocks.ts`. Post-rewire the page hooks `.parse`-throw against both, but `journeys/04` asserts only `marketResearchRequestCount > 0` — so it stays GREEN while the page is broken in E2E (a false green; **abort-4 can never fire**). This step makes the parity gate real.
+
+Correct **both** mocks to the authoritative `{ status, data }` envelope. This is safe for the still-on-old-path sections: they already read `result.status === "success" && result.data` (`IndustryTrendsSection.tsx`, `MarketSizeSection.tsx`, `RegulatoryComplianceSection.tsx`, `MarketEntrySection.tsx`), so a `{ status, data }` mock aligns the sections **and** the new hooks. Pin the exact `status` string from Task 1 (the sections gate on `=== "success"`; the legacy mock used `"completed"`, which would still render blank):
+```ts
+// journeys/04 inline route + api-mocks.ts "/api/market-research" entry:
+{ status: "success", data: { component_name: componentName, title: "…", summary: "…", /* per-component fields the sections render */ } }
+```
+Then strengthen `journeys/04`: after navigation, assert that at least one section's mocked content is actually visible — e.g. `await expect(page.getByText(/Mocked summary/i)).toBeVisible()` — turning the smoke check into a real render signal. This is the only **agent-executable** floor that the rewired page renders (the per-section visual check in Task 7 Step 4 is a human-controller step). Keep the mock `data` fields in sync with what the sections read.
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence/frontend
+npx playwright test e2e/journeys/04-market-research-5-components.spec.ts
+```
+Expected: PASS — and now meaningfully (the page parses **and** renders the mocked `{ status, data }`; a parse/render regression now reds the gate, satisfying abort-4).
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+git add frontend/e2e/journeys/04-market-research-5-components.spec.ts frontend/e2e/fixtures/api-mocks.ts
+git commit -m "test(fe): correct market-research E2E mock envelope to {status,data}; assert section render in journeys/04"
+```
 
 - [ ] **Step 4: Settle, typecheck, lint, test, commit**
 ```bash
@@ -408,17 +459,21 @@ git commit -m "refactor(fe): consume market-research hooks; remove raw fetch + l
 
 - [ ] **Step 1: Write ADR-0003 (feature-local contracts)** — Context: where do market-research zod schemas live; Decision: a single feature-local `contracts.ts` (the ≥2-features promotion rule keeps single-feature shapes in the feature; Phase 3's per-domain `contracts/` *directory* is for the cross-cutting shared surface); Consequences: precedent for Phases 6–12; promote to `shared/api/contracts/` only when a 2nd feature imports a shape.
 
-- [ ] **Step 2: Write ADR-0004 (memory-only cache)** — Context: the retired hand-rolled localStorage 5-min cache vs TanStack; Decision: memory-only TanStack cache, no persister (resolves master §8 Q9 toward simplicity + Phase-3 consistency + MVP velocity); Consequences: reload re-fetches (accepted, R7), more calls through the 30/min limiter — sufficiency is not meaningfully testable pre-launch (0 users), so the post-launch measurement is itself the revisit trigger.
+- [ ] **Step 2: Write ADR-0004 (memory-only cache)** — Context: the retired hand-rolled localStorage 5-min cache vs TanStack; Decision: memory-only TanStack cache, no persister (resolves master §8 Q9 toward simplicity + Phase-3 consistency + MVP velocity); Consequences: reload re-fetches (accepted, R7), more calls through the 30/min limiter — sufficiency is not meaningfully testable pre-launch (0 users), so the post-launch measurement is itself the revisit trigger. Also record the write-pattern choice: `useRegenerateResearch` populates the cache via `setQueryData` from the mutation result rather than `invalidateQueries`, because invalidate-on-success double-fetches a POST-backed query (a second `refresh:false` POST through the limiter, which can overwrite the just-regenerated report with a server-stale one) — revisit if a future write genuinely needs server reconciliation after the mutation. Also record as an **accepted limitation**: the query key is `["market-research", "component", orgId, componentName]` — keyed on `orgId` + `componentName` but **not** `user_id` (which the POST body carries). If a different user ever operates under the same `orgId`, the memory cache could serve data fetched with the previous `user_id` without re-POSTing. Practical risk is nil at MVP (0 users, the endpoint is org-scoped and the backend doesn't validate auth — see AGENTS.md); consistent with the repo's no-real-auth posture. Trigger to revisit: when user-scoped data or real auth enforcement lands, add `user_id` to the key (cache evicts on re-login, acceptable since memory-only re-fetches anyway).
 
 - [ ] **Step 3: Commit the ADRs**
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
-npx prettier --check ../docs/adr/0003-*.md ../docs/adr/0004-*.md || true
+npx prettier --check ../docs/adr/*-market-research-contracts-are-feature-local.md ../docs/adr/*-market-research-cache-is-memory-only.md || true
 ```
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
-git add docs/adr/0003-market-research-contracts-are-feature-local.md docs/adr/0004-market-research-cache-is-memory-only.md
-git commit -m "docs(adr): market-research contracts feature-local (0003); cache memory-only (0004)"
+# Glob on the fixed ADR slugs, not the numbers — the numbers are picked
+# dynamically from `ls docs/adr/`, so a hardcoded 0003/0004 would `git add` a
+# nonexistent file if parallel work landed an ADR first. Use the actual chosen
+# numbers in the commit message.
+git add docs/adr/*-market-research-contracts-are-feature-local.md docs/adr/*-market-research-cache-is-memory-only.md
+git commit -m "docs(adr): market-research contracts feature-local; cache memory-only"
 ```
 
 - [ ] **Step 4: Full preflight + behavioral parity**
@@ -426,9 +481,9 @@ git commit -m "docs(adr): market-research contracts feature-local (0003); cache 
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
 npm run preflight
 ```
-Expected: PASS, including `journeys/04` (login → marketintelligence → a market-research POST fires). **If `journeys/04` reds**, the rewire stopped the auto-fetch from firing — investigate (a hook not enabled, wrong endpoint); fix and re-run; if unfound, STOP (abort 4). Note `journeys/04` only checks that ≥1 request fires (it reads `component_name` to pick its mock but does **not** assert it), so it guards "the page still calls the endpoint" — not the request/response shape. The `{ status, data }` parse in the contract test + the service test's body assertion are what guard the shape.
+Expected: PASS, including `journeys/04` (login → marketintelligence → a market-research POST fires **and** a section renders its mocked content — the render assertion added in Task 6 Step 3b). **If `journeys/04` reds**, either the rewire stopped the auto-fetch from firing or the corrected `{ status, data }` mock no longer parses/renders — investigate (a hook not enabled, wrong endpoint, or a section's `data` fields drifted from the mock); fix and re-run; if unfound, STOP (abort 4). Note `journeys/04` now checks ≥1 request fires **and** that one section renders (Task 6 Step 3b); it still does **not** assert the exact request/response shape — the `{ status, data }` parse in the contract test + the service test's body assertion are what guard the shape.
 
-After preflight, also spot-check that all five section components (market size, industry trends, regulatory, competitor, market entry) still render their data — they keep their own raw `fetch` until 5d–5h, and 5b's MSW/`qk`/limiter changes share surface with them. **`journeys/04` is a pure smoke check (it asserts only no-login-bounce + ≥1 request fired), so it will NOT catch a section that renders blank** — this manual render check is the only 5b signal. Per-section E2E assertions arrive with each section's 5d–5h conversion; record this coverage note in the §9 delta (Step 6).
+After preflight, the **human controller** (not the executing agent) should also spot-check that all five section components (market size, industry trends, regulatory, competitor, market entry) still render their data — they keep their own raw `fetch` until 5d–5h, and 5b's MSW/`qk`/limiter changes share surface with them. The automated floor is the corrected `journeys/04` (it now asserts ≥1 section renders, so a total parse/render failure of the page reds the gate); **this manual check covers the per-section blanks that the single-section assertion does not** — it is a human step, not agent-executable. Per-section E2E assertions arrive with each section's 5d–5h conversion; record this coverage note in the §9 delta (Step 6).
 
 - [ ] **Step 5: Done-when (spec §4 "Done when")**
 1. Market-research-proper data comes from TanStack Query (memory-only); company profile via `useCompanyProfile`.
@@ -437,7 +492,7 @@ After preflight, also spot-check that all five section components (market size, 
 4. Both ADRs (0003, 0004) merged.
 5. Behavior parity (`journeys/04`) + `npm run preflight` green.
 
-- [ ] **Step 6: Spec 24 §9 delta + handoff** — append a §9 note: "5b confirmed all market-research fetches are intelligence-owned; §4.2's lead-stream-fetch exclusion is moot (analysis tab does no fetching) — its data-layer migration remains Phase 7's when it claims the component. §4.2's 'Done when' item — only the analysis/lead-stream tab's raw `fetch` remains in the page — is likewise void: 5b's done-when is stricter (zero raw `fetch` in the page), since the analysis tab has none." Then `/review-impl` → `/synthesize-impl-review` → controller preflight → merge `phase-5b-data-layer` → `master`. **5c must not begin until 5b is merged** (5c reads from these hooks).
+- [ ] **Step 6: Spec 24 §9 delta + handoff** — append a §9 note: "5b confirmed all market-research fetches are intelligence-owned; §4.2's lead-stream-fetch exclusion is moot (analysis tab does no fetching) — its data-layer migration remains Phase 7's when it claims the component. §4.2's 'Done when' item — only the analysis/lead-stream tab's raw `fetch` remains in the page — is likewise void: 5b's done-when is stricter (zero raw `fetch` in the page), since the analysis tab has none. **§4.1's endpoint inventory is superseded:** market-research is POST-only — there is no GET / no `?_cb&_r` cache-busted load endpoint, the response envelope is `{ status, data }` (`MarketResponse`), and there is no load-all / array / keyed-object response (the page hydrates with 5 per-component POSTs). Downstream 5d–5h readers should treat §4.1's GET row and any `loadLatest`/array shape as void and consume the per-component contract (`useResearchComponent`, no `useLatestResearch`). **Competitor caveat (for 5f):** only **4 of 5** sections self-fetch `market-research`; CompetitorLandscapeSection self-fetches `/api/ask` + `/api/market_intelligence` instead (verified in 5b), so 5f must analyze those endpoints itself rather than reuse 5b's `fetchResearchComponent` for the section-internal migration." Then `/review-impl` → `/synthesize-impl-review` → controller preflight → merge `phase-5b-data-layer` → `master`. **5c must not begin until 5b is merged** (5c reads from these hooks).
 
 ---
 
@@ -445,6 +500,6 @@ After preflight, also spot-check that all five section components (market size, 
 
 - **Spec coverage:** §4.1 endpoint inventory + live verification (Tasks 0–1); §4.2 services/contracts/hooks/qk/MSW/page-rewire/ADRs (Tasks 2–7); §4 "Done when" (Task 7 Step 5); R2 live-shape verification (Task 1, abort 3); R7 memory-only + reload re-fetch (ADR-0004).
 - **Contract locked for downstream plans (24c–24h consume these exact names):** `services/marketResearch.ts` → `RESEARCH_COMPONENTS`, `fetchResearchComponent(userId, componentName, { orgId?, data?, refresh? })`; `contracts.ts` → `ResearchComponentSchema`/`ResearchComponentResponse` (the `{ status, data }` envelope); `hooks/useMarketResearch.ts` → `useResearchComponent(userId, orgId, name)`, `useRegenerateResearch(userId, orgId)`; `qk.marketResearchComponent`; company profile → `useCompanyProfile` (reused). **No `loadLatestResearch`/`LatestResearchSchema`/`useLatestResearch`/`qk.marketResearchLatest`** — the backend has no load-all endpoint, so the page hydrates per-component. ⚠️ Any 24c–24h step that referenced `useLatestResearch` must be updated to per-component `useResearchComponent`.
-- **Authoritative envelope, captured internals:** the response envelope `{ status, data }` and the `MarketRequest` body come from the backend `market_research` models/router (authoritative — the route has `response_model`); the opaque inner `data` per component is captured in Task 1 for 5d–5h. The schema code here is the correct envelope; the per-section `data` slices are refined as sections convert. (Corrects the round-1 assumption — copied from the 5a E2E mock — that the envelope was `{ component_name, status, result, cached }`.)
+- **Authoritative envelope, captured internals:** the response envelope `{ status, data }` and the `MarketRequest` body come from the backend `market_research` models/router (authoritative — the route has `response_model`); the opaque inner `data` per component is captured in Task 1 for 5d–5h. The schema code here is the correct envelope; the per-section `data` slices are refined as sections convert. (Corrects the round-1 assumption — copied from the pre-existing `e2e/fixtures/api-mocks.ts` mock, which pre-dates 5a — that the envelope was `{ component_name, status, result, cached }`.)
 - **Divergence carried from 5a:** the analysis/trends tabs do no MR fetching → §4.2's exclusion is moot; recorded as a §9 delta, and 5c's lead-stream extraction carries no raw fetch.
-- **Section self-fetch (key scope correction):** the five sections each hold their own `market-research` fetch + cache; 5b creates the hooks + migrates the **page** sites, and each section's fetch migrates with its **5d–5h** decomposition (R3 satisfied — hooks precede section conversion). Plans 24d/24e/24f/24g/24h each encode "complete this section's 5b migration" accordingly; 24i confirms no raw `fetch` remains in the feature at phase close.
+- **Section self-fetch (key scope correction):** **4 of 5** sections (MarketEntry/Regulatory/IndustryTrends/MarketSize) each hold their own `market-research` fetch + cache; 5b creates the hooks + migrates the **page** sites, and each section's fetch migrates with its **5d–5h** decomposition (R3 satisfied — hooks precede section conversion). ⚠️ **CompetitorLandscapeSection is the exception** — its section-internal fetches hit `/api/ask` + `/api/market_intelligence` (verified: `CompetitorLandscapeSection.tsx` lines 697, 727; zero `market-research` refs), so **5f cannot assume it swaps `apiFetchJson("market-research")` → `fetchResearchComponent`** — it must analyze those two endpoints' shapes itself and likely build their own contracts/service fns. (5b's page-level competitor fetch *is* `market-research` POST and is migrated here; only the section-internal access differs.) Plans 24d/24e/24g/24h each encode "complete this section's 5b migration"; **24f (competitor) additionally encodes its own `/api/ask` + `/api/market_intelligence` endpoint analysis**; 24i confirms no raw `fetch` remains in the feature at phase close.
