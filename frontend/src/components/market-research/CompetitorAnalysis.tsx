@@ -1,3 +1,5 @@
+// DEAD CODE → delete in 5i (Spec 24 §7 dead-code sweep). No live importer as of Phase 5a (TD-FE logged).
+
 import { BarChart3, Bot } from "lucide-react";
 import { useState } from "react";
 

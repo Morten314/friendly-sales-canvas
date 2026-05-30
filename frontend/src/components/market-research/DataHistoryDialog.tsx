@@ -1,3 +1,5 @@
+// DEAD CODE → delete in 5i (Spec 24 §7 dead-code sweep). No live importer as of Phase 5a (TD-FE logged).
+
 // import { useState, useEffect } from "react";
 // import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 // import { Button } from "@/components/ui/button";

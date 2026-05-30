@@ -1,3 +1,6 @@
+// HANDOFF → scout (Spec 24 §7). This component is NOT part of market-research;
+// it stays here until the scout feature phase relocates + decomposes it.
+
 import { Loader2 } from "lucide-react";
 import React, { useState, useEffect } from "react";
 

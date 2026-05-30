@@ -1,3 +1,6 @@
+// HANDOFF → customers (Spec 24 §7). This component is NOT part of market-research;
+// it stays here until the customers feature phase relocates + decomposes it.
+
 import { Users, BarChart3, Bot } from "lucide-react";
 import React, { useMemo } from "react";
 import {

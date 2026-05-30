@@ -24,14 +24,14 @@ _Locked in 5i (`index.ts`). Anticipated: research-result/report types + a result
 
 These belong to **other** features and are NOT part of market-research. They stay annotated (`// HANDOFF → <feature>`) in place; the owning phase relocates + decomposes each. The dir is deleted once empty (≤ Phase 9). Inventory confirmed by 5a import-trace.
 
-| Component(s) | Target feature | Claiming phase |
-|---|---|---|
-| `StrategistWorkspace.tsx` | strategist | per naming map |
-| `lead-stream/*` (`LeadsTable`, `leadData`, `OpportunityDashboard`) + the `analysis`-tab code 5c extracts here | customers | 7 |
-| `EditDropdownMenu.tsx` (used by `customers/SuggestedICPCards`) | customers | 7 |
-| `ScoutChatPanel.tsx`, `ChatWithScout.tsx` | scout | per naming map |
-| `Scout*` config cluster (`ScoutSettingsForm`, `ScoutDeploymentDetails`, `ScoutLeadStream`) | scout | per naming map |
-| `AddLeadModal.tsx`, `SuggestedCompaniesSection.tsx` (used by `signals/ScoutChatWithHistory`) | scout | per naming map |
+| Component(s)                                                                                                  | Target feature | Claiming phase |
+| ------------------------------------------------------------------------------------------------------------- | -------------- | -------------- |
+| `StrategistWorkspace.tsx`                                                                                     | strategist     | per naming map |
+| `lead-stream/*` (`LeadsTable`, `leadData`, `OpportunityDashboard`) + the `analysis`-tab code 5c extracts here | customers      | 7              |
+| `EditDropdownMenu.tsx` (used by `customers/SuggestedICPCards`)                                                | customers      | 7              |
+| `ScoutChatPanel.tsx`, `ChatWithScout.tsx`                                                                     | scout          | per naming map |
+| `Scout*` config cluster (`ScoutSettingsForm`, `ScoutDeploymentDetails`, `ScoutLeadStream`)                    | scout          | per naming map |
+| `AddLeadModal.tsx`, `SuggestedCompaniesSection.tsx` (used by `signals/ScoutChatWithHistory`)                  | scout          | per naming map |
 
 `types.ts` (the legacy `src/components/market-research/types.ts`, `EditRecord` et al.) is shared by these moved sections **and** `signals`, so it stays in legacy; the feature imports it transitionally. Promotion to `@/shared/` is Phase 11.
 

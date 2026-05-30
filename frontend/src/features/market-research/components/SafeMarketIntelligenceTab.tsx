@@ -1,6 +1,5 @@
 import React from "react";
 
-
 import MarketIntelligenceTab from "./MarketIntelligenceTab";
 import type { MarketIntelligenceTabProps } from "./MarketIntelligenceTabProps";
 
