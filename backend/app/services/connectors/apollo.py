@@ -86,9 +86,14 @@ class ApolloConnector:
                 _sleep(sleep_for)
                 delay *= _BACKOFF_FACTOR
                 continue
-            if resp.status_code in (401, 403):
+            if resp.status_code == 401:
                 raise ConnectorCredentialsInvalidError(
-                    f"Apollo rejected the API key ({resp.status_code})."
+                    "Apollo rejected the API key (401 Unauthorized)."
+                )
+            if resp.status_code == 403:
+                raise ApolloAPIError(
+                    f"Apollo returned 403 Forbidden — the API key may lack permission for this endpoint"
+                    f" (check your Apollo plan/tier): {(resp.text or '')[:200]}"
                 )
             if resp.status_code == 402 or (
                 resp.status_code == 422 and "credit" in (resp.text or "").lower()

@@ -12,7 +12,7 @@ Submodules:
   - normalization.py: pure data shapers — _safe_json_to_obj,
     _extract_company_name / _lead_name, _parse_iso_datetime,
     _lead_to_score_row, etc.
-  - scoring.py: _is_stale_queued_run, _run_market_scoring_for_org
+  - scoring.py: _is_stale_run, _run_market_scoring_for_org
     (background task body)
 
 Re-exports the 4 public-surface symbols listed in spec §3.6, plus the

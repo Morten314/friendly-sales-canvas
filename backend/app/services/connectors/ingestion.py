@@ -117,6 +117,8 @@ def _dedupe_import_records(records: List[Dict[str, Any]]) -> List[Dict[str, Any]
             if email in seen_email:
                 continue
             seen_email.add(email)
+            if contact:                 # also remember the contact_id to dedup later records
+                seen_contact.add(contact)
         elif contact:
             if contact in seen_contact:
                 continue
@@ -226,18 +228,23 @@ def _records_to_dicts(results) -> List[Dict[str, Any]]:
     return leads
 
 
+def _read_leads_by_ids_tx(tx, org_id, lead_ids):
+    result = tx.run(
+        """
+            MATCH (l:Lead {org_id: $org_id})
+            WHERE l.lead_id IN $lead_ids
+            RETURN l
+            """,
+        org_id=org_id,
+        lead_ids=lead_ids,
+    )
+    return list(result)
+
+
 def get_leads_by_ids(driver, org_id: str, lead_ids: List[str]) -> List[Dict[str, Any]]:
     """Load Lead nodes by id within an org (for building enrichment match entries)."""
     if not lead_ids:
         return []
     with driver.session() as session:
-        result = session.run(
-            """
-            MATCH (l:Lead {org_id: $org_id})
-            WHERE l.lead_id IN $lead_ids
-            RETURN l
-            """,
-            org_id=org_id,
-            lead_ids=lead_ids,
-        )
-        return _records_to_dicts(result)
+        rows = session.execute_read(_read_leads_by_ids_tx, org_id, lead_ids)
+    return _records_to_dicts(rows)

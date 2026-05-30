@@ -51,7 +51,12 @@ def save_credentials(mongo, org_id: str, provider: str, api_key: str, status: st
         },
         upsert=True,
     )
-    return {"org_id": org_id, "provider": provider, "status": status, "connected_at": now}
+    # Read back the stored doc so the returned connected_at reflects the persisted value.
+    # On insert: connected_at == now. On update: $setOnInsert is a no-op, so connected_at
+    # is the original insertion time — which is what callers need.
+    stored = get_credentials(mongo, org_id, provider) or {}
+    connected_at = stored.get("connected_at", now)
+    return {"org_id": org_id, "provider": provider, "status": status, "connected_at": connected_at}
 
 
 def get_credentials(mongo, org_id: str, provider: str) -> Optional[Dict[str, Any]]:
