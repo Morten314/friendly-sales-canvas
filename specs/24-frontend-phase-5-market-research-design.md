@@ -134,7 +134,7 @@ src/features/market-research/
 
 > The `analysis` (lead-stream) tab is inline in the page, so its code rides into the feature *inside* `MarketResearchPage.tsx` in 5a; 5c extracts it back out to the legacy `lead-stream/` unit (§5). 5a does not attempt to separate it.
 
-**Done when:** market-research renders from `features/market-research/`; `src/pages/MarketResearch.tsx` is gone; the genuine components moved; leaving components remain in `src/components/market-research/` annotated; routes resolve; E2E (`journeys/04`) + visual + Vitest + `npm run preflight` green. One reviewable mechanical diff.
+**Done when:** market-research renders from `features/market-research/`; `src/pages/MarketResearch.tsx` is gone; the genuine components moved; leaving components remain in `src/components/market-research/` annotated; routes resolve; E2E (`journeys/04`) + Vitest + `npm run preflight` green (visual parity via behavioral E2E + Vitest; **no MR pixel VR** — §9 delta 6 / TD-FE-17). One reviewable mechanical diff.
 
 ---
 
@@ -242,6 +242,7 @@ Applied at sub-phase merges via the synthesize-impl-review "master-plan deltas" 
 3. **Sub-split deviation.** Master §4 Phase 5 sketched 5a/5b/5c; this spec uses 5a–5i because full decomposition was chosen. Mapping: **master 5a → 5a, master 5b → 5b, master 5c → 5c + 5d–5h + 5i.** Record the finer split.
 4. **Phase-number reconciliation.** Master §4 overview (signals 8 · scout 9 · settings 10) conflicts with the Phase 4b `features/README.md` naming map (signals 6 · scout 8 · settings 11). Pre-existing drift, surfaced (not caused) by Phase 5. Recommend reconciling the master plan to one source of truth; until then handoffs reference target features by name. Log as a master-plan delta (or `TD-FE-<n>` if not resolved at Phase 5 merge).
 5. **Phase 13 boundary (recommendation, not assertion).** Phase 13 **should expect** its market-research pass to narrow to verification + cross-feature dedup + codemod extraction (first-time decomposition done here), **assuming 5d–5h decomposition quality meets Phase 13's standards — Phase 13's spec re-evaluates.** Note in master §4 Phase 13.
+6. **5a findings (recorded at 5a merge).** Confirmed against `App.tsx`: the frozen route is `/your-ai-team/scout/:tab` (segments `marketintelligence`/`leadstream`/`chatwithscout` ↔ internal keys intelligence/analysis/trends), with `/market-research` + `/your-ai-team/scout` redirects — superseding the §1.2 shorthand. The `trends` tab renders **Scout chat** (`ChatWithScout`/`ScoutChatWithHistory`), not an emerging-trends view, and `analysis` renders `ScoutLeadStream`; only the `intelligence` tab is genuine market-research (the §2.1 `trends/TrendsTab` becomes a thin router over leaving Scout-chat — see 5c). **The 5a whole-dir import trace refined the §7 leaving inventory:** (i) the genuine moved set is **12** files (the §7-implied 11 + `AIPromptingInterface`, live via `MarketDetailDrawer`); (ii) **3 leavers not in the §7 table** were found and annotated — `AddLeadModal` + `SuggestedCompaniesSection` → **scout** (importer `signals/ScoutChatWithHistory`), `EditDropdownMenu` → **customers** (importer `customers/SuggestedICPCards`); (iii) the `Scout*` config file `ScoutCapabilities` is **dead** (0 importers), not a live scout leaver — it joins **8 dead files** annotated `// DEAD CODE → delete in 5i` (TD-FE-18) for the §7 5i sweep; (iv) `types.ts` is shared by the moved sections **and** `signals`, so it stays in legacy (moved files import it transitionally via `@/components/market-research/types`; promotion to `shared/` is Phase 11). **Visual parity for all of Phase 5 is behavioral E2E (`journeys/04`) + Vitest/RTL — there is no market-research pixel-VR baseline (TD-FE-17 logged 5a). This supersedes every "visual" / "visual regression" parity-guard assertion in this spec for the market-research surface: §1.2 (safety-net row), §3 & §6 "Done when", §8 (testing/preflight), §11 (phase DoD item 5), and R4.**
 
 ---
 
@@ -260,7 +261,7 @@ Applied at sub-phase merges via the synthesize-impl-review "master-plan deltas" 
 2. `src/pages/MarketResearch.tsx` is gone and the genuine market-research components are in the feature; `src/components/market-research/` retains only the annotated leaving components (lead-stream, `StrategistWorkspace`, `ScoutChatPanel` + `Scout*` cluster), which Phases 7/8/9 relocate — the dir is deleted once empty.
 3. Data layer is TanStack Query (memory-only); no raw `fetch` or localStorage cache in the feature.
 4. Routes resolve to the feature; **URLs unchanged**.
-5. Vitest + RTL coverage for the feature's logic-bearing units; `journeys/04` E2E + visual regression green; `npm run preflight` green.
+5. Vitest + RTL coverage for the feature's logic-bearing units; `journeys/04` E2E green (visual parity via behavioral E2E; **no MR pixel VR** — §9 delta 6); `npm run preflight` green.
 6. Both ADRs (feature-local contracts; memory-only cache) merged.
 7. Handoff table authoritative; master Spec 14 deltas applied.
 
