@@ -6,7 +6,8 @@ import MarketEntrySection from "./MarketEntrySection";
 import type { MarketIntelligenceTabProps } from "./MarketIntelligenceTabProps";
 import MarketSizeSection from "./MarketSizeSection";
 import RegulatoryComplianceSection from "./RegulatoryComplianceSection";
-import ScoutChatPanel from "./ScoutChatPanel";
+
+import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
 
 type MarketIntelligenceSectionsProps = MarketIntelligenceTabProps;
 

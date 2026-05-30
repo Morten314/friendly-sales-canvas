@@ -1,7 +1,6 @@
 import { TrendingUp, Edit3, Save, X } from "lucide-react";
 import { useState, useEffect } from "react";
 
-import { AIPromptingInterface } from "./AIPromptingInterface";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +14,7 @@ import {
 } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { AIPromptingInterface } from "@/features/market-research/components/AIPromptingInterface";
 
 interface EmergingTrend {
   trend: string;

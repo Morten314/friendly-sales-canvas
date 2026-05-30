@@ -1,9 +1,10 @@
 import React from "react";
 
-import { ErrorBoundary } from "../common/ErrorBoundary";
 
 import MarketIntelligenceTab from "./MarketIntelligenceTab";
 import type { MarketIntelligenceTabProps } from "./MarketIntelligenceTabProps";
+
+import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 
 const SafeMarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) => {
   // Check for problematic objects before rendering

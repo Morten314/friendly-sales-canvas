@@ -1986,8 +1986,7 @@ import {
 } from "lucide-react";
 import React, { useEffect, useState, useRef } from "react";
 
-import type { EditRecord } from "./types";
-
+import type { EditRecord } from "@/components/market-research/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

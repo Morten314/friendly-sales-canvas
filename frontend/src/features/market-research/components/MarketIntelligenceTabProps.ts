@@ -1,5 +1,8 @@
-import type { EditRecord, TrendSnapshot, IndustryTrendsRecommendations } from "./types";
-
+import type {
+  EditRecord,
+  TrendSnapshot,
+  IndustryTrendsRecommendations,
+} from "@/components/market-research/types";
 import type { UntypedBackendProfile, UntypedReportState } from "@/lib/types/escape-hatches";
 
 export interface MarketIntelligenceTabProps {
