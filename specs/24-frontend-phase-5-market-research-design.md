@@ -1,7 +1,7 @@
 # Spec 24 — Frontend Phase 5: Feature Extraction — market-research
 
-**Status:** Design — round 2 (round 1 review `docs/reviews/24-frontend-phase-5-market-research-design-spec-review-1.md` synthesized at `docs/reviews/24-frontend-phase-5-market-research-design-spec-synthesis-1.md`)
-**Date:** 2026-05-30 (round 1 + round 2 revisions)
+**Status:** Design — round 3 (round 1–2 reviews `docs/reviews/24-frontend-phase-5-market-research-design-spec-review-{1,2}.md` synthesized at `…-spec-synthesis-{1,2}.md`)
+**Date:** 2026-05-30 (rounds 1–3)
 **Type:** Phase spec (child of master Spec 14 §4 — Phase 5)
 **Paired plan:** none yet — sub-plans `24a`…`24i` ship per sub-phase as it begins
 
@@ -83,12 +83,14 @@ src/features/market-research/
 │   └── MarketResearchPage.tsx        # thin routed shell + tab router, wrapped in <FeatureErrorBoundary>
 ├── components/
 │   ├── intelligence/                 # intelligence-tab composition + the 5 decomposed sections
+│   │   ├── IntelligenceTab.tsx       # intelligence tab container (created by 5c)
 │   │   ├── market-entry/             # MarketEntrySection decomposed (container + sub-components)
 │   │   ├── regulatory-compliance/
 │   │   ├── competitor-landscape/
 │   │   ├── industry-trends/
 │   │   └── market-size/
-│   └── trends/                       # emerging-trends tab
+│   └── trends/
+│       └── TrendsTab.tsx             # emerging-trends tab container (created by 5c)
 ├── hooks/                            # useQuery/useMutation wrappers (server state)
 ├── services/                         # fetch fns over shared client.ts + RateLimiter
 ├── contracts.ts                      # feature-local zod schemas (.parse at boundary, z.infer types)
@@ -103,7 +105,7 @@ src/features/market-research/
 
 - `features/market-research/` may import from itself, `shared/`, `components/ui/`, npm, and — under the transitional exception (Phases 4b–12) — legacy dirs (incl. the leaving components still in `src/components/market-research/`). 5a leans on this so it does **not** have to drag cross-cutting helpers into `shared/` now (that's Phase 11).
 - Cross-feature consumption is via `index.ts` only; no circular feature deps (if one appears, the shared surface moves to `src/shared/`, not resolved inside this feature).
-- **Anticipated public surface (non-binding, validated in 5i):** signals (Phase 8) consumes market-research *output*, so the likely `index.ts` surface is the research-result/report types + a results-read hook. 5c–5h keep those exportable (don't bury result types in deeply-private modules); the exact surface is locked in 5i once internals stabilize, informed by Phase 8's needs. No in-phase consumer exists, so the surface is deliberately not finalized early.
+- **Anticipated public surface (non-binding, validated in 5i):** signals (Phase 8) consumes market-research *output*, so the likely `index.ts` surface is the research-result/report types + a results-read hook. 5c–5h keep those exportable as a guideline; if a section nonetheless buries a result type in a deeply-private module, **5i includes a surface-extraction restructure** (no behavior change) to lift it — the guideline is a default, not an enforced gate. The exact surface is locked in 5i once internals stabilize, informed by Phase 8's needs; no in-phase consumer exists, so it is deliberately not finalized early.
 
 ### 2.3 Mapping (old → new)
 
@@ -148,18 +150,18 @@ The 9 raw fetches resolve to **2 endpoints** (via the existing `buildApiUrl(...)
 | 2820, 2948, 2981, 3252, 3480, 3759, 4088 | `market-research` | POST | research operations (generate/refresh — incl. competitor, see line 3977), dispatched by request body |
 | 2483 | `profile/company?org_id=` | GET | company profile — **already migrated in Phase 3** (`useCompanyProfile`, shared company-profile contract) |
 
-**Implications for 5b:** the seven POSTs share one endpoint distinguished by payload → a small set of typed service fns over `market-research`; the company-profile GET **reuses Phase 3's existing hook/contract**, not a new one. Line/site numbers are a 2026-05-30 anchor; the exact operation set + request/response shapes are verified live (`/docs`/`curl`) per the polyglot rule — 5b's first task.
+**Implications for 5b:** the seven POSTs share one endpoint distinguished by payload → a small set of typed service fns over `market-research`; the company-profile GET **reuses Phase 3's existing hook/contract**, not a new one. Line/site numbers are a 2026-05-30 anchor; the exact operation set + request/response shapes are verified live (`/docs`/`curl`) per the polyglot rule — 5b's first task. **5b also tags each site by owning tab:** sites belonging to the `analysis` (lead-stream) tab are **excluded from migration** (§4.2) — they stay raw and leave with the lead-stream unit in 5c.
 
 ### 4.2 Actions
 
 - `services/` — one fetch fn per `market-research` operation over the shared `client.ts` + the **existing** shared `RateLimiter` (30/min is a single frozen budget — no second limiter).
 - `contracts.ts` — feature-local zod schemas for the `market-research` operations; `.parse` at the fetch boundary, static types via `z.infer`. Shapes verified live (§4.1).
 - `hooks/` — `useQuery`/`useMutation` wrappers; query keys added to the central `qk` factory (`src/shared/api/queryKeys.ts`). Company-profile reads route through Phase 3's `useCompanyProfile`.
-- Rewire the (still-monolithic) page to consume the hooks; delete the raw `fetch` sites, the `CACHE_DURATION` cache, and the 68 localStorage refs that back it. `sessionStorage` used as primary state (if any survives) is left alone — that's not cache.
+- Rewire the (still-monolithic) page to consume the hooks for the **market-research-proper** sites; delete those raw `fetch` sites, the `CACHE_DURATION` cache, and the 68 localStorage refs that back it. **The `analysis`/lead-stream tab's fetch sites are NOT migrated** — they stay raw and ride to the legacy `lead-stream/` unit in 5c, where **Phase 7 migrates them**. This keeps a legacy component from importing feature-internal hooks (the transitional exception covers feature→legacy, not the reverse). `sessionStorage` used as primary state (if any survives) is left alone — that's not cache.
 - **Prerequisite:** confirm/extend the Phase 0b **MSW** handlers (and `e2e/fixtures/api-mocks.ts`) for the `market-research` operations; missing handlers are 5b work, not assumed-present.
 - **ADRs** (in `docs/adr/`): (1) market-research contracts are feature-local; (2) TanStack cache is memory-only for market-research (resolving master §8 Q9).
 
-**Done when:** market-research data comes entirely from TanStack Query (memory-only); no raw `fetch` or localStorage cache remains in the feature; both ADRs merged; behavior + visual parity green; preflight green.
+**Done when:** market-research-proper data comes from TanStack Query (memory-only); the localStorage cache is gone; the only raw `fetch` left in the page is the `analysis`/lead-stream tab's (relocated to legacy in 5c); both ADRs merged; behavior + visual parity green; preflight green.
 
 ---
 
@@ -169,12 +171,13 @@ The 9 raw fetches resolve to **2 endpoints** (via the existing `buildApiUrl(...)
 
 **Actions:**
 - `MarketResearchPage.tsx` becomes a thin shell (route wiring + tab routing + `<FeatureErrorBoundary>`), delegating each tab to a container: `IntelligenceTab`, `TrendsTab`, and an `analysis` branch that renders the **legacy** lead-stream unit (below).
-- **State rehoming:** server data → TanStack hooks (5b); `activeTab` → stays URL-derived; primary search/filter state → **URL params** (shareable, consistent with `activeTab`); ephemeral state (open dialogs, input drafts) → local `useState` in the decomposed pieces; genuinely-shared coordination → `MarketResearchContext` per the criteria below.
+- **State rehoming:** server data → TanStack hooks (5b); `activeTab` → stays URL-derived; ephemeral state (open dialogs, input drafts, interim loading) → local `useState` in the decomposed pieces; genuinely-shared coordination → `MarketResearchContext` per the criteria below. **Search/filter state** follows the URL-vs-local constraint below; its exact treatment is a `24c` decision (§13), not settled here.
+- **URL-vs-local constraint:** URL params carry top-level navigation + *simple, shareable* primary filters; ephemeral inputs stay local. Complex or rapidly-changing filter state may stay local or use `replace`-mode history to avoid history pollution (and URL-length/encoding limits). 5c picks per filter once the actual filter shapes are known.
 - **Context placement criteria** (precedent for Phases 6–12): `MarketResearchContext` holds *only* state that is **(a)** shared across ≥2 sections/tabs, **(b)** not derivable from URL params, and **(c)** not server state (TanStack owns that). State failing all three stays local `useState`; URL-derivable navigation state goes to URL params. **If nothing meets all three, no context is created.**
 - Replace the bespoke `SafeMarketIntelligenceTab` error wrapper with `<FeatureErrorBoundary>`; drop any unused `Safe*` wrappers.
-- **Extract the inline `analysis` (lead-stream) tab** out of the page into the legacy `src/components/market-research/lead-stream/` unit (joining the existing lead-stream files), annotated **→ customers (Phase 7)**. The feature's tab router renders it via the transitional exception. This stays in legacy, not the feature (leave-in-place model, §1.3.5/§7); extracting it is what makes the page decomposable.
+- **Extract the inline `analysis` (lead-stream) tab** out of the page into the legacy `src/components/market-research/lead-stream/` unit (joining the existing lead-stream files), annotated **→ customers (Phase 7)**. It **keeps its own raw `fetch` data access** (un-migrated by 5b, per §4.2) — so the legacy unit does not import feature hooks; Phase 7 migrates its data layer when it claims the component. The feature's tab router renders it via the transitional exception. This stays in legacy, not the feature (leave-in-place model, §1.3.5/§7); extracting it is what makes the page decomposable.
 
-**Done when:** the page is a thin shell + tab router; no fetch-result or server state held in page `useState`; the lead-stream tab is a self-contained annotated unit in `src/components/market-research/lead-stream/`; parity + preflight green.
+**Done when:** the page is a thin shell + tab router; no fetch-result or server state held in page `useState`; the lead-stream tab is a self-contained annotated unit in `src/components/market-research/lead-stream/` (carrying its own raw `fetch`); the feature itself has no raw `fetch` left; parity + preflight green.
 
 ---
 
@@ -184,7 +187,7 @@ The 9 raw fetches resolve to **2 endpoints** (via the existing `buildApiUrl(...)
 
 **Per-section pattern (MarketEntry / RegulatoryCompliance / CompetitorLandscape / IndustryTrends / MarketSize):**
 - A section container + focused presentational sub-components + a section-data hook (consuming 5b) + local types, under `components/intelligence/<section>/`.
-- Replace the section's slice of the `MarketIntelligenceTabProps` prop surface with hook consumption.
+- Replace the section's slice of the `MarketIntelligenceTabProps` prop surface with hook consumption. `MarketIntelligenceTabProps.ts` is **deleted when its last consuming section converts** (≤ 5h); 5i's dead-code sweep confirms it is gone.
 - **No hard LOC cap** (master §6) — target single-purpose files that fit in agent context. The exact file breakdown per section is a 5d–5h plan decision.
 - Vitest + RTL tests for the section's hook + logic-bearing sub-components (§8).
 
@@ -231,8 +234,9 @@ The 9 raw fetches resolve to **2 endpoints** (via the existing `buildApiUrl(...)
 Applied at sub-phase merges via the synthesize-impl-review "master-plan deltas" step (master §5.5):
 
 1. **Leaving-component model (clarification, not override).** Master §4 Phase 5's 5c directs leaving components to "stay in their current pre-extraction location." Those components are co-located *inside* `src/components/market-research/`; this spec honors 5c literally — they stay there (not pulled into the feature), and the dir empties as Phases 7/8/9 claim them. Recorded because the co-location makes "stay in place" non-obvious (the dir is otherwise vacated). No master override.
-2. **Status table (§4).** Mark Phase 5 → in progress now, → done (with date) at final merge. **Verify Phase 3 and Phase 4 rows read "done"** — they are merged — and correct if still "pending" (observed stale in at least one working copy).
-3. **Sub-split deviation.** Master §4 Phase 5 sketched 5a/5b/5c; this spec uses 5a–5i because full decomposition was chosen. Record the finer split.
+2. **Status table (§4) — amendment.** Mark Phase 5 → in progress now, → done (with date) at final merge.
+   - *5a-merge action (not itself an amendment):* verify Phase 3 and Phase 4 rows read "done" — they are merged — and correct if still "pending" (observed stale in at least one working copy).
+3. **Sub-split deviation.** Master §4 Phase 5 sketched 5a/5b/5c; this spec uses 5a–5i because full decomposition was chosen. Mapping: **master 5a → 5a, master 5b → 5b, master 5c → 5c + 5d–5h + 5i.** Record the finer split.
 4. **Phase-number reconciliation.** Master §4 overview (signals 8 · scout 9 · settings 10) conflicts with the Phase 4b `features/README.md` naming map (signals 6 · scout 8 · settings 11). Pre-existing drift, surfaced (not caused) by Phase 5. Recommend reconciling the master plan to one source of truth; until then handoffs reference target features by name. Log as a master-plan delta (or `TD-FE-<n>` if not resolved at Phase 5 merge).
 5. **Phase 13 boundary (recommendation, not assertion).** Phase 13 **should expect** its market-research pass to narrow to verification + cross-feature dedup + codemod extraction (first-time decomposition done here), **assuming 5d–5h decomposition quality meets Phase 13's standards — Phase 13's spec re-evaluates.** Note in master §4 Phase 13.
 
@@ -280,6 +284,8 @@ Applied at sub-phase merges via the synthesize-impl-review "master-plan deltas" 
 - The exact route URL(s) + `:tab` segments as currently configured in `App.tsx` (`24a`/`24c` confirm; they stay frozen).
 - The per-section file breakdown inside each `components/intelligence/<section>/` (`24d`–`24h`).
 - Whether `MarketResearchContext` is needed at all (per §5 criteria) and, if so, its shape (`24c`).
+- **Search/filter state → URL vs local** policy + history mode, per the §5 constraint (`24c`, once the actual filters are known).
+- The partition of the 9 fetch sites into market-research-proper vs lead-stream (`24b`, tagged by owning tab); **lead-stream's data-layer migration is deferred to Phase 7** (customers).
 - The `Scout*` config cluster's per-file stay/leave (`24a`, by import tracing).
 - The final `index.ts` public surface (`24i`, once internals are stable, informed by Phase 8).
 
@@ -293,4 +299,4 @@ Applied at sub-phase merges via the synthesize-impl-review "master-plan deltas" 
 - `frontend/src/features/README.md` — feature conventions + naming map.
 - `frontend/e2e/journeys/04-market-research-5-components.spec.ts` — the behavioral safety net.
 - `docs/TECH_DEBT.md` (`TD-FE-<n>`), `docs/adr/` (the two Phase 5 ADRs).
-- Round 1 review + synthesis: `docs/reviews/24-frontend-phase-5-market-research-design-spec-review-1.md`, `…-synthesis-1.md`.
+- Round 1–2 reviews + syntheses: `docs/reviews/24-frontend-phase-5-market-research-design-spec-{review,synthesis}-{1,2}.md`.
