@@ -1,7 +1,7 @@
 # Spec 24 — Frontend Phase 5: Feature Extraction — market-research
 
-**Status:** Design — round 3 (round 1–2 reviews `docs/reviews/24-frontend-phase-5-market-research-design-spec-review-{1,2}.md` synthesized at `…-spec-synthesis-{1,2}.md`)
-**Date:** 2026-05-30 (rounds 1–3)
+**Status:** Design — round 4 (round 1–3 reviews `docs/reviews/24-frontend-phase-5-market-research-design-spec-review-{1,2,3}.md` synthesized at `…-spec-synthesis-{1,2,3}.md`)
+**Date:** 2026-05-30 (rounds 1–4)
 **Type:** Phase spec (child of master Spec 14 §4 — Phase 5)
 **Paired plan:** none yet — sub-plans `24a`…`24i` ship per sub-phase as it begins
 
@@ -43,7 +43,7 @@ These are settled (see §13 for the deferred items):
 
 | Sub-phase | Plan | Mission |
 |---|---|---|
-| 5a | `24a` | Relocate genuine market-research into `features/` — mechanical, parity-preserving, zero logic change |
+| 5a | `24a` | Relocate genuine market-research into `features/` — mechanical, parity-preserving, no behavioral change |
 | 5b | `24b` | Data layer → TanStack Query (memory-only) + feature-local zod contracts + 2 ADRs; retire raw `fetch`/localStorage cache |
 | 5c | `24c` | Page decomposition along the 3 tabs + state rehoming; extract inline lead-stream tab to legacy |
 | 5d | `24d` | Decompose `MarketEntrySection` (3,872) |
@@ -84,8 +84,10 @@ src/features/market-research/
 ├── components/
 │   ├── intelligence/                 # intelligence-tab composition + the 5 decomposed sections
 │   │   ├── IntelligenceTab.tsx       # intelligence tab container (created by 5c)
-│   │   ├── market-entry/             # MarketEntrySection decomposed (container + sub-components)
-│   │   ├── regulatory-compliance/
+│   │   ├── market-entry/             # MarketEntrySection decomposed:
+│   │   │   ├── MarketEntrySection.tsx #   section container
+│   │   │   └── …                      #   focused sub-components + section hook
+│   │   ├── regulatory-compliance/    # (same shape: container + sub-components + hook)
 │   │   ├── competitor-landscape/
 │   │   ├── industry-trends/
 │   │   └── market-size/
@@ -122,7 +124,7 @@ src/features/market-research/
 
 ## §3 Sub-phase 5a — Relocate (mechanical, parity)
 
-**Mission:** move the *genuine* market-research surface into `features/market-research/` with zero logic change, so all later decomposition happens in the new location against one set of import paths.
+**Mission:** move the *genuine* market-research surface into `features/market-research/` with **no behavioral change** — the handoff annotations, `<FeatureErrorBoundary>` wrapping, and the `Scout*` import-tracing (§7) are additive/non-behavioral — so all later decomposition happens in the new location against one set of import paths.
 
 **Actions:**
 - `npm run scaffold:feature -- market-research` (emits `types.ts`/`index.ts`/`README.md`).
@@ -150,7 +152,7 @@ The 9 raw fetches resolve to **2 endpoints** (via the existing `buildApiUrl(...)
 | 2820, 2948, 2981, 3252, 3480, 3759, 4088 | `market-research` | POST | research operations (generate/refresh — incl. competitor, see line 3977), dispatched by request body |
 | 2483 | `profile/company?org_id=` | GET | company profile — **already migrated in Phase 3** (`useCompanyProfile`, shared company-profile contract) |
 
-**Implications for 5b:** the seven POSTs share one endpoint distinguished by payload → a small set of typed service fns over `market-research`; the company-profile GET **reuses Phase 3's existing hook/contract**, not a new one. Line/site numbers are a 2026-05-30 anchor; the exact operation set + request/response shapes are verified live (`/docs`/`curl`) per the polyglot rule — 5b's first task. **5b also tags each site by owning tab:** sites belonging to the `analysis` (lead-stream) tab are **excluded from migration** (§4.2) — they stay raw and leave with the lead-stream unit in 5c.
+**Implications for 5b:** the seven POSTs share one endpoint distinguished by payload → a small set of typed service fns over `market-research`; the company-profile GET **reuses Phase 3's existing hook/contract**, not a new one. Line/site numbers are a **pre-5a anchor** — once 5a relocates the file they shift, so 5b re-identifies sites by searching `fetch(` + `buildApiUrl` in the moved file, not by line number; the exact operation set + request/response shapes are verified live (`/docs`/`curl`) per the polyglot rule — 5b's first task. **5b also tags each site by owning tab:** sites belonging to the `analysis` (lead-stream) tab are **excluded from migration** (§4.2) — they stay raw and leave with the lead-stream unit in 5c.
 
 ### 4.2 Actions
 
@@ -176,8 +178,9 @@ The 9 raw fetches resolve to **2 endpoints** (via the existing `buildApiUrl(...)
 - **Context placement criteria** (precedent for Phases 6–12): `MarketResearchContext` holds *only* state that is **(a)** shared across ≥2 sections/tabs, **(b)** not derivable from URL params, and **(c)** not server state (TanStack owns that). State failing all three stays local `useState`; URL-derivable navigation state goes to URL params. **If nothing meets all three, no context is created.**
 - Replace the bespoke `SafeMarketIntelligenceTab` error wrapper with `<FeatureErrorBoundary>`; drop any unused `Safe*` wrappers.
 - **Extract the inline `analysis` (lead-stream) tab** out of the page into the legacy `src/components/market-research/lead-stream/` unit (joining the existing lead-stream files), annotated **→ customers (Phase 7)**. It **keeps its own raw `fetch` data access** (un-migrated by 5b, per §4.2) — so the legacy unit does not import feature hooks; Phase 7 migrates its data layer when it claims the component. The feature's tab router renders it via the transitional exception. This stays in legacy, not the feature (leave-in-place model, §1.3.5/§7); extracting it is what makes the page decomposable.
+- **Shared-GET edge case:** if the `analysis` tab shares the GET `market-research` ("load latest research") fetch with `intelligence`, 5c either **(i)** duplicates that GET as raw `fetch` in the legacy `lead-stream/` unit (default — duplication over coupling for transitional code) or **(ii)** promotes the GET service fn to `src/shared/` so both the feature and the legacy unit consume it without a feature→legacy dependency. 5c decides; default is (i).
 
-**Done when:** the page is a thin shell + tab router; no fetch-result or server state held in page `useState`; the lead-stream tab is a self-contained annotated unit in `src/components/market-research/lead-stream/` (carrying its own raw `fetch`); the feature itself has no raw `fetch` left; parity + preflight green.
+**Done when:** the page is a thin shell + tab router; no fetch-result or server state held in page `useState`; the lead-stream tab is a self-contained annotated unit in `src/components/market-research/lead-stream/` (carrying its own raw `fetch`); the feature's own modules have no raw `fetch` left (the legacy lead-stream unit it renders does); parity + preflight green.
 
 ---
 
@@ -247,7 +250,7 @@ Applied at sub-phase merges via the synthesize-impl-review "master-plan deltas" 
 - Adversarial cycle per master §5: spec → review-spec → synthesize → writing-plans → review-plan → synthesize → impl → review-impl → synthesize → human-approved merge. **Further review rounds at each stage are the orchestrator's judgement call** (master §5.2), not an automatic loop.
 - **Sub-plan granularity + incremental merge:** each `24a`…`24i` is its own plan + review + impl, and **merges to `master` incrementally** when green (not one terminal merge). `phase-5-market-research` is the working branch; each sub-phase branches from / re-syncs onto the latest `master` before its merge, so no long-lived branch accumulates weeks of drift (`sync.sh` / other work may land on master between sub-phases). Revert is per sub-phase (master §5.7); the whole phase reverts only if the *phase as a whole* can't reach done.
 - Branch in the main repo (per user direction — no separate worktree); surgical commits by path.
-- Human checkpoints: approve spec→plan, plan→impl, impl→merge for each sub-phase; controller runs `npm run preflight` immediately before each merge.
+- Human checkpoints: approve spec→plan, plan→impl, impl→merge for each sub-phase; controller runs `npm run preflight` immediately before each merge. **Approval depth is the orchestrator's judgement** (master §5.2) — mechanical sub-phases (5a relocate, 5i finalize) may warrant a lighter sign-off than the design-heavy ones (5b data layer, 5c page decomposition).
 
 ---
 
