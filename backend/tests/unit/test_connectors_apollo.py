@@ -133,3 +133,11 @@ def test_bulk_match_sends_reveal_flags_and_details(monkeypatch):
     assert captured["json"]["reveal_personal_emails"] is True
     assert captured["json"]["reveal_phone_number"] is False
     assert captured["json"]["details"] == [{"email": "a@b.com"}]
+
+
+def test_403_raises_api_error_not_invalid_credentials(monkeypatch):
+    monkeypatch.setattr(apollo_mod, "_http_request", lambda *a, **k: FakeResp(403, text="forbidden"))
+    with pytest.raises(ApolloAPIError) as exc_info:
+        ApolloConnector("key").validate_credentials()
+    assert type(exc_info.value) is ApolloAPIError  # NOT ConnectorCredentialsInvalidError
+    assert "403" in str(exc_info.value)
