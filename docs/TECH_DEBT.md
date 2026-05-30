@@ -674,6 +674,10 @@ stays green.
 
 **Owner:** TBD.
 
+**Resolved:** 2026-05-30 (Plan 24a Phase 5a, Task 5). Phase 5a wraps the market-research route in
+`FeatureErrorBoundary` (`App.tsx`); `"src/shared/components/**"` removed from `knip.json` `ignore` and
+`knip --strict` stays green.
+
 ---
 
 ## TD-FE-15 — Cross-feature index-only lint enforcement deferred (zone boundaries only)
@@ -762,5 +766,41 @@ Either make the blocking handlers sync `def` (FastAPI dispatches them to the thr
 
 **Pull-forward trigger:**
 - A pre-launch load/performance pass, or the first measured event-loop contention / p99 latency anomaly traced to blocking I/O in async handlers. Decide sync-handlers-vs-motor for the connector router then, and apply the same lens to any other async handler doing blocking I/O.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-17 — market-research has no visual-regression baseline (Phase 5 guards with behavioral E2E + Vitest)
+
+**Date logged:** 2026-05-30
+**Origin:** Plan 24a Phase 5a (plans/24a-frontend-phase-5a-relocate.md), Task 5.
+
+**Current state:**
+The behavioral E2E `e2e/journeys/04-market-research-5-components.spec.ts` deliberately omits pixel screenshots (the 7k-LOC page's rotating loading messages + concurrent independent fetches make full-page snapshots unstable without much heavier mocking). The global 2% `maxDiffPixelRatio` VR config and other journeys' snapshots exist, but **market-research has no VR baseline**. Spec 24 §1.2/§8/R4 assumed 2% VR was the primary parity guard "between every sub-phase"; it is not available for this surface.
+
+**What it should be:**
+Phase 5 (5a–5i) guards visual parity with behavioral E2E (`journeys/04`) + Vitest/RTL + `npm run preflight` only — no MR pixel VR. Re-establish a market-research visual-regression baseline **after** Phase 5, once decomposition (5c–5h) has produced stable, individually-mockable components for which screenshot comparison is practical (the `journeys/04` author's "reinstated post-refactor" intent).
+
+**Pull-forward trigger:**
+Post-Phase-5, when the decomposed tab/section components are stable enough to snapshot — or earlier if a visual regression slips through behavioral coverage.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-18 — market-research dead code (8 files, no live importer) awaiting the 5i sweep
+
+**Date logged:** 2026-05-30
+**Origin:** Plan 24a Phase 5a (plans/24a-frontend-phase-5a-relocate.md), Task 0 import trace.
+
+**Current state:**
+The 5a whole-dir import trace found 8 files in `src/components/market-research/` with **zero live importers** (knip does not flag them because `knip.json` `entry` makes every `src/**` file a production entry): `CompetitorAnalysis.tsx`, `CompetitorAnalysisDrawer.tsx` (only importer is dead `CompetitorAnalysis`), `ComponentStatusLoadingScreen.tsx`, `DataHistoryDialog.tsx`, `EmergingTrends.tsx`, `EmergingTrendsDrawer.tsx` (only importer is dead `EmergingTrends`), `RecentMarketResearch.tsx`, `ScoutCapabilities.tsx`. They are annotated `// DEAD CODE → delete in 5i` in place (5a Task 4).
+
+**What it should be:**
+5a is mechanical/parity, so it does **not** delete them (deletion is Spec 24 §7's 5i dead-code-sweep scope). 5i deletes all 8 and confirms `knip --strict` + `tsc` stay green. (`CompetitorAnalysisDrawer` and `EmergingTrendsDrawer` were repointed in 5a Task 2 to import the moved `AIPromptingInterface` via `@/features/...` so `tsc` stays green while they await deletion.)
+
+**Pull-forward trigger:**
+Spec 24 §7 (sub-phase 5i). Earlier only if one of these files becomes a build/parity liability before 5i.
 
 **Owner:** TBD.

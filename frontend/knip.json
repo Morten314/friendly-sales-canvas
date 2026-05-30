@@ -9,6 +9,6 @@
     "scripts/*.ts"
   ],
   "project": ["src/**/*.{ts,tsx}", "e2e/**/*.ts"],
-  "ignore": ["src/components/ui/**", "src/shared/components/**"],
+  "ignore": ["src/components/ui/**"],
   "ignoreDependencies": ["tailwindcss-animate", "tsx"]
 }
