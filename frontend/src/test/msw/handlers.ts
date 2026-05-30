@@ -55,4 +55,17 @@ export const handlers = [
   http.post("/api/auth/refresh", () =>
     HttpResponse.json({ access_token: "mock_jwt_token", expires_in: 3600 }),
   ),
+
+  // 6. Market research — Phase 5b
+  http.post("/api/market-research", async ({ request }) => {
+    const body = (await request.json()) as { component_name?: string };
+    return HttpResponse.json({
+      status: "success",
+      data: {
+        component_name: body.component_name ?? "market size & opportunity",
+        title: "Test",
+        summary: "Test summary",
+      },
+    });
+  }),
 ];
