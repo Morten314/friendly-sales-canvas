@@ -244,7 +244,7 @@ Applied at sub-phase merges via the synthesize-impl-review "master-plan deltas" 
 
 ## §10 Per-phase workflow
 
-- Adversarial cycle per master §5: spec → review-spec → synthesize (loop to nit-or-below) → writing-plans → review-plan → synthesize → impl → review-impl → synthesize → human-approved merge.
+- Adversarial cycle per master §5: spec → review-spec → synthesize → writing-plans → review-plan → synthesize → impl → review-impl → synthesize → human-approved merge. **Further review rounds at each stage are the orchestrator's judgement call** (master §5.2), not an automatic loop.
 - **Sub-plan granularity + incremental merge:** each `24a`…`24i` is its own plan + review + impl, and **merges to `master` incrementally** when green (not one terminal merge). `phase-5-market-research` is the working branch; each sub-phase branches from / re-syncs onto the latest `master` before its merge, so no long-lived branch accumulates weeks of drift (`sync.sh` / other work may land on master between sub-phases). Revert is per sub-phase (master §5.7); the whole phase reverts only if the *phase as a whole* can't reach done.
 - Branch in the main repo (per user direction — no separate worktree); surgical commits by path.
 - Human checkpoints: approve spec→plan, plan→impl, impl→merge for each sub-phase; controller runs `npm run preflight` immediately before each merge.

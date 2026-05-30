@@ -561,12 +561,12 @@ Every phase runs the same adversarial cycle, identical to backend Phases B–L:
 
 ```
 brainstorm spec    →  review-spec     →  synthesize-spec-review (round N)
-                          ↻ loop until clean
+                          ↻ repeat at orchestrator's discretion
                    →  writing-plans   →  review-plan    →  synthesize-plan-review (round N)
-                                            ↻ loop until clean
+                                            ↻ repeat at orchestrator's discretion
                    →  executing-plans (or subagent-driven-development)
                    →  review-impl     →  synthesize-impl-review (round N)
-                                            ↻ loop until clean
+                                            ↻ repeat at orchestrator's discretion
                    →  merge to master, delete branch
 ```
 
@@ -579,7 +579,7 @@ brainstorm spec    →  review-spec     →  synthesize-spec-review (round N)
 ### 5.2 Review rounds
 
 - Spec, plan, and impl each get **at least one** review round.
-- Additional rounds until findings are at `nit` severity or below.
+- **Whether to run additional rounds is the orchestrator's (human's) judgement** — not an automatic loop to a fixed severity bar.
 - Backend pattern of "fresh-eyes review" applies: a different agent (or a clean-context agent) does the review than wrote the artifact.
 
 ### 5.3 Preflight gates per phase
