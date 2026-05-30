@@ -8,7 +8,6 @@ import Customers from "./pages/Customers";
 import Deals from "./pages/Deals";
 import Insights from "./pages/Insights";
 import Login from "./pages/Login";
-import MarketResearch from "./pages/MarketResearch";
 import MissionControl from "./pages/MissionControl";
 import NotFound from "./pages/NotFound";
 import Reports from "./pages/Reports";
@@ -20,9 +19,11 @@ import TenantSelection from "./pages/TenantSelection";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import MarketResearchPage from "@/features/market-research/pages/MarketResearchPage";
 import { ProtectedRoute, SidebarProvider } from "@/features/shell";
 import { queryClient } from "@/shared/api/queryClient";
 import { AuthProvider } from "@/shared/auth";
+import { FeatureErrorBoundary } from "@/shared/components";
 import { TenantProvider } from "@/shared/tenant";
 
 const App = () => (
@@ -128,7 +129,9 @@ const App = () => (
                   path="/your-ai-team/scout/:tab"
                   element={
                     <ProtectedRoute requireTenant>
-                      <MarketResearch />
+                      <FeatureErrorBoundary featureName="Market Research">
+                        <MarketResearchPage />
+                      </FeatureErrorBoundary>
                     </ProtectedRoute>
                   }
                 />
