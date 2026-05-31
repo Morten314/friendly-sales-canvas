@@ -25,8 +25,8 @@ describe("market-research contracts", () => {
   });
 
   it("rejects a non-object data field", () => {
-    expect(() =>
-      ResearchComponentSchema.parse({ status: "success", data: "string" }),
-    ).toThrow(ZodError);
+    expect(() => ResearchComponentSchema.parse({ status: "success", data: "string" })).toThrow(
+      ZodError,
+    );
   });
 });

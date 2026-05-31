@@ -10,8 +10,7 @@ export const RESEARCH_COMPONENTS = {
   competitor: "competitor landscape",
   marketEntry: "market entry & growth strategy",
 } as const;
-export type ResearchComponentName =
-  (typeof RESEARCH_COMPONENTS)[keyof typeof RESEARCH_COMPONENTS];
+export type ResearchComponentName = (typeof RESEARCH_COMPONENTS)[keyof typeof RESEARCH_COMPONENTS];
 
 /** Fetch one research component (POST `/market-research`). The backend `MarketRequest`
  *  REQUIRES `user_id` and `data`; `org_id` and `refresh` are optional. `data` carries the

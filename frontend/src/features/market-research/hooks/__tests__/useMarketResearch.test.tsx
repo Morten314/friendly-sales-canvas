@@ -28,10 +28,9 @@ const COMPONENT = RESEARCH_COMPONENTS.marketSize; // "market size & opportunity"
 describe("useResearchComponent", () => {
   it("fetches and returns parsed data from the MSW handler", async () => {
     const { Wrapper } = wrapper();
-    const { result } = renderHook(
-      () => useResearchComponent(USER_ID, ORG_ID, COMPONENT),
-      { wrapper: Wrapper },
-    );
+    const { result } = renderHook(() => useResearchComponent(USER_ID, ORG_ID, COMPONENT), {
+      wrapper: Wrapper,
+    });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data?.status).toBe("success");
     expect(result.current.data?.data).toMatchObject({
@@ -53,10 +52,9 @@ describe("useResearchComponent", () => {
       }),
     );
     const { Wrapper } = wrapper();
-    const { result } = renderHook(
-      () => useResearchComponent("", ORG_ID, COMPONENT),
-      { wrapper: Wrapper },
-    );
+    const { result } = renderHook(() => useResearchComponent("", ORG_ID, COMPONENT), {
+      wrapper: Wrapper,
+    });
     // Give React Query a tick to attempt the query (it should not).
     await act(async () => {
       await new Promise((r) => setTimeout(r, 50));

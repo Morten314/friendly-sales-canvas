@@ -1,9 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import {
-  fetchResearchComponent,
-  type ResearchComponentName,
-} from "../services/marketResearch";
+import { fetchResearchComponent, type ResearchComponentName } from "../services/marketResearch";
 
 import { qk } from "@/shared/api/queryKeys";
 
@@ -35,10 +32,7 @@ export function useRegenerateResearch(userId: string, orgId: string) {
       // active, so invalidate would mark it stale and fire a SECOND background
       // POST (`refresh:false`) through the 30/min limiter, which can also
       // overwrite the just-regenerated report with a server-stale one. See ADR-0004.
-      queryClient.setQueryData(
-        qk.marketResearchComponent(orgId, componentName),
-        data,
-      );
+      queryClient.setQueryData(qk.marketResearchComponent(orgId, componentName), data);
     },
   });
 }

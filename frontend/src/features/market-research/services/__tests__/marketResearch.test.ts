@@ -5,10 +5,7 @@ import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ZodError } from "zod";
 
-import {
-  fetchResearchComponent,
-  RESEARCH_COMPONENTS,
-} from "../marketResearch";
+import { fetchResearchComponent, RESEARCH_COMPONENTS } from "../marketResearch";
 
 import { server } from "@/test/msw/server";
 
@@ -18,10 +15,7 @@ afterEach(() => {
 
 describe("fetchResearchComponent", () => {
   it("returns a parsed ResearchComponentResponse from the shipped MSW handler", async () => {
-    const result = await fetchResearchComponent(
-      "user-abc",
-      RESEARCH_COMPONENTS.marketSize,
-    );
+    const result = await fetchResearchComponent("user-abc", RESEARCH_COMPONENTS.marketSize);
 
     // Response envelope must parse: { status, data }
     expect(result.status).toBe("success");
