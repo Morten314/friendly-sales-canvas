@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **REWRITTEN 2026-05-31 after the R1 escape hatch.** The pre-R1 version of this plan assumed 5b had rewired the page onto TanStack hooks. It had not — 5b's page→hooks rewire was **descoped** (TD-FE-19), and a Task-0 inventory found three more false premises. The spec was reconciled (Spec 24 round 5; §9 delta 7) and **this plan is rewritten to match**: 5c is now **structural-only**. See `docs/reviews/24c-frontend-phase-5c-R1-escape-hatch-findings.md` for the full findings this rewrite encodes.
+> **REWRITTEN 2026-05-31 after the R1 escape hatch.** The pre-R1 version of this plan assumed 5b had rewired the page onto TanStack hooks. It had not — 5b's page→hooks rewire was **descoped** (TD-FE-19), and a Task-0 inventory found three more false premises. The spec was reconciled (Spec 24 round 5; §9 delta 7) and **this plan is rewritten to match**: 5c is now **structural-only**. See `docs/reviews/24c-frontend-phase-5c-R1-escape-hatch-findings.md` for the full findings this rewrite encodes. **`docs/reviews/24c-…-plan-review-{1,2}.md` + their syntheses critiqued the PRE-R1 plan and are superseded; review of this document resumes at round 3.**
 
 **Goal:** Break `MarketResearchPage.tsx` (7,013 LOC, ~76 `useState`, 9 raw `fetch`, 24 `useEffect`) into a thin routed shell + per-tab containers — **without rewiring its data layer**. The page's existing raw-`fetch` + `useState` server-data flow (which is editable/cascade/timestamp state, not plain server cache — TD-FE-19) **moves into `IntelligenceTab` unchanged**; per-section hook conversion is deferred to 5d–5h. Replace the bespoke `SafeMarketIntelligenceTab` wrapper with `<FeatureErrorBoundary>` **while preserving its prop-sanitization**, and **extract the inline `analysis` (lead-stream) tab into the self-contained legacy unit** at `src/components/market-research/lead-stream/` (annotated → customers/Phase 7), injecting its cross-tab/nav/Strategist coordination as **shell-owned callback props** so the legacy unit imports no feature code.
 
@@ -71,24 +71,37 @@ No commit.
 - Test: `frontend/src/features/market-research/components/intelligence/__tests__/IntelligenceTab.test.tsx`
 
 > Spec 24 §5 (structural-only), §2.1. The intelligence tab is the **only** genuine market-research tab. This is the **largest** task: `IntelligenceTab` absorbs the intelligence-tab JSX **plus the page's market-research data layer** — the 9 raw `fetch` sites, the six editable data `useState`s (`marketData`, `marketIntelligenceData`, `industryTrendsData`, `regulatoryData`, `competitorData`, `marketEntryData`), their cascade/timestamp-merge logic (`isTimestampNewer`, `data: previousContext`), the `CACHE_DURATION` localStorage cache + `save*ToLocalStorage` helpers, the per-section editing/expand/edit-history `useState`s, and the intelligence-only `useEffect`s. **Move it as-is. Do NOT convert any of it to the 5b hooks** — that is 5d–5h (TD-FE-19). `IntelligenceTab` will be large; that is expected and fine (it gets decomposed section-by-section in 5d–5h).
+>
+> **Task 1 is a PURE MOVE.** It keeps rendering the intelligence content via the **existing `SafeMarketIntelligenceTab`** wrapper (lifted verbatim) — the Safe→`FeatureErrorBoundary` swap + sanitization extraction is **Task 2's** single concern. This guarantees behavior is provably identical at the Task 1 commit (sanitization intact, same wrapper, same markup) and keeps the two tasks one-concern each. The reviewer of Task 1 audits a **"moved, not modified"** diff: confirm every lifted block is byte-identical modulo import-path rewrites and the `props` object now assembled inside `IntelligenceTab` — **no** behavior edited in transit.
 
 - [ ] **Step 1: Write the failing render test** — mount `<IntelligenceTab>` (with whatever props/providers it ends up needing — at minimum a router context, since it renders nav-aware children) and assert it renders the intelligence surface (e.g. a known section heading or the "Load Data" CTA branch) without crashing. Use MSW for any fetch the moved data layer fires on mount. Run it; confirm it **fails** (component doesn't exist yet).
 
-- [ ] **Step 2: Create `IntelligenceTab.tsx`** — lift, from the page into this container:
-  - the `intelligence`-tab JSX subtree (page L6525–6914): the `marketData ? <intelligence content> : <Load Data CTA>` branch, **but render `MarketIntelligenceSections` directly** (not via the deleted Safe/MarketIntelligenceTab wrappers — see Task 2) plus the `EditHistoryPanel`s it composes;
+- [ ] **Step 2: Verify the shell-retained handlers don't read the data being moved.** The three handlers that **stay** in the page shell (Task 3 — `handleChatWithScout`/`handleChatAboutCoverage`/`handleSendToStrategist`) must not depend on any of the six data states / fetch results moving into `IntelligenceTab`, or moving that data breaks them here:
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence/frontend
+P=src/features/market-research/pages/MarketResearchPage.tsx
+# print the three handler bodies and eyeball them for references to the moved data:
+sed -n '401,412p;1553,1583p' "$P"
+grep -nE 'marketData|marketIntelligenceData|industryTrendsData|regulatoryData|competitorData|marketEntryData' "$P" | sed -n '1,40p'
+```
+  If a handler reads a moved data state, that data is **shared** (not intelligence-local) — STOP and report; the move needs the data hoisted to the shell or passed back, not buried in `IntelligenceTab`. (Task 0 found the handlers touch only `scoutResearchContext`/`scoutMode`/nav/`localStorage`, so this should come back clean — it's confirmation, not exploration.)
+
+- [ ] **Step 3: Create `IntelligenceTab.tsx`** — lift, from the page into this container:
+  - the `intelligence`-tab JSX subtree (page L6525–6914): the `marketData ? <intelligence content> : <Load Data CTA>` branch rendered via the **existing `<SafeMarketIntelligenceTab .../>`** call (lifted verbatim, importing Safe from `@/features/market-research/components/SafeMarketIntelligenceTab` — Task 2 replaces it) plus the `EditHistoryPanel`s it composes;
   - **the market-research data layer**: the 9 raw `fetch` sites + `buildApiUrl` calls, the six editable data `useState`s + their initializers (`getInitial*Data`), the cascade/timestamp-merge logic, the `CACHE_DURATION` cache + `save*ToLocalStorage`/`getUserLocalStorage` helpers, the loading/error/refresh `useState`s + `useEffect`s that drive intelligence;
+  - **the window-global refresh-coordination helpers**: the `declare global { interface Window { refreshStartTime?, getAllScoutComponentResponses?, getScoutResponses? } }` augmentation (page L59–65) **and** every `window.refreshStartTime` / `window.getAllScoutComponentResponses` / `window.getScoutResponses` assignment/read — these belong to the refresh layer and must move **with** it (leaving the `declare global` behind → TS error; leaving the assignments behind → silent no-op). First `grep -rn 'getAllScoutComponentResponses\|getScoutResponses\|refreshStartTime' src` to confirm nothing **outside** the page reads them; if something does, keep the `declare global` in a shared location and note it;
   - the per-section ephemeral `useState`s (editing/expanded/hasEdits/deletedSections/editHistory/customMessage/showScoutChat/loading/error for marketSize, industryTrends, competitor, regulatory, marketEntry) + their handlers.
 
   Keep all markup and behavior **identical** (behavioral + visual parity via `journeys/04`). The container reads nothing from the shell except what the intelligence surface genuinely needs; it does **not** receive the analysis/trends state. Imports come from the page's existing import set (move them with the code).
 
-- [ ] **Step 3: Replace the page's intelligence branch with `<IntelligenceTab />`** — in `MarketResearchPage.tsx`, replace the L6525–6914 subtree with `<IntelligenceTab />` and remove every `useState`/handler/`useEffect`/helper/import that moved into the container (and now has zero remaining page references). Leave the analysis + trends branches and their state in place (Tasks 3/4). After this step the page still holds: tab routing, the analysis tab + its handlers/filters, the trends out-of-band block + `scoutResearchContext`/`scoutMode`/`signalsChatContext`, and the `Layout` wrapper.
+- [ ] **Step 4: Replace the page's intelligence branch with `<IntelligenceTab />`** — in `MarketResearchPage.tsx`, replace the L6525–6914 subtree with `<IntelligenceTab />` and remove every `useState`/handler/`useEffect`/helper/import (including the `declare global` block + `window.*` refresh code) that moved into the container and now has zero remaining page references. Leave the analysis + trends branches and their state in place (Tasks 3/4). After this step the page still holds: tab routing, the analysis tab + its handlers/filters, the trends out-of-band block + `scoutResearchContext`/`scoutMode`/`signalsChatContext`, and the `Layout` wrapper.
 
-- [ ] **Step 4: Green + commit**
+- [ ] **Step 5: Green + commit**
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
 npx eslint --fix src && npm run lint && npx tsc --noEmit -p tsconfig.app.json && npm run test
 ```
-> Task 1 is the first (and largest) extraction from the monolithic page, so it runs the **full** `npm run test` suite — a tab-routing or render-branch regression surfaces here, not one task later. `knip` is deferred to Tasks 2/3/4 (the page still imports the to-be-removed wrappers until Task 2).
+> Task 1 is the first (and largest) extraction from the monolithic page, so it runs the **full** `npm run test` suite — a tab-routing or render-branch regression surfaces here, not one task later. `knip` is intentionally **not** run at Task 1: `IntelligenceTab` still imports `SafeMarketIntelligenceTab` (the swap is Task 2), so nothing is orphaned yet. (Note: per Spec 24 §7 / `knip.json`'s `entry`-makes-every-file-a-production-entry config, knip does **not** report unused *files* in this repo anyway — it catches unused *exports*; Task 2's knip run guards the post-deletion export graph.)
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
 git add frontend/src/features/market-research/components/intelligence/IntelligenceTab.tsx \
@@ -108,7 +121,7 @@ git commit -m "refactor(fe): extract IntelligenceTab container (data layer moved
 - Delete: `frontend/src/features/market-research/components/SafeMarketIntelligenceTab.tsx`
 - Delete: `frontend/src/features/market-research/components/MarketIntelligenceTab.tsx` (only importer was Safe)
 
-> Spec 24 §5, §2.3. **Prerequisite: Task 1 (IntelligenceTab exists).** The bespoke wrapper is replaced by the shared boundary — **but `SafeMarketIntelligenceTab` is not just an error wrapper**; it performs real recursive prop-sanitization (Set preservation, object→array coercion, render-unsafe-object stringification, function-prop restore) before rendering `MarketIntelligenceSections`. A blind swap drops that. Preserve it by extracting it to a tested pure function.
+> Spec 24 §5, §2.3. **Prerequisite: Task 1 (IntelligenceTab exists and renders via the lifted `SafeMarketIntelligenceTab`).** This task does the swap Task 1 deliberately deferred: replace the bespoke wrapper with the shared boundary — **but `SafeMarketIntelligenceTab` is not just an error wrapper**; it performs real recursive prop-sanitization (Set preservation, object→array coercion, render-unsafe-object stringification, function-prop restore) before rendering `MarketIntelligenceSections`. A blind swap drops that. Preserve it by extracting it to a tested pure function. Because Task 1 kept Safe intact, **the sanitization is never absent from a committed state** — Task 1 has it via Safe, Task 2 has it via the extracted helper.
 
 - [ ] **Step 1: Write a characterization test for the extracted sanitizer (TDD).** Before moving the logic, pin its behavior so the move is provably faithful. Create `__tests__/sanitizeIntelligenceProps.test.ts` asserting the four behaviors that the inline `JSON.parse(JSON.stringify(...))` round-trip is easy to break:
 ```ts
@@ -145,7 +158,7 @@ describe("sanitizeIntelligenceProps", () => {
 ```
   Run it — it **fails** (`sanitizeIntelligenceProps` doesn't exist yet). The exact prop names (`onRefreshComponent`, `companyProfile`, etc.) must match `MarketIntelligenceTabProps`; if the field shapes differ, adjust the factory to real fields while keeping the four assertions.
 
-- [ ] **Step 2: Move the sanitization into `IntelligenceTab` and wrap in `<FeatureErrorBoundary>`.** The former `SafeMarketIntelligenceTab` is **not** a trivial null-default guard — it runs real defensive logic that must be **preserved verbatim**: (a) a `console.error` scan for "problematic objects" (`checkForObjects`), (b) `companyProfile.targetMarkets` object→array coercion, (c) a recursive `JSON.parse(JSON.stringify(fixedProps, replacer))` sanitization where the replacer converts `Set`→array and `JSON.stringify`s render-unsafe objects (`{channel|channelMix|trigger|description}`) while preserving `industryTrendsRegionalHotspots` as an object, (d) function-prop capture-and-restore around that round-trip, and (e) rebuilding the four `*DeletedSections` props back into `Set`s. **Extract this whole block into a local helper** so it's a faithful move, not a rewrite — create `frontend/src/features/market-research/components/intelligence/sanitizeIntelligenceProps.ts` exporting `sanitizeIntelligenceProps(props: MarketIntelligenceTabProps): MarketIntelligenceTabProps` containing the exact body of the former Safe component (lines 9–127 of the deleted file — the `checkForObjects`/`fixedProps`/`sanitizeProps`/`functionProps`/`sanitizedProps`/`deletedSectionsKeys` logic), returning `sanitizedProps`. Then in `IntelligenceTab`:
+- [ ] **Step 2: Replace the `<SafeMarketIntelligenceTab>` call (lifted in Task 1) with the extracted sanitizer + `<FeatureErrorBoundary>`.** The former `SafeMarketIntelligenceTab` is **not** a trivial null-default guard — it runs real defensive logic that must be **preserved verbatim**: (a) a `console.error` scan for "problematic objects" (`checkForObjects`), (b) `companyProfile.targetMarkets` object→array coercion, (c) a recursive `JSON.parse(JSON.stringify(fixedProps, replacer))` sanitization where the replacer converts `Set`→array and `JSON.stringify`s render-unsafe objects (`{channel|channelMix|trigger|description}`) while preserving `industryTrendsRegionalHotspots` as an object, (d) function-prop capture-and-restore around that round-trip, and (e) rebuilding the four `*DeletedSections` props back into `Set`s. **Extract this whole block into a local helper** so it's a faithful move, not a rewrite — create `frontend/src/features/market-research/components/intelligence/sanitizeIntelligenceProps.ts` exporting `sanitizeIntelligenceProps(props: MarketIntelligenceTabProps): MarketIntelligenceTabProps` containing the exact body of the former Safe component (lines 9–127 of the deleted file — the `checkForObjects`/`fixedProps`/`sanitizeProps`/`functionProps`/`sanitizedProps`/`deletedSectionsKeys` logic), returning `sanitizedProps`. Then in `IntelligenceTab`:
 ```tsx
 import { FeatureErrorBoundary } from "@/shared/components";
 import { sanitizeIntelligenceProps } from "./sanitizeIntelligenceProps";
@@ -243,31 +256,42 @@ git commit -m "refactor(fe): extract analysis lead-stream tab into legacy unit w
 
 > Spec 24 §5, §2.1, §9 delta 6. **Prerequisite: Tasks 1, 3.** `trends` renders **Scout chat** (`ChatWithScout` / `ScoutChatWithHistory`) — both legacy/leaving. `TrendsTab` is a **thin router** over those legacy components (transitional import), not a genuine MR view. **The real trends chat renders OUT OF BAND** (page ~L6494–6511, above the `<Tabs>` body, gated on `activeTab === "trends"`) — **not** in the empty `hidden` `TabsContent value="trends"` (L6930–6933). `TrendsTab` lifts the out-of-band block; the empty placeholder is removed.
 
-- [ ] **Step 1: Create `TrendsTab.tsx`** rendering the lifted out-of-band `trends` block. It receives the shared cross-tab state as props (finalized in Task 5):
+- [ ] **Step 1a: Name the `scoutResearchContext` type.** The page declares it as an inline `useState<{…}>` literal (page L392) — there is no named type to import. Extract that exact object shape to a named type so both the page and `TrendsTab` reference one source: add `export interface ScoutResearchContext { /* the exact fields from the page L392 useState generic */ }` to `frontend/src/features/market-research/types.ts`, and change the page's `useState<…>` to `useState<ScoutResearchContext | null>`. (Copy the field list verbatim from the page's current generic — do not invent fields.)
+
+- [ ] **Step 1b: Create `TrendsTab.tsx`** rendering the lifted out-of-band `trends` block. It receives the shared cross-tab state as props (finalized in Task 5):
 ```tsx
+import type { ScoutResearchContext } from "@/features/market-research/types";
+import type { SignalsChatContext } from "@/components/signals/SignalsContextChat";
+
 // trends = Scout chat (Spec 24 §9 delta 6), NOT an emerging-trends view. This is a
 // feature-owned thin router over the LEAVING Scout-chat components (scout / signals),
 // kept until scout claims the chat surface. The components it renders are legacy.
 interface TrendsTabProps {
-  scoutResearchContext: /* the page's scoutResearchContext type */ ...;
+  scoutResearchContext: ScoutResearchContext | null;
   scoutMode: "selected-leads" | "full-list";
-  signalsChatContext: SignalsChatContext | null;
-  onClearSignalsChatContext: () => void; // wraps sessionStorage.removeItem("signalsChatContext") + setSignalsChatContext(null)
 }
 // renders:
 //   scoutResearchContext
 //     ? <ChatWithScout fullPage researchContext={scoutResearchContext} mode={scoutMode} />
-//     : <ScoutChatWithHistory initialContext={signalsChatContext} onConsumeContext={onClearSignalsChatContext} ... />
+//     : <ScoutChatWithHistory initialContext={signalsChatContext} onConsumeContext={clearSignalsChatContext} ... />
+// where signalsChatContext + its load/clear are OWNED INTERNALLY (see Step 1c), not props.
 ```
-  `ChatWithScout` imports from `@/components/market-research/ChatWithScout` (legacy/leaving), `ScoutChatWithHistory` from `@/components/signals/ScoutChatWithHistory` (non-MR). Carry the `signalsChatContext` sessionStorage handoff behavior (the `useEffect` at page L414–430 that reads `sessionStorage.getItem("signalsChatContext")` when `activeTab === "trends"`) — decide in Step 2 whether that effect lives in `TrendsTab` (preferred — it's trends-local) or stays in the shell; if it moves, move `signalsChatContext`'s `useState` with it and drop it from the props.
+  `ChatWithScout` imports from `@/components/market-research/ChatWithScout` (legacy/leaving), `ScoutChatWithHistory` from `@/components/signals/ScoutChatWithHistory` (non-MR).
 
-- [ ] **Step 2: Route the page's `trends` branch to `<TrendsTab/>`.** Replace the out-of-band block (L6494–6511) with `<TrendsTab .../>` passing the shared state, and **remove the empty `TabsContent value="trends"` placeholder** (L6930–6933). The page still holds `scoutResearchContext`/`scoutMode` `useState` at this point (rehomed in Task 5). If Step 1 moved `signalsChatContext` + its effect into `TrendsTab`, remove them from the page here.
+- [ ] **Step 1c: Move `signalsChatContext` into `TrendsTab` (decided — not left in-flight).** The `signalsChatContext` `useState` (page L391) + its loader effect (page L414–430, which reads `sessionStorage.getItem("signalsChatContext")` *gated on* `activeTab === "trends"`) + its clear (`sessionStorage.removeItem` + `setSignalsChatContext(null)`) all move **into** `TrendsTab` and become its internal state — `signalsChatContext` has a single consumer (the trends chat), so it needs no hoist, just relocation. **Precondition to verify in Step 2:** the out-of-band branch must *mount/unmount* `TrendsTab` on tab change (not hide it with CSS) — only then does mounting `TrendsTab` exclusively when trends is active make the `activeTab === "trends"` guard implicit and behavior-equivalent. If the branch instead keeps `TrendsTab` always-mounted and CSS-hidden, **keep the `activeTab` guard inside `TrendsTab`** (pass `isActive` as a prop) so the effect still only runs for trends. Confirm which, then implement accordingly.
+
+- [ ] **Step 2: Route the page's `trends` branch to `<TrendsTab/>`.** Replace the out-of-band block (L6494–6511) with `<TrendsTab scoutResearchContext={scoutResearchContext} scoutMode={scoutMode} />` (plus `isActive` if Step 1c found the branch keeps `TrendsTab` always-mounted), and **remove the empty `TabsContent value="trends"` placeholder** (L6930–6933). The page still holds `scoutResearchContext`/`scoutMode` `useState` at this point (rehomed in Task 5). Remove the page's `signalsChatContext` `useState` + its loader effect (they moved into `TrendsTab` in Step 1c).
 
 - [ ] **Step 3: Green + commit**
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
+# Guard against the repo's known false-green: a stale vite preview/dev server on the E2E port
+# + Playwright reuseExistingServer can test the OLD build (TD/repo memory: orphan-preview false-green).
+# Kill any orphan server on the E2E port BEFORE the journey so it tests the build under change.
+( lsof -ti tcp:5173 | xargs -r kill ) 2>/dev/null; ( lsof -ti tcp:4173 | xargs -r kill ) 2>/dev/null; true
 npx eslint --fix src && npm run lint && npx tsc --noEmit -p tsconfig.app.json && npm run test && npx knip --strict --no-progress && npx playwright test journeys/04
 ```
+> **Orphan-server guard (required).** This repo has a documented false-green: `reuseExistingServer` + a stale `:5173`/`:4173` server → Playwright silently tests the previous build and reports green. Since `journeys/04` is this plan's load-bearing parity signal, the kill-orphan step above runs first. Confirm the playwright config's `webServer` port matches the ports killed; adjust if the E2E server uses a different port.
 > Task 4 is the **last structural extraction** — all three tab containers now exist and the page is at its most-changed before the Task 5 state finalization. This is the single mid-sub-phase `journeys/04` checkpoint: it isolates any tab-routing/extraction regression (`marketintelligence`/`leadstream`/`chatwithscout` segments) *before* the state rewrite, so a Task 6 preflight red attributes to Task 5 rather than bisecting back through the extractions. (Spec §8's per-sub-phase cadence is still satisfied at Task 6; this run is a bisectability aid, not an added gate.) **If `journeys/04` reds and the cause is deep cross-tab coupling, invoke the R1 escape hatch** rather than fix-forward.
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
@@ -316,6 +340,9 @@ git commit -m "refactor(fe): thin MarketResearchPage shell; hoist scout cross-ta
 - [ ] **Step 1: Full preflight + behavioral parity**
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
+# Same orphan-server guard as Task 4 — preflight includes Playwright; a stale preview server
+# would produce a false-green on the parity check that gates the merge.
+( lsof -ti tcp:5173 | xargs -r kill ) 2>/dev/null; ( lsof -ti tcp:4173 | xargs -r kill ) 2>/dev/null; true
 npm run preflight
 ```
 Expected: PASS incl. `journeys/04`. The journey must still pass for all three URL segments (`marketintelligence`/`leadstream`/`chatwithscout`) — tab routing and the intelligence / lead-stream / scout-chat surfaces render the same as before. **If it reds**, investigate tab-routing/extraction; if the cause is deep cross-tab coupling, invoke the R1 escape hatch (revert 5c, replan — master §5.7) rather than fix-forward.
