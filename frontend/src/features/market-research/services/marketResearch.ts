@@ -14,7 +14,9 @@ export type ResearchComponentName = (typeof RESEARCH_COMPONENTS)[keyof typeof RE
 
 /** Fetch one research component (POST `/market-research`). The backend `MarketRequest`
  *  REQUIRES `user_id` and `data`; `org_id` and `refresh` are optional. `data` carries the
- *  org/context fields the LLM needs — the page currently sends `data: {}` (empty). NO
+ *  org/context fields the LLM needs: the legacy page's per-component fetchers pass a cascade
+ *  `previousContext` here (not `{}`); only its all-components cascade sends `{}`. Callers pass
+ *  `data` accordingly — 5d–5h decide whether to preserve the cascade (see plan 24b §9). NO
  *  `_cache_bust`/`_cb`/`_r` — memory-only cache replaces hand-rolled busting (ADR-0004).
  *  There is no load-all endpoint: the page hydrates by calling this once per component. */
 export function fetchResearchComponent(
