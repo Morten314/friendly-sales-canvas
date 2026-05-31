@@ -110,3 +110,29 @@ spec-level decision, not just a plan edit.
 ## Next step
 Revise `plans/24c-...md` per the confirmed direction, then re-run `/review-plan` →
 `/synthesize-plan-review` before implementation resumes.
+
+---
+
+# R1 escape hatch — EVENT #2 (2026-05-31, at implementation start)
+
+**Decided by:** human (akgaurav@hotmail.com) — "Rethink the cut" → ground-first → **Full data+edit hook (A)**.
+**Branch:** `phase-5c-page-decomposition` — still **no implementation commits** (nothing to revert).
+
+## What fired it
+Event #1 resolved by rewriting plan 24c to move the data layer **into `IntelligenceTab`** (Spec §9 delta 7). When the Task-1 implementer began, it stopped **BLOCKED** before writing code: the data layer is **not intelligence-local**. A verified read-only inventory (`docs/reviews/24c-frontend-phase-5c-data-layer-inventory.md`) confirmed:
+
+- **`marketData` / `isRefreshing` / `isInitialLoading`** are read by **shell chrome** outside all `TabsContent` — the page-level status banners (error alert L6322, cache-age alert L6341), the opacity wrapper L6518, the `!isRefreshing` gate L6523, and the refresh `<Dialog open={isRefreshing}>` L6966 (after `</Tabs>`). Two live `fetchMarketData()` onClicks straddle the boundary (shell early-return Retry L6081 + intelligence Load-Data L6905).
+- **`editHistory`** is read by the **trends** tab (L6507 → `ScoutChatWithHistory`) **and** the intelligence content (L6552/6882) → genuinely cross-tab.
+- One fetch/cascade engine (`fetchMarketData`/`smartRefresh`, L2025–2760) writes **all six** data states together, so they cannot be split per-tab.
+
+Therefore moving the data layer into `IntelligenceTab` would strand the shell chrome + the trends `editHistory` — it can't live inside one tab. (Correction to the implementer's report: the in-page refresh `<Button onClick={handleRefresh}>` at L6381–6429 it cited is inside a **JSX comment** — dead; the live refresh path is `handleRefresh` via `handleRefreshRef` from a custom-event listener at ~L4426. The conclusion stands regardless.)
+
+## Resolution: hook-first re-cut (Spec §9 delta 8)
+Re-sequence so the data layer is extracted **first** into a `useMarketResearchData()` custom hook (structural move, **no** TanStack rewire), which the shell calls **once** and threads to the tabs as props; **then** decompose the tabs. Boundary = **full data+edit hook** (6 data states + lifecycle + fetch/cache/cascade/refresh engine + per-section edit state + cross-tab `editHistory`). **Dead code dropped, not migrated:** `componentRenderingStatus` (L653, unread), the commented refresh `Button` (L6367–6469), dead effects (L1708, L2251–2256).
+
+New plan task order: **1** extract `useMarketResearchData` → **2** IntelligenceTab (data via props) → **3** Safe→FeatureErrorBoundary → **4** analysis→legacy LeadStreamTab → **5** TrendsTab → **6** thin shell → **7** preflight/handoff.
+
+Net master-plan effect: none beyond delta 7 — still structural-only; TanStack conversion still 5d–5h. `useMarketResearchData` ≠ 5b's `useMarketResearch` (the future TanStack target adopted inside it by 5d–5h).
+
+## Next step (event #2)
+Re-run the plan-review loop on the hook-first `plans/24c-...md` (review files resume fresh), then resume subagent-driven implementation from Task 1.
