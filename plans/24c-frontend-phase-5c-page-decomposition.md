@@ -162,9 +162,9 @@ return (
   </FeatureErrorBoundary>
 );
 ```
-  This also folds in the trivial wrapper `<div>` that the deleted `MarketIntelligenceTab` provided (split-view width + `space-y-6`), so deleting `MarketIntelligenceTab` in Step 2 loses no markup. **Boundary granularity criterion:** wrap at the section-composition level inside `IntelligenceTab` (default — one section's crash doesn't blank the whole tab, and it isolates failures the route-level 5a boundary would otherwise escalate to a full-feature blank). The route-level `<FeatureErrorBoundary featureName="Market Research">` at `App.tsx:132` stays as the outer net; this is the inner one (note the distinct `featureName` so the two fallbacks are distinguishable). The former Safe wrapped in the generic `@/components/common/ErrorBoundary`; swapping to `<FeatureErrorBoundary>` is the intended §2.3 change — the *sanitization* is what must survive, not that specific boundary component.
+  This also folds in the trivial wrapper `<div>` that the deleted `MarketIntelligenceTab` provided (split-view width + `space-y-6`), so deleting `MarketIntelligenceTab` in Step 3 loses no markup. **Boundary granularity criterion:** wrap at the section-composition level inside `IntelligenceTab` (default — one section's crash doesn't blank the whole tab, and it isolates failures the route-level 5a boundary would otherwise escalate to a full-feature blank). The route-level `<FeatureErrorBoundary featureName="Market Research">` at `App.tsx:132` stays as the outer net; this is the inner one (note the distinct `featureName` so the two fallbacks are distinguishable). The former Safe wrapped in the generic `@/components/common/ErrorBoundary`; swapping to `<FeatureErrorBoundary>` is the intended §2.3 change — the *sanitization* is what must survive, not that specific boundary component.
 
-- [ ] **Step 2: Delete `SafeMarketIntelligenceTab` and `MarketIntelligenceTab`.** Confirm no remaining importers first, then remove:
+- [ ] **Step 3: Delete `SafeMarketIntelligenceTab` and `MarketIntelligenceTab`.** Confirm no remaining importers first, then remove:
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
 grep -rn 'SafeMarketIntelligenceTab' src   # expect: NO output after IntelligenceTab no longer imports it
@@ -174,7 +174,7 @@ git rm frontend/src/features/market-research/components/SafeMarketIntelligenceTa
 ```
   > If either grep returns a live importer you didn't expect, STOP and report — the deletion premise (Task 0: "only importer is Safe") no longer holds. Do **not** delete `MarketIntelligenceSections` or `MarketIntelligenceTabProps.ts` (5d–5h need them).
 
-- [ ] **Step 3: Green (incl. knip — no orphaned exports) + commit**
+- [ ] **Step 4: Green (incl. knip — no orphaned exports) + commit**
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
 npm run lint && npx tsc --noEmit -p tsconfig.app.json && npx knip --strict --no-progress && npm run test
