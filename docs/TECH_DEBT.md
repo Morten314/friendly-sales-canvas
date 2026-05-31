@@ -804,3 +804,21 @@ The 5a whole-dir import trace found 8 files in `src/components/market-research/`
 Spec 24 §7 (sub-phase 5i). Earlier only if one of these files becomes a build/parity liability before 5i.
 
 **Owner:** TBD.
+
+---
+
+## TD-FE-19 — market-research page still runs raw fetch + localStorage cache (5b page-rewire deferred)
+
+**Date logged:** 2026-05-31
+**Origin:** Plan 24b Phase 5b (plans/24b-frontend-phase-5b-data-layer.md), Task 6 — descoped during execution.
+
+**Current state:**
+5b built the market-research data layer (feature-local `contracts.ts`, `services/marketResearch.ts`, `hooks/useMarketResearch.ts`, `qk.marketResearchComponent`, MSW handlers) and corrected the E2E mock envelope to `{ status, data }`. But the page itself (`src/features/market-research/pages/MarketResearchPage.tsx`, ~7k LOC) was **not** rewired: it still holds 9 raw `fetch(` sites, the `CACHE_DURATION` 5-min localStorage cache, the `?_cb&_r` cache-busting, and the `save*ToLocalStorage` helpers. The plan's Task 6 Step 1(c) ("delete the server-data `useState`s; the hook now owns that data") was found false during execution: the six data `useState`s are **editable UI state**, not server caches — the per-component fetchers send `data: previousContext` for cascading, responses are reconciled by timestamp-merge (`isTimestampNewer`), and the states carry ~113 `setX` callsites plus full edit-history. The flat hooks model none of this; deleting the states would destroy edit/cascade/timestamp features.
+
+**What it should be:**
+The page-level raw `fetch` + localStorage-cache removal moves to **5c (page decomposition)** and **5d–5h (section extraction)**. As each section is extracted to consume `useResearchComponent`/`useRegenerateResearch`, its slice of the editable-state/cascade/timestamp logic moves with it (or is intentionally dropped per its section plan), and the corresponding page `fetch` + cache machinery is deleted then. The data layer existing now already satisfies Spec 24 R3 (hooks precede section conversion).
+
+**Pull-forward trigger:**
+5c/5d–5h as each section converts; 24i confirms zero raw `fetch` + zero `CACHE_DURATION` remain in the feature at phase close. Earlier only if the legacy page cache causes a parity/regression issue. See ADR-0004 scope note.
+
+**Owner:** TBD.

@@ -31,15 +31,14 @@ test("market research page loads + auto-fetches first component", async ({ page 
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
-        component_name: componentName,
-        status: "completed",
-        result: {
+        status: "success",
+        data: {
+          component_name: componentName,
           title: `${componentName} (mocked)`,
           summary: `Mocked summary for ${componentName}.`,
           key_findings: ["Finding 1", "Finding 2", "Finding 3"],
           sources: [{ url: "https://example.test", title: "Source 1" }],
         },
-        cached: false,
       }),
     });
   });

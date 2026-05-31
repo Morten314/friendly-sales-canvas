@@ -3,4 +3,6 @@
 export const qk = {
   companyProfile: (orgId: string) => ["company-profile", orgId] as const,
   tenants: (userId: string | null | undefined) => ["tenants", userId ?? "anon"] as const,
+  marketResearchComponent: (orgId: string, componentName: string) =>
+    ["market-research", "component", orgId, componentName] as const,
 };

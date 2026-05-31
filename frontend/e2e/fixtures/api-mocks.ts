@@ -15,10 +15,13 @@ const apiMocks: Record<string, unknown> = {
   "/api/customer_profile": { profiles: [icp(), icp({ icp_id: "icp_002", name: "Fintech CFOs" })] },
   "/api/icp": { suggested: [{ icp_id: "sug_1", name: "Suggested", match_score: 0.8 }] },
   "/api/market-research": {
-    component_name: "market_size_opportunity",
-    status: "completed",
-    result: { title: "Market Size", summary: "Test summary", key_findings: [] },
-    cached: false,
+    status: "success",
+    data: {
+      component_name: "market size & opportunity",
+      title: "Market Size",
+      summary: "Test summary",
+      key_findings: [],
+    },
   },
   "/api/user-documents": { documents: [] },
 };
