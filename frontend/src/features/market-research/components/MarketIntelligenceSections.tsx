@@ -2,12 +2,12 @@ import React from "react";
 
 import CompetitorLandscapeSection from "./CompetitorLandscapeSection";
 import IndustryTrendsSection from "./IndustryTrendsSection";
-import MarketEntrySection from "./MarketEntrySection";
 import type { MarketIntelligenceTabProps } from "./MarketIntelligenceTabProps";
 import MarketSizeSection from "./MarketSizeSection";
 import RegulatoryComplianceSection from "./RegulatoryComplianceSection";
 
 import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
+import MarketEntrySection from "@/features/market-research/components/intelligence/market-entry/MarketEntrySection";
 
 type MarketIntelligenceSectionsProps = MarketIntelligenceTabProps;
 
