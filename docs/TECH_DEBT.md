@@ -822,3 +822,21 @@ The page-level raw `fetch` + localStorage-cache removal moves to **5c (page deco
 5c/5d–5h as each section converts; 24i confirms zero raw `fetch` + zero `CACHE_DURATION` remain in the feature at phase close. Earlier only if the legacy page cache causes a parity/regression issue. See ADR-0004 scope note.
 
 **Owner:** TBD.
+
+---
+
+## TD-FE-20 — market-research trends/scout-chat tab has no e2e behavioral coverage
+
+**Date logged:** 2026-06-01
+**Origin:** Plan 24c Phase 5c (plans/24c-frontend-phase-5c-page-decomposition.md), Task 5 — surfaced during the TrendsTab extraction review.
+
+**Current state:**
+`frontend/e2e/journeys/04-market-research-5-components.spec.ts` only `page.goto("/your-ai-team/scout/marketintelligence")` and asserts the 5-component market-intelligence load. It never clicks the `trends` (`chatwithscout`) `TabsTrigger` and never lands on the scout-chat surface, nor the `analysis` (`leadstream`) tab. So `journeys/04` is a behavioral parity guard for the **intelligence** tab only — the `trends` and `analysis` branches have no e2e coverage. This gap **pre-dates Phase 5** (the journey never covered those tabs) and was confirmed non-regressive at the 5c TrendsTab extraction (Task 5 verified by tsc + byte-identical lift + the unchanged controlled `TabsTrigger`). Both the spec-compliance and code-quality reviewers judged it LOW / non-blocking for the structural-only move.
+
+**What it should be:**
+A small trends-trigger click-through assertion in `journeys/04` (click the `chatwithscout` tab → assert the Scout-chat surface renders) — and ideally an analysis-tab assertion — closing the parity gap on the two legacy-routing tabs. Adding behavioral e2e is out of structural-only 5c scope; the natural home is Phase 7 (customers/scout claim the lead-stream + scout-chat components and migrate their data layer), or sooner if a trends/analysis regression is suspected.
+
+**Pull-forward trigger:**
+Phase 7 (scout-chat / lead-stream migration), or earlier if a trends/analysis-tab regression is suspected. Note: this is advisory per the repo's pre-launch gate posture (advisory-over-hard-fail at 0 users) — not a merge blocker for 5c.
+
+**Owner:** TBD.
