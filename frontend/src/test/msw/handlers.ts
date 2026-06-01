@@ -56,13 +56,42 @@ export const handlers = [
     HttpResponse.json({ access_token: "mock_jwt_token", expires_in: 3600 }),
   ),
 
-  // 6. Market research — Phase 5b
+  // 6. Market research — Phase 5b (generic) + Phase 5d (market-entry shape).
   http.post("/api/market-research", async ({ request }) => {
     const body = (await request.json()) as { component_name?: string };
+    const name = body.component_name ?? "market size & opportunity";
+
+    // Phase 5d: market-entry section needs a realistically-shaped payload so
+    // useMarketEntry can parse a non-trivial view-model. Match the
+    // "market entry & growth strategy" component case-insensitively.
+    const lower = name.toLowerCase();
+    if (lower === "market entry & growth strategy" || lower.includes("market entry")) {
+      return HttpResponse.json({
+        status: "success",
+        data: {
+          executiveSummary: "Test executive summary for market entry.",
+          entryBarriers: ["High capital costs", "Established incumbents"],
+          recommendedChannel: "Direct-to-consumer",
+          timeToMarket: "6-9 months",
+          topBarrier: "High capital costs",
+          competitiveDifferentiation: ["Local sourcing", "Faster delivery"],
+          strategicRecommendations: ["Pilot in one region", "Partner with distributors"],
+          riskAssessment: ["Regulatory delay", "Supply volatility"],
+          swot: {
+            strengths: ["Brand recognition"],
+            weaknesses: ["Limited footprint"],
+            opportunities: ["Growing segment"],
+            threats: ["Price competition"],
+          },
+        },
+      });
+    }
+
+    // All other components: preserve the existing generic 5b response.
     return HttpResponse.json({
       status: "success",
       data: {
-        component_name: body.component_name ?? "market size & opportunity",
+        component_name: name,
         title: "Test",
         summary: "Test summary",
       },
