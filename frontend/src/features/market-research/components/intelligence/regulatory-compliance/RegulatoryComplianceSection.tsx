@@ -1,9 +1,6 @@
 import {
-  Scale,
   Shield,
   FileText,
-  Globe,
-  AlertTriangle,
   TrendingUp,
   ChevronDown,
   ChevronUp,
@@ -18,13 +15,13 @@ import {
   Building,
   Share,
   Bot,
-  Sun,
   BarChart3,
-  Factory,
 } from "lucide-react";
 import React, { useState, useEffect } from "react";
 
-import type { EditRecord } from "@/components/market-research/types";
+import { deriveKeyDataPoints } from "./regulatoryHelpers";
+import type { RegulatoryComplianceSectionProps } from "./types";
+
 import MiniLineChart from "@/components/MiniLineChart";
 import MiniPieChart from "@/components/MiniPieChart";
 import { Badge } from "@/components/ui/badge";
@@ -45,7 +42,6 @@ import { apiFetchJson } from "@/lib/api";
 import { executeWithRateLimit } from "@/lib/rateLimitManager";
 import type {
   UntypedBackendApiResponse,
-  UntypedBackendProfile,
   UntypedRegulatoryUpdate,
   UntypedVisualDataCard,
   UntypedRegionData,
@@ -53,44 +49,6 @@ import type {
 import { useAuth } from "@/shared/auth";
 import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
 
-interface RegulatoryComplianceSectionProps {
-  isEditing: boolean;
-  isSplitView: boolean;
-  isExpanded: boolean;
-  hasEdits: boolean;
-  deletedSections: Set<string>;
-  editHistory: EditRecord[];
-  executiveSummary: string;
-  euAiActDeadline: string;
-  gdprCompliance: string;
-  potentialFines: string;
-  dataLocalization: string;
-  onToggleEdit: () => void;
-  onScoutIconClick: (
-    context?: "market-size" | "industry-trends" | "competitor-landscape" | "regulatory-compliance",
-    hasEdits?: boolean,
-    customMessage?: string,
-  ) => void;
-  onEditHistoryOpen: () => void;
-  onDeleteSection: (sectionId: string) => void;
-  onSaveChanges: () => void;
-  onCancelEdit: () => void;
-  onExpandToggle: (expanded: boolean) => void;
-  onExecutiveSummaryChange: (value: string) => void;
-  onEuAiActDeadlineChange: (value: string) => void;
-  onGdprComplianceChange: (value: string) => void;
-  onPotentialFinesChange: (value: string) => void;
-  onDataLocalizationChange: (value: string) => void;
-  onExportPDF: () => void;
-  onSaveToWorkspace: () => void;
-  onGenerateShareableLink: () => void;
-  // Add refresh props
-  isRefreshing?: boolean;
-  companyProfile?: UntypedBackendProfile;
-
-  // Add centralized data prop
-  regulatoryData?: UntypedBackendApiResponse;
-}
 
 const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = ({
   isEditing,
@@ -862,138 +820,13 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
 
   // Always use regulatoryData when available
 
-  // Use API data if available, otherwise fall back to props
-  const getIconByName = (iconName: string) => {
-    switch (iconName) {
-      case "sun":
-        return Sun;
-      case "chart":
-      case "chart-line":
-        return BarChart3;
-      case "government":
-        return Building;
-      case "competition":
-        return Factory;
-      case "arrow-up":
-        return TrendingUp;
-      case "users":
-        return Users;
-      case "gavel":
-        return Scale;
-      case "scale":
-        return Scale;
-      default:
-        return Scale;
-    }
-  };
-
-  const getBadgeColor = (tag: string) => {
-    switch (tag) {
-      case "New":
-        return "bg-blue-100 text-blue-800";
-      case "Update":
-        return "bg-yellow-100 text-yellow-800";
-      case "Support":
-        return "bg-green-100 text-green-800";
-      case "Competitive":
-        return "bg-purple-100 text-purple-800";
-      case "Risk":
-        return "bg-red-100 text-red-800";
-      case "Market Leaders":
-        return "bg-green-100 text-green-800";
-      case "Regulatory":
-        return "bg-purple-100 text-purple-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
   // Create fallback key data points using local state values first, then regulatoryData properties
-
-  const keyDataPoints =
-    regulatoryData?.keyUpdates && Array.isArray(regulatoryData.keyUpdates)
-      ? regulatoryData.keyUpdates
-          .filter((update: UntypedRegulatoryUpdate) => update)
-          .map((update: UntypedRegulatoryUpdate, index: number) => {
-            // Parse if update is a JSON string
-            let parsedUpdate = update;
-            if (typeof update === "string") {
-              try {
-                parsedUpdate = JSON.parse(update);
-              } catch (_e) {
-                parsedUpdate = update;
-              }
-            }
-
-            // Try multiple possible field names for title and value/description
-            const title =
-              parsedUpdate.title ||
-              parsedUpdate.name ||
-              parsedUpdate.label ||
-              parsedUpdate.heading ||
-              `Update ${index + 1}`;
-            const value =
-              parsedUpdate.description ||
-              parsedUpdate.value ||
-              parsedUpdate.content ||
-              parsedUpdate.text ||
-              parsedUpdate.details ||
-              "";
-
-            return {
-              id: title?.toLowerCase().replace(/\s+/g, "-") || `update-${index}`,
-              icon: getIconByName(parsedUpdate.icon || "scale"),
-              title: title,
-              value: value,
-              badge: parsedUpdate.tag || parsedUpdate.badge || parsedUpdate.category || "Update",
-              badgeColor: getBadgeColor(
-                parsedUpdate.tag || parsedUpdate.badge || parsedUpdate.category,
-              ),
-              tooltip: value || title,
-            };
-          })
-      : [
-          {
-            id: "eu-ai-act",
-            icon: Scale,
-            title: "EU AI Act enforcement starts Q1 2026",
-            value: euAiActDeadline,
-            badge: "New",
-            badgeColor: "bg-blue-100 text-blue-800",
-            tooltip:
-              "New European AI Act comes into effect with strict compliance requirements for AI systems.",
-          },
-          {
-            id: "gdpr-compliance",
-            icon: Shield,
-            title: "GDPR compliance among SaaS providers",
-            value: gdprCompliance,
-            badge: "Update",
-            badgeColor: "bg-yellow-100 text-yellow-800",
-            tooltip:
-              "Current adoption rates show varying levels of GDPR compliance across different SaaS categories.",
-          },
-          {
-            id: "potential-fines",
-            icon: AlertTriangle,
-            title: "Potential fines: up to 6% revenue",
-            value: potentialFines,
-            badge: "Risk",
-            badgeColor: "bg-red-100 text-red-800",
-            tooltip:
-              "Maximum penalty levels for non-compliance with major data protection regulations.",
-          },
-          {
-            id: "data-localization",
-            icon: Globe,
-            title: "China data localization laws impacting global SaaS",
-            value: dataLocalization,
-            badge: "High Priority",
-            badgeColor: "bg-purple-100 text-purple-800",
-            tooltip:
-              "New data residency requirements affecting international SaaS deployment strategies.",
-          },
-        ];
+  const keyDataPoints = deriveKeyDataPoints(regulatoryData?.keyUpdates, {
+    euAiActDeadline,
+    gdprCompliance,
+    potentialFines,
+    dataLocalization,
+  });
 
   const visualDataCards = regulatoryData?.visualDataCards || [
     {
