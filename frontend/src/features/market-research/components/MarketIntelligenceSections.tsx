@@ -2,12 +2,12 @@ import React from "react";
 
 import CompetitorLandscapeSection from "./CompetitorLandscapeSection";
 import IndustryTrendsSection from "./IndustryTrendsSection";
-import MarketEntrySection from "./MarketEntrySection";
 import type { MarketIntelligenceTabProps } from "./MarketIntelligenceTabProps";
 import MarketSizeSection from "./MarketSizeSection";
 import RegulatoryComplianceSection from "./RegulatoryComplianceSection";
 
 import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
+import MarketEntrySection from "@/features/market-research/components/intelligence/market-entry/MarketEntrySection";
 
 type MarketIntelligenceSectionsProps = MarketIntelligenceTabProps;
 
@@ -292,14 +292,6 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
             hasEdits={props.marketEntryHasEdits || false}
             deletedSections={props.marketEntryDeletedSections || new Set()}
             editHistory={props.marketEntryEditHistory || []}
-            executiveSummary={props.marketEntryExecutiveSummary || ""}
-            entryBarriers={props.marketEntryBarriers || []}
-            recommendedChannel={props.marketEntryRecommendedChannel || ""}
-            timeToMarket={props.marketEntryTimeToMarket || ""}
-            topBarrier={props.marketEntryTopBarrier || ""}
-            competitiveDifferentiation={props.marketEntryCompetitiveDifferentiation || []}
-            strategicRecommendations={props.marketEntryStrategicRecommendations || []}
-            riskAssessment={props.marketEntryRiskAssessment || []}
             onToggleEdit={props.onMarketEntryToggleEdit || (() => {})}
             onScoutIconClick={props.onMarketEntryScoutIconClick || props.onMarketSizeScoutIconClick}
             onEditHistoryOpen={props.onMarketEntryEditHistoryOpen || (() => {})}
@@ -322,8 +314,6 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
             onExportPDF={props.onExportPDF}
             onSaveToWorkspace={props.onSaveToWorkspace}
             onGenerateShareableLink={props.onGenerateShareableLink}
-            isRefreshing={props.isRefreshing}
-            companyProfile={props.companyProfile}
           />
         </div>
         {props.showMarketEntryScoutChat && marketEntryScoutChatPanel && (

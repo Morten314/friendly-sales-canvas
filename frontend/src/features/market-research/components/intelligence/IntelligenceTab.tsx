@@ -36,7 +36,6 @@ type IntelligenceHookSlice = Pick<
   | "editHistoryContext"
   | "fetchCompetitorData"
   | "fetchMarketData"
-  | "fetchMarketEntryData"
   | "fetchMarketSizeData"
   | "handleCompetitorCancelEdit"
   | "handleCompetitorDeleteSection"
@@ -131,7 +130,6 @@ type IntelligenceHookSlice = Pick<
   | "isRegulatoryPostSave"
   | "marketData"
   | "marketEntryCustomMessage"
-  | "marketEntryData"
   | "marketEntryDeletedSections"
   | "marketEntryEditHistory"
   | "marketEntryExpanded"
@@ -196,7 +194,6 @@ const IntelligenceTab: React.FC<IntelligenceTabProps> = ({
   marketIntelligenceData,
   setMarketIntelligenceData,
   industryTrendsData,
-  marketEntryData,
   currentUser,
   editHistory,
   editHistoryContext,
@@ -206,7 +203,6 @@ const IntelligenceTab: React.FC<IntelligenceTabProps> = ({
   fetchMarketData,
   fetchMarketSizeData,
   fetchCompetitorData,
-  fetchMarketEntryData,
   saveMarketIntelligenceToLocalStorage,
   setIsChatOpen,
   isMarketIntelligenceEditing,
@@ -431,18 +427,8 @@ const IntelligenceTab: React.FC<IntelligenceTabProps> = ({
     marketEntryHasEdits,
     marketEntryDeletedSections,
     marketEntryEditHistory,
-    marketEntryExecutiveSummary: marketEntryData?.executiveSummary,
-    marketEntryBarriers: marketEntryData?.entryBarriers,
-    marketEntryRecommendedChannel: marketEntryData?.recommendedChannel,
-    marketEntryTimeToMarket: marketEntryData?.timeToMarket,
-    marketEntryTopBarrier: marketEntryData?.topBarrier,
-    marketEntryCompetitiveDifferentiation: marketEntryData?.competitiveDifferentiation,
-    marketEntryStrategicRecommendations: marketEntryData?.strategicRecommendations,
-    marketEntryRiskAssessment: marketEntryData?.riskAssessment,
-    // Market Entry loading states and handlers
-
-    isMarketEntryLoading: isMarketSizeLoading,
-    marketEntryError: marketSizeError,
+    // Market Entry read-path data + loading/error/refresh are now owned by the
+    // useMarketEntry hook inside MarketEntrySection — no longer threaded as props.
     onToggleEdit: handleMarketIntelligenceToggleEdit,
     onMarketSizeScoutIconClick: handleMarketSizeScoutClick,
     onIndustryTrendsScoutIconClick: handleIndustryTrendsScoutClick,
@@ -572,7 +558,6 @@ const IntelligenceTab: React.FC<IntelligenceTabProps> = ({
 
     onMarketEntryToggleEdit: handleMarketEntryToggleEdit,
     onMarketEntrySaveChanges: handleMarketEntrySaveChanges,
-    onMarketEntryRefresh: () => fetchMarketEntryData(true),
     onMarketEntryCancelEdit: handleMarketEntryCancelEdit,
     onMarketEntryDeleteSection: handleMarketEntryDeleteSection,
     onMarketEntryEditHistoryOpen: handleMarketEntryEditHistoryOpen,

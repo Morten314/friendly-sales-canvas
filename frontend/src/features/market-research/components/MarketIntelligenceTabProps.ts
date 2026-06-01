@@ -82,22 +82,16 @@ export interface MarketIntelligenceTabProps {
   regulatoryPotentialFines?: string;
   regulatoryDataLocalization?: string;
   // Market Entry props
+  // NOTE: MarketEntry's read-path data fields (executiveSummary, entryBarriers,
+  // recommendedChannel, timeToMarket, topBarrier, competitiveDifferentiation,
+  // strategicRecommendations, riskAssessment) and its loading/error/refresh wiring
+  // were removed here — that data is now owned by the useMarketEntry hook inside
+  // MarketEntrySection. The cross-section coordination + scout fields below stay.
   isMarketEntryEditing?: boolean;
   marketEntryExpanded?: boolean;
   marketEntryHasEdits?: boolean;
   marketEntryDeletedSections?: Set<string>;
   marketEntryEditHistory?: EditRecord[];
-  marketEntryExecutiveSummary?: string;
-  marketEntryBarriers?: string[];
-  marketEntryRecommendedChannel?: string;
-  marketEntryTimeToMarket?: string;
-  marketEntryTopBarrier?: string;
-  marketEntryCompetitiveDifferentiation?: string[];
-  marketEntryStrategicRecommendations?: string[];
-  marketEntryRiskAssessment?: string[];
-  // Market Entry loading states and handlers
-  isMarketEntryLoading?: boolean;
-  marketEntryError?: string | null;
   onCompetitorRefresh?: () => void;
   onToggleEdit: () => void;
   onMarketSizeScoutIconClick: (
@@ -201,7 +195,6 @@ export interface MarketIntelligenceTabProps {
   // Market Entry handlers
   onMarketEntryToggleEdit?: () => void;
   onMarketEntrySaveChanges?: () => void;
-  onMarketEntryRefresh?: () => void;
   onMarketEntryCancelEdit?: () => void;
   onMarketEntryDeleteSection?: (sectionId: string) => void;
   onMarketEntryEditHistoryOpen?: () => void;

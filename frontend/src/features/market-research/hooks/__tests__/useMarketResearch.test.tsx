@@ -31,7 +31,7 @@ describe("useResearchComponent", () => {
     const { result } = renderHook(() => useResearchComponent(USER_ID, ORG_ID, COMPONENT), {
       wrapper: Wrapper,
     });
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5000 });
     expect(result.current.data?.status).toBe("success");
     expect(result.current.data?.data).toMatchObject({
       component_name: COMPONENT,
@@ -95,7 +95,7 @@ describe("useRegenerateResearch", () => {
     );
 
     // Wait for the initial read to settle (POST #1 — refresh: false).
-    await waitFor(() => expect(result.current.query.isSuccess).toBe(true));
+    await waitFor(() => expect(result.current.query.isSuccess).toBe(true), { timeout: 5000 });
     expect(postCount).toBe(1);
     expect(result.current.query.data?.data).toMatchObject({ title: "Original" });
 

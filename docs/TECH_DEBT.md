@@ -840,3 +840,60 @@ A small trends-trigger click-through assertion in `journeys/04` (click the `chat
 Phase 7 (scout-chat / lead-stream migration), or earlier if a trends/analysis-tab regression is suspected. Note: this is advisory per the repo's pre-launch gate posture (advisory-over-hard-fail at 0 users) — not a merge blocker for 5c.
 
 **Owner:** TBD.
+
+---
+
+## TD-FE-21 — market-entry edit-write path: GET `/api/ask` with JSON-in-query-params + write-path localStorage + SWOT fake-defaults
+
+**Date logged:** 2026-06-01
+**Origin:** Plan 24d Phase 5d impl review round 1 (`docs/reviews/phase-5d-market-entry-impl-review-1.md` findings 2/3/4/6, `docs/reviews/phase-5d-market-entry-impl-synthesis-1.md`). Deferred during the 5d decomposition — 5d converted the market-entry *read* path to `useMarketEntry`; plan Task 4 explicitly scoped the *edit-write* path out ("leave that fetch exactly as-is").
+
+**Current state:**
+`MarketEntrySection.tsx`'s `handleMarketEntryFullSaveChanges` (the edit-save handler) retains the legacy `/ask` write pattern, untouched by 5d:
+- **GET with JSON in the query string.** It URL-encodes two full JSON objects (`original_json`, `modified_json`) into `URLSearchParams` and sends them as `GET /api/ask?...`. For substantial payloads this risks browser URL-length limits (~2–8 KB), exposes edit data in server access logs / browser history / referrers, and uses GET for a mutation (REST-semantics violation).
+- **Write-path `localStorage`.** `localStorage.setItem("market-entry_original_json", ...)` and `"market-entry_modified_json"` write the edit payload to localStorage just before the GET. These are part of the same legacy `/ask` pattern; the read-path localStorage cache was already removed in 5b/5d, but these write-path calls rode along with the preserved fetch. The values are not read anywhere else in the codebase.
+- **Hardcoded SWOT fake-defaults.** When `displayData.swotAnalysis` is absent, both `handleModify` and the save handler fall back to `["Strong tech platform"]` / `["Limited local presence"]` / `["Growing market"]` / `["Regulatory changes"]`. If the backend genuinely has no SWOT data, the edit form presents these placeholders as real data and the save handler sends them as the "original" baseline.
+- **Container LOC.** The retained edit-write logic (~90 LOC `handleMarketEntryFullSaveChanges` + `displayData` derivation + `handleModify`) is the bulk keeping the `MarketEntrySection.tsx` container at 537 LOC, ~2× the plan's ~150–250 estimate (not a spec violation — spec §6 sets no hard LOC cap).
+
+**What it should be:**
+Migrate the market-entry edit-write path to a mutation hook (a `useMutation` POSTing a JSON **body** to the backend, replacing the GET-with-query-params), drop the write-path `localStorage` calls (unused elsewhere), and replace the SWOT fake-defaults with a safe empty-state (`{ strengths: [], weaknesses: [], opportunities: [], threats: [] }`). Extracting the handler into the hook also shrinks the container toward the plan estimate. Backend `/ask` contract should be confirmed against a live call before rewiring (no auto-generated client — per CLAUDE.md polyglot rule).
+
+**Why we deferred:**
+- Plan 24d Task 4 explicitly scoped the `/ask` edit-write path out of 5d, which converted only the research read path. Rewiring it during the decomposition would have been a spec deviation and mixed two concerns in one phase.
+- A mutation-hook migration is its own coordinated FE (+ backend contract confirmation) change warranting a focused phase, not a drive-by during a structural extraction.
+
+**What we lose by staying as-is:**
+- Edit saves can silently fail/truncate for large payloads (URL length), and edit data leaks into logs/history.
+- SWOT placeholders can be persisted as a real "original" baseline, corrupting the edit diff sent to `/ask`.
+- The container stays larger than the section tree's single-purpose target until the handler is extracted.
+
+**Pull-forward trigger:**
+- The market-entry edit-write migration phase (a future 5d+ / Phase 7-era mutation-hook pass), or 24i's phase-close check (zero raw `fetch` + zero `CACHE_DURATION` in the feature — this `/ask` GET is one of the remaining raw fetches; see TD-FE-19).
+- Earlier if an edit-save URL-length failure or a SWOT fake-default appearing in saved data is observed.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-22 — MarketEntrySection owns a data fetch but has no `<FeatureErrorBoundary>` wrapping
+
+**Date logged:** 2026-06-01
+**Origin:** Plan 24d Phase 5d impl review round 1 (`docs/reviews/phase-5d-market-entry-impl-review-1.md` Nit "No `<FeatureErrorBoundary>` wrapping"). Plan Task 4 Step 5 marked the boundary **optional**.
+
+**Current state:**
+`MarketEntrySection` now owns its own data fetch via `useMarketEntry` (5d moved the read path into the section), but the section itself is not wrapped in `<FeatureErrorBoundary>`. A render/parse crash inside market-entry would propagate up to the intelligence tab rather than being contained to the section. A page-level boundary already exists (the market-research route is wrapped — see Spec 24 §2 / TD-FE-14 resolution), so a crash is caught at the page, not the whole app — but not isolated to the one section.
+
+**What it should be:**
+Optionally wrap `MarketEntrySection` (or each extracted section, as a 5e–5h pattern) in `@/shared/components`'s `FeatureErrorBoundary` so a single section's fetch/render failure degrades only that section. Cheap to add (one wrapper) if section-level isolation is judged worth it.
+
+**Why we deferred:**
+- Plan 24d Task 4 Step 5 explicitly marked it optional, and a page-level boundary already provides app-level containment at 0 live users (pre-launch gate posture: advisory over hard-fail).
+- Better decided once as a consistent pattern across all five sections (5d–5h) than bolted onto market-entry alone.
+
+**What we lose by staying as-is:**
+- A market-entry render/parse crash takes down the whole intelligence tab (caught at the page boundary) rather than being isolated to the section.
+
+**Pull-forward trigger:**
+- The 5e–5h section extractions — decide section-level `FeatureErrorBoundary` as a uniform pattern there — or earlier if a market-entry crash is observed disrupting the rest of the intelligence tab.
+
+**Owner:** TBD.
