@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import React, { useState } from "react";
 
+import MarketEntryKpiCards from "./MarketEntryKpiCards";
 import MarketEntrySwotEditor from "./MarketEntrySwotEditor";
 import MarketEntrySwotGrid from "./MarketEntrySwotGrid";
 import { useMarketEntry } from "./useMarketEntry";
@@ -470,26 +471,11 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
             {displayData.executiveSummary}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
-              <div className="text-xs font-medium text-purple-700 mb-1">Top Entry Channel</div>
-              <div className="text-sm font-semibold text-purple-900">
-                {typeof displayData.recommendedChannel === "object" &&
-                displayData.recommendedChannel !== null
-                  ? (displayData.recommendedChannel.channel as string) ||
-                    JSON.stringify(displayData.recommendedChannel)
-                  : displayData.recommendedChannel || "N/A"}
-              </div>
-            </div>
-            <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-              <div className="text-xs font-medium text-blue-700 mb-1">Time to Market</div>
-              <div className="text-sm font-semibold text-blue-900">{displayData.timeToMarket}</div>
-            </div>
-            <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
-              <div className="text-xs font-medium text-orange-700 mb-1">Top Barrier</div>
-              <div className="text-sm font-semibold text-orange-900">{displayData.topBarrier}</div>
-            </div>
-          </div>
+          <MarketEntryKpiCards
+            recommendedChannel={displayData.recommendedChannel}
+            timeToMarket={displayData.timeToMarket}
+            topBarrier={displayData.topBarrier}
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
@@ -535,26 +521,11 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
-              <div className="text-xs font-medium text-purple-700 mb-1">Top Entry Channel</div>
-              <div className="text-sm font-semibold text-purple-900">
-                {typeof displayData.recommendedChannel === "object" &&
-                displayData.recommendedChannel !== null
-                  ? (displayData.recommendedChannel.channel as string) ||
-                    JSON.stringify(displayData.recommendedChannel)
-                  : displayData.recommendedChannel || "N/A"}
-              </div>
-            </div>
-            <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-              <div className="text-xs font-medium text-blue-700 mb-1">Time to Market</div>
-              <div className="text-sm font-semibold text-blue-900">{displayData.timeToMarket}</div>
-            </div>
-            <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
-              <div className="text-xs font-medium text-orange-700 mb-1">Top Barrier</div>
-              <div className="text-sm font-semibold text-orange-900">{displayData.topBarrier}</div>
-            </div>
-          </div>
+          <MarketEntryKpiCards
+            recommendedChannel={displayData.recommendedChannel}
+            timeToMarket={displayData.timeToMarket}
+            topBarrier={displayData.topBarrier}
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
