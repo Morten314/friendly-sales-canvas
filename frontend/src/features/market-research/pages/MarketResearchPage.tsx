@@ -45,6 +45,23 @@ interface Market {
   };
 }
 
+/**
+ * Thin shell for the Scout market-research page. The data layer (fetch + cache +
+ * cascade + all per-section edit/scout-chat state) lives in `useMarketResearchData`;
+ * the three tabs are extracted into IntelligenceTab / LeadStreamTab / TrendsTab.
+ *
+ * Residual shell state, classified per Spec 24 §5 (hoistability):
+ * - activeTab / activeTabRef: ROUTING — derived from location.pathname via
+ *   getActiveTabFromPath(); intentionally not normalized to useParams (out of scope).
+ * - scoutResearchContext / scoutMode: CROSS-TAB pair — written by the analysis
+ *   handlers below, read by <TrendsTab>. Hoisted as PROPS, not context: only 2
+ *   shallow consumers, so the §5 default (props) applies. No MarketResearchContext.
+ * - isDrawerOpen / isSettingsOpen / scoutDeploymentData / selectedMarket: SHELL UI —
+ *   retained because each is still read in live JSX (MarketDetailDrawer,
+ *   ScoutSettingsForm, IntelligenceTab prop). scoutDeploymentData / selectedMarket
+ *   are always-null today but consumed, so kept (not dead).
+ * - No data/server useState remains in the shell; it is all in the hook.
+ */
 const MarketResearch = React.memo(() => {
   usePageTitle("🔍 Scout - Brewra");
 
