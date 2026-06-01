@@ -22,7 +22,6 @@ import { useMarketEntry } from "./useMarketEntry";
 import type { EditRecord } from "@/components/market-research/types";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import type { UntypedReportSection } from "@/lib/types/escape-hatches";
 import { useAuth } from "@/shared/auth";
 
 interface MarketEntrySectionProps {
@@ -139,6 +138,21 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
     onToggleEdit();
   };
 
+  // Push the local edit-state values up to the parent and trigger the save.
+  // Used in both the API-success and API-failure paths — we trust the user's
+  // edits regardless of whether the /ask call succeeded.
+  const persistEditsToParent = () => {
+    onExecutiveSummaryChange(editExecutiveSummary);
+    onEntryBarriersChange(editEntryBarriers);
+    onRecommendedChannelChange(editRecommendedChannel);
+    onTimeToMarketChange(editTimeToMarket);
+    onTopBarrierChange(editTopBarrier);
+    onCompetitiveDifferentiationChange(editCompetitiveDifferentiation);
+    onStrategicRecommendationsChange(editStrategicRecommendations);
+    onRiskAssessmentChange(editRiskAssessment);
+    onSaveChanges();
+  };
+
   // Handle save changes with API integration
   const handleMarketEntryFullSaveChanges = async () => {
     try {
@@ -175,9 +189,6 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
         swotAnalysis: editSwotAnalysis,
       };
 
-      console.log("📤 Market Entry - original_json:", originalData);
-      console.log("📤 Market Entry - modified_json:", modifiedData);
-
       // Store data for /ask API
       localStorage.setItem("market-entry_original_json", JSON.stringify(originalData));
       localStorage.setItem("market-entry_modified_json", JSON.stringify(modifiedData));
@@ -197,39 +208,17 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
         },
       });
 
-      console.log("📥 GET /ask status:", response.status);
-
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       // Update parent state with local values (trust the user's edits)
-      onExecutiveSummaryChange(editExecutiveSummary);
-      onEntryBarriersChange(editEntryBarriers);
-      onRecommendedChannelChange(editRecommendedChannel);
-      onTimeToMarketChange(editTimeToMarket);
-      onTopBarrierChange(editTopBarrier);
-      onCompetitiveDifferentiationChange(editCompetitiveDifferentiation);
-      onStrategicRecommendationsChange(editStrategicRecommendations);
-      onRiskAssessmentChange(editRiskAssessment);
-
-      // Call the original save function
-      onSaveChanges();
+      persistEditsToParent();
     } catch (error) {
       console.error("❌ Market Entry - Error saving changes:", error);
 
-      // Even if API fails, update parent state with local values
-      onExecutiveSummaryChange(editExecutiveSummary);
-      onEntryBarriersChange(editEntryBarriers);
-      onRecommendedChannelChange(editRecommendedChannel);
-      onTimeToMarketChange(editTimeToMarket);
-      onTopBarrierChange(editTopBarrier);
-      onCompetitiveDifferentiationChange(editCompetitiveDifferentiation);
-      onStrategicRecommendationsChange(editStrategicRecommendations);
-      onRiskAssessmentChange(editRiskAssessment);
-
-      // Still call the original save function even if API fails
-      onSaveChanges();
+      // Even if the /ask call fails, still persist the user's edits.
+      persistEditsToParent();
     }
   };
 
@@ -400,11 +389,9 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
               Executive Summary
             </h3>
             <div className="text-gray-700 leading-relaxed space-y-3">
-              {displayData.executiveSummary
-                .split("\n")
-                .map((paragraph: UntypedReportSection, index: number) => (
-                  <p key={index}>{paragraph}</p>
-                ))}
+              {displayData.executiveSummary.split("\n").map((paragraph: string, index: number) => (
+                <p key={index}>{paragraph}</p>
+              ))}
             </div>
           </div>
 

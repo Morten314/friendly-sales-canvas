@@ -1,7 +1,5 @@
 import type { ReactNode } from "react";
 
-import type { UntypedReportSection } from "@/lib/types/escape-hatches";
-
 interface MarketEntryBulletListProps {
   /** Section title rendered in the h4 header. */
   title: string;
@@ -10,7 +8,7 @@ interface MarketEntryBulletListProps {
   /** Presentation style for the item list. */
   variant: "bullets" | "cards";
   /** List items. Empty/missing renders only the header (matches the live block). */
-  items?: UntypedReportSection[];
+  items?: string[];
   /** Bullet accent classes (bullets variant), e.g. "text-orange-500 mt-1". */
   accentClassName?: string;
   /** Wrapper classes around the cards grid/stack (cards variant). */
@@ -49,7 +47,7 @@ export default function MarketEntryBulletList({
       </h4>
       {variant === "bullets" ? (
         <ul className="space-y-2">
-          {items.map((item: UntypedReportSection, index: number) => (
+          {items.map((item: string, index: number) => (
             <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
               <span className={accentClassName}>•</span>
               {item}
@@ -58,7 +56,7 @@ export default function MarketEntryBulletList({
         </ul>
       ) : (
         <div className={cardsContainerClassName}>
-          {items.map((item: UntypedReportSection, index: number) => (
+          {items.map((item: string, index: number) => (
             <div key={index} className={cardClassName}>
               <div className={cardTextClassName}>{item}</div>
             </div>
