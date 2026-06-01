@@ -14,7 +14,9 @@ import {
   ChevronUp,
   Check,
 } from "lucide-react";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useState } from "react";
+
+import { useMarketEntry } from "./useMarketEntry";
 
 import type { EditRecord } from "@/components/market-research/types";
 import { Button } from "@/components/ui/button";
@@ -23,15 +25,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { apiFetchJson } from "@/lib/api";
-import { executeWithRateLimit } from "@/lib/rateLimitManager";
 import type {
-  UntypedReportState,
   UntypedReportSection,
   UntypedBackendProfile,
 } from "@/lib/types/escape-hatches";
 import { useAuth } from "@/shared/auth";
-import { getUserLocalStorage } from "@/utils/cacheUtils";
 
 interface MarketEntrySectionProps {
   isEditing: boolean;
@@ -104,22 +102,15 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   onExportPDF,
   onSaveToWorkspace,
   onGenerateShareableLink,
-  isRefreshing = false,
 }) => {
   const { currentUser, orgId } = useAuth();
   const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  const [_error, setError] = useState<string | null>(null);
-  const [marketEntryData, setMarketEntryData] = useState<UntypedReportState>(null);
-  // Use ref to track if we have API data to prevent props from overwriting it
-  const hasApiDataRef = useRef(false);
-  const apiDataTimestampRef = useRef<number | null>(null);
-  // Use ref to prevent multiple simultaneous fetches
-  const isFetchingRef = useRef(false);
-  const hasFetchedRef = useRef(false);
-  // Track if we've already tried to fetch SWOT data to prevent infinite loops
-  const hasTriedSwotFetchRef = useRef(false);
+
+  // Section SERVER data now comes exclusively from the useMarketEntry hook
+  // (TanStack-backed, memory-only cache). The parent MarketResearch cascade
+  // populates the same component via the shared query, so this reads it directly.
+  const me = useMarketEntry(currentUser?.uid ?? "", orgIdToUse);
 
   // Local edit state variables
   const [editExecutiveSummary, setEditExecutiveSummary] = useState("");
@@ -144,426 +135,17 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
     threats: [],
   });
 
-  // Debug logging for state changes
-  // Fetch Market Entry data from API
-  const fetchMarketEntryData = async (refresh = false) => {
-    // Prevent multiple simultaneous fetches
-    if (isFetchingRef.current && !refresh) {
-      return;
-    }
-
-    isFetchingRef.current = true;
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      if (!currentUser?.uid) {
-        console.error("User not authenticated");
-        setError("User not authenticated");
-        setIsLoading(false);
-        return;
-      }
-
-      const payload = {
-        org_id: orgIdToUse,
-        user_id: currentUser.uid,
-        component_name: "Market Entry & Growth Strategy", // Exact match from swagger
-        refresh: refresh,
-        force_refresh: refresh,
-        cache_bypass: refresh,
-        bypass_all_cache: refresh,
-        request_timestamp: Date.now(),
-        request_id: Math.random().toString(36).substr(2, 6),
-        data: {},
-      };
-
-      const result = await executeWithRateLimit(
-        () =>
-          apiFetchJson("market-research", {
-            method: "POST",
-            body: payload,
-          }),
-        "Market Entry",
-      );
-
-      if (result.status === "success" && result.data) {
-        const apiData = result.data;
-
-        // Check if we have the expected Market Entry data structure
-        if (apiData.executiveSummary || apiData.entryBarriers) {
-          // Update component data with API response
-          if (apiData.executiveSummary) onExecutiveSummaryChange(apiData.executiveSummary);
-          if (apiData.entryBarriers) onEntryBarriersChange(apiData.entryBarriers);
-          if (apiData.recommendedChannel) {
-            const channelValue =
-              typeof apiData.recommendedChannel === "object"
-                ? apiData.recommendedChannel.channel || JSON.stringify(apiData.recommendedChannel)
-                : apiData.recommendedChannel;
-            onRecommendedChannelChange(channelValue);
-          }
-          if (apiData.timeToMarket) onTimeToMarketChange(apiData.timeToMarket);
-          if (apiData.topBarrier) onTopBarrierChange(apiData.topBarrier);
-          if (apiData.competitiveDifferentiation)
-            onCompetitiveDifferentiationChange(apiData.competitiveDifferentiation);
-          if (apiData.strategicRecommendations)
-            onStrategicRecommendationsChange(apiData.strategicRecommendations);
-          if (apiData.riskAssessment) onRiskAssessmentChange(apiData.riskAssessment);
-
-          // Map swot to swotAnalysis to match frontend structure
-          // Handle both swot and swotAnalysis from API, and ensure proper structure
-          const swotData = apiData.swot || apiData.swotAnalysis;
-          if (swotData) {
-            // intentional: presence check only; validation happens below
-          }
-
-          // Validate SWOT data structure - check structure, not content length
-          // Accept SWOT data as long as it has the correct structure (arrays exist, even if empty)
-          let validSwotData = null;
-          if (swotData && typeof swotData === "object") {
-            // Check that it has the expected structure with arrays (even if empty)
-            const hasValidStructure =
-              Array.isArray(swotData.strengths) &&
-              Array.isArray(swotData.weaknesses) &&
-              Array.isArray(swotData.opportunities) &&
-              Array.isArray(swotData.threats);
-
-            if (hasValidStructure) {
-              // CRITICAL: Preserve the actual array items, don't create new empty arrays
-              // Use the arrays directly from swotData to preserve the actual content
-              // CRITICAL: Use arrays directly - don't use || [] which could mask issues
-              // If arrays exist, use them directly to preserve all items
-              validSwotData = {
-                strengths: swotData.strengths, // Use original array directly
-                weaknesses: swotData.weaknesses,
-                opportunities: swotData.opportunities,
-                threats: swotData.threats,
-              };
-            } else {
-              // Invalid SWOT structure – validSwotData stays null
-            }
-          } else {
-            // intentional: no swotData present; validSwotData stays null
-          }
-
-          // Create mapped data with swotAnalysis - set if we have valid SWOT structure
-          const mappedApiData = {
-            ...apiData,
-            timestamp: apiData.timestamp || Date.now(), // Ensure timestamp exists
-          };
-
-          // Set swotAnalysis if we have valid SWOT structure (even if arrays are empty)
-          if (validSwotData) {
-            mappedApiData.swotAnalysis = validSwotData;
-          } else if (swotData) {
-            // If swotData exists but structure is invalid, still try to use it (might be different format)
-            mappedApiData.swotAnalysis = swotData;
-          }
-
-          // Remove the original swot key to avoid confusion (keep only swotAnalysis)
-          if (mappedApiData.swot && mappedApiData.swotAnalysis) {
-            delete mappedApiData.swot;
-          }
-
-          // Mark that we have API data
-          hasApiDataRef.current = true;
-          apiDataTimestampRef.current = mappedApiData.timestamp;
-
-          // Merge with existing marketEntryData to preserve any props data, but prioritize API data
-          setMarketEntryData((prev: UntypedReportState) => {
-            const merged = {
-              ...prev, // Keep existing data
-              ...mappedApiData, // Overwrite with API data (which has swotAnalysis)
-            };
-            // Only set swotAnalysis from API if it's valid, otherwise preserve existing SWOT data
-            if (mappedApiData.swotAnalysis) {
-              merged.swotAnalysis = mappedApiData.swotAnalysis;
-              // Reset the SWOT fetch attempt flag since we got SWOT data
-              hasTriedSwotFetchRef.current = false;
-              console.log("✅ MarketEntrySection: Set swotAnalysis from API:", {
-                strengthsLength: merged.swotAnalysis.strengths?.length,
-                strengthsContent: merged.swotAnalysis.strengths,
-                weaknessesLength: merged.swotAnalysis.weaknesses?.length,
-                opportunitiesLength: merged.swotAnalysis.opportunities?.length,
-                threatsLength: merged.swotAnalysis.threats?.length,
-              });
-            } else if (!merged.swotAnalysis) {
-              // Only fall back to prev SWOT data if we don't already have it
-              merged.swotAnalysis = prev?.swotAnalysis || prev?.swot || null;
-            }
-            return merged;
-          });
-          hasFetchedRef.current = true;
-        } else {
-          // intentional: skip merge when no API data returned
-        }
-      }
-    } catch (error) {
-      console.error("❌ MarketEntrySection: Error fetching data:", error);
-      setError("Failed to load market entry data");
-    } finally {
-      setIsLoading(false);
-      isFetchingRef.current = false;
-    }
-  };
-
-  // Load SWOT from localStorage if missing (runs on mount and when marketEntryData changes)
-  useEffect(() => {
-    // Check if we need to load SWOT from localStorage
-    const hasSwot = marketEntryData?.swotAnalysis || marketEntryData?.swot;
-    const needsSwot =
-      !hasSwot ||
-      (hasSwot &&
-        typeof hasSwot === "object" &&
-        !hasSwot.strengths?.length &&
-        !hasSwot.weaknesses?.length &&
-        !hasSwot.opportunities?.length &&
-        !hasSwot.threats?.length);
-
-    if (needsSwot) {
-      try {
-        const stored = getUserLocalStorage("marketEntryData", currentUser?.uid);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          const swotFromStorage = parsed.swotAnalysis || parsed.swot;
-          if (swotFromStorage && typeof swotFromStorage === "object") {
-            const hasContent =
-              (Array.isArray(swotFromStorage.strengths) && swotFromStorage.strengths.length > 0) ||
-              (Array.isArray(swotFromStorage.weaknesses) &&
-                swotFromStorage.weaknesses.length > 0) ||
-              (Array.isArray(swotFromStorage.opportunities) &&
-                swotFromStorage.opportunities.length > 0) ||
-              (Array.isArray(swotFromStorage.threats) && swotFromStorage.threats.length > 0);
-
-            if (hasContent) {
-              // Update marketEntryData with SWOT from localStorage
-              setMarketEntryData((prev: UntypedReportState) => ({
-                ...prev,
-                swotAnalysis: swotFromStorage,
-                swot: swotFromStorage,
-              }));
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error loading SWOT from localStorage:", error);
-      }
-    }
-  }, [marketEntryData, currentUser?.uid]); // Run when marketEntryData changes or user changes
-
-  // Track if component has mounted to prevent running on refresh completion
-  const hasMountedRef = useRef(false);
-
-  // Fetch data when component mounts if no data is available
-  // NOTE: This should ONLY run on initial mount, NOT when refresh completes
-  useEffect(() => {
-    // Mark as mounted on first run
-    if (!hasMountedRef.current) {
-      hasMountedRef.current = true;
-    } else {
-      // If already mounted, don't run auto-fetch logic
-      // This prevents running when isRefreshing changes from true → false
-      return;
-    }
-
-    // Prevent running if already fetched or currently fetching
-    if (hasFetchedRef.current || isFetchingRef.current) {
-      return;
-    }
-
-    // Don't auto-fetch if parent is currently refreshing
-    if (isRefreshing) {
-      return;
-    }
-
-    // Check if we have any meaningful data in our local state OR props
-    const hasLocalData =
-      marketEntryData &&
-      (marketEntryData.executiveSummary || marketEntryData.entryBarriers?.length > 0);
-    const hasLocalSwotData =
-      marketEntryData && (marketEntryData.swot || marketEntryData.swotAnalysis);
-    const hasPropsData =
-      executiveSummary ||
-      entryBarriers.length > 0 ||
-      recommendedChannel ||
-      timeToMarket ||
-      topBarrier ||
-      competitiveDifferentiation.length > 0 ||
-      strategicRecommendations.length > 0 ||
-      riskAssessment.length > 0;
-
-    // Check if we're receiving fallback data from parent (the "being prepared" message)
-    const isReceivingFallbackData =
-      executiveSummary?.includes("being prepared") ||
-      executiveSummary?.includes("Market entry analysis is being prepared");
-
-    // Only fetch if we truly need data
-    // Don't fetch for missing SWOT if we've already tried (prevents infinite loop)
-    const needsSwotData = hasLocalData && !hasLocalSwotData && !hasTriedSwotFetchRef.current;
-    const needsInitialData = !hasLocalData && (!hasPropsData || isReceivingFallbackData);
-
-    if (needsInitialData || needsSwotData) {
-      // Mark that we're trying to fetch SWOT if that's the reason
-      if (needsSwotData) {
-        hasTriedSwotFetchRef.current = true;
-      }
-
-      // Reduced delay for faster loading
-      const timer = setTimeout(() => {
-        // Double-check conditions haven't changed
-        if (!isRefreshing && !hasFetchedRef.current && !isFetchingRef.current) {
-          void fetchMarketEntryData(false);
-        }
-      }, 1500);
-
-      return () => clearTimeout(timer);
-    } else {
-      // intentional: no-op when initial mount conditions are not met
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only initial fetch guard; deps intentionally empty to prevent re-fetch loops
-  }, []); // Empty dependency array - only run on mount
-
-  // When parent runs cascade refresh, only show loading; parent will pass data via props (do NOT fetch here – avoids duplicate requests)
-  useEffect(() => {
-    if (isRefreshing) {
-      hasApiDataRef.current = false;
-      apiDataTimestampRef.current = null;
-      setError(null);
-      setIsLoading(true);
-      // Do not call fetchMarketEntryData – parent MarketResearch cascade already calls the API for this component
-    }
-  }, [isRefreshing]);
-
-  // Sync with props when they change (similar to other components)
-  // Only sync when not editing to avoid overwriting user's current edits
-  // IMPORTANT: Use ref to prevent overwriting API data - ref persists across renders
-  useEffect(() => {
-    // Skip if currently fetching to avoid conflicts
-    if (isFetchingRef.current) {
-      return;
-    }
-
-    if (!isEditing) {
-      // If we have fresh props data
-      const hasPropsData =
-        executiveSummary ||
-        entryBarriers.length > 0 ||
-        recommendedChannel ||
-        timeToMarket ||
-        topBarrier ||
-        competitiveDifferentiation.length > 0 ||
-        strategicRecommendations.length > 0 ||
-        riskAssessment.length > 0;
-
-      // Check if we have API data using ref (more reliable than checking marketEntryData state)
-      const hasApiData = hasApiDataRef.current && apiDataTimestampRef.current;
-
-      // CRITICAL: If we have API data (from ref), NEVER overwrite it with props
-      if (hasApiData) {
-        return; // Exit early - don't sync props if API data exists
-      }
-
-      // Only sync from props if we don't have API data and props are different
-      if (hasPropsData && !hasApiData) {
-        // Check if props are actually different from current marketEntryData to avoid unnecessary updates
-        const propsChanged =
-          marketEntryData?.executiveSummary !== executiveSummary ||
-          JSON.stringify(marketEntryData?.entryBarriers) !== JSON.stringify(entryBarriers) ||
-          marketEntryData?.recommendedChannel !== recommendedChannel ||
-          marketEntryData?.timeToMarket !== timeToMarket ||
-          marketEntryData?.topBarrier !== topBarrier ||
-          JSON.stringify(marketEntryData?.competitiveDifferentiation) !==
-            JSON.stringify(competitiveDifferentiation) ||
-          JSON.stringify(marketEntryData?.strategicRecommendations) !==
-            JSON.stringify(strategicRecommendations) ||
-          JSON.stringify(marketEntryData?.riskAssessment) !== JSON.stringify(riskAssessment);
-
-        if (propsChanged) {
-          // CRITICAL: Preserve existing swotAnalysis from marketEntryData - SWOT is NOT in props!
-          let existingSwot = marketEntryData?.swotAnalysis || marketEntryData?.swot;
-
-          // If SWOT is missing or empty, try to load from localStorage
-          if (
-            !existingSwot ||
-            (existingSwot &&
-              typeof existingSwot === "object" &&
-              !existingSwot.strengths?.length &&
-              !existingSwot.weaknesses?.length &&
-              !existingSwot.opportunities?.length &&
-              !existingSwot.threats?.length)
-          ) {
-            try {
-              const stored = getUserLocalStorage("marketEntryData", currentUser?.uid);
-              if (stored) {
-                const parsed = JSON.parse(stored);
-                const swotFromStorage = parsed.swotAnalysis || parsed.swot;
-                if (swotFromStorage && typeof swotFromStorage === "object") {
-                  const hasContent =
-                    (Array.isArray(swotFromStorage.strengths) &&
-                      swotFromStorage.strengths.length > 0) ||
-                    (Array.isArray(swotFromStorage.weaknesses) &&
-                      swotFromStorage.weaknesses.length > 0) ||
-                    (Array.isArray(swotFromStorage.opportunities) &&
-                      swotFromStorage.opportunities.length > 0) ||
-                    (Array.isArray(swotFromStorage.threats) && swotFromStorage.threats.length > 0);
-
-                  if (hasContent) {
-                    existingSwot = swotFromStorage;
-                  }
-                }
-              }
-            } catch (error) {
-              console.error("Error loading SWOT from localStorage during props sync:", error);
-            }
-          }
-
-          // Only include swotAnalysis in update if it actually exists (don't set undefined)
-          const updateData: Record<string, unknown> = {
-            executiveSummary,
-            entryBarriers,
-            recommendedChannel,
-            timeToMarket,
-            topBarrier,
-            competitiveDifferentiation,
-            strategicRecommendations,
-            riskAssessment,
-            timestamp: marketEntryData?.timestamp || Date.now(),
-          };
-
-          // ALWAYS preserve SWOT data if it exists - even if arrays are empty, preserve the structure
-          // SWOT is not passed as props, so we must preserve it from marketEntryData or localStorage
-          if (existingSwot && typeof existingSwot === "object") {
-            // Preserve the entire SWOT object, including all arrays (even if empty)
-            updateData.swotAnalysis = existingSwot;
-            updateData.swot = existingSwot; // Also set swot for backward compatibility
-          } else {
-            // intentional: nothing to preserve when existingSwot is missing/invalid
-          }
-
-          setMarketEntryData(updateData);
-        } else {
-          // intentional: skip when no update payload was produced
-        }
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- prop-sync effect; intentionally watches only incoming props (not marketEntryData/currentUser) to avoid overwriting local state with stale snapshots
-  }, [
-    executiveSummary,
-    entryBarriers,
-    recommendedChannel,
-    timeToMarket,
-    topBarrier,
-    competitiveDifferentiation,
-    strategicRecommendations,
-    riskAssessment,
-    isEditing,
-  ]);
-
   // Handle modify button click - initialize edit fields with current data
   const handleModify = () => {
     // Initialize all edit fields with current data
     setEditExecutiveSummary(displayData.executiveSummary || "");
     setEditEntryBarriers(displayData.entryBarriers || []);
-    setEditRecommendedChannel(displayData.recommendedChannel || "");
+    setEditRecommendedChannel(
+      typeof displayData.recommendedChannel === "object" && displayData.recommendedChannel !== null
+        ? (displayData.recommendedChannel.channel as string) ||
+            JSON.stringify(displayData.recommendedChannel)
+        : displayData.recommendedChannel || "",
+    );
     setEditTimeToMarket(displayData.timeToMarket || "");
     setEditTopBarrier(displayData.topBarrier || "");
     setEditCompetitiveDifferentiation(displayData.competitiveDifferentiation || []);
@@ -656,20 +238,6 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       onStrategicRecommendationsChange(editStrategicRecommendations);
       onRiskAssessmentChange(editRiskAssessment);
 
-      // Update local display data immediately so UI reflects changes right away
-      setMarketEntryData({
-        executiveSummary: editExecutiveSummary,
-        entryBarriers: editEntryBarriers,
-        recommendedChannel: editRecommendedChannel,
-        timeToMarket: editTimeToMarket,
-        topBarrier: editTopBarrier,
-        competitiveDifferentiation: editCompetitiveDifferentiation,
-        strategicRecommendations: editStrategicRecommendations,
-        riskAssessment: editRiskAssessment,
-        swotAnalysis: editSwotAnalysis,
-        timestamp: Date.now(),
-      });
-
       // Call the original save function
       onSaveChanges();
     } catch (error) {
@@ -684,20 +252,6 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       onCompetitiveDifferentiationChange(editCompetitiveDifferentiation);
       onStrategicRecommendationsChange(editStrategicRecommendations);
       onRiskAssessmentChange(editRiskAssessment);
-
-      // Update local display data immediately so UI reflects changes even if API fails
-      setMarketEntryData({
-        executiveSummary: editExecutiveSummary,
-        entryBarriers: editEntryBarriers,
-        recommendedChannel: editRecommendedChannel,
-        timeToMarket: editTimeToMarket,
-        topBarrier: editTopBarrier,
-        competitiveDifferentiation: editCompetitiveDifferentiation,
-        strategicRecommendations: editStrategicRecommendations,
-        riskAssessment: editRiskAssessment,
-        swotAnalysis: editSwotAnalysis,
-        timestamp: Date.now(),
-      });
 
       // Still call the original save function even if API fails
       onSaveChanges();
@@ -828,87 +382,73 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
     </div>
   );
 
-  // Check if we have any meaningful data to display (prioritize local data over props)
-  // Always prioritize marketEntryData if it exists, as it contains API data
-  const baseDisplayData = marketEntryData
-    ? {
-        ...marketEntryData,
-        // Ensure we use props only if marketEntryData doesn't have that field
-        executiveSummary: marketEntryData.executiveSummary || executiveSummary,
-        entryBarriers:
-          marketEntryData.entryBarriers?.length > 0 ? marketEntryData.entryBarriers : entryBarriers,
-        recommendedChannel: marketEntryData.recommendedChannel || recommendedChannel,
-        timeToMarket: marketEntryData.timeToMarket || timeToMarket,
-        topBarrier: marketEntryData.topBarrier || topBarrier,
-        competitiveDifferentiation:
-          marketEntryData.competitiveDifferentiation?.length > 0
-            ? marketEntryData.competitiveDifferentiation
-            : competitiveDifferentiation,
-        strategicRecommendations:
-          marketEntryData.strategicRecommendations?.length > 0
-            ? marketEntryData.strategicRecommendations
-            : strategicRecommendations,
-        riskAssessment:
-          marketEntryData.riskAssessment?.length > 0
-            ? marketEntryData.riskAssessment
-            : riskAssessment,
-        // CRITICAL: Explicitly preserve SWOT data from marketEntryData - it's NOT in props!
-        // Use the spread operator to include it, but also explicitly set it to ensure it's not lost
-        swotAnalysis: marketEntryData.swotAnalysis || marketEntryData.swot || undefined,
-        swot: marketEntryData.swot || marketEntryData.swotAnalysis || undefined,
-      }
-    : {
-        executiveSummary,
-        entryBarriers,
-        recommendedChannel,
-        timeToMarket,
-        topBarrier,
-        competitiveDifferentiation,
-        strategicRecommendations,
-        riskAssessment,
-        // Note: SWOT is not in props, so it won't be in baseDisplayData if marketEntryData is null
-      };
+  // Check if we have any meaningful data to display.
+  // SERVER data now comes from the useMarketEntry hook (me.data); props remain
+  // the fallback (parent cascade + in-flight edit-form writes still flow via props).
+  const serverData = me.data;
 
-  // Map swot to swotAnalysis to match frontend structure
-  // Prioritize marketEntryData's swot/swotAnalysis since it comes from API
-  // Always check marketEntryData first (most reliable source), then baseDisplayData
-  const swotData =
-    marketEntryData?.swotAnalysis ||
-    marketEntryData?.swot ||
-    baseDisplayData.swotAnalysis ||
-    baseDisplayData.swot;
-
+  // Map swot to swotAnalysis to match frontend structure.
+  // Prioritize me.data's swot/swotAnalysis (server source).
+  const rawSwot = serverData?.swot ?? serverData?.swotAnalysis;
   // CRITICAL: Don't normalize - use the data directly to preserve array items!
-  // Only check that it's a valid object with arrays, but use original arrays
-  const finalSwotData =
-    swotData &&
-    typeof swotData === "object" &&
-    Array.isArray(swotData.strengths) &&
-    Array.isArray(swotData.weaknesses) &&
-    Array.isArray(swotData.opportunities) &&
-    Array.isArray(swotData.threats)
-      ? swotData // Use original object directly - preserves all array items
-      : null;
+  // Only check that it's a valid object with arrays, but use original arrays.
+  const finalSwotData:
+    | { strengths: string[]; weaknesses: string[]; opportunities: string[]; threats: string[] }
+    | undefined =
+    rawSwot &&
+    Array.isArray(rawSwot.strengths) &&
+    Array.isArray(rawSwot.weaknesses) &&
+    Array.isArray(rawSwot.opportunities) &&
+    Array.isArray(rawSwot.threats)
+      ? {
+          strengths: rawSwot.strengths,
+          weaknesses: rawSwot.weaknesses,
+          opportunities: rawSwot.opportunities,
+          threats: rawSwot.threats,
+        }
+      : undefined;
 
+  // Resolve the section's display values: me.data field wins, prop is the
+  // fallback (parent cascade + in-flight edit-form writes still flow via props).
   const displayData = {
-    ...baseDisplayData,
-    // Set swotAnalysis from the most reliable source (marketEntryData > baseDisplayData)
-    // Use original data directly to preserve all array items - DO NOT normalize!
-    swotAnalysis: finalSwotData || undefined,
+    executiveSummary: serverData?.executiveSummary || executiveSummary,
+    entryBarriers:
+      (serverData?.entryBarriers?.length ?? 0) > 0
+        ? (serverData?.entryBarriers ?? [])
+        : entryBarriers,
+    // recommendedChannel may be a string OR an object (JSX handles both shapes).
+    recommendedChannel: serverData?.recommendedChannel || recommendedChannel,
+    timeToMarket: serverData?.timeToMarket || timeToMarket,
+    topBarrier: serverData?.topBarrier || topBarrier,
+    competitiveDifferentiation:
+      (serverData?.competitiveDifferentiation?.length ?? 0) > 0
+        ? (serverData?.competitiveDifferentiation ?? [])
+        : competitiveDifferentiation,
+    strategicRecommendations:
+      (serverData?.strategicRecommendations?.length ?? 0) > 0
+        ? (serverData?.strategicRecommendations ?? [])
+        : strategicRecommendations,
+    riskAssessment:
+      (serverData?.riskAssessment?.length ?? 0) > 0
+        ? (serverData?.riskAssessment ?? [])
+        : riskAssessment,
+    // SWOT is NOT in props - only present when me.data carries it (edit mode falls
+    // back to editSwotAnalysis at the SwotQuadrant call sites).
+    swotAnalysis: finalSwotData,
   };
 
   const hasData =
     displayData.executiveSummary ||
-    displayData.entryBarriers?.length > 0 ||
+    displayData.entryBarriers.length > 0 ||
     displayData.recommendedChannel ||
     displayData.timeToMarket ||
     displayData.topBarrier ||
-    displayData.competitiveDifferentiation?.length > 0 ||
-    displayData.strategicRecommendations?.length > 0 ||
-    displayData.riskAssessment?.length > 0;
+    displayData.competitiveDifferentiation.length > 0 ||
+    displayData.strategicRecommendations.length > 0 ||
+    displayData.riskAssessment.length > 0;
 
   // Show loading state only when actively loading and have no data, not when showing fallback data
-  if (isLoading && !hasData) {
+  if (me.isLoading && !hasData) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
@@ -926,7 +466,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   }
 
   // Show empty state if we have no data and not loading
-  if (!hasData && !isLoading) {
+  if (!hasData && !me.isLoading) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
@@ -961,12 +501,13 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           <p className="text-gray-600 mb-4">No market entry data available</p>
           <Button
             onClick={() => {
-              // onScoutIconClick('market-entry');
+              me.regenerate();
               toast({
-                title: "Coming Soon",
-                description: "Scout feature is coming soon!",
+                title: "Generating",
+                description: "Scout is regenerating the market entry report.",
               });
             }}
+            disabled={me.isRegenerating}
             variant="outline"
             className="text-gray-400 border-gray-300 opacity-50"
           >
@@ -1040,7 +581,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
               <div className="text-sm font-semibold text-purple-900">
                 {typeof displayData.recommendedChannel === "object" &&
                 displayData.recommendedChannel !== null
-                  ? displayData.recommendedChannel.channel ||
+                  ? (displayData.recommendedChannel.channel as string) ||
                     JSON.stringify(displayData.recommendedChannel)
                   : displayData.recommendedChannel || "N/A"}
               </div>
@@ -1105,7 +646,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
               <div className="text-sm font-semibold text-purple-900">
                 {typeof displayData.recommendedChannel === "object" &&
                 displayData.recommendedChannel !== null
-                  ? displayData.recommendedChannel.channel ||
+                  ? (displayData.recommendedChannel.channel as string) ||
                     JSON.stringify(displayData.recommendedChannel)
                   : displayData.recommendedChannel || "N/A"}
               </div>
