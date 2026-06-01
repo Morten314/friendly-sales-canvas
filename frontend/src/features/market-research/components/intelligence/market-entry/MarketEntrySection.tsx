@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import React, { useState } from "react";
 
+import MarketEntryBulletList from "./MarketEntryBulletList";
 import MarketEntryKpiCards from "./MarketEntryKpiCards";
 import MarketEntrySwotEditor from "./MarketEntrySwotEditor";
 import MarketEntrySwotGrid from "./MarketEntrySwotGrid";
@@ -539,68 +540,42 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <h4 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-orange-600" />
-                Entry Barriers
-              </h4>
-              <ul className="space-y-2">
-                {displayData.entryBarriers.map((barrier: UntypedReportSection, index: number) => (
-                  <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
-                    <span className="text-orange-500 mt-1">•</span>
-                    {barrier}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <MarketEntryBulletList
+              title="Entry Barriers"
+              icon={<AlertTriangle className="h-4 w-4 text-orange-600" />}
+              variant="bullets"
+              accentClassName="text-orange-500 mt-1"
+              items={displayData.entryBarriers}
+            />
 
-            <div className="space-y-4">
-              <h4 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Target className="h-4 w-4 text-green-600" />
-                Competitive Differentiation
-              </h4>
-              <ul className="space-y-2">
-                {displayData.competitiveDifferentiation.map(
-                  (diff: UntypedReportSection, index: number) => (
-                    <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
-                      <span className="text-green-500 mt-1">•</span>
-                      {diff}
-                    </li>
-                  ),
-                )}
-              </ul>
-            </div>
+            <MarketEntryBulletList
+              title="Competitive Differentiation"
+              icon={<Target className="h-4 w-4 text-green-600" />}
+              variant="bullets"
+              accentClassName="text-green-500 mt-1"
+              items={displayData.competitiveDifferentiation}
+            />
           </div>
 
-          <div className="space-y-4">
-            <h4 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-blue-600" />
-              Strategic Recommendations
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {displayData.strategicRecommendations.map(
-                (recommendation: UntypedReportSection, index: number) => (
-                  <div key={index} className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                    <div className="text-sm font-medium text-blue-900">{recommendation}</div>
-                  </div>
-                ),
-              )}
-            </div>
-          </div>
+          <MarketEntryBulletList
+            title="Strategic Recommendations"
+            icon={<TrendingUp className="h-4 w-4 text-blue-600" />}
+            variant="cards"
+            cardsContainerClassName="grid grid-cols-1 md:grid-cols-2 gap-4"
+            cardClassName="bg-blue-50 p-3 rounded-lg border border-blue-200"
+            cardTextClassName="text-sm font-medium text-blue-900"
+            items={displayData.strategicRecommendations}
+          />
 
-          <div className="space-y-4">
-            <h4 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-red-600" />
-              Risk Assessment
-            </h4>
-            <div className="space-y-2">
-              {displayData.riskAssessment.map((risk: UntypedReportSection, index: number) => (
-                <div key={index} className="bg-red-50 p-3 rounded-lg border border-red-200">
-                  <div className="text-sm text-red-900">{risk}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <MarketEntryBulletList
+            title="Risk Assessment"
+            icon={<AlertTriangle className="h-4 w-4 text-red-600" />}
+            variant="cards"
+            cardsContainerClassName="space-y-2"
+            cardClassName="bg-red-50 p-3 rounded-lg border border-red-200"
+            cardTextClassName="text-sm text-red-900"
+            items={displayData.riskAssessment}
+          />
 
           <div className="pt-4 border-t space-y-3 w-full flex flex-col items-start gap-3">
             <div className="flex flex-wrap gap-2 justify-start">
