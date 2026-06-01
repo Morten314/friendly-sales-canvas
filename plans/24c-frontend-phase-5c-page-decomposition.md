@@ -25,7 +25,7 @@ State rehoming uses the 3-part hoistability test (shared-across-≥2 / not-URL-d
 
 **Conventions for every task:** as 24a/24b — npm from `frontend/`; commits from repo root; `type(scope):` subjects, **no** `Co-Authored-By`/`[N/M]` suffixes; per-task `tsc`+`lint` green; **surgical commits by path** (never `git add -A`). **Visual-parity guard is behavioral E2E `journeys/04` + Vitest/RTL — there is no MR pixel VR** (TD-FE-17 / §9 delta 6).
 
-**Failure handling (every task):** if a task's verification reds, fix-forward within that task; if it can't be resolved, **stop and report to the human** — do not silently proceed. The R1 escape hatch (revert 5c + replan) is reserved for deep cross-coupling surprises, not ordinary task failures.
+**Failure handling (every task):** if a task's verification reds, fix-forward within that task; if it can't be resolved, **stop and report to the human** — do not silently proceed. The R1 escape hatch (revert 5c + replan) is reserved for deep cross-coupling surprises, not ordinary task failures. **Secondary abort heuristic (given R1 has fired twice):** if **≥2 non-coupling tasks** require human intervention for *unexpected* failures, pause and reassess whether the hook-first cut is viable before continuing — repeated surprises on a supposedly-mechanical move are themselves a signal the inventory missed something. Advisory (a human decision tripwire), not an automatic revert.
 
 **Task independence / serialization:** **Tasks 1, 2, 4, 5, and 6 all modify `MarketResearchPage.tsx`** and must run **strictly serial** in that order. Task 3 (edits `IntelligenceTab` only, plus deletions) is the only task disjoint from the page-editing chain and may run concurrently with 4/5/6 if commits stay surgical — but its prerequisite is Task 2. Do **not** run page-editing tasks in parallel (shared file → merge conflict). Conventional order 1→2→3→4→5→6 is the safe default.
 
@@ -92,7 +92,7 @@ No commit.
 
 - [ ] **Step 3: Rewire the page to the hook.** In `MarketResearchPage.tsx`, replace the moved declarations with a single `const { …data, …lifecycle, editHistory, setEditHistory, …perSection, fetchMarketData, smartRefresh, handleRefresh, … } = useMarketResearchData();` destructure (name the destructured members exactly as the old locals so **no JSX changes**). Delete the moved `useState`/helper/effect/`declare global`/`window.*` code and the DROPPED dead code. Leave **all JSX** and the STAYS set untouched. After this step the page renders identically, sourcing data from the hook.
 
-- [ ] **Step 4: Write the hook smoke test (after extraction).** This is a verbatim move, so not test-first. Add `__tests__/useMarketResearchData.test.tsx`: render the hook via RTL `renderHook` (or a tiny harness component) inside the providers it needs (router + auth context) with MSW stubbing only the fetches it fires on mount; assert it returns the expected shape and reaches a non-crashing initial state (e.g. `isInitialLoading` resolves, `marketData` is null-or-object). Its job is to catch a broken extraction, not drive design.
+- [ ] **Step 4: Write the hook smoke test (after extraction).** This is a verbatim move, so not test-first. Add `__tests__/useMarketResearchData.test.tsx`: render the hook via RTL `renderHook` (or a tiny harness component) inside the providers it needs (router + auth context); assert it returns the expected shape and reaches a non-crashing initial state (e.g. `isInitialLoading` resolves, `marketData` is null-or-object). **Use a coarse fetch stub** — `vi.spyOn(globalThis, "fetch").mockResolvedValue(<canned envelope>)`, or MSW for *only* the one-or-two sites fired on mount — **not** handlers for all 9 raw `fetch` sites: the smoke test's job is to catch a broken extraction, not to characterize every endpoint (the existing suite + `journeys/04` do that). Standing up 9 handlers for a pure-move guard is disproportionate.
 
 - [ ] **Step 5: Green + commit**
 ```bash
@@ -124,14 +124,15 @@ git commit -m "refactor(fe): extract useMarketResearchData data-layer hook (stru
 
 - [ ] **Step 2: Define `IntelligenceTab`'s prop interface.** It is the slice of the hook's return that the intelligence subtree (L6525–6914) reads — the `marketData`/section data, the per-section edit/expand state + setters, `editHistory`, `isRefreshing`, the section handlers, `fetchMarketData` (Load-Data CTA), etc. Type it with an explicit `interface IntelligenceTabProps` (it largely mirrors the existing `MarketIntelligenceTabProps` surface Safe already consumes — reuse/compose that type where it fits rather than re-typing 169 fields).
 
-- [ ] **Step 3: Create `IntelligenceTab.tsx`** — lift the intelligence-tab JSX subtree (L6525–6914): the `marketData ? <SafeMarketIntelligenceTab .../> + EditHistoryPanels : <Load Data CTA>` branch, rendered via the **existing** `<SafeMarketIntelligenceTab>` (import from `@/features/market-research/components/SafeMarketIntelligenceTab` — Task 3 replaces it). All data/handlers come from `props`. Markup/behavior **identical**. In the page, replace the L6525–6914 subtree with `<IntelligenceTab {...slice} />` where `slice` is built from the shell's hook destructure. Leave the analysis + trends branches + the shell chrome (banners/gate/`Dialog`) in place.
+- [ ] **Step 3: Create `IntelligenceTab.tsx` AND its test file** — (a) lift the intelligence-tab JSX subtree (L6525–6914): the `marketData ? <SafeMarketIntelligenceTab .../> + EditHistoryPanels : <Load Data CTA>` branch, rendered via the **existing** `<SafeMarketIntelligenceTab>` (import from `@/features/market-research/components/SafeMarketIntelligenceTab` — Task 3 replaces it). All data/handlers come from `props`. Markup/behavior **identical**. In the page, replace the L6525–6914 subtree with `<IntelligenceTab {...slice} />` where `slice` is built from the shell's hook destructure. Leave the analysis + trends branches + the shell chrome (banners/gate/`Dialog`) in place. (b) Create `__tests__/IntelligenceTab.test.tsx` with the mount smoke test planned in Step 1 — written now that the component + prop surface exist, run in Step 4. (Don't skip the file: it appears in Step 4's `git add`.)
 
 - [ ] **Step 4: Green + commit**
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
-npx eslint --fix src && npm run lint && npx tsc --noEmit -p tsconfig.app.json && npm run test
+( lsof -ti tcp:5173 | xargs -r kill ) 2>/dev/null; ( lsof -ti tcp:4173 | xargs -r kill ) 2>/dev/null; true
+npx eslint --fix src && npm run lint && npx tsc --noEmit -p tsconfig.app.json && npm run test && npx playwright test journeys/04
 ```
-> Full Vitest (a tab-render regression surfaces here). `knip` not run (IntelligenceTab still imports Safe — nothing orphaned; Task 3's knip run guards the post-deletion graph).
+> Full Vitest **plus `journeys/04`** (with the orphan-server kill guard — see Task 5 note): Task 2 extracts the intelligence subtree and rebuilds its ~169-prop surface via `{...slice}`, so a miswired prop is a likely failure mode the Vitest suite may not fully exercise — and the next `journeys/04` otherwise isn't until Task 5, letting a Task-2 regression ride through Tasks 3–4 before surfacing. Running it here catches the miswire at its own commit. `knip` not run (IntelligenceTab still imports Safe — nothing orphaned; Task 3's knip run guards the post-deletion graph).
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
 git add frontend/src/features/market-research/components/intelligence/IntelligenceTab.tsx \
@@ -201,7 +202,7 @@ return (
   </FeatureErrorBoundary>
 );
 ```
-  This folds in the trivial wrapper `<div>` the deleted `MarketIntelligenceTab` provided. **Boundary granularity:** wrap at the section-composition level (default — one section's crash doesn't blank the whole tab). The route-level `<FeatureErrorBoundary featureName="Market Research">` (App.tsx:132) stays as the outer net; note the distinct `featureName`.
+  This folds in the trivial wrapper `<div>` the deleted `MarketIntelligenceTab` provided. **Copy the exact wrapper `className` verbatim from the `MarketIntelligenceTab` source being deleted** — the value shown above is the inventory's expected form, but verify it against the live file (it may have drifted since the inventory snapshot); the source is authoritative. **Boundary granularity:** wrap at the section-composition level (default — one section's crash doesn't blank the whole tab). The route-level `<FeatureErrorBoundary featureName="Market Research">` (App.tsx:132) stays as the outer net; note the distinct `featureName`.
 
 - [ ] **Step 3: Delete `SafeMarketIntelligenceTab` + `MarketIntelligenceTab`.** Confirm no importers first:
 ```bash
@@ -290,6 +291,7 @@ interface TrendsTabProps {
   scoutResearchContext: ScoutResearchContext | null;
   scoutMode: "selected-leads" | "full-list";
   editHistory: EditRecord[];
+  onTabChange: (tab: string) => void; // = the shell's setActiveTab (match its signature); see Step 1c / Step 2
 }
 // renders:
 //   scoutResearchContext
@@ -301,7 +303,15 @@ interface TrendsTabProps {
 
 - [ ] **Step 1c: Move `signalsChatContext` into `TrendsTab`.** The `signalsChatContext` `useState` (page L391) + its loader effect (page L414–430, gated on `activeTab === "trends"`) + its clear move **into** `TrendsTab` as internal state (single consumer → relocate, no hoist). The out-of-band block renders **conditionally** (`{activeTab === "trends" ? (<trends>) : (<other>)}`, page L6494) → the subtree **mounts/unmounts** on tab change → the `activeTab === "trends"` guard becomes implicit; **no `isActive` prop needed**. (Defensive fallback: if a future change converts it to always-mounted CSS-hide, re-add an `isActive` prop + keep the guard inside `TrendsTab`.) `onTabChange` (currently `setActiveTab`) is passed from the shell.
 
-- [ ] **Step 2: Route the page's `trends` branch to `<TrendsTab/>`.** Replace the out-of-band block (L6494–6511) with `<TrendsTab scoutResearchContext={scoutResearchContext} scoutMode={scoutMode} editHistory={editHistory} onTabChange={setActiveTab} />`, and **remove the empty `TabsContent value="trends"` placeholder** (L6930–6933). Remove the page's `signalsChatContext` `useState` + loader (moved in 1c). **Verify the trends trigger still navigates once its panel is gone:** the controlled trigger (`value={activeTab}`/`onValueChange={handleTabChange}`) fires regardless of a matching panel, so this *should* be a no-op — confirm in Step 3 that `journeys/04` actually **clicks** the trends (`chatwithscout`) `TabsTrigger` and lands on the scout-chat surface; if it only navigates by URL, add an explicit click→navigate assertion.
+- [ ] **Step 2: Route the page's `trends` branch to `<TrendsTab/>`.** The out-of-band block is the **true branch of a ternary** — the live source (verified) is `{activeTab === "trends" ? (<trends block, L6494–6511>) : (<ScrollArea>…the other tabs' content…</ScrollArea>)}` (**not** a bare `{activeTab === "trends" && (…)}`). **Preserve the ternary; replace only its true-branch content** with `<TrendsTab scoutResearchContext={scoutResearchContext} scoutMode={scoutMode} editHistory={editHistory} onTabChange={setActiveTab} />`, leaving the `: (<ScrollArea>…</ScrollArea>)` false branch (the other tabs) intact:
+```tsx
+{activeTab === "trends" ? (
+  <TrendsTab scoutResearchContext={scoutResearchContext} scoutMode={scoutMode} editHistory={editHistory} onTabChange={setActiveTab} />
+) : (
+  <ScrollArea> … intelligence / analysis tab content … </ScrollArea>
+)}
+```
+  A literal "replace L6494–6511" that swallows the `) : (` would break the ternary or unconditionally render TrendsTab — **locate the ternary's true-branch boundaries in the live file** (the L-numbers are a 2026-05-31 anchor a merge can shift), don't trust the line range blindly. Then **remove the empty `TabsContent value="trends"` placeholder** (L6930–6933), and remove the page's `signalsChatContext` `useState` + loader (moved in 1c). **Verify the trends trigger still navigates once its panel is gone:** the controlled trigger (`value={activeTab}`/`onValueChange={handleTabChange}`) fires regardless of a matching panel, so this *should* be a no-op — confirm in Step 3 that `journeys/04` actually **clicks** the trends (`chatwithscout`) `TabsTrigger` and lands on the scout-chat surface; if it only navigates by URL, add an explicit click→navigate assertion.
 
 - [ ] **Step 3: Green + commit (orphan-server guard — last structural extraction)**
 ```bash
