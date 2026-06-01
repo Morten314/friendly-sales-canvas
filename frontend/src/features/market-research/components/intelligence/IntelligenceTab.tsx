@@ -582,7 +582,8 @@ const IntelligenceTab: React.FC<IntelligenceTabProps> = ({
     onMarketEntryRecommendedChannelChange: handleMarketEntryRecommendedChannelChange,
     onMarketEntryTimeToMarketChange: handleMarketEntryTimeToMarketChange,
     onMarketEntryTopBarrierChange: handleMarketEntryTopBarrierChange,
-    onMarketEntryCompetitiveDifferentiationChange: handleMarketEntryCompetitiveDifferentiationChange,
+    onMarketEntryCompetitiveDifferentiationChange:
+      handleMarketEntryCompetitiveDifferentiationChange,
     onMarketEntryStrategicRecommendationsChange: handleMarketEntryStrategicRecommendationsChange,
     onMarketEntryRiskAssessmentChange: handleMarketEntryRiskAssessmentChange,
     onMarketEntryScoutIconClick: handleMarketEntryScoutClick,

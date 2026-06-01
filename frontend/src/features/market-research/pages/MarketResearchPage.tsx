@@ -28,7 +28,10 @@ import { Layout } from "@/features/shell";
 import type { DeploymentData } from "@/features/shell";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import type { UntypedLead } from "@/lib/types/escape-hatches";
-import { buildLeadStreamChatContext, LEAD_STREAM_CHAT_CONTEXT_KEY } from "@/utils/leadStreamChatContext";
+import {
+  buildLeadStreamChatContext,
+  LEAD_STREAM_CHAT_CONTEXT_KEY,
+} from "@/utils/leadStreamChatContext";
 
 // Minimal shape the detail drawer needs for its (currently always-null) selected market.
 interface Market {
@@ -852,7 +855,9 @@ const MarketResearch = React.memo(() => {
                         marketSizeCustomMessage={marketSizeCustomMessage}
                         setMarketSizeCustomMessage={setMarketSizeCustomMessage}
                         handleMarketIntelligenceToggleEdit={handleMarketIntelligenceToggleEdit}
-                        handleMarketIntelligenceDeleteSection={handleMarketIntelligenceDeleteSection}
+                        handleMarketIntelligenceDeleteSection={
+                          handleMarketIntelligenceDeleteSection
+                        }
                         handleMarketSizeDeleteSection={handleMarketSizeDeleteSection}
                         handleMarketIntelligenceSaveChanges={handleMarketIntelligenceSaveChanges}
                         handleMarketIntelligenceCancelEdit={handleMarketIntelligenceCancelEdit}
@@ -927,7 +932,9 @@ const MarketResearch = React.memo(() => {
                           handleCompetitorExecutiveSummaryChange
                         }
                         handleCompetitorTopPlayerShareChange={handleCompetitorTopPlayerShareChange}
-                        handleCompetitorEmergingPlayersChange={handleCompetitorEmergingPlayersChange}
+                        handleCompetitorEmergingPlayersChange={
+                          handleCompetitorEmergingPlayersChange
+                        }
                         handleCompetitorFundingNewsChange={handleCompetitorFundingNewsChange}
                         handleCompetitorScoutClick={handleCompetitorScoutClick}
                         isRegulatoryEditing={isRegulatoryEditing}
@@ -950,7 +957,9 @@ const MarketResearch = React.memo(() => {
                         handleRegulatoryExecutiveSummaryChange={
                           handleRegulatoryExecutiveSummaryChange
                         }
-                        handleRegulatoryEuAiActDeadlineChange={handleRegulatoryEuAiActDeadlineChange}
+                        handleRegulatoryEuAiActDeadlineChange={
+                          handleRegulatoryEuAiActDeadlineChange
+                        }
                         handleRegulatoryGdprComplianceChange={handleRegulatoryGdprComplianceChange}
                         handleRegulatoryPotentialFinesChange={handleRegulatoryPotentialFinesChange}
                         handleRegulatoryDataLocalizationChange={
@@ -989,7 +998,9 @@ const MarketResearch = React.memo(() => {
                         handleMarketEntryStrategicRecommendationsChange={
                           handleMarketEntryStrategicRecommendationsChange
                         }
-                        handleMarketEntryRiskAssessmentChange={handleMarketEntryRiskAssessmentChange}
+                        handleMarketEntryRiskAssessmentChange={
+                          handleMarketEntryRiskAssessmentChange
+                        }
                         handleMarketEntryRevertEdit={handleMarketEntryRevertEdit}
                         handleMarketEntryViewEditDetails={handleMarketEntryViewEditDetails}
                         handleMarketEntryScoutClick={handleMarketEntryScoutClick}
@@ -1005,7 +1016,6 @@ const MarketResearch = React.memo(() => {
                         onSendToStrategist={handleSendToStrategist}
                       />
                     </TabsContent>
-
                   </>
                 ) : (
                   /* Show loading message when refreshing and not all components are successful */

@@ -10,9 +10,10 @@ const base = (over: Record<string, unknown> = {}) =>
 describe("sanitizeIntelligenceProps", () => {
   it("preserves a function prop through the JSON round-trip", () => {
     const fn = () => "kept";
-    const out = sanitizeIntelligenceProps(
-      base({ onMarketSizeRefresh: fn }),
-    ) as unknown as Record<string, unknown>;
+    const out = sanitizeIntelligenceProps(base({ onMarketSizeRefresh: fn })) as unknown as Record<
+      string,
+      unknown
+    >;
     expect(typeof out.onMarketSizeRefresh).toBe("function");
     expect((out.onMarketSizeRefresh as () => string)()).toBe("kept");
   });

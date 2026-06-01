@@ -51,9 +51,9 @@ describe("useMarketResearchData", () => {
     const { result } = renderHook(() => useHarness());
 
     // Core data states are present and start null-or-object (not undefined).
-    expect(result.current.marketData === null || typeof result.current.marketData === "object").toBe(
-      true,
-    );
+    expect(
+      result.current.marketData === null || typeof result.current.marketData === "object",
+    ).toBe(true);
     expect(typeof result.current.marketIntelligenceData).toBe("object");
 
     // Lifecycle + key setters/actions are exposed.
