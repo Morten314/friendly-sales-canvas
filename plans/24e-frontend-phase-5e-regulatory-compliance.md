@@ -43,6 +43,10 @@ Each sub-component extraction follows the same TDD loop:
 4. **Gate:** `npx eslint --fix src`; `npm run lint`; `npx tsc --noEmit -p tsconfig.app.json`; `npx vitest run <the new file's test>`; `npx knip --strict --no-progress` where the change adds/removes exports.
 5. **Commit:** one commit, `refactor(fe): extract <Name> from RegulatoryComplianceSection`.
 
+**Per-step recovery:** If any gate fails, revert the uncommitted changes (`git checkout -- .`) and re-attempt the step; if it cannot be made green after two attempts, STOP and escalate. Never commit a red state.
+
+**Periodic full-suite checkpoint:** After **Task 5** (`ComplianceVisualCard` — the densest extraction) and **Task 9** (`RegionalComplianceSection` — the last large extraction), additionally run the **full** Vitest suite (`npx vitest run`, no file filter) before committing. `tsc --noEmit` + `npm run lint` already run project-wide on every gate, so this only needs to catch runtime/behavioral regressions in tests outside the per-task filter — cheaper than bisecting a Task 12 preflight failure across ~10 extraction commits.
+
 Each sub-component **receives typed props** (from `types.ts`); it does **not** call the section hook or fetch. The five `local*` editing strings + `localRegionalData`/`localVisualDataCards`/`localStrategicRecommendations`/`localKeyDataValues` editing **state stays in the container** and is passed down as value + setter/callback pairs, so every section is controlled and unit-testable in isolation. **The section is rendered twice** (compact vs `isExpanded`); a section component takes the data it renders + an `isExpanded`/`isEditing` flag and the parent decides which to mount — preserve both code paths exactly when lifting (the compact and expanded markup differ; do not collapse them into one unless the audit shows they are identical).
 
 ---
@@ -98,8 +102,12 @@ echo "=== handlers + helpers + the raw fetch ==="; grep -nE '\bconst (handleModi
 echo "=== the raw fetch site (this is what the hook replaces) ==="; grep -nE 'fetch\(|buildApiUrl|apiFetch|executeWithRateLimit' "$F"
 echo "=== derived data from regulatoryData prop ==="; grep -nE 'regulatoryData\?\.(keyUpdates|visualDataCards|regionalData|strategicRecommendations)' "$F"
 echo "=== compact vs expanded markup (isExpanded branches) ==="; grep -nE 'isExpanded' "$F" | head
+echo "=== export form (default vs named — the Task 1 barrel must mirror this) ==="; grep -nE 'export (default|function|const) RegulatoryCompliance' "$F"
+echo "=== userId/orgId availability for the Task 11 hook call ==="; grep -nE 'useAuth|orgId|organizationId' "$F"
 echo "=== importers of the section ==="; grep -rln 'RegulatoryComplianceSection' src --include=*.ts --include=*.tsx
 ```
+> **Export form (Task 1 barrel):** the `grep ... export (default|...)` line above settles whether the section is a default or named export, so Task 1 Step 2's barrel mirrors it rather than assuming `export default`.
+> **`orgId` for Task 11:** the `useAuth|orgId` grep records whether an `orgId`/`organizationId` is already in the section's scope. **Regardless of the result, Task 11 threads `orgId` explicitly as a prop** (see Task 11 Step 2/3) — this codebase resolves tenancy via passed params, not a validated context, so do not depend on an in-scope var. The grep only confirms `useAuth` is importable for `userId`.
 
 **Anchor (verified by a full read of the pre-5a file; the audit wins on any conflict):**
 - **Props interface `RegulatoryComplianceSectionProps` (lines 58–95)** — the `MarketIntelligenceTabProps` slice this section consumes, all passed by `MarketIntelligenceSections.tsx`:
@@ -363,7 +371,28 @@ git commit -m "refactor(fe): extract regulatoryHelpers + types from RegulatoryCo
 
 > Spec 24 §6, R3. Add the hook that wraps the 5b data layer so the container can **delete `fetchRegulatoryComplianceData`** and stop consuming the `regulatoryData` / `isRefreshing` props as its data source. MSW handlers exist from 5b. (5b's page-rewire removed the *page's* fetches; this section still carries its own — that is what 5e removes.)
 
-- [ ] **Step 1: Write the failing hook test** (RTL `renderHook` + `QueryClientProvider` + MSW):
+- [ ] **Step 1: Extend the MSW handler, then write the failing hook test with field-level assertions.**
+
+  **First extend the 5b MSW handler.** The shipped handler (`src/test/msw/handlers.ts`, the `POST /api/market-research` case) returns a generic `data: { component_name, title, summary }` stub for **every** component, and `ResearchComponentSchema` types `data` opaquely (`z.record(z.string(), z.unknown()).passthrough()`) so nothing validates field presence. Against that stub the hook test would pass while `regulatoryData` lacks `keyUpdates`/`visualDataCards`/`regionalData`/`strategicRecommendations`, and every section would silently render hardcoded defaults — the exact late-surfacing failure this task exists to prevent. Branch the handler on `component_name` so the regulatory component returns a regulatory-shaped `data` (keep the existing default for other components):
+```ts
+// in handlers.ts, POST /api/market-research:
+if (body.component_name === "regulatory & compliance highlights") {
+  return HttpResponse.json({
+    status: "success",
+    data: {
+      keyUpdates: [{ title: "EU AI Act", description: "starts Q1 2026", tag: "New" }],
+      visualDataCards: [{ /* one bar-chart card fixture */ }],
+      regionalData: [{ region: "EU", deadline: "Q1 2026", requirements: "…" }],
+      strategicRecommendations: {
+        mitigateRegulatoryRisks: ["…"], competitivePositioning: ["…"], goToMarketStrategy: ["…"],
+      },
+    },
+  });
+}
+```
+  Reuse this same fixture for the `regulatoryHelpers` adapter test if one is added (Task 2 / the reconcile below).
+
+  **Then the failing hook test** (RTL `renderHook` + `QueryClientProvider` + MSW) — assert the *fields are present*, not merely that `regulatoryData` is defined:
 ```tsx
 import { describe, expect, it } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
@@ -376,10 +405,15 @@ function wrapper({ children }: { children: React.ReactNode }) {
 }
 
 describe("useRegulatoryCompliance", () => {
-  it("returns regulatory data from the 5b hook", async () => {
+  it("surfaces the regulatory report fields from the 5b hook", async () => {
     const { result } = renderHook(() => useRegulatoryCompliance("user-1", "org-1"), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.regulatoryData).toBeDefined();
+    // Field-level: prove the hook supplies the shape the sections read, so a mismatch
+    // fails HERE (Task 3) instead of silently rendering defaults until Task 11.
+    expect(Object.keys(result.current.regulatoryData ?? {})).toEqual(
+      expect.arrayContaining(["keyUpdates", "visualDataCards", "regionalData", "strategicRecommendations"]),
+    );
   });
   it("exposes refresh() and isRefreshing", () => {
     const { result } = renderHook(() => useRegulatoryCompliance("user-1", "org-1"), { wrapper });
@@ -388,7 +422,7 @@ describe("useRegulatoryCompliance", () => {
   });
 });
 ```
-Run red (module missing).
+Run red (module missing; once green, the field assertions are the executable form of abort criterion 4).
 
 - [ ] **Step 2: Implement `useRegulatoryCompliance.ts`:**
 ```ts
@@ -422,6 +456,8 @@ export function useRegulatoryCompliance(userId: string, orgId: string): UseRegul
 }
 ```
 > **Reconcile (abort 4 backstop):** the section renders `regulatoryData?.{keyUpdates, visualDataCards, regionalData, strategicRecommendations, executiveSummary, euAiActDeadline, …}` (an `UntypedBackendApiResponse`), while the 5b hook returns `ResearchComponentResponse` (`{ status, data }`). Map `query.data?.data` to that shape — by typing the return here (preferred) or with a small `mapResearchToRegulatory(data)` adapter in `regulatoryHelpers.ts` (add a unit test if non-trivial). If `data` cannot supply a field a section renders, STOP and escalate to 5b (abort 4) — do not re-add a permanent prop or a raw `fetch`.
+>
+> **Verified against merged 5b (confirms the "type the return" path):** `useResearchComponent`/`fetchResearchComponent` return the `{ status, data }` envelope verbatim (`ResearchComponentSchema`, `contracts.ts`), and the section reads its fields directly off `data`, so this is a **typed pass-through** — `regulatoryData = query.data?.data as UntypedBackendApiResponse` — **no reshaping adapter is required**; the risk is field *presence*, not position. The Step-1 handler extension + field-level assertion make abort-4 executable inside this task. **One residual check:** `ResearchComponentSchema` types `data` opaquely (`z.record(z.string(), z.unknown())`), so before Task 11 drops the prop, confirm the **real** backend returns those fields under `data` for `component_name = "regulatory & compliance highlights"` with one live `curl`/`/docs` call (repo rule: verify the response shape with a live call). The section historically rendered them from the prop, so this is expected — but the opaque contract keeps abort-4 a genuine path.
 
 - [ ] **Step 3: Green + gates + commit:**
 ```bash
@@ -489,7 +525,7 @@ export function ComplianceVisualCard(props: ComplianceVisualCardProps) {
 }
 ```
 Keep the chart markup byte-identical. The `hoveredCard` state stays in the container; pass `isHovered`/`onHover`.
-- [ ] **Step 3:** Use it in the container's Analytics map for now (Task 8 lifts the map itself). Gates + commit `refactor(fe): extract ComplianceVisualCard from RegulatoryComplianceSection`.
+- [ ] **Step 3:** Use it in the container's Analytics map for now (Task 8 lifts the map itself). Gates + **full-suite checkpoint** (`npx vitest run`, no filter — densest extraction, per the template) + commit `refactor(fe): extract ComplianceVisualCard from RegulatoryComplianceSection`.
 
 ---
 
@@ -588,7 +624,7 @@ export interface RegionalComplianceSectionProps {
 }
 export function RegionalComplianceSection(props: RegionalComplianceSectionProps) { /* … */ }
 ```
-- [ ] **Step 3:** Wire into the container (both branches); delete inlined table. Gates + commit `refactor(fe): extract RegionalComplianceSection from RegulatoryComplianceSection`.
+- [ ] **Step 3:** Wire into the container (both branches); delete inlined table. Gates + **full-suite checkpoint** (`npx vitest run`, no filter — last large extraction, per the template) + commit `refactor(fe): extract RegionalComplianceSection from RegulatoryComplianceSection`.
 
 ---
 
@@ -645,19 +681,21 @@ export function RegulatoryFooter(props: RegulatoryFooterProps) { /* lifted foote
 ```
 RTL test: clicking Save/Cancel/Export/Read-More fires the right callback. Wire in; delete inlined footer. Commit `refactor(fe): extract RegulatoryFooter from RegulatoryComplianceSection`.
 
-- [ ] **Step 2: Hook-source the data; delete `fetchRegulatoryComplianceData` and the data slice.** In the container, derive `regulatoryData` from the hook and drop the `regulatoryData`/`isRefreshing` props as the data source (the section needs a `userId` + `organizationId` to call the hook — add them to the prop slice if not already threaded; confirm `MarketIntelligenceSections` passes an org id, e.g. via `useAuth()` → `{ currentUser, orgId }` so `userId = currentUser?.uid`, and pass them through):
+- [ ] **Step 2: Hook-source the data; delete `fetchRegulatoryComplianceData` and the data slice.** In the container, derive `regulatoryData` from the hook and drop the `regulatoryData`/`isRefreshing` props as the data source. The section needs a `userId` + `orgId` to call the hook. **Thread `orgId` explicitly as a new prop from `MarketIntelligenceSections` — do not rely on an in-scope `orgId` var.** Task 0's grep recorded whether one exists, but the decision is to pass it down regardless: this codebase resolves tenancy via passed params, not a validated auth/tenant context, so an in-scope var is not guaranteed and must not be assumed. Get `userId` from `useAuth().currentUser?.uid`:
 ```tsx
 import { useRegulatoryCompliance } from "./useRegulatoryCompliance";
 
-// inside the component:
+// inside the component (orgId arrives as a prop threaded from MarketIntelligenceSections; userId from auth):
+const userIdToUse = useAuth().currentUser?.uid ?? "";
 const { regulatoryData, isLoading: _isLoading, refresh, isRefreshing } =
-  useRegulatoryCompliance(userIdToUse, orgIdToUse);   // orgIdToUse already exists (line ~129); userIdToUse = useAuth().currentUser?.uid
+  useRegulatoryCompliance(userIdToUse, orgId);   // orgId is a NEW prop on this section — see Step 3; do NOT assume a pre-existing in-scope var
 // DELETE fetchRegulatoryComplianceData and the `propRegulatoryData` prop usage.
 // Refresh affordances call refresh(); loading uses isLoading/isRefreshing.
 ```
+Add `orgId: string` to the section's prop slice (`types.ts` `RegulatoryComplianceSectionProps`) as part of this task.
 Remove `regulatoryData?: UntypedBackendApiResponse` and (as a data source) `isRefreshing` from the prop slice. **Keep the edit-persistence props** (`onSaveChanges`, the five `on*Change`, `onDeleteSection`, `editHistory`, `deletedSections`, etc.) — those are not data-layer; they remain parent-owned unless the audit shows the edit path is dead. Record the decision.
 
-- [ ] **Step 3: Update the caller.** In `MarketIntelligenceSections.tsx`, stop passing `regulatoryData` (and `isRefreshing` as data) to `<RegulatoryComplianceSection>`; pass the `userId`/`organizationId`/`orgId` the hook needs (if the layer doesn't already — `userId` from `useAuth().currentUser?.uid`). **Leave the `regulatory*`/`regulatoryData` fields on `MarketIntelligenceTabProps` and any data still flowing for other sections** — only stop threading them into *this* section.
+- [ ] **Step 3: Update the caller.** In `MarketIntelligenceSections.tsx`, stop passing `regulatoryData` (and `isRefreshing` as data) to `<RegulatoryComplianceSection>`, and **pass the new `orgId` prop** the hook needs, sourced from the tenant/auth context available in `MarketIntelligenceSections` (do not assume the section already holds an `orgId`). `userId` is read inside the section via `useAuth().currentUser?.uid` (or thread it too if `useAuth` isn't importable there — Task 0's grep settled this). **Leave the `regulatory*`/`regulatoryData` fields on `MarketIntelligenceTabProps` and any data still flowing for other sections** — only stop threading them into *this* section.
 
 - [ ] **Step 4: Confirm the interface is retained + note remaining consumers + gates + commit:**
 ```bash
