@@ -1,7 +1,5 @@
 import {
-  MapPin,
   Bot,
-  Edit,
   Target,
   Clock,
   AlertTriangle,
@@ -17,6 +15,7 @@ import {
 import React, { useState } from "react";
 
 import MarketEntryBulletList from "./MarketEntryBulletList";
+import MarketEntryHeader from "./MarketEntryHeader";
 import MarketEntryKpiCards from "./MarketEntryKpiCards";
 import MarketEntrySwotEditor from "./MarketEntrySwotEditor";
 import MarketEntrySwotGrid from "./MarketEntrySwotGrid";
@@ -332,12 +331,12 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   if (me.isLoading && !hasData) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-purple-600" />
-            Market Entry & Growth Strategy
-          </h2>
-        </div>
+        <MarketEntryHeader
+          isSplitView={isSplitView}
+          onToggleEdit={handleModify}
+          onEditHistoryOpen={onEditHistoryOpen}
+          onScoutIconClick={onScoutIconClick}
+        />
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading market entry data...</p>
@@ -350,34 +349,13 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   if (!hasData && !me.isLoading) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-purple-600" />
-            Market Entry & Growth Strategy
-          </h2>
-          <div className="flex items-center gap-3">
-            {!isSplitView && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      onScoutIconClick("market-entry");
-                    }}
-                    className="text-purple-600 hover:text-purple-700 transition-all duration-200 relative"
-                  >
-                    <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
-                    <Bot className="h-5 w-5 relative z-10" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Chat with Scout</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </div>
-        </div>
+        <MarketEntryHeader
+          showActions
+          isSplitView={isSplitView}
+          onToggleEdit={handleModify}
+          onEditHistoryOpen={onEditHistoryOpen}
+          onScoutIconClick={onScoutIconClick}
+        />
         <div className="text-center py-12">
           <p className="text-gray-600 mb-4">No market entry data available</p>
           <Button
@@ -402,52 +380,15 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-          <MapPin className="h-5 w-5 text-purple-600" />
-          Market Entry & Growth Strategy
-        </h2>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleModify}
-            className="text-purple-800 hover:text-purple-900"
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
-          {hasEdits && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onEditHistoryOpen}
-              className="text-gray-600 hover:text-gray-700"
-            >
-              <Clock className="h-4 w-4" />
-            </Button>
-          )}
-          {!isSplitView && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    onScoutIconClick("market-entry");
-                  }}
-                  className="text-purple-600 hover:text-purple-700 transition-all duration-200 relative"
-                >
-                  <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
-                  <Bot className="h-5 w-5 relative z-10" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Chat with Scout</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-        </div>
-      </div>
+      <MarketEntryHeader
+        showActions
+        showEditButton
+        showEditHistory={hasEdits}
+        isSplitView={isSplitView}
+        onToggleEdit={handleModify}
+        onEditHistoryOpen={onEditHistoryOpen}
+        onScoutIconClick={onScoutIconClick}
+      />
 
       {/* Collapsed View */}
       {!isExpanded && !isEditing && (
