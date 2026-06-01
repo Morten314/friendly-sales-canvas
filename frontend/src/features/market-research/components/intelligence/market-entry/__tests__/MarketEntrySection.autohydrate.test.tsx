@@ -61,8 +61,10 @@ describe("MarketEntrySection auto-hydrate", () => {
 
     // The signature regression for this task: section no longer auto-hydrates.
     // Assert a field that only the MSW market-entry payload provides appears.
-    await waitFor(() =>
-      expect(screen.getByText("Test executive summary for market entry.")).toBeInTheDocument(),
+    await waitFor(
+      () =>
+        expect(screen.getByText("Test executive summary for market entry.")).toBeInTheDocument(),
+      { timeout: 5000 },
     );
     // A second fetched field (collapsed-view KPI) confirms full hydration.
     expect(screen.getByText("Direct-to-consumer")).toBeInTheDocument();

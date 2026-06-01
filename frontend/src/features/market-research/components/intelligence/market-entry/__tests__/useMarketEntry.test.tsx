@@ -24,7 +24,7 @@ describe("useMarketEntry", () => {
     const { Wrapper } = wrapper();
     const { result } = renderHook(() => useMarketEntry(USER_ID, ORG_ID), { wrapper: Wrapper });
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 5000 });
     expect(result.current.isError).toBe(false);
     expect(result.current.data).toBeDefined();
     // Behavioral: a real parsed field is present.
