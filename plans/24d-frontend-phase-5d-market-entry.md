@@ -17,7 +17,7 @@
 - `qk.marketResearchComponent` in `src/shared/api/queryKeys.ts`.
 - MSW handlers for `market-research` already in `src/test/msw/handlers.ts`.
 
-**Prerequisite (hard):** **5c (`plans/24c-frontend-phase-5c-page-decomposition.md`) merged to `master`.** 5d operates on the section as rendered by the 5c-created `IntelligenceTab` (the page is a thin shell + tab router; sections render through `IntelligenceTab` reading 5b hooks). Task 0 Step 2 verifies 5b's hooks/services/contracts + 5c's `IntelligenceTab` are present; if any is missing, stop. Branch off the latest `master`.
+**Prerequisite (hard):** **5c (`plans/24c-frontend-phase-5c-page-decomposition.md`) merged to `master`.** 5d operates on the section as rendered by the 5c-created `IntelligenceTab` (the page is a thin shell + tab router; sections render through `IntelligenceTab` reading 5b hooks). Task 0 Step 2 verifies 5b's hooks/services/contracts + 5c's `IntelligenceTab` are present; if any is missing, stop. Branch off the latest `master`. **Why this is a hard gate (not merely renderer identity):** the binding reason to wait for 5c is that 5c's merged form is hook-first and may have rewired this section's *data path* — running 5d first risks 5d's self-fetch premise (Task 4) being invalidated or re-touched by a later 5c merge. 5d's file-level work does **not** strictly require `IntelligenceTab` to exist (Task 1 already hedges the importer as `MarketIntelligenceSections.tsx` and/or `IntelligenceTab.tsx`); the data-path risk is the real gate. (Status at plan-authoring: on `master`, `IntelligenceTab` is absent and the section still self-fetches — i.e. 5c is not yet merged, so Task 0 Step 2 will correctly STOP until it lands.)
 
 **Conventions for every task:**
 - File ops (`mkdir`, `git mv`, `sed`, `grep`, `npm`, `eslint --fix`) run from `frontend/`. `git add`/`git commit` run from the monorepo root `/projects/Brewra/brewra-gtm-intelligence` (so any `docs/`/`specs/` path is includable). There is no root-level `package.json` — all `npm` is in `frontend/`.
@@ -28,7 +28,7 @@
 
 **Abort criteria (whole-branch — report to the controller and halt; do NOT force-push, amend pushed commits, or revert without sign-off):** the per-task STOP conditions handle "fix this step and continue." Abandon the *branch* and escalate when:
 1. 5b or 5c is not actually merged (Task 0 Step 2 fails).
-2. The Task 0 baseline preflight (or its lighter subset) is RED **before any 5d change**.
+2. The Task 0 baseline **full** preflight is RED **before any 5d change** (run the same gate Task N+2 uses — do not declare the baseline green on a lighter subset that skips build/E2E/visual/knip).
 3. The live `"market entry & growth strategy"` `data` shape cannot be confirmed — neither against a captured payload (5b fixtures / `/tmp` captures / MSW handler) nor a live backend call — so `market-entry/types.ts` would have to be inferred statically (R2). STOP and get a captured payload.
 4. Behavioral `journeys/04` cannot be made green after decomposition and the cause is unfound after investigation (final task) — a structural-only refactor must not change behavior.
 5. Replacing the in-component fetch/cache (Task 4) reveals cross-section coupling the 5b page-rewire depends on (e.g. the parent expects this section to hydrate shared props via `on*Change`) that cannot be cleanly cut — that is a 5b/5c boundary question (revert Task 4 and replan), not 5d's to force.
@@ -42,6 +42,8 @@ A half-decomposed tree is recoverable from the last green commit; a force-pushed
 **Files:** none (verification + audit only).
 
 > This task confirms the **seam list + the in-component data machinery** that drive Tasks 2–N. The structure below was read from the file at plan-authoring time (2026-05-30, against the pre-5a copy) and is concrete — **re-confirm it against the merged tree** (5b/5c may have rewired or partially removed the in-component fetch during the page rewire; line numbers will have shifted after relocation + dead-block deletion). Two findings to verify first: (1) **roughly half the file is a commented-out old copy of the component** (a `// import …`-prefixed block, ~lines 1–1970 of the raw file) that is dead code — Task 2 deletes it; (2) **the live code still fetches + caches on its own** (5b rewired the page, not this section) — Task 4 replaces that with the hook.
+>
+> **Decision branch on the re-confirm (the Task 3–4 spine assumes the self-fetch survived to 5d — true on `master` at plan-authoring, NOT guaranteed after 5c merges):** if Task 0 finds the in-component self-fetch **already removed or replaced by 5c** (5c's merged form is hook-first and may have wired this section to a shared research-data hook), Tasks 3–4 do **not** apply as written — re-derive the read seams from the *existing* hook, **shrink or skip Task 4** (its deletions become no-ops/partials), and record the reduced scope in the audit. If the existing 5c wiring conflicts with `useMarketEntry` (e.g. two competing hooks for the same data), do **not** stack a second hook — that is a 5b/5c boundary question: STOP and escalate per abort criterion 5.
 
 - [ ] **Step 1: Branch off the latest `master` (5c merged)**
 
@@ -68,9 +70,9 @@ Expected: all OK. If any fails, STOP — a prerequisite is not merged (abort cri
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
-npm run preflight   # or the lighter typecheck+lint+test subset; the final task is the real gate
+npm run preflight   # run the SAME gate Task N+2 uses, so the baseline is provably green at the identical bar
 ```
-Expected: PASS. RED before any change → STOP (abort criterion 2).
+Expected: PASS. RED before any change → STOP (abort criterion 2). **Do not green the baseline on a lighter typecheck+lint+test subset:** a pre-existing failure in the parts a subset skips (build, `bundle:check`, Playwright `journeys/04`, visual, `knip --strict`) would pass an undersized baseline and then first surface at the Task N+2 full preflight, where it gets misattributed to 5d (or triggers a fruitless abort-criterion-4 investigation). If full preflight is too slow to run repeatedly, it must still run **once here** to establish the starting line — at minimum the build + `journeys/04`, which are exactly what a subset omits.
 
 - [ ] **Step 4: Seam audit — confirm the live structure (drives Tasks 2 + 4–N)**
 
@@ -84,7 +86,7 @@ echo "=== component layers + nested render fns (expect ONE component) ==="; grep
 echo "=== props interface ==="; grep -nE 'interface MarketEntrySectionProps' "$S"
 echo "=== live data machinery (MUST exist in the LIVE code — Task 4 removes it) ==="; grep -nE 'fetchMarketEntryData|apiFetchJson|executeWithRateLimit|getUserLocalStorage|fetch\(|useEffect|useRef|useAuth' "$S" | tail -50
 ```
-**Confirmed live structure (verify each against the output; reconcile any drift):**
+**Confirmed live structure (verify each against the output; reconcile any drift — re-derive every line number from the grep output above; do NOT act on a literal `~N` anchor: the `~N` values are pre-edit hints that shift after relocation + dead-block deletion):**
 - **Single layer** — one `const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({ … }) => {` (~2045), `export default MarketEntrySection;` at the end (~3870). **There is no inner `…Component` wrapper** (the commented-out block had a similar shape; do not be confused by it).
 - **Props slice consumed (~2007–2042):** view flags `isEditing/isSplitView/isExpanded/hasEdits`, `deletedSections: Set<string>`, `editHistory: EditRecord[]`; **data** `executiveSummary`, `entryBarriers: string[]`, `recommendedChannel`, `timeToMarket`, `topBarrier`, `competitiveDifferentiation: string[]`, `strategicRecommendations: string[]`, `riskAssessment: string[]`; ~17 `on*` callbacks (`onToggleEdit`, `onScoutIconClick`, `onEditHistoryOpen`, `onDeleteSection`, `onSaveChanges`, `onCancelEdit`, `onExpandToggle`, the eight `on<Field>Change`, `onExportPDF`, `onSaveToWorkspace`, `onGenerateShareableLink`); `isRefreshing?`, `companyProfile?: UntypedBackendProfile`.
 - **Live data machinery to REMOVE in Task 4 (this is the gnarly part):** `useAuth()` → `{ currentUser, orgId }` (~2080); `fetchMarketEntryData(refresh)` (~2120) = `executeWithRateLimit(() => apiFetchJson("market-research", { method:"POST", body:{ component_name:"Market Entry & Growth Strategy", … } }))`, then hydrates props via the `on*Change` callbacks; **4 `useEffect`** (mount-fetch ~2329 with a `setTimeout`, refresh-on-`isRefreshing`, props-sync ~2410, SWOT-from-localStorage ~2281); **7 `useRef`** (`hasApiDataRef`/`isFetchingRef`/`hasFetchedRef`/`hasTriedSwotFetchRef`/`hasMountedRef`/…); `getUserLocalStorage("marketEntryData")` SWOT fallback (~2295, ~2466); `handleMarketEntryFullSaveChanges` (~2557) does a raw `fetch("/api/ask?…")`. **The hook (Tasks 3–4) replaces the research GET/POST + localStorage-SWOT machinery.** The `/ask` edit-save `fetch` is the **edit-write path** — leaving it as-is (or migrating it) is a 5d-scope call flagged for review (Task 4 / Task N+2); default: keep behavior, do not silently drop it.
@@ -395,11 +397,7 @@ echo "=== now-dead imports removed (expect NO output) ==="; grep -nE 'apiFetchJs
 ```
 > **The `/ask` edit-save `fetch`** in `handleMarketEntryFullSaveChanges` (~2607) is the **edit-write path, NOT a research read** — 5d converts the *read* path. Leave that `fetch` exactly as-is this phase (it rides with the edit form into Task 11); migrating the edit-write path to a mutation is **out of 5d scope** — flag it for the reviewer (Task N+2) and, if it should move, log a `TD-FE`. Do **not** silently delete it (that would drop save behavior). If removing the research fetch makes `journeys/04` fail because the section no longer auto-hydrates, that means the hook's `enabled`/auto-fetch is not matching the old mount-fetch — fix the hook wiring, do not re-add the raw fetch.
 
-- [ ] **Step 4: Optionally wrap in a section error boundary**
-
-Wrap the section body in `<FeatureErrorBoundary featureName="Market entry">` (from `@/shared/components`) so a market-entry crash does not blank the whole intelligence tab — warranted now that the section owns a data fetch.
-
-- [ ] **Step 5: Settle, typecheck, lint, test, knip, commit**
+- [ ] **Step 4: Settle, typecheck, lint, behavioral E2E, knip, commit (the fetch→hook swap)**
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
@@ -407,13 +405,22 @@ npx eslint --fix src && npm run lint && npx tsc --noEmit -p tsconfig.app.json
 npx vitest run src/features/market-research/components/intelligence/market-entry
 npx knip --strict --no-progress
 ```
-Expected: PASS. The section now owns its read data via the hook with no raw research `fetch`/localStorage; the parent may still pass the (soon-removed) data prop slice — fine until Task N+1.
+Then run the **behavioral guard here — not only at Task N+2.** This is the riskiest commit (the fetch→hook swap), and its signature failure mode (the section no longer auto-hydrates because the hook's `enabled`/auto-fetch does not match the old mount-fetch) is invisible to the unit gates above — only `journeys/04` catches it. Detecting it now, rather than at the end of a ~13-commit branch, is the difference between a one-commit fix and unwinding the stack:
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence/frontend
+npx playwright test e2e/journeys/04-market-research-5-components.spec.ts
+```
+Expected: PASS. The section owns its read data via the hook with no raw research `fetch`/localStorage; the parent may still pass the (soon-removed) data prop slice — fine until Task N+1. If `journeys/04` goes red here, the auto-hydrate wiring is wrong — fix the hook's `enabled`/auto-fetch (do **not** re-add the raw fetch); if unfound after investigation, STOP (abort criterion 4). Also add/extend a Vitest/RTL assertion that the section auto-hydrates (renders fetched data after mount with an `orgId`) so the **unit** gate carries a behavioral signal, not only a structural one.
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
 git add -A frontend/src
 git commit -m "refactor(fe): MarketEntry reads useMarketEntry; remove in-component research fetch + localStorage cache"
 ```
+
+- [ ] **Step 5 (SEPARATE commit, only after Step 4 is green — do NOT fold into the Task 4 commit): optionally wrap the section in a feature error boundary**
+
+Optionally wrap the section body in `<FeatureErrorBoundary featureName="Market entry">` (from `@/shared/components`) so a market-entry crash does not blank the whole intelligence tab — warranted now that the section owns a data fetch. Keep it **out** of the Step 4 commit: it changes runtime failure behavior (not structure), and Task 4 is already the heaviest change — bundling it hurts reviewability of the gnarliest commit. Commit it on its own (`refactor(fe): wrap MarketEntry section in FeatureErrorBoundary`) or drop it from 5d and log a follow-up. This is additive beyond the spec's page-level boundary (spec §2), not required.
 
 ---
 
@@ -473,7 +480,7 @@ echo "=== interface fields ==="; grep -nE '^\s*[a-zA-Z].*[:?]' "$P"
 echo "=== who still consumes the interface (must remain) ==="; grep -rln 'MarketIntelligenceTabProps' src --include=*.ts --include=*.tsx
 echo "=== marketEntry-named fields (exclusive — removable) ==="; grep -niE 'marketentry|market_entry' "$P"
 ```
-A field is **MarketEntry-exclusive** only if no other section reads it. Cross-section coordination (a global `isEditing`/`isExpanded` shared by all sections, `deletedSections`, generic `onExportPDF`/`onSaveToWorkspace`) **stays**. When in doubt, leave the field (the last section deletes the interface anyway). Note: the props the section reads (`isEditing`, `executiveSummary`, etc.) are passed as a *flat* slice today — confirm whether they are MarketEntry-only or shared before removing each.
+A field is **MarketEntry-exclusive** only if no other section reads it. Cross-section coordination (a global `isEditing`/`isExpanded` shared by all sections, `deletedSections`, generic `onExportPDF`/`onSaveToWorkspace`) **stays**. When in doubt, leave the field (the last section deletes the interface anyway). Note: the props the section reads (`isEditing`, `executiveSummary`, etc.) are passed as a *flat* slice today — confirm whether they are MarketEntry-only or shared before removing each. **The hard regression guard for over-removal is `tsc --noEmit` (Step 4):** if you drop a field a sibling section still reads, typecheck fails — so "when in doubt, leave it" *plus* the typecheck net is sufficient; do not rely on grep/judgement alone, and never silence a resulting type error by re-adding the field as `any` or `?` on the sibling.
 
 - [ ] **Step 2: Drop the exclusive fields + stop forwarding them**
 
@@ -549,6 +556,7 @@ Per Spec 24 §10: `/review-impl` → `/synthesize-impl-review` (loop until nit-o
 ## Self-review notes (plan author)
 
 - **Spec coverage:** §6 per-section pattern — container + focused sub-components + section-data hook + local types (Tasks 1–11), prop-slice replacement with `MarketIntelligenceTabProps.ts` **retained** because MarketEntry is the first of five sections (Task N+1), no hard LOC cap / single-purpose files (Tasks 5–11), Vitest+RTL for the hook + logic-bearing sub-components (Tasks 3, 5, 6, 8, 11, §8); §4.2 memory-only / retire raw `fetch`+localStorage (Task 4 — applied to this section, which 5b missed); §6 "Done when (each)" (Task N+2 Step 4); §2.1 target tree (`components/intelligence/market-entry/`); §2.3 mapping (prop-drill → hook; section file → decomposed); §12 R3 (hooks exist from 5b before this section converts) and R6 (narrow per-piece commits; E2E as the executable spec).
+  - **Spec gap flagged (plan absorbs a missed 5b migration):** §6's per-section pattern assumes 5b already cleaned each section's data path ("a section-data hook *consuming 5b*"). For MarketEntry it did not — the page-rewire was descoped from 5b, so this section still self-fetches — and 5d therefore *necessarily* absorbs the missed read-migration (Task 4) to satisfy §6's "reading from hooks" Done-when. This is required, not scope creep, but it is a spec-vs-plan delta: recommend a one-line spec §6 amendment (or master-plan delta) stating that 5d–5h each also complete their section's 5b read-migration where 5b's page-rewire did not reach it. That amendment is the spec owner's call (out of scope for this plan edit); flagged here and in Task N+2 Step 5 for the reviewer.
 - **Grounded in the live file (read 2026-05-30 against the pre-5a copy at `src/components/market-research/MarketEntrySection.tsx`):** the file is 3,873 raw LOC, of which **~1,970 are a commented-out old copy of the component** (an earlier version still importing `useAuth` from `@/contexts/AuthContext`) and **~1,900 are live** (lines ~1971–3870). The live component is **single-layer** (`const MarketEntrySection: React.FC<MarketEntrySectionProps>` ~2045, `export default MarketEntrySection` at the end — *not* a two-layer wrapper, *not* a separate `…Component`). **It is NOT purely presentational:** it still runs its own `fetchMarketEntryData` (`apiFetchJson("market-research", POST)` via `executeWithRateLimit`), 4 `useEffect` + 7 `useRef` of fetch orchestration, `getUserLocalStorage("marketEntryData")` SWOT cache, and a raw `/ask` `fetch` in the edit-save path — i.e. **5b's data-layer migration never reached this section**, so 5d completes it (Task 4 replaces the research fetch/cache with `useMarketEntry`). There is **no separate `SwotEditor` const** — the edit-mode SWOT is inline JSX inside `renderEditView` (extracted into `MarketEntrySwotEditor` in Task 6/11). Render seams confirmed live: header, 3 KPI cards, `SwotQuadrant`, static `TimelineChart`, four bullet lists (barriers / differentiation / recommendations / risk), and the large edit form. `types.ts` field names come from both the live `fetchMarketEntryData` mapping and the dead block (camelCase + `swot`↔`swotAnalysis` alias) — Task 0 re-confirms against the merged tree (5b/5c may have rewired) and the captured payload (R2), since 5b's contract may have changed the casing.
 - **Decisions a reviewer should sanity-check:** (a) **Task 2 deletes ~1,970 lines of commented-out code** as its own commit — flagged because it is a large (if inert) deletion; consistent with the repo's dead-code posture (CLAUDE.md Gotchas). (b) **Task 4 deletes the live in-component research fetch + localStorage cache** (the gnarliest change) and routes the read path through `useMarketEntry` — this *completes a 5b migration that missed this file*; abort criterion 5 covers the case where the parent depends on this section hydrating shared props via `on*Change`. (c) The **edit-write path (`/ask` raw `fetch` in `handleMarketEntryFullSaveChanges`) is deliberately left untouched** — 5d converts the research *read* path only; re-routing edits to a mutation is out of scope (flagged for review; candidate `TD-FE`/Phase 7). (d) The four near-identical display bullet lists may collapse into one parameterized `MarketEntryBulletList` — gated on the live markup being uniform (Task 8). (e) `TimelineChart` is a static placeholder today — extracted as-is, not data-wired.
 - **Greenness + revertability:** every commit leaves `tsc --noEmit` + `lint` (+ targeted Vitest) green; relocation (Task 1), dead-block deletion (Task 2), the hook (Task 3), the hook-adopt + fetch/cache removal (Task 4), and each extraction (Tasks 5–11) is its own commit, so any single piece reverts without unwinding the section. Task 4 (section owns its data) precedes the prop-slice removal (Task N+1) so the section reads from the hook before the parent stops feeding it.
