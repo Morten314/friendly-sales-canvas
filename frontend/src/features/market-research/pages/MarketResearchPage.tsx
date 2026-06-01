@@ -12,7 +12,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 import { ChatWithScout } from "@/components/market-research/ChatWithScout";
-import ScoutLeadStream from "@/components/market-research/ScoutLeadStream";
+import LeadStreamTab from "@/components/market-research/lead-stream/LeadStreamTab";
 import { ScoutSettingsForm } from "@/components/market-research/ScoutSettingsForm";
 import { ScoutChatWithHistory } from "@/components/signals/ScoutChatWithHistory";
 import type { SignalsChatContext } from "@/components/signals/SignalsContextChat";
@@ -245,8 +245,6 @@ const MarketResearch = React.memo(() => {
     handleMarketEntryRevertEdit,
     handleMarketEntryViewEditDetails,
     handleMarketEntryScoutClick,
-    leadStreamFilters,
-    setLeadStreamFilters,
     opportunityFilter,
     setOpportunityFilter,
   } = useMarketResearchData(activeTabRef);
@@ -1018,12 +1016,8 @@ const MarketResearch = React.memo(() => {
                     </TabsContent>
 
                     <TabsContent value="analysis" className="mt-0">
-                      <ScoutLeadStream
-                        selectedIndustry={leadStreamFilters.selectedIndustry}
-                        selectedSize={leadStreamFilters.selectedSize}
-                        selectedRegion={leadStreamFilters.selectedRegion}
+                      <LeadStreamTab
                         opportunityFilter={opportunityFilter}
-                        onFiltersChange={(filters) => setLeadStreamFilters(filters)}
                         onClearOpportunityFilter={() => setOpportunityFilter(null)}
                         onChatWithScout={handleChatWithScout}
                         onChatAboutCoverage={handleChatAboutCoverage}

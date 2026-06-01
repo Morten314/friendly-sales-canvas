@@ -1428,14 +1428,6 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
 
   const [industryTrendsLastEditedField, setIndustryTrendsLastEditedField] = useState("");
 
-  // ConsumerTrends (Your Lead Stream) filter state - persist across tab switches
-
-  const [leadStreamFilters, setLeadStreamFilters] = useState({
-    selectedIndustry: "all",
-    selectedSize: "all",
-    selectedRegion: "all",
-  });
-
   // Opportunity filter from intelligence sections
   const [opportunityFilter, setOpportunityFilter] = useState<string | null>(null);
 
@@ -6040,9 +6032,7 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
     handleMarketEntryRevertEdit,
     handleMarketEntryViewEditDetails,
     handleMarketEntryScoutClick,
-    // Lead-stream filters (analysis tab) + opportunity filter
-    leadStreamFilters,
-    setLeadStreamFilters,
+    // Opportunity filter (cross-tab; lead-stream-local filters now live in LeadStreamTab)
     opportunityFilter,
     setOpportunityFilter,
   };
