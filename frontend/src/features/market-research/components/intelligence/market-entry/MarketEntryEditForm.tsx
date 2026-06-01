@@ -343,9 +343,7 @@ export default function MarketEntryEditForm({
             </button>
           </div>
           <div className="space-y-4">
-            <Label className="text-sm font-medium text-gray-700">
-              Competitive Differentiation
-            </Label>
+            <Label className="text-sm font-medium text-gray-700">Competitive Differentiation</Label>
             {editCompetitiveDifferentiation.map((diff, index) => (
               <div key={index} className="flex gap-2">
                 <Input
@@ -414,9 +412,7 @@ export default function MarketEntryEditForm({
             </button>
           </div>
           <div className="space-y-4">
-            <Label className="text-sm font-medium text-gray-700">
-              Strategic Recommendations
-            </Label>
+            <Label className="text-sm font-medium text-gray-700">Strategic Recommendations</Label>
             {editStrategicRecommendations.map((recommendation, index) => (
               <div key={index} className="flex gap-2">
                 <Textarea
@@ -445,9 +441,7 @@ export default function MarketEntryEditForm({
             <Button
               variant="outline"
               size="sm"
-              onClick={() =>
-                setEditStrategicRecommendations([...editStrategicRecommendations, ""])
-              }
+              onClick={() => setEditStrategicRecommendations([...editStrategicRecommendations, ""])}
             >
               Add Recommendation
             </Button>

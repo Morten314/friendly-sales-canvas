@@ -63,9 +63,7 @@ describe("MarketEntryHeader", () => {
 
   it("fires onToggleEdit when the Edit button is clicked", () => {
     const handlers = baseHandlers();
-    renderHeader(
-      <MarketEntryHeader showActions showEditButton isSplitView={true} {...handlers} />,
-    );
+    renderHeader(<MarketEntryHeader showActions showEditButton isSplitView={true} {...handlers} />);
 
     fireEvent.click(screen.getByRole("button"));
 

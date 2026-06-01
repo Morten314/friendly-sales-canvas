@@ -7,7 +7,6 @@ import MarketEntrySection from "../MarketEntrySection";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-
 // Mock auth so the section resolves a userId + orgId and the hook's query is
 // enabled (auto-fetch on mount). The MSW handler returns the market-entry shape.
 vi.mock("@/shared/auth", () => ({
