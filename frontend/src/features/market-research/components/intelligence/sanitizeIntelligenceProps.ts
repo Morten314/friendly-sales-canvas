@@ -1,11 +1,22 @@
 import React from "react";
 
-import MarketIntelligenceTab from "./MarketIntelligenceTab";
-import type { MarketIntelligenceTabProps } from "./MarketIntelligenceTabProps";
+import type { MarketIntelligenceTabProps } from "../MarketIntelligenceTabProps";
 
-import { ErrorBoundary } from "@/components/common/ErrorBoundary";
-
-const SafeMarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) => {
+/**
+ * Recursive prop-sanitization formerly performed inside SafeMarketIntelligenceTab.
+ *
+ * It guards MarketIntelligenceSections against render-unsafe shapes coming from the
+ * backend: coerces region-keyed objects to arrays, JSON-stringifies objects that
+ * would otherwise be rendered directly, preserves `industryTrendsRegionalHotspots`
+ * as an object, survives the JSON round-trip for function props and Sets, and
+ * rebuilds the four `*DeletedSections` props back into Sets.
+ *
+ * Lifted verbatim from the former Safe wrapper so behavior is unchanged; the
+ * characterization test pins the four round-trip-fragile behaviors.
+ */
+export function sanitizeIntelligenceProps(
+  props: MarketIntelligenceTabProps,
+): MarketIntelligenceTabProps {
   // Check for problematic objects before rendering
   const checkForObjects = (obj: unknown, path = "") => {
     // Skip regionalHotspots - it's correctly an object from backend with region keys
@@ -126,14 +137,5 @@ const SafeMarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) 
     }
   });
 
-  return (
-    <ErrorBoundary
-      fallbackMessage="Error in Market Intelligence section"
-      componentName="MarketIntelligenceTab"
-    >
-      <MarketIntelligenceTab {...sanitizedProps} />
-    </ErrorBoundary>
-  );
-};
-
-export default SafeMarketIntelligenceTab;
+  return sanitizedProps as MarketIntelligenceTabProps;
+}
