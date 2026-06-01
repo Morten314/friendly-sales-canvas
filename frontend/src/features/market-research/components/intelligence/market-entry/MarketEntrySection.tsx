@@ -20,6 +20,7 @@ import MarketEntryBulletList from "./MarketEntryBulletList";
 import MarketEntryKpiCards from "./MarketEntryKpiCards";
 import MarketEntrySwotEditor from "./MarketEntrySwotEditor";
 import MarketEntrySwotGrid from "./MarketEntrySwotGrid";
+import MarketEntryTimeline from "./MarketEntryTimeline";
 import { useMarketEntry } from "./useMarketEntry";
 
 import type { EditRecord } from "@/components/market-research/types";
@@ -262,23 +263,6 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
     }
   };
 
-  const TimelineChart = () => (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-        <span className="text-xs">Q1 2025: Market Research</span>
-      </div>
-      <div className="flex items-center gap-2">
-        <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-        <span className="text-xs">Q2 2025: Partnerships</span>
-      </div>
-      <div className="flex items-center gap-2">
-        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-        <span className="text-xs">Q3 2025: Launch</span>
-      </div>
-    </div>
-  );
-
   // Check if we have any meaningful data to display.
   // SERVER data now comes from the useMarketEntry hook (me.data); props remain
   // the fallback (parent cascade + in-flight edit-form writes still flow via props).
@@ -485,7 +469,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
             </div>
             <div>
               <h4 className="text-lg font-semibold text-gray-900 mb-2">Timeline Preview</h4>
-              <TimelineChart />
+              <MarketEntryTimeline />
             </div>
           </div>
 
@@ -535,7 +519,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
             </div>
             <div>
               <h4 className="text-lg font-semibold text-gray-900 mb-2">Timeline Preview</h4>
-              <TimelineChart />
+              <MarketEntryTimeline />
             </div>
           </div>
 
