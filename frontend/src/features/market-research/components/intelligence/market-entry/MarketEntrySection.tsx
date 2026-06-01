@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import React, { useState } from "react";
 
+import MarketEntrySwotGrid from "./MarketEntrySwotGrid";
 import { useMarketEntry } from "./useMarketEntry";
 
 import type { EditRecord } from "@/components/market-research/types";
@@ -258,113 +259,6 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
     }
   };
 
-  const SwotQuadrant = ({
-    swotData,
-  }: {
-    swotData?: {
-      strengths: string[];
-      weaknesses: string[];
-      opportunities: string[];
-      threats: string[];
-    };
-  }) => {
-    if (swotData) {
-      // intentional: presence check only; normalization happens below
-    }
-
-    // Use swotData if it exists and is an object, otherwise try editSwotAnalysis
-    // Normalize the data to ensure proper structure
-    let swotToUse: {
-      strengths: string[];
-      weaknesses: string[];
-      opportunities: string[];
-      threats: string[];
-    } | null = null;
-
-    if (swotData && typeof swotData === "object") {
-      // Normalize swotData to ensure all arrays exist
-      swotToUse = {
-        strengths: Array.isArray(swotData.strengths) ? swotData.strengths : [],
-        weaknesses: Array.isArray(swotData.weaknesses) ? swotData.weaknesses : [],
-        opportunities: Array.isArray(swotData.opportunities) ? swotData.opportunities : [],
-        threats: Array.isArray(swotData.threats) ? swotData.threats : [],
-      };
-    } else if (editSwotAnalysis && typeof editSwotAnalysis === "object") {
-      // Fallback to editSwotAnalysis if swotData is not available
-      swotToUse = {
-        strengths: Array.isArray(editSwotAnalysis.strengths) ? editSwotAnalysis.strengths : [],
-        weaknesses: Array.isArray(editSwotAnalysis.weaknesses) ? editSwotAnalysis.weaknesses : [],
-        opportunities: Array.isArray(editSwotAnalysis.opportunities)
-          ? editSwotAnalysis.opportunities
-          : [],
-        threats: Array.isArray(editSwotAnalysis.threats) ? editSwotAnalysis.threats : [],
-      };
-    }
-
-    if (swotToUse) {
-      // intentional: presence check only; arrays extracted below
-    }
-
-    // Use normalized data or empty arrays
-    const strengths = swotToUse?.strengths || [];
-    const weaknesses = swotToUse?.weaknesses || [];
-    const opportunities = swotToUse?.opportunities || [];
-    const threats = swotToUse?.threats || [];
-
-    return (
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="bg-green-50 p-2 rounded border">
-          <div className="font-semibold text-green-700">Strengths</div>
-          {strengths.length > 0 ? (
-            strengths.map((strength, index) => (
-              <div key={index} className="text-green-600">
-                • {strength}
-              </div>
-            ))
-          ) : (
-            <div className="text-gray-400 text-xs italic">No data available</div>
-          )}
-        </div>
-        <div className="bg-blue-50 p-2 rounded border">
-          <div className="font-semibold text-blue-700">Opportunities</div>
-          {opportunities.length > 0 ? (
-            opportunities.map((opportunity, index) => (
-              <div key={index} className="text-blue-600">
-                • {opportunity}
-              </div>
-            ))
-          ) : (
-            <div className="text-gray-400 text-xs italic">No data available</div>
-          )}
-        </div>
-        <div className="bg-orange-50 p-2 rounded border">
-          <div className="font-semibold text-orange-700">Weaknesses</div>
-          {weaknesses.length > 0 ? (
-            weaknesses.map((weakness, index) => (
-              <div key={index} className="text-orange-600">
-                • {weakness}
-              </div>
-            ))
-          ) : (
-            <div className="text-gray-400 text-xs italic">No data available</div>
-          )}
-        </div>
-        <div className="bg-red-50 p-2 rounded border">
-          <div className="font-semibold text-red-700">Threats</div>
-          {threats.length > 0 ? (
-            threats.map((threat, index) => (
-              <div key={index} className="text-red-600">
-                • {threat}
-              </div>
-            ))
-          ) : (
-            <div className="text-gray-400 text-xs italic">No data available</div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   const TimelineChart = () => (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
@@ -433,7 +327,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
         ? (serverData?.riskAssessment ?? [])
         : riskAssessment,
     // SWOT is NOT in props - only present when me.data carries it (edit mode falls
-    // back to editSwotAnalysis at the SwotQuadrant call sites).
+    // back to editSwotAnalysis at the MarketEntrySwotGrid call sites).
     swotAnalysis: finalSwotData,
   };
 
@@ -599,7 +493,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
               <h4 className="text-lg font-semibold text-gray-900 mb-2">SWOT Analysis</h4>
-              <SwotQuadrant swotData={displayData.swotAnalysis || editSwotAnalysis} />
+              <MarketEntrySwotGrid swot={displayData.swotAnalysis || editSwotAnalysis} />
             </div>
             <div>
               <h4 className="text-lg font-semibold text-gray-900 mb-2">Timeline Preview</h4>
@@ -664,7 +558,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
               <h4 className="text-lg font-semibold text-gray-900 mb-2">SWOT Analysis</h4>
-              <SwotQuadrant swotData={displayData.swotAnalysis || editSwotAnalysis} />
+              <MarketEntrySwotGrid swot={displayData.swotAnalysis || editSwotAnalysis} />
             </div>
             <div>
               <h4 className="text-lg font-semibold text-gray-900 mb-2">Timeline Preview</h4>
