@@ -11,11 +11,8 @@ import {
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
-import { ChatWithScout } from "@/components/market-research/ChatWithScout";
 import LeadStreamTab from "@/components/market-research/lead-stream/LeadStreamTab";
 import { ScoutSettingsForm } from "@/components/market-research/ScoutSettingsForm";
-import { ScoutChatWithHistory } from "@/components/signals/ScoutChatWithHistory";
-import type { SignalsChatContext } from "@/components/signals/SignalsContextChat";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,7 +21,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import IntelligenceTab from "@/features/market-research/components/intelligence/IntelligenceTab";
 import { MarketDetailDrawer } from "@/features/market-research/components/MarketDetailDrawer";
+import TrendsTab from "@/features/market-research/components/trends/TrendsTab";
 import { useMarketResearchData } from "@/features/market-research/hooks/useMarketResearchData";
+import type { ScoutResearchContext } from "@/features/market-research/types";
 import { Layout } from "@/features/shell";
 import type { DeploymentData } from "@/features/shell";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -76,13 +75,9 @@ const MarketResearch = React.memo(() => {
   const [activeTab, setActiveTab] = useState(getActiveTabFromPath());
   const activeTabRef = useRef(activeTab);
   activeTabRef.current = activeTab;
-  const [signalsChatContext, setSignalsChatContext] = useState<SignalsChatContext | null>(null);
-  const [scoutResearchContext, setScoutResearchContext] = useState<{
-    leads: { name: string; company: string; jobTitle: string }[];
-    opportunity?: string;
-    icp?: string;
-    reportTraits?: string[];
-  } | null>(null);
+  const [scoutResearchContext, setScoutResearchContext] = useState<ScoutResearchContext | null>(
+    null,
+  );
   const [scoutMode, setScoutMode] = useState<"selected-leads" | "full-list">("selected-leads");
 
   // Data layer (raw fetch + cache + cascade) lives in the hook; the shell threads the
@@ -315,26 +310,6 @@ const MarketResearch = React.memo(() => {
     }
     navigate("/your-ai-team/strategist/leadstream");
   };
-
-  // When Chat with Scout tab is active, check for context from Signals page
-  useEffect(() => {
-    if (activeTab !== "trends") return;
-    try {
-      const stored = sessionStorage.getItem("signalsChatContext");
-      if (stored) {
-        const parsed = JSON.parse(stored) as SignalsChatContext;
-        if (parsed?.agent === "scout") {
-          setSignalsChatContext(parsed);
-        } else {
-          setSignalsChatContext(null);
-        }
-      } else {
-        setSignalsChatContext(null);
-      }
-    } catch {
-      setSignalsChatContext(null);
-    }
-  }, [activeTab]);
 
   // Update active tab when URL changes
 
@@ -801,23 +776,12 @@ const MarketResearch = React.memo(() => {
           {/* Scrollable content area - ALWAYS show content if data exists */}
 
           {activeTab === "trends" ? (
-            <div className="flex-1 h-full min-h-[30rem] flex flex-col overflow-hidden -mx-3 md:-mx-4 lg:-mx-6 w-[calc(100%+1.5rem)] md:w-[calc(100%+2rem)] lg:w-[calc(100%+3rem)] max-w-none">
-              {scoutResearchContext ? (
-                <div className="px-3 md:px-4 lg:px-6 py-4 h-full flex flex-col min-h-0 flex-1">
-                  <ChatWithScout fullPage researchContext={scoutResearchContext} mode={scoutMode} />
-                </div>
-              ) : (
-                <ScoutChatWithHistory
-                  initialContext={signalsChatContext}
-                  onClearContext={() => {
-                    sessionStorage.removeItem("signalsChatContext");
-                    setSignalsChatContext(null);
-                  }}
-                  editHistory={editHistory}
-                  onTabChange={setActiveTab}
-                />
-              )}
-            </div>
+            <TrendsTab
+              scoutResearchContext={scoutResearchContext}
+              scoutMode={scoutMode}
+              editHistory={editHistory}
+              onTabChange={setActiveTab}
+            />
           ) : (
             <ScrollArea className="flex-1">
               {/* Show content only when all components are successful or when not refreshing */}
@@ -1025,10 +989,6 @@ const MarketResearch = React.memo(() => {
                       />
                     </TabsContent>
 
-                    <TabsContent value="trends" className="mt-0 hidden">
-                      {/* Chat tab content rendered above when activeTab === 'trends' */}
-                      <div />
-                    </TabsContent>
                   </>
                 ) : (
                   /* Show loading message when refreshing and not all components are successful */
