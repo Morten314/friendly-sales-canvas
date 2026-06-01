@@ -119,7 +119,6 @@ const MarketResearch = React.memo(() => {
     industryTrendsData,
     competitorData,
     regulatoryData,
-    marketEntryData,
     companyProfile,
     editHistory,
     editHistoryContext,
@@ -129,7 +128,6 @@ const MarketResearch = React.memo(() => {
     fetchMarketData,
     fetchMarketSizeData,
     fetchCompetitorData,
-    fetchMarketEntryData,
     returnToCurrentData,
     formatTimestamp,
     saveMarketIntelligenceToLocalStorage,
@@ -564,7 +562,6 @@ const MarketResearch = React.memo(() => {
                         marketIntelligenceData={marketIntelligenceData}
                         setMarketIntelligenceData={setMarketIntelligenceData}
                         industryTrendsData={industryTrendsData}
-                        marketEntryData={marketEntryData}
                         currentUser={currentUser}
                         editHistory={editHistory}
                         editHistoryContext={editHistoryContext}
@@ -574,7 +571,6 @@ const MarketResearch = React.memo(() => {
                         fetchMarketData={fetchMarketData}
                         fetchMarketSizeData={fetchMarketSizeData}
                         fetchCompetitorData={fetchCompetitorData}
-                        fetchMarketEntryData={fetchMarketEntryData}
                         saveMarketIntelligenceToLocalStorage={saveMarketIntelligenceToLocalStorage}
                         setIsChatOpen={setIsChatOpen}
                         isMarketIntelligenceEditing={isMarketIntelligenceEditing}

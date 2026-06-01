@@ -292,14 +292,6 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
             hasEdits={props.marketEntryHasEdits || false}
             deletedSections={props.marketEntryDeletedSections || new Set()}
             editHistory={props.marketEntryEditHistory || []}
-            executiveSummary={props.marketEntryExecutiveSummary || ""}
-            entryBarriers={props.marketEntryBarriers || []}
-            recommendedChannel={props.marketEntryRecommendedChannel || ""}
-            timeToMarket={props.marketEntryTimeToMarket || ""}
-            topBarrier={props.marketEntryTopBarrier || ""}
-            competitiveDifferentiation={props.marketEntryCompetitiveDifferentiation || []}
-            strategicRecommendations={props.marketEntryStrategicRecommendations || []}
-            riskAssessment={props.marketEntryRiskAssessment || []}
             onToggleEdit={props.onMarketEntryToggleEdit || (() => {})}
             onScoutIconClick={props.onMarketEntryScoutIconClick || props.onMarketSizeScoutIconClick}
             onEditHistoryOpen={props.onMarketEntryEditHistoryOpen || (() => {})}
@@ -322,8 +314,6 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
             onExportPDF={props.onExportPDF}
             onSaveToWorkspace={props.onSaveToWorkspace}
             onGenerateShareableLink={props.onGenerateShareableLink}
-            isRefreshing={props.isRefreshing}
-            companyProfile={props.companyProfile}
           />
         </div>
         {props.showMarketEntryScoutChat && marketEntryScoutChatPanel && (

@@ -22,10 +22,7 @@ import { useMarketEntry } from "./useMarketEntry";
 import type { EditRecord } from "@/components/market-research/types";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import type {
-  UntypedReportSection,
-  UntypedBackendProfile,
-} from "@/lib/types/escape-hatches";
+import type { UntypedReportSection } from "@/lib/types/escape-hatches";
 import { useAuth } from "@/shared/auth";
 
 interface MarketEntrySectionProps {
@@ -35,14 +32,6 @@ interface MarketEntrySectionProps {
   hasEdits: boolean;
   deletedSections: Set<string>;
   editHistory: EditRecord[];
-  executiveSummary: string;
-  entryBarriers: string[];
-  recommendedChannel: string;
-  timeToMarket: string;
-  topBarrier: string;
-  competitiveDifferentiation: string[];
-  strategicRecommendations: string[];
-  riskAssessment: string[];
   onToggleEdit: () => void;
   onScoutIconClick: (context?: "market-entry", hasEdits?: boolean, customMessage?: string) => void;
   onEditHistoryOpen: () => void;
@@ -61,9 +50,6 @@ interface MarketEntrySectionProps {
   onExportPDF: () => void;
   onSaveToWorkspace: () => void;
   onGenerateShareableLink: () => void;
-  // Add refresh props
-  isRefreshing?: boolean;
-  companyProfile?: UntypedBackendProfile;
 }
 
 const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
@@ -73,14 +59,6 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   hasEdits,
   deletedSections,
   editHistory: _editHistory,
-  executiveSummary,
-  entryBarriers,
-  recommendedChannel,
-  timeToMarket,
-  topBarrier,
-  competitiveDifferentiation,
-  strategicRecommendations,
-  riskAssessment,
   onToggleEdit,
   onScoutIconClick,
   onEditHistoryOpen,
@@ -281,30 +259,20 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
         }
       : undefined;
 
-  // Resolve the section's display values: me.data field wins, prop is the
-  // fallback (parent cascade + in-flight edit-form writes still flow via props).
+  // Resolve the section's display values from the useMarketEntry hook's server
+  // data (me.data). The former prop fallbacks were removed — MarketEntry now owns
+  // its read path via the hook — so each field defaults to a sensible empty value
+  // ("" for strings, [] for arrays) to preserve the prior empty-state rendering.
   const displayData = {
-    executiveSummary: serverData?.executiveSummary || executiveSummary,
-    entryBarriers:
-      (serverData?.entryBarriers?.length ?? 0) > 0
-        ? (serverData?.entryBarriers ?? [])
-        : entryBarriers,
+    executiveSummary: serverData?.executiveSummary || "",
+    entryBarriers: serverData?.entryBarriers ?? [],
     // recommendedChannel may be a string OR an object (JSX handles both shapes).
-    recommendedChannel: serverData?.recommendedChannel || recommendedChannel,
-    timeToMarket: serverData?.timeToMarket || timeToMarket,
-    topBarrier: serverData?.topBarrier || topBarrier,
-    competitiveDifferentiation:
-      (serverData?.competitiveDifferentiation?.length ?? 0) > 0
-        ? (serverData?.competitiveDifferentiation ?? [])
-        : competitiveDifferentiation,
-    strategicRecommendations:
-      (serverData?.strategicRecommendations?.length ?? 0) > 0
-        ? (serverData?.strategicRecommendations ?? [])
-        : strategicRecommendations,
-    riskAssessment:
-      (serverData?.riskAssessment?.length ?? 0) > 0
-        ? (serverData?.riskAssessment ?? [])
-        : riskAssessment,
+    recommendedChannel: serverData?.recommendedChannel || "",
+    timeToMarket: serverData?.timeToMarket || "",
+    topBarrier: serverData?.topBarrier || "",
+    competitiveDifferentiation: serverData?.competitiveDifferentiation ?? [],
+    strategicRecommendations: serverData?.strategicRecommendations ?? [],
+    riskAssessment: serverData?.riskAssessment ?? [],
     // SWOT is NOT in props - only present when me.data carries it (edit mode falls
     // back to editSwotAnalysis at the MarketEntrySwotGrid call sites).
     swotAnalysis: finalSwotData,

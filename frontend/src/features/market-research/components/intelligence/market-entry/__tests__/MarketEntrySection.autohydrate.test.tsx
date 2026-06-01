@@ -31,15 +31,8 @@ function renderSection() {
       hasEdits={false}
       deletedSections={new Set()}
       editHistory={[]}
-      // Empty props: data must come from the hook (auto-hydrate), not props.
-      executiveSummary=""
-      entryBarriers={[]}
-      recommendedChannel=""
-      timeToMarket=""
-      topBarrier=""
-      competitiveDifferentiation={[]}
-      strategicRecommendations={[]}
-      riskAssessment={[]}
+      // Data props were dropped from MarketEntrySectionProps — the section now
+      // reads its read path exclusively from the useMarketEntry hook (auto-hydrate).
       onToggleEdit={noop}
       onScoutIconClick={noop}
       onEditHistoryOpen={noop}
