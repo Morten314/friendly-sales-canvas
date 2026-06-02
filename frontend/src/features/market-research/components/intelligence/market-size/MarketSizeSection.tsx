@@ -14,7 +14,8 @@ import { ExecutiveSummary } from "./ExecutiveSummary";
 import { ExportOptions } from "./ExportOptions";
 import { KeyMetrics } from "./KeyMetrics";
 import { MarketDrivers } from "./MarketDrivers";
-import { segmentsToPieData, projectionsToLineData } from "./marketSize";
+import { projectionsToLineData } from "./marketSize";
+import { MarketSizeBySegment } from "./MarketSizeBySegment";
 import { MarketSizeHeader } from "./MarketSizeHeader";
 import { ErrorState, LoadingState, NoDataState } from "./states";
 import { StrategicRecommendations } from "./StrategicRecommendations";
@@ -25,7 +26,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import MiniLineChart from "@/components/ui/MiniLineChart";
-import MiniPieChart from "@/components/ui/MiniPieChart";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
@@ -703,70 +703,16 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                       {/* Market Size by Segment */}
-                      <div className="bg-white border border-gray-200 rounded-lg p-4">
-                        <Label className="text-sm font-medium text-gray-900 mb-3 block">
-                          Market Size by Segment
-                        </Label>
-                        <div className="space-y-3">
-                          {Object.entries(localMarketSizeBySegment).map(
-                            ([segment, value], index) => (
-                              <div key={index} className="flex items-center gap-2">
-                                <Input
-                                  value={segment}
-                                  onChange={(e) => {
-                                    const updated = { ...localMarketSizeBySegment };
-                                    const oldKey = segment;
-                                    const newKey = e.target.value;
-                                    if (newKey !== oldKey) {
-                                      delete updated[oldKey];
-                                      updated[newKey] = value;
-                                    }
-                                    setLocalMarketSizeBySegment(updated);
-                                  }}
-                                  className="flex-1 text-sm"
-                                  placeholder="Segment name"
-                                />
-                                <Input
-                                  type="text"
-                                  value={value}
-                                  onChange={(e) => {
-                                    const updated = { ...localMarketSizeBySegment };
-                                    updated[segment] = e.target.value;
-                                    setLocalMarketSizeBySegment(updated);
-                                  }}
-                                  className="w-24 text-sm"
-                                  placeholder="Value"
-                                />
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    const updated = { ...localMarketSizeBySegment };
-                                    delete updated[segment];
-                                    setLocalMarketSizeBySegment(updated);
-                                  }}
-                                  className="text-red-600 hover:text-red-700"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ),
-                          )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setLocalMarketSizeBySegment({
-                                ...localMarketSizeBySegment,
-                                ["New Segment"]: "",
-                              });
-                            }}
-                            className="mt-2"
-                          >
-                            Add Segment
-                          </Button>
-                        </div>
-                      </div>
+                      <MarketSizeBySegment
+                        editing={isEditing}
+                        segments={
+                          Object.keys(localMarketSizeBySegment).length > 0
+                            ? localMarketSizeBySegment
+                            : view.marketSizeBySegment
+                        }
+                        draft={localMarketSizeBySegment}
+                        onChange={setLocalMarketSizeBySegment}
+                      />
 
                       {/* Growth Projections */}
                       <div className="bg-white border border-gray-200 rounded-lg p-4">
@@ -977,17 +923,16 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                       </h3>
 
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                        <div className="bg-white border border-gray-200 rounded-lg p-4">
-                          <h4 className="font-medium text-gray-900 mb-3">Market Size by Segment</h4>
-                          <MiniPieChart
-                            data={segmentsToPieData(
-                              Object.keys(localMarketSizeBySegment).length > 0
-                                ? localMarketSizeBySegment
-                                : view.marketSizeBySegment,
-                            )}
-                            title=""
-                          />
-                        </div>
+                        <MarketSizeBySegment
+                          editing={isEditing}
+                          segments={
+                            Object.keys(localMarketSizeBySegment).length > 0
+                              ? localMarketSizeBySegment
+                              : view.marketSizeBySegment
+                          }
+                          draft={localMarketSizeBySegment}
+                          onChange={setLocalMarketSizeBySegment}
+                        />
                         <div className="bg-white border border-gray-200 rounded-lg p-4">
                           <h4 className="font-medium text-gray-900 mb-3">Growth Projections</h4>
                           <MiniLineChart
