@@ -1055,3 +1055,22 @@ Industry-trends page-level fetch/state/cache slice retained in `useMarketResearc
 - When 5h is decomposed (or the cascade is retired), remove the industry-trends slice from `useMarketResearchData.ts`; this also feeds 24i's zero-raw-fetch gate.
 
 **Owner:** TBD.
+
+---
+
+## TD-FE-29 — Full preflight gate stays serial; parallel runner is opt-in (flakes e2e under concurrent-session load)
+
+**Date logged:** 2026-06-02
+**Origin:** Preflight perf items 4–5 (follow-on to the merged perf quick-wins). `frontend/scripts/preflight.mjs` parallelizes the gate but is wired as `npm run preflight:par` (opt-in), NOT the default `npm run preflight`.
+
+**Current state:**
+Three commands: `npm run preflight` = serial `&&` chain (the merge gate); `npm run verify` = typecheck+lint+test (the fast inner loop); `npm run preflight:par` = full gate parallelized via `scripts/preflight.mjs` (dependency-aware build→bundle/e2e, bounded by `PREFLIGHT_JOBS`, fail-fast). Parallel is opt-in by measurement: it runs build + vitest (4 workers) + e2e + lint concurrently, and stacked on a second worktree's preflight it pushed box load to ~20/23 cores — inflating every task 3–4× and **flaking the e2e visual snapshot** (`02-post-login-state.png`: 86% pixel diff + render timeout), a false failure that would block a merge. In the same back-to-back run the SERIAL gate passed e2e 14/14 at load ~8, isolating the cause to the parallel load-spike, not a regression. Parallel-full only wins on an idle box (~1.5–2×).
+
+**Why we deferred (serial stays the default gate):**
+- The team runs concurrent worktree sessions; a gate that's fast solo but flaky-under-concurrency is a net loss — a false e2e failure costs more (a wasted full re-run + investigation) than the serial gate's extra minutes.
+- Hardening the VR e2e against contention is its own focused change, separate from the gate-structure work.
+
+**What it should be / pull-forward trigger:**
+- Make the VR e2e contention-robust — Playwright retries on the VR specs, a higher `toHaveScreenshot` stabilization timeout, a lower default `PREFLIGHT_JOBS`, or scheduling e2e in its own non-concurrent wave so it never renders under a CPU spike — then flip `preflight` → `preflight:par`. Trigger: the serial merge-gate wall-clock becomes a real bottleneck, or concurrent-worktree development ends (single-session steady state).
+
+**Owner:** TBD.
