@@ -1,24 +1,15 @@
-import {
-  FileText,
-  ChevronDown,
-  ChevronUp,
-  Save,
-  X,
-  Clock,
-  Share,
-} from "lucide-react";
 import React, { useState, useEffect } from "react";
 
 import { ComplianceAnalyticsSection } from "./ComplianceAnalyticsSection";
 import { ExecutiveSummarySection } from "./ExecutiveSummarySection";
 import { KeyRegulatoryUpdatesSection } from "./KeyRegulatoryUpdatesSection";
 import { RegionalComplianceSection } from "./RegionalComplianceSection";
+import { RegulatoryFooter } from "./RegulatoryFooter";
 import { RegulatoryHeader } from "./RegulatoryHeader";
 import { deriveKeyDataPoints } from "./regulatoryHelpers";
 import { StrategicRecommendationsSection } from "./StrategicRecommendationsSection";
 import type { RegulatoryComplianceSectionProps } from "./types";
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { apiFetchJson } from "@/lib/api";
 import { executeWithRateLimit } from "@/lib/rateLimitManager";
@@ -629,6 +620,80 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   };
 
+  const handleSaveChangesClick = () => {
+    // Log original and modified JSON for debugging
+    const originalJson = {
+      executiveSummary: executiveSummary || "",
+      euAiActDeadline: euAiActDeadline || "",
+      gdprCompliance: gdprCompliance || "",
+      potentialFines: potentialFines || "",
+      dataLocalization: dataLocalization || "",
+      keyUpdates: regulatoryData?.keyUpdates || [],
+    };
+
+    const modifiedJson = {
+      executiveSummary: localExecutiveSummary,
+      euAiActDeadline: localEuAiActDeadline,
+      gdprCompliance: localGdprCompliance,
+      potentialFines: localPotentialFines,
+      dataLocalization: localDataLocalization,
+      keyUpdates:
+        (regulatoryData?.keyUpdates || [])
+          .filter(
+            (update: UntypedRegulatoryUpdate) =>
+              update && update?.title && typeof update.title === "string",
+          )
+          .map((update: UntypedRegulatoryUpdate) => {
+            const id = update.title.toLowerCase().replace(/\s+/g, "-");
+            let localValue = localKeyDataValues[id];
+
+            // Check for specific fixed fields that have their own local state
+            if (id === "eu-ai-act-deadline" || id === "eu-ai-act") {
+              localValue = localEuAiActDeadline;
+            } else if (id === "gdpr-compliance") {
+              localValue = localGdprCompliance;
+            } else if (id === "potential-fines") {
+              localValue = localPotentialFines;
+            } else if (id === "data-localization") {
+              localValue = localDataLocalization;
+            }
+
+            if (localValue !== undefined) {
+              return { ...update, description: localValue };
+            }
+            return update;
+          }) || [],
+    };
+
+    // Store JSON data in localStorage for Scout API (user-specific)
+    setUserLocalStorage(
+      "regulatory-compliance_original_json",
+      JSON.stringify(originalJson),
+      currentUser?.uid,
+    );
+    setUserLocalStorage(
+      "regulatory-compliance_modified_json",
+      JSON.stringify(modifiedJson),
+      currentUser?.uid,
+    );
+
+    // First, call all the change handlers to update parent state with local values
+    onExecutiveSummaryChange(localExecutiveSummary);
+    onEuAiActDeadlineChange(localEuAiActDeadline);
+    onGdprComplianceChange(localGdprCompliance);
+    onPotentialFinesChange(localPotentialFines);
+    onDataLocalizationChange(localDataLocalization);
+
+    // Update key data points if regulatoryData exists
+    if (regulatoryData?.keyUpdates && Array.isArray(regulatoryData.keyUpdates)) {
+      // Update the regulatory data with new key updates
+      // Update regulatory data would be handled by parent component
+    }
+
+    // Then call the API save function
+    void handleRegulatoryComplianceSaveChanges();
+  };
+
   // Clear previous data and fetch fresh data on component mount (only when parent is not doing a cascade refresh)
   useEffect(() => {
     if (isRefreshing) return; // Parent is fetching; don't duplicate
@@ -956,106 +1021,18 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
               onScoutIconClick={onScoutIconClick}
             />
 
-            {/* Save/Cancel buttons and Edit History - positioned at bottom */}
-            <div className="flex justify-between items-center pt-6 border-t border-gray-200">
-              <div className="flex gap-3">
-                <Button
-                  onClick={() => {
-                    // Log original and modified JSON for debugging
-                    const originalJson = {
-                      executiveSummary: executiveSummary || "",
-                      euAiActDeadline: euAiActDeadline || "",
-                      gdprCompliance: gdprCompliance || "",
-                      potentialFines: potentialFines || "",
-                      dataLocalization: dataLocalization || "",
-                      keyUpdates: regulatoryData?.keyUpdates || [],
-                    };
-
-                    const modifiedJson = {
-                      executiveSummary: localExecutiveSummary,
-                      euAiActDeadline: localEuAiActDeadline,
-                      gdprCompliance: localGdprCompliance,
-                      potentialFines: localPotentialFines,
-                      dataLocalization: localDataLocalization,
-                      keyUpdates:
-                        (regulatoryData?.keyUpdates || [])
-                          .filter(
-                            (update: UntypedRegulatoryUpdate) =>
-                              update && update?.title && typeof update.title === "string",
-                          )
-                          .map((update: UntypedRegulatoryUpdate) => {
-                            const id = update.title.toLowerCase().replace(/\s+/g, "-");
-                            let localValue = localKeyDataValues[id];
-
-                            // Check for specific fixed fields that have their own local state
-                            if (id === "eu-ai-act-deadline" || id === "eu-ai-act") {
-                              localValue = localEuAiActDeadline;
-                            } else if (id === "gdpr-compliance") {
-                              localValue = localGdprCompliance;
-                            } else if (id === "potential-fines") {
-                              localValue = localPotentialFines;
-                            } else if (id === "data-localization") {
-                              localValue = localDataLocalization;
-                            }
-
-                            if (localValue !== undefined) {
-                              return { ...update, description: localValue };
-                            }
-                            return update;
-                          }) || [],
-                    };
-
-                    // Store JSON data in localStorage for Scout API (user-specific)
-                    setUserLocalStorage(
-                      "regulatory-compliance_original_json",
-                      JSON.stringify(originalJson),
-                      currentUser?.uid,
-                    );
-                    setUserLocalStorage(
-                      "regulatory-compliance_modified_json",
-                      JSON.stringify(modifiedJson),
-                      currentUser?.uid,
-                    );
-
-                    // First, call all the change handlers to update parent state with local values
-                    onExecutiveSummaryChange(localExecutiveSummary);
-                    onEuAiActDeadlineChange(localEuAiActDeadline);
-                    onGdprComplianceChange(localGdprCompliance);
-                    onPotentialFinesChange(localPotentialFines);
-                    onDataLocalizationChange(localDataLocalization);
-
-                    // Update key data points if regulatoryData exists
-                    if (regulatoryData?.keyUpdates && Array.isArray(regulatoryData.keyUpdates)) {
-                      // Update the regulatory data with new key updates
-                      // Update regulatory data would be handled by parent component
-                    }
-
-                    // Then call the API save function
-                    void handleRegulatoryComplianceSaveChanges();
-                  }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Changes
-                </Button>
-                <Button variant="outline" onClick={onCancelEdit}>
-                  <X className="h-4 w-4 mr-2" />
-                  Cancel
-                </Button>
-              </div>
-
-              {/* Edit History Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onEditHistoryOpen}
-                className="flex items-center gap-2 hover:bg-gray-50"
-                title="View changes made to this report"
-              >
-                <Clock className="h-4 w-4" />
-                Edit History
-              </Button>
-            </div>
+            <RegulatoryFooter
+              isEditing={true}
+              isExpanded={isExpanded}
+              isSplitView={isSplitView}
+              onSave={handleSaveChangesClick}
+              onCancelEdit={onCancelEdit}
+              onEditHistoryOpen={onEditHistoryOpen}
+              onExportPDF={onExportPDF}
+              onSaveToWorkspace={onSaveToWorkspace}
+              onGenerateShareableLink={onGenerateShareableLink}
+              onExpandToggle={onExpandToggle}
+            />
           </div>
         ) : (
           /* Normal View Mode */
@@ -1096,16 +1073,18 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
 
             {/* Read More Button - Only when not expanded */}
             {!isExpanded && (
-              <div className="flex justify-center pt-4">
-                <Button
-                  onClick={() => onExpandToggle(true)}
-                  variant="outline"
-                  className="flex items-center space-x-2 text-sm hover:bg-gray-50"
-                >
-                  <span>Read More</span>
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </div>
+              <RegulatoryFooter
+                isEditing={false}
+                isExpanded={false}
+                isSplitView={isSplitView}
+                onSave={handleSaveChangesClick}
+                onCancelEdit={onCancelEdit}
+                onEditHistoryOpen={onEditHistoryOpen}
+                onExportPDF={onExportPDF}
+                onSaveToWorkspace={onSaveToWorkspace}
+                onGenerateShareableLink={onGenerateShareableLink}
+                onExpandToggle={onExpandToggle}
+              />
             )}
 
             {/* Enhanced Expanded Content */}
@@ -1144,53 +1123,18 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                   onScoutIconClick={onScoutIconClick}
                 />
 
-                {/* Export Options */}
-                <div className="border-t pt-6">
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">Export Options</h4>
-                  <div className="flex flex-wrap gap-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={onExportPDF}
-                      className="flex items-center gap-2"
-                    >
-                      <FileText className="h-4 w-4" />
-                      Save PDF
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={onSaveToWorkspace}
-                      className="flex items-center gap-2"
-                    >
-                      <Save className="h-4 w-4" />
-                      Save to Workspace
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={onGenerateShareableLink}
-                      className="flex items-center gap-2"
-                    >
-                      <Share className="h-4 w-4" />
-                      Shareable Link
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Show Less Button - Only when not in split view */}
-                {!isSplitView && (
-                  <div className="flex justify-center pt-4">
-                    <Button
-                      onClick={() => onExpandToggle(false)}
-                      variant="outline"
-                      className="flex items-center space-x-2 text-sm"
-                    >
-                      <span>Show Less</span>
-                      <ChevronUp className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
+                <RegulatoryFooter
+                  isEditing={false}
+                  isExpanded={true}
+                  isSplitView={isSplitView}
+                  onSave={handleSaveChangesClick}
+                  onCancelEdit={onCancelEdit}
+                  onEditHistoryOpen={onEditHistoryOpen}
+                  onExportPDF={onExportPDF}
+                  onSaveToWorkspace={onSaveToWorkspace}
+                  onGenerateShareableLink={onGenerateShareableLink}
+                  onExpandToggle={onExpandToggle}
+                />
               </div>
             )}
           </>
