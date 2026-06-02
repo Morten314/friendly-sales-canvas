@@ -1,13 +1,4 @@
-import {
-  Bot,
-  TrendingUp,
-  PieChart,
-  X,
-  Clock,
-  ChevronDown,
-  ChevronUp,
-  Check,
-} from "lucide-react";
+import { Bot, PieChart, X, Clock, ChevronDown, ChevronUp, Check } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 
 import { ExecutiveSummary } from "./ExecutiveSummary";
@@ -15,6 +6,7 @@ import { ExportOptions } from "./ExportOptions";
 import { GrowthProjections } from "./GrowthProjections";
 import { KeyMetrics } from "./KeyMetrics";
 import { MarketDrivers } from "./MarketDrivers";
+import { MarketEntry } from "./MarketEntry";
 import { MarketSizeBySegment } from "./MarketSizeBySegment";
 import { MarketSizeHeader } from "./MarketSizeHeader";
 import { ErrorState, LoadingState, NoDataState } from "./states";
@@ -23,8 +15,6 @@ import { useMarketSize } from "./useMarketSize";
 
 import type { EditRecord } from "@/components/market-research/types";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import type { UntypedBackendProfile } from "@/lib/types/escape-hatches";
@@ -591,58 +581,15 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
               />
 
               {/* Market Entry Edit */}
-              {!deletedSections.has("market-entry") && (
-                <div className="relative group">
-                  <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleSaveMarketEntry}
-                          className="text-gray-400 hover:text-green-600 hover:bg-green-50"
-                          title="Commit changes"
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Commit changes</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onDeleteSection("market-entry")}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Delete this section</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <div>
-                    <Label
-                      htmlFor="marketEntry"
-                      className="text-sm font-medium text-gray-700 mb-2 block"
-                    >
-                      Market Entry Strategy
-                    </Label>
-                    <Textarea
-                      id="marketEntry"
-                      value={localMarketEntry}
-                      onChange={(e) => setLocalMarketEntry(e.target.value)}
-                      className="w-full h-32 resize-none"
-                      placeholder="Enter market entry strategy..."
-                    />
-                  </div>
-                </div>
-              )}
+              <MarketEntry
+                editing={isEditing}
+                deleted={deletedSections.has("market-entry")}
+                value={localMarketEntry || view.marketEntry}
+                draft={localMarketEntry}
+                onChange={setLocalMarketEntry}
+                onCommit={handleSaveMarketEntry}
+                onDelete={() => onDeleteSection("market-entry")}
+              />
 
               {/* Market Drivers Edit */}
               <MarketDrivers
@@ -851,15 +798,15 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                     />
 
                     {/* Market Entry */}
-                    <div className="mb-8">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <TrendingUp className="h-5 w-5 text-blue-600" />
-                        Market Entry
-                      </h3>
-                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                        <p className="text-gray-700 mb-4">{localMarketEntry || view.marketEntry}</p>
-                      </div>
-                    </div>
+                    <MarketEntry
+                      editing={isEditing}
+                      deleted={deletedSections.has("market-entry")}
+                      value={localMarketEntry || view.marketEntry}
+                      draft={localMarketEntry}
+                      onChange={setLocalMarketEntry}
+                      onCommit={handleSaveMarketEntry}
+                      onDelete={() => onDeleteSection("market-entry")}
+                    />
 
                     {/* Market Opportunity Breakdown */}
                     <div className="mb-8">
