@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ChevronUp, X } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import React, { useState, useEffect } from "react";
 
 import { EditToolbar } from "./EditToolbar";
@@ -16,14 +16,11 @@ import type {
   TrendSnapshot,
   IndustryTrendsRecommendations,
   IndustryTrendsData,
+  VisualChartsData,
 } from "./types";
+import { VisualCharts } from "./VisualCharts";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import MiniLineChart from "@/components/ui/MiniLineChart";
-import MiniPieChart from "@/components/ui/MiniPieChart";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetchJson } from "@/lib/api";
 import { executeWithRateLimit } from "@/lib/rateLimitManager";
@@ -162,14 +159,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       marketEntry: "",
     });
   const [editRisks, setEditRisks] = useState<string[]>([]);
-  const [editVisualCharts, setEditVisualCharts] = useState<{
-    aiAdoptionTrends: string[];
-    technologyBudgetAllocation: {
-      "AI/ML": string;
-      Cloud: string;
-      Security: string;
-    };
-  }>({
+  const [editVisualCharts, setEditVisualCharts] = useState<VisualChartsData>({
     aiAdoptionTrends: [],
     technologyBudgetAllocation: {
       "AI/ML": "",
@@ -258,12 +248,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           Security: "",
         },
       };
-    setEditVisualCharts(
-      visualChartsToUse as {
-        aiAdoptionTrends: string[];
-        technologyBudgetAllocation: { "AI/ML": string; Cloud: string; Security: string };
-      },
-    );
+    setEditVisualCharts(visualChartsToUse as VisualChartsData);
 
     onIndustryTrendsToggleEdit();
   };
@@ -781,180 +766,15 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           />
 
           {/* Visual Charts Edit */}
-          {!normalizedDeletedSections.has("visual-charts") && (
-            <div className="relative group">
-              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleSaveVisualCharts}
-                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
-                      title="Commit changes"
-                    >
-                      <Check className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Commit changes</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onIndustryTrendsDeleteSection("visual-charts")}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50 pointer-events-auto z-50"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Delete this section</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Visual Charts</h3>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <Label
-                      htmlFor="aiAdoptionTrends"
-                      className="text-sm font-medium text-gray-900 mb-3 block"
-                    >
-                      AI Adoption Trends
-                    </Label>
-                    <div className="space-y-2">
-                      {editVisualCharts.aiAdoptionTrends.map((trend, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <Input
-                            value={trend}
-                            onChange={(e) => {
-                              const updated = [...editVisualCharts.aiAdoptionTrends];
-                              updated[index] = e.target.value;
-                              setEditVisualCharts({
-                                ...editVisualCharts,
-                                aiAdoptionTrends: updated,
-                              });
-                            }}
-                            className="flex-1 text-sm"
-                            placeholder="Enter trend (e.g., Q1 2024)"
-                          />
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const updated = editVisualCharts.aiAdoptionTrends.filter(
-                                (_, i) => i !== index,
-                              );
-                              setEditVisualCharts({
-                                ...editVisualCharts,
-                                aiAdoptionTrends: updated,
-                              });
-                            }}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setEditVisualCharts({
-                            ...editVisualCharts,
-                            aiAdoptionTrends: [...editVisualCharts.aiAdoptionTrends, ""],
-                          })
-                        }
-                        className="mt-2"
-                      >
-                        Add Trend
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <Label className="text-sm font-medium text-gray-900 mb-3 block">
-                      Technology Budget Allocation
-                    </Label>
-                    <div className="space-y-3">
-                      <div>
-                        <Label
-                          htmlFor="budgetAIML"
-                          className="text-sm font-medium text-gray-700 mb-1 block"
-                        >
-                          AI/ML (%)
-                        </Label>
-                        <Input
-                          id="budgetAIML"
-                          value={editVisualCharts.technologyBudgetAllocation["AI/ML"]}
-                          onChange={(e) =>
-                            setEditVisualCharts({
-                              ...editVisualCharts,
-                              technologyBudgetAllocation: {
-                                ...editVisualCharts.technologyBudgetAllocation,
-                                "AI/ML": e.target.value,
-                              },
-                            })
-                          }
-                          className="text-sm"
-                          placeholder="e.g., 30"
-                        />
-                      </div>
-                      <div>
-                        <Label
-                          htmlFor="budgetCloud"
-                          className="text-sm font-medium text-gray-700 mb-1 block"
-                        >
-                          Cloud (%)
-                        </Label>
-                        <Input
-                          id="budgetCloud"
-                          value={editVisualCharts.technologyBudgetAllocation.Cloud}
-                          onChange={(e) =>
-                            setEditVisualCharts({
-                              ...editVisualCharts,
-                              technologyBudgetAllocation: {
-                                ...editVisualCharts.technologyBudgetAllocation,
-                                Cloud: e.target.value,
-                              },
-                            })
-                          }
-                          className="text-sm"
-                          placeholder="e.g., 25"
-                        />
-                      </div>
-                      <div>
-                        <Label
-                          htmlFor="budgetSecurity"
-                          className="text-sm font-medium text-gray-700 mb-1 block"
-                        >
-                          Security (%)
-                        </Label>
-                        <Input
-                          id="budgetSecurity"
-                          value={editVisualCharts.technologyBudgetAllocation.Security}
-                          onChange={(e) =>
-                            setEditVisualCharts({
-                              ...editVisualCharts,
-                              technologyBudgetAllocation: {
-                                ...editVisualCharts.technologyBudgetAllocation,
-                                Security: e.target.value,
-                              },
-                            })
-                          }
-                          className="text-sm"
-                          placeholder="e.g., 20"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          <VisualCharts
+            editing
+            deleted={normalizedDeletedSections.has("visual-charts")}
+            visualCharts={propVisualCharts || industryTrendsData?.visualCharts || { aiAdoptionTrends: [], technologyBudgetAllocation: {} }}
+            draft={editVisualCharts}
+            onChange={setEditVisualCharts}
+            onCommit={handleSaveVisualCharts}
+            onDelete={() => onIndustryTrendsDeleteSection("visual-charts")}
+          />
 
           {/* Save/Cancel Buttons */}
           <EditToolbar
@@ -1081,106 +901,15 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 />
 
                 {/* Visual Charts Section */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Visual Charts</h3>
-                  {(() => {
-                    // Use props first, then fall back to internal state
-                    const visualCharts = propVisualCharts || industryTrendsData?.visualCharts;
-
-                    if (!visualCharts) {
-                      return <p className="text-gray-500">No visual charts data available</p>;
-                    }
-
-                    return (
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-white border border-gray-200 rounded-lg p-4">
-                          <h4 className="font-medium text-gray-900 mb-3">AI Adoption Trends</h4>
-                          {(() => {
-                            const trendsData = visualCharts?.aiAdoptionTrends;
-
-                            if (trendsData && Array.isArray(trendsData) && trendsData.length > 0) {
-                              return (
-                                <MiniLineChart
-                                  data={trendsData.map((quarter, index) => ({
-                                    name: quarter || `Q${index + 1}`,
-                                    value: 45 + index * 11, // Dynamic values based on quarters
-                                  }))}
-                                  title=""
-                                  color="#8B5CF6"
-                                />
-                              );
-                            }
-                            return (
-                              <p className="text-gray-500 text-sm">
-                                No AI adoption trends data available
-                              </p>
-                            );
-                          })()}
-                        </div>
-                        <div className="bg-white border border-gray-200 rounded-lg p-4">
-                          <h4 className="font-medium text-gray-900 mb-3">
-                            Technology Budget Allocation
-                          </h4>
-                          {(() => {
-                            try {
-                              const budgetData =
-                                visualCharts?.technologyBudgetAllocation ||
-                                industryTrendsData?.visualCharts?.technologyBudgetAllocation;
-                              if (!budgetData || Object.keys(budgetData).length === 0) {
-                                return (
-                                  <p className="text-gray-500 text-sm">
-                                    No budget allocation data available
-                                  </p>
-                                );
-                              }
-
-                              // Dynamically parse all entries from the budget data
-                              const colors = [
-                                "#8B5CF6",
-                                "#3B82F6",
-                                "#10B981",
-                                "#F59E0B",
-                                "#EF4444",
-                                "#06B6D4",
-                                "#84CC16",
-                                "#EC4899",
-                              ];
-                              const chartData = Object.entries(budgetData)
-                                .map(([name, value], index) => {
-                                  const numericValue = value
-                                    ? parseInt(String(value).replace("%", ""))
-                                    : 0;
-                                  return {
-                                    name: name,
-                                    value: isNaN(numericValue) ? 0 : numericValue,
-                                    color: colors[index % colors.length],
-                                  };
-                                })
-                                .filter((item) => item.value > 0); // Only include items with valid values
-
-                              if (chartData.length === 0) {
-                                return (
-                                  <p className="text-gray-500 text-sm">
-                                    No valid budget allocation data available
-                                  </p>
-                                );
-                              }
-
-                              return <MiniPieChart data={chartData} title="" />;
-                            } catch (error) {
-                              console.error("Error rendering budget allocation chart:", error);
-                              return (
-                                <p className="text-gray-500 text-sm">
-                                  Error loading budget allocation chart
-                                </p>
-                              );
-                            }
-                          })()}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
+                <VisualCharts
+                  editing={false}
+                  deleted={false}
+                  visualCharts={propVisualCharts || industryTrendsData?.visualCharts || { aiAdoptionTrends: [], technologyBudgetAllocation: {} }}
+                  draft={{ aiAdoptionTrends: [], technologyBudgetAllocation: {} }}
+                  onChange={() => {}}
+                  onCommit={() => {}}
+                  onDelete={() => {}}
+                />
 
                 {/* Export Footer */}
                 <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 -mx-6 -mb-6 rounded-b-lg">
