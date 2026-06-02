@@ -5,7 +5,7 @@
  * No React, no fetch, no localStorage, no toast. Safe to unit-test in isolation.
  */
 
-import type { IndustryTrendsData, IndustryTrendsRecommendations, TrendSnapshot } from "./types";
+import type { IndustryTrendsRecommendations, TrendSnapshot, VisualChartsData } from "./types";
 
 // ---------------------------------------------------------------------------
 // normalizeDeletedSections
@@ -13,8 +13,8 @@ import type { IndustryTrendsData, IndustryTrendsRecommendations, TrendSnapshot }
 
 /**
  * Coerces any runtime shape of `industryTrendsDeletedSections` into a `Set<string>`.
+ * Used by the `normalizedDeletedSections` useMemo in IndustryTrendsSection.
  *
- * Mirrors the `useMemo` at lines 129-146 of IndustryTrendsSection.tsx:
  *   - `Set`            → returned as-is (same reference)
  *   - `string[]`       → `new Set(array)`
  *   - plain object     → `new Set(Object.keys(object))`
@@ -88,6 +88,19 @@ export function budgetToChartData(allocation: Record<string, string>): BudgetCha
 // buildEditSnapshot
 // ---------------------------------------------------------------------------
 
+/** The already-normalized display values read from the hook view-model. */
+export interface DisplayData {
+  executiveSummary: string;
+  aiAdoption: string;
+  cloudMigration: string;
+  regulatory: string;
+  trendSnapshots: TrendSnapshot[];
+  regionalHotspots: Record<string, string>;
+  strategicRecommendations: IndustryTrendsRecommendations;
+  risks: string[];
+  visualCharts: VisualChartsData;
+}
+
 /** Draft state values collected from the editing form. */
 export interface EditDrafts {
   editExecutiveSummary: string;
@@ -98,88 +111,37 @@ export interface EditDrafts {
   editRegionalHotspots: Record<string, string>;
   editStrategicRecommendations: IndustryTrendsRecommendations;
   editRisks: string[];
-  editVisualCharts: {
-    aiAdoptionTrends: string[];
-    technologyBudgetAllocation: Record<string, string>;
-  };
+  editVisualCharts: VisualChartsData;
 }
 
 /** The shaped pair written to localStorage by `handleSaveChanges`. */
 export interface EditSnapshot {
-  originalData: {
-    executiveSummary: string;
-    aiAdoption: string;
-    cloudMigration: string;
-    regulatory: string;
-    trendSnapshots: TrendSnapshot[];
-    regionalHotspots: Record<string, string>;
-    strategicRecommendations: IndustryTrendsRecommendations;
-    risks: string[];
-    visualCharts: {
-      aiAdoptionTrends: string[];
-      technologyBudgetAllocation: Record<string, string>;
-    };
-  };
-  modifiedData: {
-    executiveSummary: string;
-    aiAdoption: string;
-    cloudMigration: string;
-    regulatory: string;
-    trendSnapshots: TrendSnapshot[];
-    regionalHotspots: Record<string, string>;
-    strategicRecommendations: IndustryTrendsRecommendations;
-    risks: string[];
-    visualCharts: {
-      aiAdoptionTrends: string[];
-      technologyBudgetAllocation: Record<string, string>;
-    };
-  };
+  originalData: DisplayData;
+  modifiedData: DisplayData;
 }
 
 /**
- * Shapes the "original" and "modified" payloads that `handleSaveChanges` builds
- * (lines 537-570 of IndustryTrendsSection.tsx) — the pure computation only.
+ * Shapes the "original" and "modified" payloads that `handleSaveChanges` writes to
+ * localStorage — the pure computation only.
  *
+ * `displayData` is the already-normalized hook view-model computed by the container.
  * The caller is responsible for writing to `localStorage`, updating React state,
  * firing parent callbacks, and showing toasts.
  */
-export function buildEditSnapshot(
-  industryTrendsData: IndustryTrendsData | null | undefined,
-  propRegionalHotspots: Record<string, string> | null | undefined,
-  propVisualCharts:
-    | {
-        aiAdoptionTrends: string[];
-        technologyBudgetAllocation: Record<string, string>;
-      }
-    | null
-    | undefined,
-  propRecommendations: IndustryTrendsRecommendations | null | undefined,
-  propRisks: string[] | null | undefined,
-  _propTrendSnapshots: TrendSnapshot[] | null | undefined,
-  drafts: EditDrafts,
-): EditSnapshot {
-  const originalData = {
-    executiveSummary: industryTrendsData?.executiveSummary || "",
-    aiAdoption: industryTrendsData?.aiAdoption || "",
-    cloudMigration: industryTrendsData?.cloudMigration || "",
-    regulatory: industryTrendsData?.regulatory || "",
-    trendSnapshots: industryTrendsData?.trendSnapshots || [],
-    regionalHotspots: industryTrendsData?.regionalHotspots || propRegionalHotspots || {},
-    strategicRecommendations: industryTrendsData?.strategicRecommendations ||
-      industryTrendsData?.recommendations ||
-      propRecommendations || {
-        primaryFocus: "",
-        marketEntry: "",
-      },
-    risks: industryTrendsData?.risks || propRisks || [],
-    visualCharts: industryTrendsData?.visualCharts ||
-      propVisualCharts || {
-        aiAdoptionTrends: [],
-        technologyBudgetAllocation: {},
-      },
+export function buildEditSnapshot(displayData: DisplayData, drafts: EditDrafts): EditSnapshot {
+  const originalData: DisplayData = {
+    executiveSummary: displayData.executiveSummary,
+    aiAdoption: displayData.aiAdoption,
+    cloudMigration: displayData.cloudMigration,
+    regulatory: displayData.regulatory,
+    trendSnapshots: displayData.trendSnapshots,
+    regionalHotspots: displayData.regionalHotspots,
+    strategicRecommendations: displayData.strategicRecommendations,
+    risks: displayData.risks,
+    visualCharts: displayData.visualCharts,
   };
 
-  const modifiedData = {
+  const modifiedData: DisplayData = {
     executiveSummary: drafts.editExecutiveSummary,
     aiAdoption: drafts.editAiAdoption,
     cloudMigration: drafts.editCloudMigration,

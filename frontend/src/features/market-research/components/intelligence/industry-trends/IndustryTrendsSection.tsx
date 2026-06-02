@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { EditToolbar } from "./EditToolbar";
 import { ExecutiveSummary } from "./ExecutiveSummary";
 import { ExportFooter } from "./ExportFooter";
+import { normalizeDeletedSections, buildEditSnapshot } from "./industryTrends";
 import { KeyMetrics } from "./KeyMetrics";
 import { RegionalHotspots } from "./RegionalHotspots";
 import { RisksWatchouts } from "./RisksWatchouts";
@@ -77,11 +78,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   onSaveToWorkspace,
   onGenerateShareableLink,
   isRefreshing = false,
-  // NOTE: The data props (executiveSummary, aiAdoption, cloudMigration, regulatory,
-  // trendSnapshots, recommendations, risks, regionalHotspots, visualCharts) remain
-  // declared on the Props interface for now but are no longer the read source — the
-  // section sources server data exclusively from the useIndustryTrends hook below.
-  // They are removed from the interface in task 8b.
   // Individual field update functions (KEPT — committed edits flow up to the parent)
   onIndustryTrendsExecutiveSummaryChange,
   onIndustryTrendsAiAdoptionChange,
@@ -102,7 +98,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   // shapes the block components and edit-state setters require. This is the single
   // read-path source — call sites and draft seeders read from `displayData`.
   const displayData = React.useMemo(() => {
-    const recs = it.data?.strategicRecommendations ?? it.data?.recommendations;
+    const recs = it.data?.recommendations ?? it.data?.strategicRecommendations;
     return {
       executiveSummary: it.data?.executiveSummary || "",
       aiAdoption: it.data?.aiAdoption || "",
@@ -127,24 +123,10 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   }, [it.data]);
 
   // Normalize industryTrendsDeletedSections to ensure it's always a Set
-  const normalizedDeletedSections = React.useMemo(() => {
-    if (!industryTrendsDeletedSections) {
-      return new Set<string>();
-    }
-    if (industryTrendsDeletedSections instanceof Set) {
-      return industryTrendsDeletedSections;
-    }
-    // If it's an array, convert to Set
-    if (Array.isArray(industryTrendsDeletedSections)) {
-      return new Set(industryTrendsDeletedSections);
-    }
-    // If it's an object, convert keys to Set
-    if (typeof industryTrendsDeletedSections === "object") {
-      return new Set(Object.keys(industryTrendsDeletedSections));
-    }
-    // Fallback to empty Set
-    return new Set<string>();
-  }, [industryTrendsDeletedSections]);
+  const normalizedDeletedSections = React.useMemo(
+    () => normalizeDeletedSections(industryTrendsDeletedSections),
+    [industryTrendsDeletedSections],
+  );
 
   // Local editing state
   const [editExecutiveSummary, setEditExecutiveSummary] = useState("");
@@ -247,31 +229,18 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   // Handle save changes
   const handleSaveChanges = async () => {
     try {
-      // Prepare original data (sourced from the hook view-model via displayData)
-      const originalData = {
-        executiveSummary: displayData.executiveSummary,
-        aiAdoption: displayData.aiAdoption,
-        cloudMigration: displayData.cloudMigration,
-        regulatory: displayData.regulatory,
-        trendSnapshots: displayData.trendSnapshots,
-        regionalHotspots: displayData.regionalHotspots,
-        strategicRecommendations: displayData.strategicRecommendations,
-        risks: displayData.risks,
-        visualCharts: displayData.visualCharts,
-      };
-
-      // Prepare modified data
-      const modifiedData = {
-        executiveSummary: editExecutiveSummary,
-        aiAdoption: editAiAdoption,
-        cloudMigration: editCloudMigration,
-        regulatory: editRegulatory,
-        trendSnapshots: editTrendSnapshots,
-        regionalHotspots: editRegionalHotspots,
-        strategicRecommendations: editStrategicRecommendations,
-        risks: editRisks,
-        visualCharts: editVisualCharts,
-      };
+      // Shape the original/modified payloads via the extracted helper.
+      const { originalData, modifiedData } = buildEditSnapshot(displayData, {
+        editExecutiveSummary,
+        editAiAdoption,
+        editCloudMigration,
+        editRegulatory,
+        editTrendSnapshots,
+        editRegionalHotspots,
+        editStrategicRecommendations,
+        editRisks,
+        editVisualCharts,
+      });
 
       // Store data for /ask API
       localStorage.setItem("industry-trends_original_json", JSON.stringify(originalData));

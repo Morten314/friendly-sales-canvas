@@ -126,7 +126,7 @@ describe("budgetToChartData", () => {
 // buildEditSnapshot
 // ---------------------------------------------------------------------------
 describe("buildEditSnapshot", () => {
-  const baseData = {
+  const baseDisplayData = {
     executiveSummary: "Original summary",
     aiAdoption: "Original AI",
     cloudMigration: "Original cloud",
@@ -134,7 +134,6 @@ describe("buildEditSnapshot", () => {
     trendSnapshots: [{ title: "Growth", metric: "10%", type: "growth" as const }],
     regionalHotspots: { APAC: "Strong", Europe: "Growing", "North America": "Mature" },
     strategicRecommendations: { primaryFocus: "Focus A", marketEntry: "Entry A" },
-    recommendations: { primaryFocus: "Focus A", marketEntry: "Entry A" },
     risks: ["Risk 1", "Risk 2"],
     visualCharts: {
       aiAdoptionTrends: ["Q1", "Q2"],
@@ -157,18 +156,21 @@ describe("buildEditSnapshot", () => {
     },
   };
 
-  it("returns originalData shaped from current industryTrendsData", () => {
-    const { originalData } = buildEditSnapshot(baseData, null, null, null, [], null, baseDrafts);
+  it("returns originalData mirroring displayData", () => {
+    const { originalData } = buildEditSnapshot(baseDisplayData, baseDrafts);
     expect(originalData.executiveSummary).toBe("Original summary");
     expect(originalData.aiAdoption).toBe("Original AI");
     expect(originalData.cloudMigration).toBe("Original cloud");
     expect(originalData.regulatory).toBe("Original reg");
-    expect(originalData.trendSnapshots).toEqual(baseData.trendSnapshots);
+    expect(originalData.trendSnapshots).toEqual(baseDisplayData.trendSnapshots);
     expect(originalData.risks).toEqual(["Risk 1", "Risk 2"]);
+    expect(originalData.regionalHotspots).toEqual(baseDisplayData.regionalHotspots);
+    expect(originalData.strategicRecommendations).toEqual(baseDisplayData.strategicRecommendations);
+    expect(originalData.visualCharts).toEqual(baseDisplayData.visualCharts);
   });
 
   it("returns modifiedData shaped from draft state", () => {
-    const { modifiedData } = buildEditSnapshot(baseData, null, null, null, [], null, baseDrafts);
+    const { modifiedData } = buildEditSnapshot(baseDisplayData, baseDrafts);
     expect(modifiedData.executiveSummary).toBe("Edited summary");
     expect(modifiedData.aiAdoption).toBe("Edited AI");
     expect(modifiedData.cloudMigration).toBe("Edited cloud");
@@ -176,46 +178,23 @@ describe("buildEditSnapshot", () => {
     expect(modifiedData.trendSnapshots).toEqual(baseDrafts.editTrendSnapshots);
     expect(modifiedData.risks).toEqual(["Risk X"]);
     expect(modifiedData.visualCharts).toEqual(baseDrafts.editVisualCharts);
+    expect(modifiedData.regionalHotspots).toEqual(baseDrafts.editRegionalHotspots);
+    expect(modifiedData.strategicRecommendations).toEqual(baseDrafts.editStrategicRecommendations);
   });
 
-  it("falls back to prop values when industryTrendsData is null", () => {
-    const propRegionalHotspots = {
-      APAC: "Prop APAC",
-      Europe: "Prop EU",
-      "North America": "Prop NA",
+  it("originalData reflects empty-string defaults when displayData is empty", () => {
+    const emptyDisplay = {
+      executiveSummary: "",
+      aiAdoption: "",
+      cloudMigration: "",
+      regulatory: "",
+      trendSnapshots: [],
+      regionalHotspots: {},
+      strategicRecommendations: { primaryFocus: "", marketEntry: "" },
+      risks: [],
+      visualCharts: { aiAdoptionTrends: [], technologyBudgetAllocation: {} },
     };
-    const propRecommendations = { primaryFocus: "Prop Focus", marketEntry: "Prop Entry" };
-    const propRisks = ["Prop Risk"];
-    const propVisualCharts = {
-      aiAdoptionTrends: ["Q1"],
-      technologyBudgetAllocation: { "AI/ML": "100%" },
-    };
-    const { originalData } = buildEditSnapshot(
-      null,
-      propRegionalHotspots,
-      propVisualCharts,
-      propRecommendations,
-      propRisks,
-      null,
-      baseDrafts,
-    );
-    expect(originalData.executiveSummary).toBe("");
-    expect(originalData.regionalHotspots).toEqual(propRegionalHotspots);
-    expect(originalData.strategicRecommendations).toEqual(propRecommendations);
-    expect(originalData.risks).toEqual(propRisks);
-    expect(originalData.visualCharts).toEqual(propVisualCharts);
-  });
-
-  it("uses default fallbacks when both data and props are null/undefined", () => {
-    const { originalData } = buildEditSnapshot(
-      null,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      baseDrafts,
-    );
+    const { originalData } = buildEditSnapshot(emptyDisplay, baseDrafts);
     expect(originalData.executiveSummary).toBe("");
     expect(originalData.regionalHotspots).toEqual({});
     expect(originalData.strategicRecommendations).toEqual({ primaryFocus: "", marketEntry: "" });
@@ -226,42 +205,12 @@ describe("buildEditSnapshot", () => {
     });
   });
 
-  it("prefers strategicRecommendations over recommendations from data", () => {
-    const dataWithBoth = {
-      ...baseData,
-      strategicRecommendations: { primaryFocus: "Strategic", marketEntry: "S-Entry" },
-      recommendations: { primaryFocus: "Rec", marketEntry: "R-Entry" },
+  it("originalData uses whatever strategicRecommendations displayData provides", () => {
+    const display = {
+      ...baseDisplayData,
+      strategicRecommendations: { primaryFocus: "Display Focus", marketEntry: "Display Entry" },
     };
-    const { originalData } = buildEditSnapshot(
-      dataWithBoth,
-      null,
-      null,
-      null,
-      [],
-      null,
-      baseDrafts,
-    );
-    expect(originalData.strategicRecommendations.primaryFocus).toBe("Strategic");
-  });
-
-  it("falls back to data.recommendations when strategicRecommendations is missing", () => {
-    const dataNoStrategic = {
-      ...baseData,
-      strategicRecommendations: undefined as unknown as {
-        primaryFocus: string;
-        marketEntry: string;
-      },
-      recommendations: { primaryFocus: "Rec Only", marketEntry: "Rec Entry" },
-    };
-    const { originalData } = buildEditSnapshot(
-      dataNoStrategic,
-      null,
-      null,
-      null,
-      [],
-      null,
-      baseDrafts,
-    );
-    expect(originalData.strategicRecommendations.primaryFocus).toBe("Rec Only");
+    const { originalData } = buildEditSnapshot(display, baseDrafts);
+    expect(originalData.strategicRecommendations.primaryFocus).toBe("Display Focus");
   });
 });
