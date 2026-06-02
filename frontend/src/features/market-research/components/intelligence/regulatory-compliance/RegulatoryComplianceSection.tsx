@@ -15,6 +15,7 @@ import {
 import React, { useState, useEffect } from "react";
 
 import { ComplianceVisualCard } from "./ComplianceVisualCard";
+import { ExecutiveSummarySection } from "./ExecutiveSummarySection";
 import { RegulatoryHeader } from "./RegulatoryHeader";
 import { deriveKeyDataPoints } from "./regulatoryHelpers";
 import type { RegulatoryComplianceSectionProps } from "./types";
@@ -94,7 +95,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
     // If it's an array, convert to Set
     if (Array.isArray(deletedSections)) {
-      return new Set(deletedSections);
+      return new Set<string>(deletedSections);
     }
     // If it's an object, convert keys to Set
     if (typeof deletedSections === "object") {
@@ -903,50 +904,16 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         {isEditing ? (
           /* Full Editable Report Mode */
           <div className="space-y-8">
-            {/* Executive Summary */}
-            {!normalizedDeletedSections.has("executive-summary") && (
-              <div className="relative group border border-gray-200 rounded-lg p-4">
-                <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
-                  <button
-                    onClick={() => {
-                      onExecutiveSummaryChange(localExecutiveSummary);
-                      toast({
-                        title: "Saved",
-                        description: "Executive Summary changes committed.",
-                      });
-                    }}
-                    className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
-                    title="Commit changes"
-                  >
-                    <Check className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      onDeleteSection("executive-summary");
-                      onScoutIconClick(
-                        "regulatory-compliance",
-                        true,
-                        "I noticed you removed the Executive Summary. Want me to help refine or replace it?",
-                      );
-                    }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
-                  >
-                    <X className="h-4 w-4 text-red-600" />
-                  </button>
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Executive Summary</h3>
-                <textarea
-                  value={localExecutiveSummary}
-                  onChange={(e) => {
-                    setLocalExecutiveSummary(e.target.value);
-                    onExecutiveSummaryChange(e.target.value);
-                  }}
-                  className="w-full p-3 border border-gray-300 rounded-lg text-sm resize-none"
-                  rows={4}
-                  placeholder="Enter executive summary..."
-                />
-              </div>
-            )}
+            <ExecutiveSummarySection
+              isEditing={true}
+              normalizedDeletedSections={normalizedDeletedSections}
+              localExecutiveSummary={localExecutiveSummary}
+              setLocalExecutiveSummary={setLocalExecutiveSummary}
+              onExecutiveSummaryChange={onExecutiveSummaryChange}
+              onDeleteSection={onDeleteSection}
+              onScoutIconClick={onScoutIconClick}
+              currentExecutiveSummary={currentExecutiveSummary}
+            />
 
             {/* Key Regulatory Updates */}
             {!normalizedDeletedSections.has("key-updates") && (
@@ -1714,14 +1681,16 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         ) : (
           /* Normal View Mode */
           <>
-            {/* Executive Summary */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Executive Summary</h3>
-              <p className="text-gray-600 leading-relaxed">
-                {currentExecutiveSummary ||
-                  "The regulatory landscape for SaaS companies continues to evolve rapidly, with new compliance requirements emerging across multiple jurisdictions."}
-              </p>
-            </div>
+            <ExecutiveSummarySection
+              isEditing={false}
+              normalizedDeletedSections={normalizedDeletedSections}
+              localExecutiveSummary={localExecutiveSummary}
+              setLocalExecutiveSummary={setLocalExecutiveSummary}
+              onExecutiveSummaryChange={onExecutiveSummaryChange}
+              onDeleteSection={onDeleteSection}
+              onScoutIconClick={onScoutIconClick}
+              currentExecutiveSummary={currentExecutiveSummary}
+            />
 
             {/* Key Data Points */}
             <div>
