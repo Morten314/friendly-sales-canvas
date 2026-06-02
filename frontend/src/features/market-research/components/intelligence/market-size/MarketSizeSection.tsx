@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 
+import { segmentsToPieData, projectionsToLineData } from "./marketSize";
 import { useMarketSize } from "./useMarketSize";
 
 import type { EditRecord } from "@/components/market-research/types";
@@ -1298,110 +1299,22 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                         <div className="bg-white border border-gray-200 rounded-lg p-4">
                           <h4 className="font-medium text-gray-900 mb-3">Market Size by Segment</h4>
                           <MiniPieChart
-                            data={(() => {
-                              const segmentsToUse =
-                                Object.keys(localMarketSizeBySegment).length > 0
-                                  ? localMarketSizeBySegment
-                                  : view.marketSizeBySegment;
-                              if (!segmentsToUse || Object.keys(segmentsToUse).length === 0) {
-                                return [
-                                  { name: "Enterprise", value: 45, color: "#3B82F6" },
-                                  { name: "Mid-Market", value: 35, color: "#10B981" },
-                                  { name: "SMB", value: 20, color: "#8B5CF6" },
-                                ];
-                              }
-
-                              // If marketSizeBySegment is a string, try to parse it as JSON first
-                              if (typeof segmentsToUse === "string") {
-                                try {
-                                  const parsedSegments = JSON.parse(segmentsToUse);
-                                  if (parsedSegments && typeof parsedSegments === "object") {
-                                    return Object.entries(parsedSegments).map(
-                                      ([name, value], index) => ({
-                                        name,
-                                        value: parseInt(String(value).replace("%", "")),
-                                        color: ["#3B82F6", "#10B981", "#8B5CF6", "#F59E0B"][
-                                          index % 4
-                                        ],
-                                      }),
-                                    );
-                                  }
-                                } catch (_parseError) {
-                                  // intentional: fall through to fallback below
-                                }
-
-                                // Only use fallback data if parsing fails
-                                return [
-                                  { name: "Enterprise", value: 45, color: "#3B82F6" },
-                                  { name: "Mid-Market", value: 35, color: "#10B981" },
-                                  { name: "SMB", value: 20, color: "#8B5CF6" },
-                                ];
-                              }
-
-                              // If it's an object, use it directly
-                              return Object.entries(segmentsToUse).map(([name, value], index) => ({
-                                name,
-                                value: parseInt(value.toString().replace("%", "")),
-                                color: ["#3B82F6", "#10B981", "#8B5CF6", "#F59E0B"][index % 4],
-                              }));
-                            })()}
+                            data={segmentsToPieData(
+                              Object.keys(localMarketSizeBySegment).length > 0
+                                ? localMarketSizeBySegment
+                                : view.marketSizeBySegment,
+                            )}
                             title=""
                           />
                         </div>
                         <div className="bg-white border border-gray-200 rounded-lg p-4">
                           <h4 className="font-medium text-gray-900 mb-3">Growth Projections</h4>
                           <MiniLineChart
-                            data={(() => {
-                              const projectionsToUse =
-                                Object.keys(localGrowthProjections).length > 0
-                                  ? localGrowthProjections
-                                  : view.growthProjections;
-                              if (!projectionsToUse || Object.keys(projectionsToUse).length === 0) {
-                                return [
-                                  { name: "2023", value: 100 },
-                                  { name: "2024", value: 115 },
-                                  { name: "2025", value: 132 },
-                                  { name: "2026", value: 152 },
-                                ];
-                              }
-
-                              // If growthProjections is a string, try to parse it as JSON first
-                              if (typeof projectionsToUse === "string") {
-                                try {
-                                  const parsedProjections = JSON.parse(projectionsToUse);
-                                  if (parsedProjections && typeof parsedProjections === "object") {
-                                    return Object.entries(parsedProjections).map(
-                                      ([year, value]) => {
-                                        const numericValue = parseFloat(String(value));
-                                        return {
-                                          name: year,
-                                          value: isNaN(numericValue) ? 100 : numericValue * 100,
-                                        };
-                                      },
-                                    );
-                                  }
-                                } catch (_parseError) {
-                                  // intentional: fall through to fallback below
-                                }
-
-                                // Only use fallback data if parsing fails
-                                return [
-                                  { name: "2023", value: 100 },
-                                  { name: "2024", value: 120 },
-                                  { name: "2025", value: 144 },
-                                  { name: "2026", value: 173 },
-                                ];
-                              }
-
-                              // If it's an object, transform it safely
-                              return Object.entries(projectionsToUse).map(([year, value]) => {
-                                const numericValue = parseFloat(value.toString());
-                                return {
-                                  name: year,
-                                  value: isNaN(numericValue) ? 100 : numericValue * 100,
-                                };
-                              });
-                            })()}
+                            data={projectionsToLineData(
+                              Object.keys(localGrowthProjections).length > 0
+                                ? localGrowthProjections
+                                : view.growthProjections,
+                            )}
                             title=""
                             color="#3B82F6"
                           />
