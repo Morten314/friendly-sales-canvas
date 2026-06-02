@@ -24,9 +24,16 @@ export default defineConfig({
     },
   ],
   webServer: {
-    // Build + preview serves the production bundle, eliminating Vite's
-    // transform-on-demand penalty that caused cold-start flake under 4 workers.
-    command: "npm run build && npm run preview -- --port 5173 --strictPort",
+    // Preview serves the production bundle (no transform-on-demand penalty, which
+    // caused cold-start flake under 4 workers). We deliberately do NOT rebuild
+    // here: in the preflight chain `npm run build` already runs immediately
+    // before `test:e2e`, so a build inside this command would be a redundant
+    // second full PWA build (~50s wasted). The preflight `build` step is the
+    // single source of `dist/`, consumed by both `bundle:check` and this preview.
+    // Caveat: running `npm run test:e2e` standalone now requires a prior
+    // `npm run build` (run `npm run build && npm run test:e2e`, or just use
+    // `npm run preflight`).
+    command: "npm run preview -- --port 5173 --strictPort",
     url: "http://localhost:5173",
     reuseExistingServer: !process.env.CI,
     timeout: 180 * 1000,
