@@ -1,7 +1,7 @@
 import React from "react";
 
-import IndustryTrendsSection from "./IndustryTrendsSection";
 import CompetitorLandscapeSection from "./intelligence/competitor-landscape/CompetitorLandscapeSection";
+import IndustryTrendsSection from "./intelligence/industry-trends/IndustryTrendsSection";
 import RegulatoryComplianceSection from "./intelligence/regulatory-compliance/RegulatoryComplianceSection";
 import type { MarketIntelligenceTabProps } from "./MarketIntelligenceTabProps";
 import MarketSizeSection from "./MarketSizeSection";
