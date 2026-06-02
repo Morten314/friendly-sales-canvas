@@ -12,9 +12,9 @@ import React, { useState, useEffect, useRef } from "react";
 
 import { ExecutiveSummary } from "./ExecutiveSummary";
 import { ExportOptions } from "./ExportOptions";
+import { GrowthProjections } from "./GrowthProjections";
 import { KeyMetrics } from "./KeyMetrics";
 import { MarketDrivers } from "./MarketDrivers";
-import { projectionsToLineData } from "./marketSize";
 import { MarketSizeBySegment } from "./MarketSizeBySegment";
 import { MarketSizeHeader } from "./MarketSizeHeader";
 import { ErrorState, LoadingState, NoDataState } from "./states";
@@ -23,9 +23,7 @@ import { useMarketSize } from "./useMarketSize";
 
 import type { EditRecord } from "@/components/market-research/types";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import MiniLineChart from "@/components/ui/MiniLineChart";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
@@ -715,68 +713,16 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                       />
 
                       {/* Growth Projections */}
-                      <div className="bg-white border border-gray-200 rounded-lg p-4">
-                        <Label className="text-sm font-medium text-gray-900 mb-3 block">
-                          Growth Projections
-                        </Label>
-                        <div className="space-y-3">
-                          {Object.entries(localGrowthProjections).map(([year, value], index) => (
-                            <div key={index} className="flex items-center gap-2">
-                              <Input
-                                value={year}
-                                onChange={(e) => {
-                                  const updated = { ...localGrowthProjections };
-                                  const oldKey = year;
-                                  const newKey = e.target.value;
-                                  if (newKey !== oldKey) {
-                                    delete updated[oldKey];
-                                    updated[newKey] = value;
-                                  }
-                                  setLocalGrowthProjections(updated);
-                                }}
-                                className="flex-1 text-sm"
-                                placeholder="Year"
-                              />
-                              <Input
-                                type="text"
-                                value={value}
-                                onChange={(e) => {
-                                  const updated = { ...localGrowthProjections };
-                                  updated[year] = e.target.value;
-                                  setLocalGrowthProjections(updated);
-                                }}
-                                className="w-24 text-sm"
-                                placeholder="Value"
-                              />
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  const updated = { ...localGrowthProjections };
-                                  delete updated[year];
-                                  setLocalGrowthProjections(updated);
-                                }}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setLocalGrowthProjections({
-                                ...localGrowthProjections,
-                                ["2024"]: "",
-                              });
-                            }}
-                            className="mt-2"
-                          >
-                            Add Year
-                          </Button>
-                        </div>
-                      </div>
+                      <GrowthProjections
+                        editing={isEditing}
+                        projections={
+                          Object.keys(localGrowthProjections).length > 0
+                            ? localGrowthProjections
+                            : view.growthProjections
+                        }
+                        draft={localGrowthProjections}
+                        onChange={setLocalGrowthProjections}
+                      />
                     </div>
                   </div>
                 </div>
@@ -933,18 +879,16 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                           draft={localMarketSizeBySegment}
                           onChange={setLocalMarketSizeBySegment}
                         />
-                        <div className="bg-white border border-gray-200 rounded-lg p-4">
-                          <h4 className="font-medium text-gray-900 mb-3">Growth Projections</h4>
-                          <MiniLineChart
-                            data={projectionsToLineData(
-                              Object.keys(localGrowthProjections).length > 0
-                                ? localGrowthProjections
-                                : view.growthProjections,
-                            )}
-                            title=""
-                            color="#3B82F6"
-                          />
-                        </div>
+                        <GrowthProjections
+                          editing={isEditing}
+                          projections={
+                            Object.keys(localGrowthProjections).length > 0
+                              ? localGrowthProjections
+                              : view.growthProjections
+                          }
+                          draft={localGrowthProjections}
+                          onChange={setLocalGrowthProjections}
+                        />
                       </div>
 
                       <MarketDrivers
