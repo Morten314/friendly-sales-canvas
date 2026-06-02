@@ -15,18 +15,16 @@ import type {
   EditRecord,
   TrendSnapshot,
   IndustryTrendsRecommendations,
-  IndustryTrendsData,
   VisualChartsData,
 } from "./types";
+import { useIndustryTrends } from "./useIndustryTrends";
 import { VisualCharts } from "./VisualCharts";
 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { apiFetchJson } from "@/lib/api";
-import { executeWithRateLimit } from "@/lib/rateLimitManager";
-import { toUTCTimestamp } from "@/lib/timestampUtils";
 import type { UntypedBackendProfile } from "@/lib/types/escape-hatches";
 import { useAuth } from "@/shared/auth";
+import { FeatureErrorBoundary } from "@/shared/components";
 import { setUserLocalStorage } from "@/utils/cacheUtils";
 
 interface IndustryTrendsSectionProps {
@@ -92,17 +90,12 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   onSaveToWorkspace,
   onGenerateShareableLink,
   isRefreshing = false,
-  // Data props
-  executiveSummary: propExecutiveSummary,
-  aiAdoption: propAiAdoption,
-  cloudMigration: propCloudMigration,
-  regulatory: propRegulatory,
-  trendSnapshots: propTrendSnapshots,
-  recommendations: propRecommendations,
-  risks: propRisks,
-  regionalHotspots: propRegionalHotspots,
-  visualCharts: propVisualCharts,
-  // Individual field update functions
+  // NOTE: The data props (executiveSummary, aiAdoption, cloudMigration, regulatory,
+  // trendSnapshots, recommendations, risks, regionalHotspots, visualCharts) remain
+  // declared on the Props interface for now but are no longer the read source — the
+  // section sources server data exclusively from the useIndustryTrends hook below.
+  // They are removed from the interface in task 8b.
+  // Individual field update functions (KEPT — committed edits flow up to the parent)
   onIndustryTrendsExecutiveSummaryChange,
   onIndustryTrendsAiAdoptionChange,
   onIndustryTrendsCloudMigrationChange,
@@ -111,12 +104,40 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
 }) => {
   const { currentUser, orgId } = useAuth();
   const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
-  // State for API data
-  const [industryTrendsData, setIndustryTrendsData] = useState<IndustryTrendsData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  // Section SERVER data now comes exclusively from the useIndustryTrends hook
+  // (TanStack-backed). This replaces the former dormant raw fetch + mirror useState.
+  const it = useIndustryTrends(currentUser?.uid ?? "", orgIdToUse);
 
   const { toast } = useToast();
+
+  // Coerce the hook view-model (whose zod fields are .nullish()) into the strict
+  // shapes the block components and edit-state setters require. This is the single
+  // read-path source — call sites and draft seeders read from `displayData`.
+  const displayData = React.useMemo(() => {
+    const recs = it.data?.strategicRecommendations ?? it.data?.recommendations;
+    return {
+      executiveSummary: it.data?.executiveSummary || "",
+      aiAdoption: it.data?.aiAdoption || "",
+      cloudMigration: it.data?.cloudMigration || "",
+      regulatory: it.data?.regulatory || "",
+      trendSnapshots: (it.data?.trendSnapshots ?? []).map((s) => ({
+        title: s.title ?? "",
+        metric: s.metric ?? "",
+        type: s.type ?? undefined,
+      })) as TrendSnapshot[],
+      regionalHotspots: (it.data?.regionalHotspots ?? {}) as { [key: string]: string },
+      strategicRecommendations: {
+        primaryFocus: recs?.primaryFocus ?? "",
+        marketEntry: recs?.marketEntry ?? "",
+      } as IndustryTrendsRecommendations,
+      risks: it.data?.risks ?? [],
+      visualCharts: {
+        aiAdoptionTrends: it.data?.visualCharts?.aiAdoptionTrends ?? [],
+        technologyBudgetAllocation: it.data?.visualCharts?.technologyBudgetAllocation ?? {},
+      } as VisualChartsData,
+    };
+  }, [it.data]);
 
   // Normalize industryTrendsDeletedSections to ensure it's always a Set
   const normalizedDeletedSections = React.useMemo(() => {
@@ -208,333 +229,48 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   }, [editTrendSnapshots, currentUser?.uid]);
 
   const handleModify = () => {
-    // Initialize edit fields with current data
-    setEditExecutiveSummary(propExecutiveSummary || industryTrendsData?.executiveSummary || "");
-    setEditAiAdoption(propAiAdoption || industryTrendsData?.aiAdoption || "");
-    setEditCloudMigration(propCloudMigration || industryTrendsData?.cloudMigration || "");
-    setEditRegulatory(propRegulatory || industryTrendsData?.regulatory || "");
-    setEditTrendSnapshots(propTrendSnapshots || industryTrendsData?.trendSnapshots || []);
+    // Initialize edit fields with current server data (sourced from the hook).
+    setEditExecutiveSummary(displayData.executiveSummary);
+    setEditAiAdoption(displayData.aiAdoption);
+    setEditCloudMigration(displayData.cloudMigration);
+    setEditRegulatory(displayData.regulatory);
+    setEditTrendSnapshots(displayData.trendSnapshots);
 
     // Initialize regional hotspots
-    const regionalHotspotsToUse = propRegionalHotspots ||
-      industryTrendsData?.regionalHotspots || {
-        APAC: "",
-        Europe: "",
-        "North America": "",
-      };
+    const regionalHotspotsToUse =
+      Object.keys(displayData.regionalHotspots).length > 0
+        ? displayData.regionalHotspots
+        : { APAC: "", Europe: "", "North America": "" };
     setEditRegionalHotspots(
       regionalHotspotsToUse as { APAC: string; Europe: string; "North America": string },
     );
 
     // Initialize strategic recommendations
-    const recommendationsToUse = propRecommendations ||
-      industryTrendsData?.strategicRecommendations ||
-      industryTrendsData?.recommendations || {
-        primaryFocus: "",
-        marketEntry: "",
-      };
-    setEditStrategicRecommendations(recommendationsToUse);
+    setEditStrategicRecommendations(displayData.strategicRecommendations);
 
     // Initialize risks
-    setEditRisks(propRisks || industryTrendsData?.risks || []);
+    setEditRisks(displayData.risks);
 
     // Initialize visual charts
-    const visualChartsToUse = propVisualCharts ||
-      industryTrendsData?.visualCharts || {
-        aiAdoptionTrends: [],
-        technologyBudgetAllocation: {
-          "AI/ML": "",
-          Cloud: "",
-          Security: "",
-        },
-      };
-    setEditVisualCharts(visualChartsToUse as VisualChartsData);
+    setEditVisualCharts(displayData.visualCharts);
 
     onIndustryTrendsToggleEdit();
   };
 
-  // Fetch Industry Trends data from API
-  const fetchIndustryTrendsData = async (refresh = true) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const currentTime = Date.now();
-      const randomId = Math.random().toString(36).substring(7);
-
-      if (!currentUser?.uid) {
-        console.error("User not authenticated");
-        setError("User not authenticated");
-        setIsLoading(false);
-        return;
-      }
-
-      const payload = {
-        org_id: orgIdToUse,
-        user_id: currentUser.uid,
-        component_name: "industry trends report",
-        refresh: refresh,
-        force_refresh: refresh,
-        cache_bypass: refresh,
-        bypass_all_cache: refresh,
-        request_timestamp: currentTime,
-        request_id: randomId,
-        data: {},
-      };
-
-      const result = await executeWithRateLimit(
-        () =>
-          apiFetchJson("market-research", {
-            method: "POST",
-            body: payload,
-          }),
-        "Industry Trends",
-      );
-
-      if (result.status === "success" && result.data) {
-        const reportData = result.data;
-
-        // Convert timestamps to UTC for comparison
-        const currentTimestampUTC = toUTCTimestamp(industryTrendsData?.timestamp);
-        const newTimestampUTC = toUTCTimestamp(reportData.timestamp);
-        // Determine if we should update
-        let shouldUpdate = false;
-
-        if (!currentTimestampUTC) {
-          shouldUpdate = true;
-        } else if (!newTimestampUTC) {
-          shouldUpdate = false;
-        } else if (newTimestampUTC > currentTimestampUTC) {
-          shouldUpdate = true;
-        } else {
-          shouldUpdate = false;
-        }
-
-        if (shouldUpdate) {
-          // Generate trend snapshots if not provided
-          const trendSnapshots = reportData.trendSnapshots || [
-            {
-              title: "Market Growth",
-              metric: reportData.growthProjections || "25% YoY",
-              type: "growth" as const,
-            },
-            {
-              title: "AI Adoption",
-              metric: reportData.regionalHotspots?.India || "60%",
-              type: "adoption" as const,
-            },
-            {
-              title: "Performance Index",
-              metric: "92/100",
-              type: "performance" as const,
-            },
-          ];
-
-          // Fix strategic recommendations structure
-          const strategicRecommendations = Array.isArray(reportData.strategicRecommendations)
-            ? {
-                primaryFocus:
-                  reportData.strategicRecommendations[0] ||
-                  "Focus on digital transformation and AI adoption",
-                marketEntry:
-                  reportData.strategicRecommendations[1] ||
-                  "Strategic partnerships and gradual market penetration",
-              }
-            : reportData.strategicRecommendations || {
-                primaryFocus: "Focus on digital transformation and AI adoption",
-                marketEntry: "Strategic partnerships and gradual market penetration",
-              };
-
-          // Use regional hotspots data as-is from backend
-          const regionalHotspots =
-            reportData.regionalHotspots &&
-            typeof reportData.regionalHotspots === "object" &&
-            Object.keys(reportData.regionalHotspots).length > 0
-              ? reportData.regionalHotspots
-              : {};
-
-          const dataWithFallbacks = {
-            ...reportData,
-            trendSnapshots,
-            regionalHotspots,
-            strategicRecommendations,
-            visualCharts:
-              reportData.visualCharts &&
-              typeof reportData.visualCharts === "object" &&
-              Object.keys(reportData.visualCharts).length > 0
-                ? {
-                    aiAdoptionTrends:
-                      reportData.visualCharts.aiAdoptionTrends &&
-                      Array.isArray(reportData.visualCharts.aiAdoptionTrends) &&
-                      reportData.visualCharts.aiAdoptionTrends.length > 0
-                        ? reportData.visualCharts.aiAdoptionTrends
-                        : [],
-                    technologyBudgetAllocation:
-                      reportData.visualCharts.technologyBudgetAllocation &&
-                      typeof reportData.visualCharts.technologyBudgetAllocation === "object" &&
-                      Object.keys(reportData.visualCharts.technologyBudgetAllocation).length > 0
-                        ? reportData.visualCharts.technologyBudgetAllocation
-                        : {},
-                  }
-                : {
-                    aiAdoptionTrends: [],
-                    technologyBudgetAllocation: {},
-                  },
-            risks: reportData.risks || [],
-            marketDrivers: reportData.marketDrivers || [],
-            executiveSummary: reportData.executiveSummary || "",
-            marketSize: reportData.marketSize || "",
-            marketSizeBySegment: reportData.marketSizeBySegment || {},
-            growthProjections: reportData.growthProjections || "",
-            timestamp: newTimestampUTC,
-          };
-
-          setIndustryTrendsData(dataWithFallbacks);
-
-          // Initialize edit fields with fetched data
-          setEditExecutiveSummary(reportData.executiveSummary || "");
-          setEditAiAdoption(reportData.aiAdoption || "");
-          setEditCloudMigration(reportData.cloudMigration || "");
-          setEditRegulatory(reportData.regulatory || "");
-          setEditTrendSnapshots(dataWithFallbacks.trendSnapshots);
-        }
-      }
-    } catch (err) {
-      console.error("Error fetching industry trends data:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch industry trends data");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Component mounted - no need to fetch data, parent provides it via props
-  useEffect(() => {
-    // Don't fetch data - parent provides it via props
-  }, []);
-
-  // When parent runs cascade refresh, show loading; parent will pass data via props (do NOT fetch here – avoids duplicate requests and multiple responses)
-  useEffect(() => {
-    if (isRefreshing) {
-      setError(null);
-      setIsLoading(true);
-      // Do not call fetchIndustryTrendsData – parent MarketResearch cascade already calls the API for this component
-    }
-  }, [isRefreshing]);
-
-  // Sync with props when they change (for refresh scenarios)
-  // Only sync when not editing to avoid overwriting user's current edits
-  useEffect(() => {
-    if (
-      !isIndustryTrendsEditing &&
-      (propExecutiveSummary || propAiAdoption || propCloudMigration || propRegulatory)
-    ) {
-      // Only update if current data is empty to avoid overwriting user edits
-      setIndustryTrendsData((prevData) => {
-        if (!prevData) {
-          return {
-            executiveSummary: propExecutiveSummary || "",
-            aiAdoption: propAiAdoption || "",
-            cloudMigration: propCloudMigration || "",
-            regulatory: propRegulatory || "",
-            trendSnapshots: propTrendSnapshots || [],
-            strategicRecommendations: propRecommendations || { primaryFocus: "", marketEntry: "" },
-            recommendations: propRecommendations || { primaryFocus: "", marketEntry: "" },
-            risks: propRisks || [],
-            regionalHotspots: propRegionalHotspots || {
-              APAC: "",
-              Europe: "",
-              "North America": "",
-            },
-            visualCharts: propVisualCharts || {
-              aiAdoptionTrends: [],
-              technologyBudgetAllocation: {
-                "AI/ML": "",
-                Cloud: "",
-                Security: "",
-              },
-            },
-            timestamp: String(Date.now()),
-          };
-        }
-
-        // Only update fields that are empty
-        return {
-          ...prevData,
-          executiveSummary: prevData.executiveSummary || propExecutiveSummary || "",
-          aiAdoption: prevData.aiAdoption || propAiAdoption || "",
-          cloudMigration: prevData.cloudMigration || propCloudMigration || "",
-          regulatory: prevData.regulatory || propRegulatory || "",
-          trendSnapshots:
-            prevData.trendSnapshots?.length > 0
-              ? prevData.trendSnapshots
-              : propTrendSnapshots || [],
-          strategicRecommendations:
-            prevData.strategicRecommendations?.primaryFocus ||
-            prevData.recommendations?.primaryFocus
-              ? prevData.strategicRecommendations || prevData.recommendations
-              : propRecommendations || { primaryFocus: "", marketEntry: "" },
-          recommendations:
-            prevData.strategicRecommendations?.primaryFocus ||
-            prevData.recommendations?.primaryFocus
-              ? prevData.strategicRecommendations || prevData.recommendations
-              : propRecommendations || { primaryFocus: "", marketEntry: "" },
-          risks: prevData.risks?.length > 0 ? prevData.risks : propRisks || [],
-          regionalHotspots:
-            prevData.regionalHotspots && Object.keys(prevData.regionalHotspots).length > 0
-              ? prevData.regionalHotspots
-              : propRegionalHotspots || {},
-          visualCharts:
-            prevData.visualCharts &&
-            Object.keys(prevData.visualCharts).length > 0 &&
-            prevData.visualCharts.aiAdoptionTrends?.length > 0
-              ? prevData.visualCharts
-              : propVisualCharts || {
-                  aiAdoptionTrends: [],
-                  technologyBudgetAllocation: {
-                    "AI/ML": "",
-                    Cloud: "",
-                    Security: "",
-                  },
-                },
-        };
-      });
-    }
-  }, [
-    propExecutiveSummary,
-    propAiAdoption,
-    propCloudMigration,
-    propRegulatory,
-    propTrendSnapshots,
-    propRecommendations,
-    propRisks,
-    propRegionalHotspots,
-    propVisualCharts,
-    isIndustryTrendsEditing,
-  ]);
-
   // Handle save changes
   const handleSaveChanges = async () => {
     try {
-      // Prepare original data
+      // Prepare original data (sourced from the hook view-model via displayData)
       const originalData = {
-        executiveSummary: industryTrendsData?.executiveSummary || "",
-        aiAdoption: industryTrendsData?.aiAdoption || "",
-        cloudMigration: industryTrendsData?.cloudMigration || "",
-        regulatory: industryTrendsData?.regulatory || "",
-        trendSnapshots: industryTrendsData?.trendSnapshots || [],
-        regionalHotspots: industryTrendsData?.regionalHotspots || propRegionalHotspots || {},
-        strategicRecommendations: industryTrendsData?.strategicRecommendations ||
-          industryTrendsData?.recommendations ||
-          propRecommendations || {
-            primaryFocus: "",
-            marketEntry: "",
-          },
-        risks: industryTrendsData?.risks || propRisks || [],
-        visualCharts: industryTrendsData?.visualCharts ||
-          propVisualCharts || {
-            aiAdoptionTrends: [],
-            technologyBudgetAllocation: {},
-          },
+        executiveSummary: displayData.executiveSummary,
+        aiAdoption: displayData.aiAdoption,
+        cloudMigration: displayData.cloudMigration,
+        regulatory: displayData.regulatory,
+        trendSnapshots: displayData.trendSnapshots,
+        regionalHotspots: displayData.regionalHotspots,
+        strategicRecommendations: displayData.strategicRecommendations,
+        risks: displayData.risks,
+        visualCharts: displayData.visualCharts,
       };
 
       // Prepare modified data
@@ -554,27 +290,9 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       localStorage.setItem("industry-trends_original_json", JSON.stringify(originalData));
       localStorage.setItem("industry-trends_modified_json", JSON.stringify(modifiedData));
 
-      // Skip the /ask endpoint for now and focus on updating the UI
-      // Immediately update the UI with the edited values
-      setIndustryTrendsData((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          executiveSummary: editExecutiveSummary,
-          aiAdoption: editAiAdoption,
-          cloudMigration: editCloudMigration,
-          regulatory: editRegulatory,
-          trendSnapshots: editTrendSnapshots,
-          regionalHotspots: editRegionalHotspots,
-          strategicRecommendations: editStrategicRecommendations,
-          recommendations: editStrategicRecommendations,
-          risks: editRisks,
-          visualCharts: editVisualCharts,
-          timestamp: String(Date.now()), // Force update with new timestamp
-        };
-      });
-
-      // Update parent state with local values (trust the user's edits)
+      // Update parent state with local values (trust the user's edits). The parent
+      // cascade re-populates the shared query which the useIndustryTrends hook reads,
+      // so there is no local mirror to optimistically update here anymore.
       if (onIndustryTrendsExecutiveSummaryChange) {
         onIndustryTrendsExecutiveSummaryChange(editExecutiveSummary);
       }
@@ -665,27 +383,29 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
     });
   };
 
-  // Show loading state only if we don't have props data and we're not refreshing
-  if (isLoading && !isRefreshing && !propExecutiveSummary) {
+  // Show loading state only when actively loading, not refreshing, and no data yet.
+  if (it.isLoading && !isRefreshing && !displayData.executiveSummary) {
     return <LoadingState />;
   }
 
   // Show error state
-  if (error) {
-    return <ErrorState message={error} onRetry={() => fetchIndustryTrendsData(false)} />;
+  if (it.isError) {
+    const message = it.error instanceof Error ? it.error.message : "Failed to load industry trends";
+    return <ErrorState message={message} onRetry={() => it.regenerate()} />;
   }
 
-  // Show no data state only if we don't have props data and we're not refreshing
-  if (!industryTrendsData && !propExecutiveSummary && !isRefreshing) {
-    return <NoDataState onGenerate={() => fetchIndustryTrendsData(true)} />;
+  // Show no data state only if the hook has no data and we're not refreshing.
+  if (!it.data && !isRefreshing) {
+    return <NoDataState onGenerate={() => it.regenerate()} />;
   }
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
-      <SectionHeader
-        onModify={handleModify}
-        isSplitView={isSplitView}
-        onScoutIconClick={onScoutIconClick}
-      />
+    <FeatureErrorBoundary>
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <SectionHeader
+          onModify={handleModify}
+          isSplitView={isSplitView}
+          onScoutIconClick={onScoutIconClick}
+        />
 
       {isIndustryTrendsEditing ? (
         <div className="space-y-8">
@@ -694,7 +414,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
             editing
             deleted={normalizedDeletedSections.has("executive-summary")}
             draft={editExecutiveSummary}
-            summary={propExecutiveSummary || industryTrendsData?.executiveSummary || ""}
+            summary={displayData.executiveSummary}
             onChange={setEditExecutiveSummary}
             onCommit={handleSaveExecutiveSummary}
             onDelete={() => onIndustryTrendsDeleteSection("executive-summary")}
@@ -704,9 +424,9 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           <KeyMetrics
             editing
             deleted={normalizedDeletedSections.has("key-metrics")}
-            aiAdoption={propAiAdoption || industryTrendsData?.aiAdoption || ""}
-            cloudMigration={propCloudMigration || industryTrendsData?.cloudMigration || ""}
-            regulatory={propRegulatory || industryTrendsData?.regulatory || ""}
+            aiAdoption={displayData.aiAdoption}
+            cloudMigration={displayData.cloudMigration}
+            regulatory={displayData.regulatory}
             aiAdoptionDraft={editAiAdoption}
             cloudMigrationDraft={editCloudMigration}
             regulatoryDraft={editRegulatory}
@@ -721,7 +441,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           <TrendSnapshots
             editing
             deleted={normalizedDeletedSections.has("trend-snapshots")}
-            snapshots={propTrendSnapshots || industryTrendsData?.trendSnapshots || []}
+            snapshots={displayData.trendSnapshots}
             draft={editTrendSnapshots}
             onChange={setEditTrendSnapshots}
             onCommit={handleSaveTrendSnapshots}
@@ -732,7 +452,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           <RegionalHotspots
             editing
             deleted={normalizedDeletedSections.has("regional-hotspots")}
-            regionalHotspots={propRegionalHotspots || industryTrendsData?.regionalHotspots || {}}
+            regionalHotspots={displayData.regionalHotspots}
             draft={editRegionalHotspots}
             onChange={setEditRegionalHotspots}
             onCommit={handleSaveRegionalHotspots}
@@ -743,11 +463,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           <StrategicRecommendations
             editing
             deleted={normalizedDeletedSections.has("strategic-recommendations")}
-            recommendations={
-              propRecommendations ||
-              industryTrendsData?.strategicRecommendations ||
-              industryTrendsData?.recommendations || { primaryFocus: "", marketEntry: "" }
-            }
+            recommendations={displayData.strategicRecommendations}
             draft={editStrategicRecommendations}
             onChange={setEditStrategicRecommendations}
             onCommit={handleSaveStrategicRecommendations}
@@ -758,7 +474,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           <RisksWatchouts
             editing
             deleted={normalizedDeletedSections.has("risks")}
-            risks={propRisks || industryTrendsData?.risks || []}
+            risks={displayData.risks}
             draft={editRisks}
             onChange={setEditRisks}
             onCommit={handleSaveRisks}
@@ -769,7 +485,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           <VisualCharts
             editing
             deleted={normalizedDeletedSections.has("visual-charts")}
-            visualCharts={propVisualCharts || industryTrendsData?.visualCharts || { aiAdoptionTrends: [], technologyBudgetAllocation: {} }}
+            visualCharts={displayData.visualCharts}
             draft={editVisualCharts}
             onChange={setEditVisualCharts}
             onCommit={handleSaveVisualCharts}
@@ -804,7 +520,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
             <ExecutiveSummary
               editing={false}
               deleted={false}
-              summary={propExecutiveSummary || industryTrendsData?.executiveSummary || ""}
+              summary={displayData.executiveSummary}
               draft={editExecutiveSummary}
               onChange={setEditExecutiveSummary}
               onCommit={handleSaveExecutiveSummary}
@@ -815,9 +531,9 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
             <KeyMetrics
               editing={false}
               deleted={false}
-              aiAdoption={propAiAdoption || industryTrendsData?.aiAdoption || ""}
-              cloudMigration={propCloudMigration || industryTrendsData?.cloudMigration || ""}
-              regulatory={propRegulatory || industryTrendsData?.regulatory || ""}
+              aiAdoption={displayData.aiAdoption}
+              cloudMigration={displayData.cloudMigration}
+              regulatory={displayData.regulatory}
               aiAdoptionDraft={editAiAdoption}
               cloudMigrationDraft={editCloudMigration}
               regulatoryDraft={editRegulatory}
@@ -851,7 +567,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 <TrendSnapshots
                   editing={false}
                   deleted={false}
-                  snapshots={propTrendSnapshots || industryTrendsData?.trendSnapshots || []}
+                  snapshots={displayData.trendSnapshots}
                   draft={editTrendSnapshots}
                   onChange={setEditTrendSnapshots}
                   onCommit={handleSaveTrendSnapshots}
@@ -862,7 +578,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 <RegionalHotspots
                   editing={false}
                   deleted={false}
-                  regionalHotspots={industryTrendsData?.regionalHotspots ?? {}}
+                  regionalHotspots={displayData.regionalHotspots}
                   draft={{ APAC: "", Europe: "", "North America": "" }}
                   onChange={() => {}}
                   onCommit={() => {}}
@@ -873,16 +589,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 <StrategicRecommendations
                   editing={false}
                   deleted={false}
-                  recommendations={{
-                    primaryFocus:
-                      propRecommendations?.primaryFocus ||
-                      industryTrendsData?.strategicRecommendations?.primaryFocus ||
-                      "",
-                    marketEntry:
-                      propRecommendations?.marketEntry ||
-                      industryTrendsData?.strategicRecommendations?.marketEntry ||
-                      "",
-                  }}
+                  recommendations={displayData.strategicRecommendations}
                   draft={{ primaryFocus: "", marketEntry: "" }}
                   onChange={() => {}}
                   onCommit={() => {}}
@@ -893,7 +600,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 <RisksWatchouts
                   editing={false}
                   deleted={false}
-                  risks={propRisks || industryTrendsData?.risks || []}
+                  risks={displayData.risks}
                   draft={[]}
                   onChange={() => {}}
                   onCommit={() => {}}
@@ -904,7 +611,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 <VisualCharts
                   editing={false}
                   deleted={false}
-                  visualCharts={propVisualCharts || industryTrendsData?.visualCharts || { aiAdoptionTrends: [], technologyBudgetAllocation: {} }}
+                  visualCharts={displayData.visualCharts}
                   draft={{ aiAdoptionTrends: [], technologyBudgetAllocation: {} }}
                   onChange={() => {}}
                   onCommit={() => {}}
@@ -940,7 +647,8 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           )}
         </div>
       )}
-    </div>
+      </div>
+    </FeatureErrorBoundary>
   );
 };
 
