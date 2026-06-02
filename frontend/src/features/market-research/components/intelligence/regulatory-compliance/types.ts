@@ -60,10 +60,5 @@ export interface RegulatoryComplianceSectionProps {
   onExportPDF: () => void;
   onSaveToWorkspace: () => void;
   onGenerateShareableLink: () => void;
-  // Add refresh props
-  isRefreshing?: boolean;
   companyProfile?: UntypedBackendProfile;
-
-  // Add centralized data prop
-  regulatoryData?: UntypedBackendApiResponse;
 }

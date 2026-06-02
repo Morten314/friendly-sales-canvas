@@ -9,10 +9,10 @@ import { RegulatoryHeader } from "./RegulatoryHeader";
 import { deriveKeyDataPoints } from "./regulatoryHelpers";
 import { StrategicRecommendationsSection } from "./StrategicRecommendationsSection";
 import type { RegulatoryComplianceSectionProps } from "./types";
+import { useRegulatoryCompliance } from "./useRegulatoryCompliance";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { apiFetchJson, BACKEND_BASE_URL } from "@/lib/api";
-import { executeWithRateLimit } from "@/lib/rateLimitManager";
+import { BACKEND_BASE_URL } from "@/lib/api";
 import type {
   UntypedBackendApiResponse,
   UntypedRegulatoryUpdate,
@@ -50,16 +50,12 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   onExportPDF,
   onSaveToWorkspace,
   onGenerateShareableLink,
-  isRefreshing = false,
   companyProfile,
-  regulatoryData: propRegulatoryData,
 }) => {
   const { currentUser, orgId } = useAuth();
   const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
-  // Use centralized data from parent instead of local state
-  const regulatoryData = propRegulatoryData;
-  const [_isLoading, setIsLoading] = useState(false);
-  const [_error, setError] = useState<string | null>(null);
+  // Section-data sourced via the dedicated hook (react-query, memory-only cache)
+  const { regulatoryData, refresh } = useRegulatoryCompliance(currentUser?.uid ?? "", orgIdToUse);
 
   // Normalize deletedSections to ensure it's always a Set
   const normalizedDeletedSections = React.useMemo(() => {
@@ -504,122 +500,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   };
 
-  // Fetch Regulatory Compliance data from API (like working components do)
-  const fetchRegulatoryComplianceData = async (refresh = false) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const currentTime = Date.now();
-      const randomId = Math.random().toString(36).substring(7);
-
-      if (!currentUser?.uid) {
-        console.error("User not authenticated");
-        setError("User not authenticated");
-        setIsLoading(false);
-        return;
-      }
-
-      const payload = {
-        org_id: orgIdToUse,
-        user_id: currentUser.uid,
-        component_name: "regulatory & compliance highlights", // Exact match for regulatory compliance
-        refresh: refresh,
-        force_refresh: refresh,
-        cache_bypass: refresh,
-        bypass_all_cache: refresh,
-        request_timestamp: currentTime,
-        request_id: randomId,
-        data: {},
-      };
-
-      const result = await executeWithRateLimit(
-        () =>
-          apiFetchJson("market-research", {
-            method: "POST",
-            body: payload,
-          }),
-        "Regulatory Compliance",
-      );
-
-      if (result.status === "success" && result.data) {
-        const apiData = result.data;
-
-        // Extract data from API response like working components do
-        const executiveSummary = apiData.executiveSummary || "";
-        const euAiActDeadline = apiData.euAiActDeadline || "";
-        const gdprCompliance = apiData.gdprCompliance || "";
-        const potentialFines = apiData.potentialFines || "";
-        const dataLocalization = apiData.dataLocalization || "";
-
-        // Update local state with API data
-        setLocalExecutiveSummary(executiveSummary);
-        setLocalEuAiActDeadline(euAiActDeadline);
-        setLocalGdprCompliance(gdprCompliance);
-        setLocalPotentialFines(potentialFines);
-        setLocalDataLocalization(dataLocalization);
-
-        // Update parent state with API data
-        onExecutiveSummaryChange(executiveSummary);
-        onEuAiActDeadlineChange(euAiActDeadline);
-        onGdprComplianceChange(gdprCompliance);
-        onPotentialFinesChange(potentialFines);
-        onDataLocalizationChange(dataLocalization);
-
-        // Update dynamic key data values if available
-        if (apiData.keyUpdates) {
-          const initialValues: Record<string, string> = {};
-          apiData.keyUpdates.forEach((update: UntypedRegulatoryUpdate) => {
-            if (!update || !update.title) return;
-            const id = update.title.toLowerCase().replace(/\s+/g, "-");
-            initialValues[id] = update.description || "";
-          });
-          setLocalKeyDataValues(initialValues);
-        }
-      } else {
-        // intentional: no payload to seed initial values from
-      }
-    } catch (error) {
-      console.error("❌ RegulatoryComplianceSection: Error fetching data:", error);
-
-      // Handle errors with fallback logic
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to load regulatory data";
-      const isTimeout = errorMessage.includes("timeout");
-      const isApiError = errorMessage.includes("API error");
-
-      if (isTimeout || isApiError) {
-        // Set fallback data to prevent empty state
-        const fallbackData = {
-          executiveSummary:
-            "Regulatory compliance analysis is being prepared. Please try refreshing in a few moments.",
-          euAiActDeadline: "Loading...",
-          gdprCompliance: "Loading...",
-          potentialFines: "Loading...",
-          dataLocalization: "Loading...",
-        };
-
-        setLocalExecutiveSummary(fallbackData.executiveSummary);
-        setLocalEuAiActDeadline(fallbackData.euAiActDeadline);
-        setLocalGdprCompliance(fallbackData.gdprCompliance);
-        setLocalPotentialFines(fallbackData.potentialFines);
-        setLocalDataLocalization(fallbackData.dataLocalization);
-
-        onExecutiveSummaryChange(fallbackData.executiveSummary);
-        onEuAiActDeadlineChange(fallbackData.euAiActDeadline);
-        onGdprComplianceChange(fallbackData.gdprCompliance);
-        onPotentialFinesChange(fallbackData.potentialFines);
-        onDataLocalizationChange(fallbackData.dataLocalization);
-
-        setError("Data is being prepared. Please refresh in a few moments.");
-      } else {
-        setError(errorMessage);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleSaveChangesClick = () => {
     // Log original and modified JSON for debugging
     const originalJson = {
@@ -694,34 +574,10 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     void handleRegulatoryComplianceSaveChanges();
   };
 
-  // Clear previous data and fetch fresh data on component mount (only when parent is not doing a cascade refresh)
-  useEffect(() => {
-    if (isRefreshing) return; // Parent is fetching; don't duplicate
-    setIsLoading(true);
-    setError(null);
-    const timer = setTimeout(() => {
-      if (!isRefreshing) void fetchRegulatoryComplianceData(false);
-    }, 1000);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only initial fetch; intentionally empty deps to prevent re-fetch loops (cascade refresh handled by separate effect)
-  }, []);
-
-  // When parent runs cascade refresh, only show loading; parent will pass data via props (do NOT fetch here – avoids duplicate requests and multiple responses)
-  useEffect(() => {
-    if (isRefreshing) {
-      setError(null);
-      setIsLoading(true);
-      // Do not call fetchRegulatoryComplianceData – parent MarketResearch cascade already calls the API for this component
-    }
-  }, [isRefreshing]);
-
   // Listen for company profile updates from settings
   useEffect(() => {
     const handleCompanyProfileUpdate = () => {
       void (async () => {
-        setError(null);
-        setIsLoading(true);
-
         // Wait a bit for the backend to process the profile update
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
@@ -755,7 +611,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
           // intentional: ignore cache-write failures and proceed to refetch
         }
 
-        await fetchRegulatoryComplianceData(true); // refresh = true for company profile changes
+        refresh(); // refresh = true for company profile changes
       })();
     };
 
@@ -770,10 +626,8 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   // Also listen for companyProfile prop changes (skip if parent is refreshing – parent cascade will provide data).
   // Only depend on companyProfile so we don't refetch when isRefreshing flips to false (cascade just finished), which would overwrite fresh data and cause flicker.
   useEffect(() => {
-    if (isRefreshing || !companyProfile) return;
-    setError(null);
-    setIsLoading(true);
-    void fetchRegulatoryComplianceData(true);
+    if (!companyProfile) return;
+    refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally watches only companyProfile to avoid overwriting fresh cascade data when isRefreshing flips to false
   }, [companyProfile]);
 

@@ -272,9 +272,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
             onExportPDF={props.onExportPDF}
             onSaveToWorkspace={props.onSaveToWorkspace}
             onGenerateShareableLink={props.onGenerateShareableLink}
-            isRefreshing={props.isRefreshing}
             companyProfile={props.companyProfile}
-            regulatoryData={props.regulatoryData}
           />
         </div>
         {props.showRegulatoryScoutChat && regulatoryScoutChatPanel && (
