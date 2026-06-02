@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://backend-11kr.onrender.com/$1"
+      "destination": "https://brewra-gtm-intelligence.onrender.com/$1"
     },
     {
       "source": "/(.*)",

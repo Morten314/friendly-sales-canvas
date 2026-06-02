@@ -29,6 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { BACKEND_BASE_URL } from "@/lib/api";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -855,7 +856,7 @@ Take care,
       const timeoutId = setTimeout(() => controller.abort(), 15000);
 
       const response = await fetch(
-        `https://backend-11kr.onrender.com/chat/?question=${encodeURIComponent(text)}`,
+        `${BACKEND_BASE_URL}/chat/?question=${encodeURIComponent(text)}`,
         {
           method: "GET",
           headers: { "Content-Type": "application/json" },

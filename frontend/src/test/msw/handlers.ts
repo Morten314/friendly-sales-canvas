@@ -87,6 +87,30 @@ export const handlers = [
       });
     }
 
+    // Phase 5e: regulatory-compliance section needs a realistically-shaped payload.
+    // Match the "regulatory & compliance highlights" component case-insensitively.
+    if (lower === "regulatory & compliance highlights" || lower.includes("regulatory")) {
+      return HttpResponse.json({
+        status: "success",
+        data: {
+          keyUpdates: [{ title: "EU AI Act", description: "starts Q1 2026", tag: "New" }],
+          visualDataCards: [
+            {
+              title: "Compliance Adoption Rates",
+              chartType: "bar-chart",
+              data: [{ name: "GDPR", value: 80 }],
+            },
+          ],
+          regionalData: [{ region: "EU", deadline: "Q1 2026", requirements: "GDPR + AI Act" }],
+          strategicRecommendations: {
+            mitigateRegulatoryRisks: ["Conduct DPIA"],
+            competitivePositioning: ["Lead on privacy"],
+            goToMarketStrategy: ["EU-first launch"],
+          },
+        },
+      });
+    }
+
     // All other components: preserve the existing generic 5b response.
     return HttpResponse.json({
       status: "success",

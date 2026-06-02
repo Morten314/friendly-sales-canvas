@@ -3781,7 +3781,7 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
       console.error("❌🏆 Competitor API failed - this might be a backend server issue");
 
       console.error(
-        "❌🏆 Check if the backend server at https://backend-11kr.onrender.com is running",
+        "❌🏆 Check if the backend server at https://brewra-gtm-intelligence.onrender.com is running",
       );
 
       // Keep existing data if available

@@ -2,9 +2,9 @@ import React from "react";
 
 import CompetitorLandscapeSection from "./CompetitorLandscapeSection";
 import IndustryTrendsSection from "./IndustryTrendsSection";
+import RegulatoryComplianceSection from "./intelligence/regulatory-compliance/RegulatoryComplianceSection";
 import type { MarketIntelligenceTabProps } from "./MarketIntelligenceTabProps";
 import MarketSizeSection from "./MarketSizeSection";
-import RegulatoryComplianceSection from "./RegulatoryComplianceSection";
 
 import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
 import MarketEntrySection from "@/features/market-research/components/intelligence/market-entry/MarketEntrySection";
@@ -272,9 +272,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
             onExportPDF={props.onExportPDF}
             onSaveToWorkspace={props.onSaveToWorkspace}
             onGenerateShareableLink={props.onGenerateShareableLink}
-            isRefreshing={props.isRefreshing}
             companyProfile={props.companyProfile}
-            regulatoryData={props.regulatoryData}
           />
         </div>
         {props.showRegulatoryScoutChat && regulatoryScoutChatPanel && (
