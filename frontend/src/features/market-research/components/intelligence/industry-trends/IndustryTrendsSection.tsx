@@ -14,6 +14,13 @@ import {
 } from "lucide-react";
 import React, { useState, useEffect } from "react";
 
+import type {
+  EditRecord,
+  TrendSnapshot,
+  IndustryTrendsRecommendations,
+  IndustryTrendsData,
+} from "./types";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,48 +35,6 @@ import { toUTCTimestamp } from "@/lib/timestampUtils";
 import type { UntypedBackendProfile } from "@/lib/types/escape-hatches";
 import { useAuth } from "@/shared/auth";
 import { setUserLocalStorage } from "@/utils/cacheUtils";
-
-interface EditRecord {
-  id: string;
-  timestamp: string;
-  user: string;
-  summary: string;
-  field: string;
-  oldValue: string;
-  newValue: string;
-}
-
-interface TrendSnapshot {
-  title: string;
-  metric: string;
-  type: "growth" | "performance" | "adoption";
-}
-
-interface IndustryTrendsRecommendations {
-  primaryFocus: string;
-  marketEntry: string;
-}
-
-interface IndustryTrendsData {
-  executiveSummary: string;
-  aiAdoption: string;
-  cloudMigration: string;
-  regulatory: string;
-  timestamp?: string | number; // Allow both string and number for flexibility
-  trendSnapshots: TrendSnapshot[];
-  regionalHotspots: {
-    [key: string]: string;
-  };
-  strategicRecommendations: IndustryTrendsRecommendations;
-  recommendations?: IndustryTrendsRecommendations; // Allow both property names for compatibility
-  risks: string[];
-  visualCharts: {
-    aiAdoptionTrends: string[];
-    technologyBudgetAllocation: {
-      [key: string]: string;
-    };
-  };
-}
 
 interface IndustryTrendsSectionProps {
   isIndustryTrendsEditing: boolean;
