@@ -39,7 +39,6 @@ import type {
   UntypedBackendApiResponse,
 } from "./types";
 
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,7 +56,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/shared/auth";
 import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
-
 
 const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   isEditing: isCompetitorLandscapeEditing,
@@ -145,17 +143,17 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   });
 
   // Local state for all uiComponents data
-  const [localDataPoints, setLocalDataPoints] = useState<DataPoint[]>(
-    () => extractDataPoints(normalizedComponents),
+  const [localDataPoints, setLocalDataPoints] = useState<DataPoint[]>(() =>
+    extractDataPoints(normalizedComponents),
   );
-  const [localCompetitors, setLocalCompetitors] = useState<string[]>(
-    () => extractCompetitorTags(normalizedComponents),
+  const [localCompetitors, setLocalCompetitors] = useState<string[]>(() =>
+    extractCompetitorTags(normalizedComponents),
   );
-  const [localRegions, setLocalRegions] = useState<RegionShare[]>(
-    () => extractRegions(normalizedComponents),
+  const [localRegions, setLocalRegions] = useState<RegionShare[]>(() =>
+    extractRegions(normalizedComponents),
   );
-  const [localEntities, setLocalEntities] = useState<SwotEntity[]>(
-    () => extractSwotEntities(normalizedComponents),
+  const [localEntities, setLocalEntities] = useState<SwotEntity[]>(() =>
+    extractSwotEntities(normalizedComponents),
   );
   const [localHeadlines, setLocalHeadlines] = useState<string[]>(() => {
     return (
@@ -167,20 +165,20 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           : [])
     );
   });
-  const [localFeatures, setLocalFeatures] = useState<string[]>(
-    () => extractFeatures(normalizedComponents),
+  const [localFeatures, setLocalFeatures] = useState<string[]>(() =>
+    extractFeatures(normalizedComponents),
   );
-  const [localTools, setLocalTools] = useState<Record<string, string[]>>(
-    () => extractTools(normalizedComponents),
+  const [localTools, setLocalTools] = useState<Record<string, string[]>>(() =>
+    extractTools(normalizedComponents),
   );
-  const [localInsights, setLocalInsights] = useState<MnaInsight[]>(
-    () => extractMnaInsights(normalizedComponents),
+  const [localInsights, setLocalInsights] = useState<MnaInsight[]>(() =>
+    extractMnaInsights(normalizedComponents),
   );
-  const [localCharts, setLocalCharts] = useState<TrendChart[]>(
-    () => extractTrendCharts(normalizedComponents),
+  const [localCharts, setLocalCharts] = useState<TrendChart[]>(() =>
+    extractTrendCharts(normalizedComponents),
   );
-  const [localMetrics, setLocalMetrics] = useState<Metric[]>(
-    () => extractMetrics(normalizedComponents),
+  const [localMetrics, setLocalMetrics] = useState<Metric[]>(() =>
+    extractMetrics(normalizedComponents),
   );
 
   // Track if we just saved to prevent useEffect from overwriting our changes

@@ -45,9 +45,7 @@ export function normalizeUiComponents(
 // ── per-type extractors ──────────────────────────────────────────────────────
 
 /** Extract `dataPoints` from the `report` component. */
-export function extractDataPoints(
-  components: UntypedBackendApiResponse[],
-): DataPoint[] {
+export function extractDataPoints(components: UntypedBackendApiResponse[]): DataPoint[] {
   const reportComponent = components.find(
     (comp: UntypedBackendApiResponse) => comp?.type === "report",
   );
@@ -59,9 +57,7 @@ export function extractDataPoints(
  * Note: the `section` component is also used for `metrics` — this extractor
  * returns only `tags`.
  */
-export function extractCompetitorTags(
-  components: UntypedBackendApiResponse[],
-): string[] {
+export function extractCompetitorTags(components: UntypedBackendApiResponse[]): string[] {
   const sectionComponent = components.find(
     (comp: UntypedBackendApiResponse) => comp?.type === "section",
   );
@@ -69,9 +65,7 @@ export function extractCompetitorTags(
 }
 
 /** Extract `regions` from the `marketShareCharts` component. */
-export function extractRegions(
-  components: UntypedBackendApiResponse[],
-): RegionShare[] {
+export function extractRegions(components: UntypedBackendApiResponse[]): RegionShare[] {
   const marketShareComponent = components.find(
     (comp: UntypedBackendApiResponse) => comp?.type === "marketShareCharts",
   );
@@ -83,21 +77,17 @@ export function extractRegions(
  * Backfills missing `opportunities` and `threats` to `[]` for backwards
  * compatibility (mirrors the `?? []` guard in the original useState init).
  */
-export function extractSwotEntities(
-  components: UntypedBackendApiResponse[],
-): SwotEntity[] {
+export function extractSwotEntities(components: UntypedBackendApiResponse[]): SwotEntity[] {
   const swotComponent = components.find(
     (comp: UntypedBackendApiResponse) => comp?.type === "swotAnalysis",
   );
   const entities = swotComponent?.entities || [];
   // Ensure backward compatibility by adding opportunities and threats if missing
-  return entities.map(
-    (entity: SwotEntity) => ({
-      ...entity,
-      opportunities: entity.opportunities || [],
-      threats: entity.threats || [],
-    }),
-  );
+  return entities.map((entity: SwotEntity) => ({
+    ...entity,
+    opportunities: entity.opportunities || [],
+    threats: entity.threats || [],
+  }));
 }
 
 /**
@@ -107,20 +97,14 @@ export function extractSwotEntities(
  * so the caller can apply its own 3-level fallback chain:
  *   newsComponent?.headlines ?? competitorData?.fundingNews ?? fundingNews ?? []
  */
-export function extractHeadlines(
-  components: UntypedBackendApiResponse[],
-): string[] | null {
-  const newsComponent = components.find(
-    (comp: UntypedBackendApiResponse) => comp?.type === "news",
-  );
+export function extractHeadlines(components: UntypedBackendApiResponse[]): string[] | null {
+  const newsComponent = components.find((comp: UntypedBackendApiResponse) => comp?.type === "news");
   const apiHeadlines = newsComponent?.headlines;
   return apiHeadlines && apiHeadlines.length > 0 ? apiHeadlines : null;
 }
 
 /** Extract `features` from the `featureComparison` component. */
-export function extractFeatures(
-  components: UntypedBackendApiResponse[],
-): string[] {
+export function extractFeatures(components: UntypedBackendApiResponse[]): string[] {
   const featureComponent = components.find(
     (comp: UntypedBackendApiResponse) => comp?.type === "featureComparison",
   );
@@ -128,9 +112,7 @@ export function extractFeatures(
 }
 
 /** Extract `tools` from the `featureComparison` component. */
-export function extractTools(
-  components: UntypedBackendApiResponse[],
-): Record<string, string[]> {
+export function extractTools(components: UntypedBackendApiResponse[]): Record<string, string[]> {
   const featureComponent = components.find(
     (comp: UntypedBackendApiResponse) => comp?.type === "featureComparison",
   );
@@ -147,9 +129,7 @@ export function extractTools(
  *
  * Entries that have neither `label` nor `description` are filtered out.
  */
-export function extractMnaInsights(
-  components: UntypedBackendApiResponse[],
-): MnaInsight[] {
+export function extractMnaInsights(components: UntypedBackendApiResponse[]): MnaInsight[] {
   const mnaComponent = components.find(
     (comp: UntypedBackendApiResponse) => comp?.type === "mnaInsights",
   );
@@ -179,9 +159,7 @@ export function extractMnaInsights(
 }
 
 /** Extract `charts` from the `marketTrends` component. */
-export function extractTrendCharts(
-  components: UntypedBackendApiResponse[],
-): TrendChart[] {
+export function extractTrendCharts(components: UntypedBackendApiResponse[]): TrendChart[] {
   const trendsComponent = components.find(
     (comp: UntypedBackendApiResponse) => comp?.type === "marketTrends",
   );
@@ -193,9 +171,7 @@ export function extractTrendCharts(
  * Note: the `section` component is also used for `tags` — this extractor
  * returns only `metrics`.
  */
-export function extractMetrics(
-  components: UntypedBackendApiResponse[],
-): Metric[] {
+export function extractMetrics(components: UntypedBackendApiResponse[]): Metric[] {
   const sectionComponent = components.find(
     (comp: UntypedBackendApiResponse) => comp?.type === "section",
   );

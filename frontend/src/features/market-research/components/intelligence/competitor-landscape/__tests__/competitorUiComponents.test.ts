@@ -182,7 +182,10 @@ describe("competitorUiComponents", () => {
     const comps = [
       {
         type: "mnaInsights",
-        insights: [{ label: "", description: "" }, { label: "L", description: "D" }],
+        insights: [
+          { label: "", description: "" },
+          { label: "L", description: "D" },
+        ],
       },
     ];
     expect(extractMnaInsights(comps)).toHaveLength(1);
