@@ -14,6 +14,17 @@ import {
 } from "lucide-react";
 import React, { useState, useEffect, useRef, useReducer } from "react";
 
+import type {
+  CompetitorLandscapeSectionProps,
+  DataPoint,
+  MnaInsight,
+  Metric,
+  RegionShare,
+  SwotEntity,
+  TrendChart,
+  UntypedBackendApiResponse,
+} from "./types";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,57 +40,9 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import type { UntypedBackendApiResponse, UntypedBackendProfile } from "@/lib/types/escape-hatches";
 import { useAuth } from "@/shared/auth";
 import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
 
-interface EditRecord {
-  id: string;
-  timestamp: string;
-  user: string;
-  summary: string;
-  field: string;
-  oldValue: string;
-  newValue: string;
-}
-
-interface CompetitorLandscapeSectionProps {
-  isEditing: boolean;
-  isSplitView: boolean;
-  isExpanded: boolean;
-  hasEdits: boolean;
-  deletedSections: Set<string>;
-  editHistory: EditRecord[];
-  executiveSummary: string;
-  topPlayerShare: string;
-  emergingPlayers: string;
-  fundingNews: string[];
-  onToggleEdit: () => void;
-  onScoutIconClick: (
-    context?: "market-size" | "industry-trends" | "competitor-landscape",
-    hasEdits?: boolean,
-    customMessage?: string,
-  ) => void;
-  onEditHistoryOpen: () => void;
-  onDeleteSection: (sectionId: string) => void;
-  onSaveChanges: () => void;
-  onCancelEdit: () => void;
-  onExpandToggle: (expanded: boolean) => void;
-  onExecutiveSummaryChange: (value: string) => void;
-  onTopPlayerShareChange: (value: string) => void;
-  onEmergingPlayersChange: (value: string) => void;
-  onFundingNewsChange: (news: string[]) => void;
-  onExportPDF: () => void;
-  onSaveToWorkspace: () => void;
-  onGenerateShareableLink: () => void;
-  // Add refresh props
-  isRefreshing?: boolean;
-  companyProfile?: UntypedBackendProfile;
-
-  // Add centralized data prop
-  competitorData?: UntypedBackendApiResponse;
-  error?: string | null;
-}
 
 const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   isEditing: isCompetitorLandscapeEditing,
@@ -186,7 +149,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   });
 
   // Local state for all uiComponents data
-  const [localDataPoints, setLocalDataPoints] = useState<Array<{ label: string; value: string }>>(
+  const [localDataPoints, setLocalDataPoints] = useState<DataPoint[]>(
     () => {
       const reportComponent = normalizedComponents.find(
         (comp: UntypedBackendApiResponse) => comp?.type === "report",
@@ -200,36 +163,20 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     );
     return sectionComponent?.tags || [];
   });
-  const [localRegions, setLocalRegions] = useState<
-    Array<{ name: string; data: Record<string, string> }>
-  >(() => {
+  const [localRegions, setLocalRegions] = useState<RegionShare[]>(() => {
     const marketShareComponent = normalizedComponents.find(
       (comp: UntypedBackendApiResponse) => comp?.type === "marketShareCharts",
     );
     return marketShareComponent?.regions || [];
   });
-  const [localEntities, setLocalEntities] = useState<
-    Array<{
-      name: string;
-      strengths: string[];
-      weaknesses: string[];
-      opportunities: string[];
-      threats: string[];
-    }>
-  >(() => {
+  const [localEntities, setLocalEntities] = useState<SwotEntity[]>(() => {
     const swotComponent = normalizedComponents.find(
       (comp: UntypedBackendApiResponse) => comp?.type === "swotAnalysis",
     );
     const entities = swotComponent?.entities || [];
     // Ensure backward compatibility by adding opportunities and threats if missing
     return entities.map(
-      (entity: {
-        name: string;
-        strengths: string[];
-        weaknesses: string[];
-        opportunities: string[];
-        threats: string[];
-      }) => ({
+      (entity: SwotEntity) => ({
         ...entity,
         opportunities: entity.opportunities || [],
         threats: entity.threats || [],
@@ -261,7 +208,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     );
     return featureComponent?.tools || {};
   });
-  const [localInsights, setLocalInsights] = useState<Array<{ label: string; description: string }>>(
+  const [localInsights, setLocalInsights] = useState<MnaInsight[]>(
     () => {
       const mnaComponent = normalizedComponents.find(
         (comp: UntypedBackendApiResponse) => comp?.type === "mnaInsights",
@@ -291,7 +238,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         );
     },
   );
-  const [localCharts, setLocalCharts] = useState<Array<{ name: string; xAxis: string | string[] }>>(
+  const [localCharts, setLocalCharts] = useState<TrendChart[]>(
     () => {
       const trendsComponent = normalizedComponents.find(
         (comp: UntypedBackendApiResponse) => comp?.type === "marketTrends",
@@ -299,9 +246,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       return trendsComponent?.charts || [];
     },
   );
-  const [localMetrics, setLocalMetrics] = useState<
-    Array<{ label: string; value: string; trend?: string }>
-  >(() => {
+  const [localMetrics, setLocalMetrics] = useState<Metric[]>(() => {
     const sectionComponent = normalizedComponents.find(
       (comp: UntypedBackendApiResponse) => comp?.type === "section",
     );
