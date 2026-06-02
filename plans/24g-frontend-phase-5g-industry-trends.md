@@ -16,7 +16,7 @@
 
 **Visual guard:** behavioral E2E (`journeys/04`) + Vitest/RTL + `npm run preflight` only. **NO market-research pixel VR; do NOT add `toHaveScreenshot` for market-research** (5a TD-FE).
 
-**Batching note (Spec §1.4):** the two smaller tail sections (5g IndustryTrends + 5h RegulatoryCompliance) MAY be batched into one sub-plan with per-section commits. This document is the **standalone** 5g plan; if the implementer batches, run 24g end-to-end on the branch first, then layer 24h's tasks onto the same branch with their own per-section commits — do not interleave the two sections' commits.
+**Batching note (Spec §1.4):** the two smaller tail sections (5g IndustryTrends + 5h MarketSize) MAY be batched into one sub-plan with per-section commits. This document is the **standalone** 5g plan; if the implementer batches, run 24g end-to-end on the branch first, then layer 24h's tasks onto the same branch with their own per-section commits — do not interleave the two sections' commits.
 
 **Abort criteria (whole-branch — halt + report, do not fix-forward):**
 1. 5c not merged (the `intelligence/` surface + 5b hooks + MSW handlers are absent).
@@ -60,7 +60,10 @@ find src/features/market-research -name 'IndustryTrendsSection.tsx'   # expect u
 P=$(find src/features/market-research -name 'IndustryTrendsSection.tsx' | head -1)
 wc -l "$P"
 grep -n 'interface \|const handle\|<h3\|MiniLineChart\|MiniPieChart\|normalizedDeletedSections\|fetchIndustryTrendsData\|component_name\|industryTrendsExpanded\|export default' "$P"
+# Front-load the riskiest decision (Task 8 Step 6): is the page-level industry-trends cascade cleanable?
+grep -n 'industryTrend\|previousContext\|cascade' src/features/market-research/hooks/useMarketResearchData.ts
 ```
+**Cascade signal (read before committing any work):** if the grep shows another still-unmigrated section (5h market-size) reading industry-trends data through the `previousContext` cascade chain, the page-level slice removal (Task 8 Step 6b) is **not** cleanly doable in 5g — surface that now and plan the deferral (TD-FE) or replan, rather than discovering it after 7 tasks of work. A clean result (industry-trends is only a cascade *producer*, not consumed downstream) means Step 6b can proceed normally.
 
 **Seam inventory — VERIFIED by reading the live file (`IndustryTrendsSection.tsx`, 1,863 LOC). Reconcile against what you find post-5c; drop/add seams as the actual code shows.** (Audit-and-reconcile backstop: the line numbers below are pre-5c anchors — re-find by content, not line.)
 
@@ -94,7 +97,14 @@ grep -n 'interface \|const handle\|<h3\|MiniLineChart\|MiniPieChart\|normalizedD
 
 *Current exports:* `export default IndustryTrendsSection` only (default). The sole importer is **`MarketIntelligenceSections.tsx`** (`import IndustryTrendsSection from "./IndustryTrendsSection"`) — a 5c-era legacy composer; if 5c replaced it with `IntelligenceTab`, re-find the real importer in Step 4. Keep a **named** export `IndustryTrendsSection` going forward (drop the default) and update the importer in Task 1.
 
-**Done when:** branch created; baseline green; MSW serves `"industry trends report"`; the reconciled seam inventory (data-vs-orchestration prop split + the 7 blocks + chrome) is recorded in the PR description.
+- [ ] **Step 5: Confirm `useAuth()` is reachable from the feature's module space** (prerequisite for Task 8 Step 3, which sources `userId = currentUser?.uid` via `useAuth()`):
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence/frontend
+grep -rn 'export .*useAuth\|const useAuth' src/contexts src/hooks 2>/dev/null   # find its definition + import path
+```
+Record the exact import path. `useAuth` is expected to be a **legacy context** (e.g. `@/contexts/AuthContext`); importing it from the feature's `industry-trends/` dir falls under the transitional legacy-import exception (Spec §1.4 / 4a `features/README.md`) — note it as such. If `useAuth` is **not** reachable (renamed/removed by an earlier phase), resolve the actual identity source before Task 8 rather than assuming.
+
+**Done when:** branch created; baseline green; MSW serves `"industry trends report"`; `useAuth` import path confirmed + recorded as a transitional legacy import; the reconciled seam inventory (data-vs-orchestration prop split + the 7 blocks + chrome) is recorded in the PR description.
 
 ---
 
@@ -126,6 +136,7 @@ Do the move + importer rewrite + default→named change **in one commit** so no 
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
 npx eslint --fix src && npm run lint && npx tsc --noEmit -p tsconfig.app.json && npm run test
 ```
+(**Test-scope note:** Task 1 runs the full `npm run test` suite **deliberately** — a relocation + importer rewrite can affect anything, so the broad sweep is the right gate here. Tasks 3+ run focused `npx vitest run <path>` because they add/modify files in one directory; that is the standard for the rest of the plan. Don't generalize either approach from the other.)
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
 git add -A frontend/src
@@ -182,6 +193,8 @@ git commit -m "refactor(fe): extract industry-trends local types to types.ts"
 - Test: `…/intelligence/industry-trends/useIndustryTrends.test.ts`
 
 > Spec 24 §6, §2.1. Wrap the 5b data hook with this section's registry key; surface refresh. The container reads `data` (the Zod-validated component payload) and feeds typed slices to blocks. This **replaces** the dormant `fetchIndustryTrendsData` raw fetch.
+>
+> **Parallelism note:** Tasks 3–4 (create new files — the hook + pure helpers, no container edits) and Tasks 5–6 (modify the container — states/header, then footer/toolbar) are two independent pairs and **MAY run in parallel** across separate agents/worktrees. Within each pair, run serially: 3→4 share no files but keep the order for review clarity, and 5→6 **must** stay serial because both modify `IndustryTrendsSection.tsx` (parallelizing them would conflict in the shared tree).
 
 - [ ] **Step 1: Write the failing test** (RTL `renderHook` + `QueryClientProvider` + the 5b MSW handlers):
 ```ts
@@ -208,6 +221,7 @@ describe("useIndustryTrends", () => {
   });
   it("exposes a regenerate handle", () => {
     const { result } = renderHook(() => useIndustryTrends("user-1", "org-1"), { wrapper });
+    // mutate handle is synchronous — no waitFor needed (unlike the data-loading test above)
     expect(typeof result.current.regenerate.mutate).toBe("function");
   });
 });
@@ -281,7 +295,7 @@ git add -A frontend/src
 git commit -m "refactor(fe): extract industry-trends pure helpers (normalizeDeletedSections, budgetToChartData)"
 ```
 
-**Done when:** helpers unit-tested and green; container/blocks consume them; behavior unchanged.
+**Done when:** helpers unit-tested and green; ready for consumption in Tasks 7–8 (the container/blocks wire to them there, not in this task); behavior byte-identical to the inline versions.
 
 ---
 
@@ -376,9 +390,10 @@ npx eslint --fix src && npm run lint && npx tsc --noEmit -p tsconfig.app.json \
 
 **Files:**
 - Modify: `IndustryTrendsSection.tsx`; the importer (`MarketIntelligenceSections.tsx`/`IntelligenceTab`); `…/components/MarketIntelligenceTabProps.ts`
+- Modify (page-level slice removal, Step 6): `src/features/market-research/hooks/useMarketResearchData.ts` (the 5c data-layer hook — §2.1) + its shell caller (`MarketResearchPage.tsx` / `IntelligenceTab`) wherever the industry-trends slice is threaded
 - Test: `…/industry-trends/IndustryTrendsSection.test.tsx`
 
-> Spec 24 §6, §2.1, §12 R6. With every block + chrome extracted, the container becomes hook + edit/expand wiring + compose. Then sever this section's **data** prop slice (the edit-orchestration props stay).
+> Spec 24 §6, §2.1, §12 R6. With every block + chrome extracted, the container becomes hook + edit/expand wiring + compose. Then sever this section's **data** prop slice (the edit-orchestration props stay) — at **both** ends: the section prop surface (Steps 3–5) **and** the page-level `useMarketResearchData` source that feeds it (Step 6). Per spec §6, a section's sub-phase is "done" only when **"the page's raw `fetch` site + cache slice for this section is removed"** — that source lives in `useMarketResearchData` (§2.1 line 98; the §6 prose still says "into `IntelligenceTab`", which is stale pre-5c-R1-replan — §5 / §2.1 are authoritative), so removing only the section's own dormant fetch + the prop drilling leaves orphaned page-level I/O and misses the §6 gate. **Steps 3–6 land in one green commit** (removing the interface members without removing the shell threading would red `tsc`).
 
 - [ ] **Step 1: Reduce the container** to: `useIndustryTrends(userId, orgId)` for data + `refetch`/`regenerate` (`userId = currentUser?.uid` from `useAuth()` — the backend `MarketRequest` requires `user_id`; `orgId` stays the explicit prop per Step 3); keep the seven `edit*` drafts + `handleModify`/`handleSaveChanges`/per-block `handleSave*` (seeded from `data` instead of `prop*`/mirror — the localStorage-draft `useEffect`s may stay as-is or move into a small `useEditDrafts` helper, author's judgment; do not change their behavior); `normalizeDeletedSections` from `industryTrends.ts`; loading/error/no-data via `states.tsx`; then compose `SectionHeader` → (edit ? blocks-in-edit + `EditToolbar` + `ExportFooter` : read summary/metrics + `Read More`-gated [blocks-in-read + `ExportFooter`]). The `Read More`/`Show Less` expand wiring (over the kept `industryTrendsExpanded`/`onIndustryTrendsExpandToggle` props) stays inline. No JSX-building closures, no `fetch`, no data shaping beyond passing hook slices + drafts.
 
@@ -386,13 +401,24 @@ npx eslint --fix src && npm run lint && npx tsc --noEmit -p tsconfig.app.json \
 
 - [ ] **Step 3: Drop the DATA prop slice from `IndustryTrendsSectionProps`** — remove `executiveSummary`, `aiAdoption`, `cloudMigration`, `regulatory`, `trendSnapshots`, `recommendations`, `risks`, `regionalHotspots`, `visualCharts`, `companyProfile`, **and the now-orphaned per-field change callbacks** `onIndustryTrendsExecutiveSummaryChange`, `onIndustryTrendsAiAdoptionChange`, `onIndustryTrendsCloudMigrationChange`, `onIndustryTrendsRegulatoryChange`, `onIndustryTrendSnapshotsChange` (the section now sources data from the hook and commits via its own `handleSave*`; if the parent still needs to mirror committed edits, surface a single `onCommit(payload)` instead of re-drilling five field setters — author's judgment, record the choice). **KEEP** the edit/page-orchestration props the parent owns: `isIndustryTrendsEditing`, `isSplitView`, `industryTrendsExpanded`, `industryTrendsHasEdits`, `industryTrendsDeletedSections`, `industryTrendsEditHistory`, `isRefreshing`, `onIndustryTrendsToggleEdit/SaveChanges/CancelEdit/DeleteSection/EditHistoryOpen/ExpandToggle`, `onScoutIconClick`, `onExportPDF`, `onSaveToWorkspace`, `onGenerateShareableLink`. Add `orgId: string` (prefer an explicit prop over `useAuth` for tenant). `userId` is sourced in-container from `useAuth()` (`currentUser?.uid`) to feed `useIndustryTrends(userId, orgId)` — it is identity, not a prop.
 
-- [ ] **Step 4: Update the importer JSX** — in `MarketIntelligenceSections.tsx` (the `<IndustryTrendsSection …/>` block, verified at lines ~138–173), delete the data prop lines: `executiveSummary={props.industryTrendsExecutiveSummary}`, `aiAdoption`, `cloudMigration`, `regulatory`, `trendSnapshots={props.industryTrendSnapshots}` (**note the asymmetric source name `industryTrendSnapshots`**), `recommendations`, `risks`, `regionalHotspots`, `visualCharts={props.industryTrendsVisualCharts}`, `companyProfile`, plus the five `on…Change` lines (158–172). Add `orgId={…}`. Keep the orchestration props (139–157) as-is.
+- [ ] **Step 4: Update the importer JSX** — in `MarketIntelligenceSections.tsx` (the `<IndustryTrendsSection …/>` block, verified at lines ~138–173), delete the data prop lines: `executiveSummary={props.industryTrendsExecutiveSummary}`, `aiAdoption`, `cloudMigration`, `regulatory`, `trendSnapshots={props.industryTrendSnapshots}` (**note the asymmetric source name `industryTrendSnapshots`**), `recommendations`, `risks`, `regionalHotspots`, `visualCharts={props.industryTrendsVisualCharts}`, `companyProfile`, plus the five `on…Change` lines (158–172). Add `orgId={…}` — **source it from the parent's existing tenant value** (likely `props.orgId` on `MarketIntelligenceTabProps`, or the active `TenantContext` value the shell already holds; `grep -n 'orgId' MarketIntelligenceSections.tsx MarketIntelligenceTabProps.ts` to find the in-scope source — do not introduce a new fetch for it). Keep the orchestration props (139–157) as-is.
 
-- [ ] **Step 5: Do NOT delete `MarketIntelligenceTabProps.ts`.** Three other files consume it (`MarketIntelligenceSections.tsx`, `MarketIntelligenceTab.tsx`, `SafeMarketIntelligenceTab.tsx`) plus the interface file itself — **verified**. Remove **only** this section's now-unused **data** members from the interface (verified present): `industryTrendsExecutiveSummary`, `industryTrendsAiAdoption`, `industryTrendsCloudMigration`, `industryTrendsRegulatory`, **`industryTrendSnapshots`** (asymmetric — confirm the exact key with `grep -n 'industryTrendSnapshots\|industryTrendsTrendSnapshots' MarketIntelligenceTabProps.ts`), `industryTrendsRecommendations`, `industryTrendsRisks`, `industryTrendsRegionalHotspots`, `industryTrendsVisualCharts`, and their orphaned `on…Change` callbacks (`onIndustryTrendsExecutiveSummaryChange/AiAdoptionChange/CloudMigrationChange/RegulatoryChange`, `onIndustryTrendSnapshotsChange`) — **only if** no other consumer still reads them (grep first). **Leave** the industry-trends edit-orchestration members (`isIndustryTrendsEditing`, `industryTrendsExpanded/HasEdits/DeletedSections/EditHistory/LastEditedField`, the scout-chat members, `on…ToggleEdit/SaveChanges/CancelEdit/DeleteSection/EditHistoryOpen/ExpandToggle/ScoutIconClick/ScoutClose`) and **every other section's** members untouched. **Remaining `MarketIntelligenceTabProps` consumers + slices after 5g** (section order is 5d=market-entry, 5e=regulatory, 5f=competitor-landscape, 5g=industry-trends, 5h=market-size): the three files above + the interface, carrying the industry-trends **orchestration** members and — since 5d–5f already migrated market-entry/regulatory/competitor — **only the `marketSize` section slice**. **Confirm the actual remaining consumers/slices by `grep` at execution time** (this projection assumes 5d–5f merged; do not hard-code it). **5h (the last section, market-size) removes the final slice and deletes `MarketIntelligenceTabProps.ts`; 5i confirms.**
+**Step 5 — trim this section's data members from `MarketIntelligenceTabProps` (do NOT delete the file).** Three other files consume the interface (`MarketIntelligenceSections.tsx`, `MarketIntelligenceTab.tsx`, `SafeMarketIntelligenceTab.tsx`) plus the interface file itself — **verified** — so the file stays; only this section's now-unused **data** members leave. Decomposed into sub-steps for reviewability + revert precision:
 
-- [ ] **Step 6: Container test** — `IndustryTrendsSection.test.tsx` with 5b MSW + `QueryClientProvider`: renders loading → then the read summary/metrics; clicking `Read More` reveals the detail blocks; `isIndustryTrendsEditing` renders the edit forms + toolbar; the no-data state's `Generate` calls the hook regenerate. (Behavioral only — no `toHaveScreenshot`.)
+- [ ] **Step 5a: Resolve the asymmetric key name.** `grep -n 'industryTrendSnapshots\|industryTrendsTrendSnapshots' MarketIntelligenceTabProps.ts` and record the exact key (the snapshots member is asymmetric — `industryTrendSnapshots`, not `industryTrendsTrendSnapshots`).
+- [ ] **Step 5b: Grep each candidate member for other consumers before removing.** For each of the data members below, confirm no consumer outside this section's now-severed path still reads it (`grep -rn '<member>' src`). Remove only members with zero remaining readers.
+- [ ] **Step 5c: Remove the section's data members** (verified present): `industryTrendsExecutiveSummary`, `industryTrendsAiAdoption`, `industryTrendsCloudMigration`, `industryTrendsRegulatory`, **`industryTrendSnapshots`** (the asymmetric key from 5a), `industryTrendsRecommendations`, `industryTrendsRisks`, `industryTrendsRegionalHotspots`, `industryTrendsVisualCharts`.
+- [ ] **Step 5d: Remove the orphaned per-field change callbacks** `onIndustryTrendsExecutiveSummaryChange/AiAdoptionChange/CloudMigrationChange/RegulatoryChange`, `onIndustryTrendSnapshotsChange`.
+- [ ] **Step 5e: Verify the keep-list is untouched + record remaining consumers.** **Leave** the industry-trends edit-orchestration members (`isIndustryTrendsEditing`, `industryTrendsExpanded/HasEdits/DeletedSections/EditHistory/LastEditedField`, the scout-chat members, `on…ToggleEdit/SaveChanges/CancelEdit/DeleteSection/EditHistoryOpen/ExpandToggle/ScoutIconClick/ScoutClose`) and **every other section's** members untouched. Record the remaining `MarketIntelligenceTabProps` consumers + slices in the PR description. **Projection (confirm by `grep` at execution time — do not hard-code):** section order is 5d=market-entry, 5e=regulatory, 5f=competitor-landscape, 5g=industry-trends, 5h=market-size; assuming 5d–5f merged, the three files above + the interface remain, carrying the industry-trends **orchestration** members and **only the `marketSize` section slice**. **5h (the last section) removes the final slice and deletes `MarketIntelligenceTabProps.ts`; 5i confirms.**
 
-- [ ] **Step 7: Green + commit**
+**Step 6 — remove the page-level industry-trends slice from `useMarketResearchData` (spec §6 gate).** This is the page's raw `fetch` site + cache slice for the section — the §6 "Done when" deliverable. It splits into a part that is **always done** (coupled to Step 5, required for `tsc`) and a part that is **deferrable** if cascade-coupled:
+
+- [ ] **Step 6a (always — atomic with Steps 3–5): stop threading the industry-trends slices to the section.** In the shell caller (`MarketResearchPage.tsx` / `IntelligenceTab`), remove the wiring that passes the industry-trends data slices into the intelligence-tab/section prop path. This is mandatory regardless of Step 6b: once Steps 3–5 drop those members from `MarketIntelligenceTabProps` + the section props + the importer JSX, leaving the shell threading them in place would red `tsc`.
+- [ ] **Step 6b (deferrable — the §6 hook-internal removal): delete the industry-trends `fetch`/state/cache from the hook.** In `src/features/market-research/hooks/useMarketResearchData.ts`, remove the industry-trends `fetch`/`useState` (`industryTrendsData` + its `isLoading`/`error`), its `CACHE_DURATION`/localStorage cache slice, and its timestamp/edit-history handling; migrate-or-consciously-drop each behavior per §6, recording any conscious drop. **First map the cascade:** the Task 0 Step 4 grep already flagged whether industry-trends data is read downstream via the `previousContext` cascade. **If another still-unmigrated section (5h market-size) consumes industry-trends through that cascade chain, the hook-internal `fetch`/state cannot be removed in 5g → defer Step 6b to a named sub-phase with a recorded `TD-FE` entry (do NOT hollow the cascade). Reserve the full R3 escape hatch (revert 5g) for coupling that blocks the section decomposition itself — not for this cascade-internal-fetch case.** If clean (industry-trends is only a cascade producer), remove it now. Document the cascade finding either way in the PR description.
+
+- [ ] **Step 7: Container test** — `IndustryTrendsSection.test.tsx` with 5b MSW + `QueryClientProvider`: renders loading → then the read summary/metrics; clicking `Read More` reveals the detail blocks; `isIndustryTrendsEditing` renders the edit forms + toolbar; the no-data state's `Generate` calls the hook regenerate. (Behavioral only — no `toHaveScreenshot`.)
+
+- [ ] **Step 8: Green + commit** (Steps 1–5, 6a, and 7 land together — the prop-surface severance + the shell un-threading must be atomic to keep `tsc` green. **Step 6b lands in the same commit when clean; if Step 6b is deferred per its R3 fallback, commit Steps 1–5, 6a, 7 without it** — the retained hook-internal `industryTrendsData` is then orphaned-but-`tsc`-safe internal state, tracked by the `TD-FE` entry; do **not** revert all of 5g.)
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
 npx eslint --fix src && npm run lint && npx tsc --noEmit -p tsconfig.app.json \
@@ -401,10 +427,10 @@ npx eslint --fix src && npm run lint && npx tsc --noEmit -p tsconfig.app.json \
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
 git add -A frontend/src
-git commit -m "refactor(fe): thin IndustryTrends container, wire FeatureErrorBoundary, drop data prop slice"
+git commit -m "refactor(fe): thin IndustryTrends container, drop data prop slice + page-level fetch/cache"
 ```
 
-**Done when:** container is hook + edit/expand wiring + compose only; `FeatureErrorBoundary` in place (or 5c's noted); section reads its data from `useIndustryTrends` with only `orgId` + edit/orchestration props passed in; the industry-trends **data** members are gone from `MarketIntelligenceTabProps` while the interface and all other slices remain; remaining consumers recorded; container test + knip green; `tsc` clean.
+**Done when:** container is hook + edit/expand wiring + compose only; `FeatureErrorBoundary` in place (or 5c's noted); section reads its data from `useIndustryTrends` with only `orgId` + edit/orchestration props passed in; the industry-trends **data** members are gone from `MarketIntelligenceTabProps` while the interface and all other slices remain; **the page-level industry-trends `fetch` site + `CACHE_DURATION`/cache slice is removed from `useMarketResearchData` (or its removal consciously deferred to a named sub-phase with a `TD-FE` entry per the R3 fallback), with the cascade finding recorded**; remaining consumers recorded; container test + knip green; `tsc` clean.
 
 ---
 
@@ -426,7 +452,7 @@ Expected: PASS incl. `journeys/04` (the market-research journey renders the indu
 
 - [ ] **Step 2: Done-when (Spec 24 §6)**
 1. `IndustryTrendsSection` is a thin container; each block (`ExecutiveSummary`, `KeyMetrics`, `TrendSnapshots`, `RegionalHotspots`, `StrategicRecommendations`, `RisksWatchouts`, `VisualCharts`) and each chrome piece (`SectionHeader`, `ExportFooter`, `EditToolbar`, `states`) is single-purpose and co-located with a test; pure logic lives in `industryTrends.ts` with unit tests; types in `types.ts`.
-2. The section sources data via `useIndustryTrends` (5b hooks); the dormant raw `fetch` is gone; no market-research `fetch` remains in the section.
+2. The section sources data via `useIndustryTrends` (5b hooks); the dormant raw `fetch` is gone. **Per spec §6, the page-level industry-trends `fetch` site + `CACHE_DURATION`/cache slice is removed from `useMarketResearchData` (Task 8 Step 6)** — `grep -n 'industryTrend' src/features/market-research/hooks/useMarketResearchData.ts` returns nothing — **or** its removal is consciously deferred to a named sub-phase with a recorded `TD-FE` entry (R3 fallback for cascade coupling). Verify no market-research `fetch` remains either in the section **or** in the page-level hook's industry-trends slice; this feeds 24i's zero-raw-`fetch` gate.
 3. This section's **data** prop slice is removed from `MarketIntelligenceTabProps` (edit-orchestration props + other sections intact); `MarketIntelligenceTabProps.ts` is **not** deleted; remaining consumers recorded.
 4. Section-level `<FeatureErrorBoundary>` in place (or 5c's documented).
 5. All gates green; no new knip unused exports; `npm run preflight` passes; behavioral coverage only (RTL + `journeys/04`), no MR pixel VR.
