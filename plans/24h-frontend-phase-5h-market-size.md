@@ -210,7 +210,7 @@ git commit -m "refactor(fe): relocate MarketSizeSection into components/intellig
 
 - [ ] **Step 1: Write the failing hook test** (RTL `renderHook` + `QueryClientProvider` + MSW from `src/test/msw/handlers.ts`)
 
-Assert that `useMarketSize(userId, orgId)` returns the parsed market-size component data (from the 5b MSW handler keyed on `component_name`) and exposes a `refresh()` that triggers `useRegenerateResearch`'s mutation (invalidating `qk.marketResearchComponent(orgId, "market size & opportunity")`). Include a not-enabled case (`orgId` empty → query disabled). Skeleton:
+Assert that `useMarketSize(userId, orgId)` returns the parsed market-size component data (from the 5b MSW handler keyed on `component_name`) and exposes a `refresh()` that triggers `useRegenerateResearch`'s mutation (invalidating `qk.marketResearchComponent(orgId, "market size & opportunity")`). Include not-enabled cases (`orgId` empty **or** `userId` empty → query disabled — `userId = currentUser?.uid` is `undefined` when `useAuth()` has no signed-in user, and the backend trusts client-supplied IDs, so an ungated empty `userId` fires a malformed query rather than failing safe). Skeleton:
 ```tsx
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -232,6 +232,10 @@ describe("useMarketSize", () => {
   });
   it("does not fetch when orgId is empty", () => {
     const { result } = renderHook(() => useMarketSize("user-1", ""), { wrapper });
+    expect(result.current.isFetching).toBe(false);
+  });
+  it("does not fetch when userId is empty", () => {
+    const { result } = renderHook(() => useMarketSize("", "org-1"), { wrapper });
     expect(result.current.isFetching).toBe(false);
   });
 });
@@ -275,7 +279,7 @@ export function useMarketSize(userId: string, orgId: string) {
   };
 }
 ```
-> Confirm the exact 5b export names at execution time (`grep -n "export" src/features/market-research/services/marketResearch.ts src/features/market-research/hooks/useMarketResearch.ts`). The signature is `useResearchComponent(userId, orgId, componentName, enabled?)`; if 5b exposes the optional trailing `enabled` arg, pass it through, but do not re-implement the query here. Two specific mismatches to confirm rather than assume: (1) **`enabled` gating** — if 5b's `useResearchComponent` does *not* internally disable the query on empty `orgId`, the Step-1 `does not fetch when orgId is empty` test will go red; make it pass by adding `enabled: !!orgId` (via the trailing arg), not by weakening the test; (2) **`RESEARCH_COMPONENTS` import path** — the reference code imports it from `services/marketResearch.ts`; if 5b exports it from a different module, fix the import to match.
+> Confirm the exact 5b export names at execution time (`grep -n "export" src/features/market-research/services/marketResearch.ts src/features/market-research/hooks/useMarketResearch.ts`). The signature is `useResearchComponent(userId, orgId, componentName, enabled?)`; if 5b exposes the optional trailing `enabled` arg, pass it through, but do not re-implement the query here. Two specific mismatches to confirm rather than assume: (1) **`enabled` gating** — if 5b's `useResearchComponent` does *not* internally disable the query on empty `orgId`/`userId`, the Step-1 `does not fetch when orgId is empty` / `does not fetch when userId is empty` tests will go red; make them pass by adding `enabled: !!orgId && !!userId` (via the trailing arg), not by weakening the tests; (2) **`RESEARCH_COMPONENTS` import path** — the reference code imports it from `services/marketResearch.ts`; if 5b exports it from a different module, fix the import to match.
 
 - [ ] **Step 4: Wire the hook into the container; delete the raw refresh path**
 
