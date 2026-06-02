@@ -58,13 +58,21 @@ export const handlers = [
 
   // 6. Market research — Phase 5b (generic) + Phase 5d (market-entry shape).
   http.post("/api/market-research", async ({ request }) => {
-    const body = (await request.json()) as { component_name?: string };
+    const body = (await request.json()) as { component_name?: string; user_id?: string };
     const name = body.component_name ?? "market size & opportunity";
+    const lower = name.toLowerCase();
+
+    // Phase 5f: error-path probe. A specific user_id on the competitor component
+    // forces a 500 so the useCompetitorLandscape hook test can assert isError
+    // propagation. Scoped to `competitor` so it can't intercept other sections'
+    // tests that might reuse the same user_id.
+    if (body.user_id === "competitor-error-user" && lower.includes("competitor")) {
+      return new HttpResponse(null, { status: 500 });
+    }
 
     // Phase 5d: market-entry section needs a realistically-shaped payload so
     // useMarketEntry can parse a non-trivial view-model. Match the
     // "market entry & growth strategy" component case-insensitively.
-    const lower = name.toLowerCase();
     if (lower === "market entry & growth strategy" || lower.includes("market entry")) {
       return HttpResponse.json({
         status: "success",
@@ -107,6 +115,25 @@ export const handlers = [
             competitivePositioning: ["Lead on privacy"],
             goToMarketStrategy: ["EU-first launch"],
           },
+        },
+      });
+    }
+
+    // Phase 5f: competitor-landscape section needs a realistically-shaped
+    // payload (4 scalars + a uiComponents array) so useCompetitorLandscape and
+    // the container auto-hydrate test resolve a non-trivial view-model.
+    if (lower === "competitor landscape" || lower.includes("competitor")) {
+      return HttpResponse.json({
+        status: "success",
+        data: {
+          executiveSummary: "Test executive summary for competitor landscape.",
+          topPlayerShare: "42%",
+          emergingPlayers: "7",
+          fundingNews: ["Acme raises $20M Series B"],
+          uiComponents: [
+            { type: "section", tags: ["Acme Corp", "Globex"] },
+            { type: "report", dataPoints: [{ label: "Market leader", value: "Acme Corp" }] },
+          ],
         },
       });
     }

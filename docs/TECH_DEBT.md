@@ -1004,3 +1004,36 @@ Either route the five write effects through `setUserLocalStorage(key, value, cur
 - A localStorage/caching cleanup pass or the 24i market-research phase-close sweep.
 
 **Owner:** TBD.
+
+---
+
+## TD-FE-27 — competitor-landscape edit-write path: raw `/api/ask` + `/api/market_intelligence` fetches survive read migration
+
+**Date logged:** 2026-06-02
+**Origin:** Plan 24f Phase 5f Task 4. The task converted the competitor-landscape *read* path to `useCompetitorLandscape` (5b TanStack, hook-first with prop + localStorage fallbacks per 5e), and explicitly scoped the *edit-write* path out (mirror 5e/TD-FE-21).
+
+**Current state:**
+`CompetitorLandscapeSection.tsx`'s `handleCompetitorLandscapeSaveChanges` (the edit-save handler) retains two raw `fetch` calls, untouched by 5f:
+- **`GET /api/ask` (write)** — URL-encodes two full JSON objects (`original_json`, `modified_json`) into `URLSearchParams` and sends them as a GET. Same legacy pattern as TD-FE-21: risks browser URL-length limits, leaks edit data into server access logs / browser history / referrers, and uses GET for a mutation.
+- **`GET /api/market_intelligence` (post-save re-read)** — fired only when the `/ask` call succeeds; its response (`competitor_landscape_data`) is written **straight into local component state** (`setLocalExecutiveSummary`/`…TopPlayerShare`/`…EmergingPlayers`), bypassing the TanStack cache the `useCompetitorLandscape` hook now owns.
+- These ride alongside write-path `setUserLocalStorage("competitor-landscape_original_json"/"_modified_json", …)` calls.
+
+**Cache-divergence caveat:**
+Because the post-save `/market_intelligence` re-read sets local state from a raw fetch (not the query cache), the section's displayed values can **diverge from the TanStack cache** that `useCompetitorLandscape` reads. After a save, local state reflects the raw re-read while `cl.data` still reflects the last `useResearchComponent` POST — until the next regenerate/refetch reconciles them. The section masks this with `justSavedRef`/`savedLocalStateRef` display guards (local state wins immediately after save), but the two sources are not unified.
+
+**What it should be:**
+Migrate the edit-write path to a 5b mutation hook (a `useMutation` POSTing a JSON **body**, replacing the GET-with-query-params), and have the post-save reconciliation write through the TanStack cache (e.g. `queryClient.setQueryData` on the competitor component key, mirroring `useRegenerateResearch`) instead of into local component state — so the hook's cache stays the single source of truth. Drop the write-path `localStorage` blobs if unused elsewhere. Confirm the `/ask` + `/market_intelligence` contracts against a live backend first (no auto-generated client — per CLAUDE.md polyglot rule).
+
+**Why we deferred:**
+- Plan 24f Task 4 scoped the write path out of the 5f read-migration; rewiring it during the decomposition would mix two concerns and deviate from the 5e-parity mandate.
+- A mutation-hook migration + cache-write reconciliation is its own coordinated FE (+ backend contract confirmation) change warranting a focused phase.
+
+**What we lose by staying as-is:**
+- Edit saves can silently fail/truncate for large payloads (URL length), and edit data leaks into logs/history.
+- Display can diverge from the query cache after a save until the next refetch reconciles.
+
+**Pull-forward trigger:**
+- Before 5i's zero-raw-fetch confirmation (spec §11 item 3) — migrate the competitor write path, or 5i's gate explicitly accepts this documented exception (alongside TD-FE-21 for market-entry; see also TD-FE-19).
+- Earlier if an edit-save URL-length failure or a visible post-save cache-divergence is observed.
+
+**Owner:** TBD.

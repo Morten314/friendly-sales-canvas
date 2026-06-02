@@ -38,6 +38,7 @@ import type {
   TrendChart,
   UntypedBackendApiResponse,
 } from "./types";
+import { useCompetitorLandscape } from "./useCompetitorLandscape";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -87,14 +88,20 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   competitorData: propCompetitorData,
   error: propError,
 }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, orgId } = useAuth();
+  const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
   const { toast } = useToast();
   // Track previous user to detect user switches
   const previousUserRef = useRef<string | null | undefined>(currentUser?.uid);
 
+  // Section SERVER data is now sourced (hook-first) from the dedicated 5b
+  // TanStack hook (memory-only cache). The prop `competitorData` + localStorage
+  // fallbacks below are retained (5e parity) for backward compatibility.
+  const cl = useCompetitorLandscape(currentUser?.uid ?? "", orgIdToUse);
+
   // State for API data - parent handles loading and errors
   const error = propError; // Use prop error from parent
-  const competitorData = propCompetitorData;
+  const competitorData = cl.data ?? propCompetitorData;
 
   // Local state for error and loading management
   const [localError, setLocalError] = useState<string | null>(null);
