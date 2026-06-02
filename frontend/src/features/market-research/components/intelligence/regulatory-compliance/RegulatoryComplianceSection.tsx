@@ -11,7 +11,7 @@ import { StrategicRecommendationsSection } from "./StrategicRecommendationsSecti
 import type { RegulatoryComplianceSectionProps } from "./types";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { apiFetchJson } from "@/lib/api";
+import { apiFetchJson, BACKEND_BASE_URL } from "@/lib/api";
 import { executeWithRateLimit } from "@/lib/rateLimitManager";
 import type {
   UntypedBackendApiResponse,
@@ -727,7 +727,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
 
         // Fetch the latest company profile from backend (with org_id)
         try {
-          const profileUrl = `https://backend-11kr.onrender.com/profile/company?org_id=${orgIdToUse}`;
+          const profileUrl = `${BACKEND_BASE_URL}/profile/company?org_id=${orgIdToUse}`;
           const profileResponse = await fetch(profileUrl, {
             method: "GET",
             headers: { "Content-Type": "application/json" },

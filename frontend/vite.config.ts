@@ -4,6 +4,10 @@ import react from "@vitejs/plugin-react-swc";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
+// Single source of truth for the deployed backend host within this config.
+// vite.config can't reliably import from src, so the literal is mirrored here.
+const backendUrl = "https://brewra-gtm-intelligence.onrender.com";
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode: _mode }) => ({
   server: {
@@ -24,7 +28,7 @@ export default defineConfig(({ mode: _mode }) => ({
     },
     proxy: {
       "/api": {
-        target: "https://backend-11kr.onrender.com",
+        target: backendUrl,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ""),
         secure: true,
@@ -49,7 +53,7 @@ export default defineConfig(({ mode: _mode }) => ({
     // E2E tests don't hit this proxy — Playwright's page.route intercepts first.
     proxy: {
       "/api": {
-        target: "https://backend-11kr.onrender.com",
+        target: backendUrl,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ""),
         secure: true,

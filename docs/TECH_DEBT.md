@@ -585,6 +585,8 @@ the field) or Phase 4 (shell extraction). Remove the dead field then.
 
 ## TD-FE-13 — Repoint hardcoded backend host `backend-11kr` → `brewra-gtm-intelligence`
 
+**Resolved:** 2026-06-02 — repointed all active references to `https://brewra-gtm-intelligence.onrender.com` and collapsed the runtime app code to a single `BACKEND_BASE_URL` source of truth in `frontend/src/lib/api.ts` (consumed by `API_BASE_URL`, `ICP_BACKEND_URL`, and the 5 former direct-fetch call sites). `vite.config.ts` (one local `backendUrl` const, both proxies) and `vercel.json` (literal) cannot import the TS const and retain the host literal as the two unavoidable mirror points. The 2 dead commented-out occurrences in `DataHistoryDialog.tsx` were deleted. Backend `backend/test_*.py` probes and the doc references (CLAUDE.md/AGENTS.md gotchas, frontend/CORS_FIX_README.md, scripts/safety_net/*) were left for a separate docs/backend pass — they don't affect the running app. Note: confirmed live 2026-06-02 (POST /market-research → 200, `data` carries executiveSummary/keyUpdates/visualDataCards/regionalData/strategicRecommendations). The user provided the host as `http://`; HTTPS is used (the PWA is https → http backend would be mixed-content-blocked).
+
 **Date logged:** 2026-05-29
 **Origin:** Plan 20 Phase 3 manual smoke (plans/20-frontend-phase-3-api-data-layer.md, Task 16 Step 2). The
 live capture confirmed `https://brewra-gtm-intelligence.onrender.com` is the working backend

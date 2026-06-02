@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { BACKEND_BASE_URL } from "@/lib/api";
 
 interface MarketRanking {
   marketName: string;
@@ -212,7 +213,7 @@ export const AIPromptingInterface = ({
         params.append("modified_json", JSON.stringify(modifiedJson));
       }
 
-      const url = `https://backend-11kr.onrender.com/ask?${params.toString()}`;
+      const url = `${BACKEND_BASE_URL}/ask?${params.toString()}`;
       console.log("Making GET request to:", url);
 
       // Make the API call using GET method with URL parameters

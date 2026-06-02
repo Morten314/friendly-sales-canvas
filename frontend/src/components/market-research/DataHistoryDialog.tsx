@@ -28,8 +28,6 @@
 //   [key: string]: any;
 // }
 
-// const API_BASE_URL = 'https://backend-11kr.onrender.com';
-
 // export const DataHistoryDialog = () => {
 //   const [isOpen, setIsOpen] = useState(false);
 //   const [historyEntries, setHistoryEntries] = useState<DataHistoryEntry[]>([]);
@@ -615,8 +613,6 @@
 //   [key: string]: any;
 // }
 
-// const API_BASE_URL = 'https://backend-11kr.onrender.com';
-
 // export const DataHistoryDialog = () => {
 //   const [isOpen, setIsOpen] = useState(false);
 //   const [reportHistory, setReportHistory] = useState<string[]>([]);
@@ -937,6 +933,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { BACKEND_BASE_URL } from "@/lib/api";
 import type { UntypedBackendApiResponse, UntypedReportState } from "@/lib/types/escape-hatches";
 
 interface MarketIntelligenceResponse {
@@ -949,7 +946,7 @@ interface MarketIntelligenceResponse {
   [key: string]: UntypedBackendApiResponse;
 }
 
-const API_BASE_URL = "https://backend-11kr.onrender.com";
+const API_BASE_URL = BACKEND_BASE_URL;
 
 interface DataHistoryDialogProps {
   onReportSelected?: (reportData: UntypedReportState) => void;
