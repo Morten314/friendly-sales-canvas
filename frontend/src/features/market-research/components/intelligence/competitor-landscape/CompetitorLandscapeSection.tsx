@@ -1,4 +1,4 @@
-import { X, FileText, Save, Share, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { X, FileText, Save, Share, ChevronDown, ChevronUp } from "lucide-react";
 import React, { useState, useEffect, useRef, useReducer } from "react";
 
 import { CompetitorExecutiveSummary } from "./CompetitorExecutiveSummary";
@@ -82,24 +82,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
   // State for API data - hook owns the data and error state
   const error: string | null = cl.isError ? "Failed to load competitor data" : null;
-  // Cast to UntypedBackendApiResponse so internal sync logic can access dynamic
-  // backend fields (timestamp, user_id) not tracked in CompetitorLandscapeView.
-  const competitorData = cl.data as UntypedBackendApiResponse | undefined;
+  const competitorData = cl.data;
 
-  // Local state for error and loading management
-  const [localError, setLocalError] = useState<string | null>(null);
-  const [localLoading, setLocalLoading] = useState<boolean>(false);
-
-  // Check if we're loading - show loading when local loading is true OR when parent is refreshing
-  // Don't show loading if we have data from props or parent
-  const hasPropData =
-    executiveSummary || topPlayerShare || emergingPlayers || fundingNews?.length > 0;
-
-  // Show loading only when actively loading and no data available - simplified like other components
-  const isLoading = localLoading && !hasPropData;
-
-  // Use local error if available, otherwise use prop error
-  const displayError = localError || error;
+  // Use hook error as display error
+  const displayError = error;
 
   // Extract uiComponents data
   const normalizedComponents = competitorData?.uiComponents
@@ -249,27 +235,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           // Continue to sync below
         } else {
           // Props/competitorData haven't caught up yet - DO NOT overwrite local state
-          console.log("🛡️ Saved state (user edits):", {
-            exec: savedLocalStateRef.current.executiveSummary.substring(0, 50),
-            topPlayer: savedLocalStateRef.current.topPlayerShare.substring(0, 50),
-            emerging: savedLocalStateRef.current.emergingPlayers.substring(0, 50),
-          });
-          console.log("🛡️ Props (from parent):", {
-            exec: (executiveSummary || "").substring(0, 50),
-            topPlayer: (topPlayerShare || "").substring(0, 50),
-            emerging: (emergingPlayers || "").substring(0, 50),
-          });
-          console.log("🛡️ CompetitorData (from API - might be old):", {
-            exec: (competitorData?.executiveSummary || "").substring(0, 50),
-            topPlayer: (competitorData?.topPlayerShare || "").substring(0, 50),
-            emerging: (competitorData?.emergingPlayers || "").substring(0, 50),
-            timestamp: competitorData?.timestamp,
-          });
-          console.log("🛡️ Local state (preserved - will be used for display):", {
-            exec: localExecutiveSummary.substring(0, 50),
-            topPlayer: localTopPlayerShare.substring(0, 50),
-            emerging: localEmergingPlayers.substring(0, 50),
-          });
           return; // Exit early, don't overwrite - user's edits are preserved in local state
         }
       }
@@ -451,12 +416,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       onTopPlayerShareChange(localTopPlayerShare);
       onEmergingPlayersChange(localEmergingPlayers);
 
-      console.log("✅ Competitor Landscape - Local state preserved for immediate UI refresh:", {
-        exec: localExecutiveSummary.substring(0, 30),
-        topPlayer: localTopPlayerShare.substring(0, 30),
-        emerging: localEmergingPlayers.substring(0, 30),
-      });
-
       // Force a re-render to ensure UI updates immediately with local state values
       forceUpdate();
 
@@ -500,9 +459,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         edit_type: "modification",
       };
 
-      console.log("📤 Competitor Landscape - original_json:", editData.original_json);
-      console.log("📤 Competitor Landscape - modified_json:", editData.modified_json);
-
       // Store data for /ask API (user-specific)
       setUserLocalStorage(
         "competitor-landscape_original_json",
@@ -533,8 +489,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           redirect: "follow", // Follow redirects (307, 308, etc.)
         });
 
-        console.log("📥 GET /ask status:", response.status);
-
         // 307 is a redirect - fetch should follow it automatically, but check if final response is ok
         if (!response.ok && response.status !== 307) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -561,8 +515,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               "Content-Type": "application/json",
             },
           });
-
-          console.log("📥 GET /market_intelligence status:", getResponse.status);
 
           if (getResponse.ok) {
             getData = await getResponse.json();
@@ -602,12 +554,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         onExecutiveSummaryChange(finalExecutiveSummary);
         onTopPlayerShareChange(finalTopPlayerShare);
         onEmergingPlayersChange(finalEmergingPlayers);
-
-        console.log("✅ Competitor Landscape - Local state preserved for immediate UI refresh:", {
-          exec: finalExecutiveSummary.substring(0, 30),
-          topPlayer: finalTopPlayerShare.substring(0, 30),
-          emerging: finalEmergingPlayers.substring(0, 30),
-        });
       } else {
         // No API data - local state is already set and preserved above
         // Just ensure the saved state ref matches local state
@@ -616,12 +562,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           topPlayerShare: localTopPlayerShare,
           emergingPlayers: localEmergingPlayers,
         };
-
-        console.log("✅ Competitor Landscape - Local state values:", {
-          exec: localExecutiveSummary.substring(0, 30),
-          topPlayer: localTopPlayerShare.substring(0, 30),
-          emerging: localEmergingPlayers.substring(0, 30),
-        });
       }
 
       // Force a re-render to ensure UI updates immediately with local state values
@@ -646,12 +586,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       setLocalTopPlayerShare(localTopPlayerShare);
       setLocalEmergingPlayers(localEmergingPlayers);
 
-      console.log("✅ Competitor Landscape - Local state values:", {
-        exec: localExecutiveSummary.substring(0, 30),
-        topPlayer: localTopPlayerShare.substring(0, 30),
-        emerging: localEmergingPlayers.substring(0, 30),
-      });
-
       // Force a re-render to ensure UI updates immediately with local state values
       forceUpdate();
 
@@ -669,7 +603,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
     // Only clear if user actually changed (not on initial mount)
     if (previousUserId !== undefined && previousUserId !== currentUserId) {
-      setLocalError(null);
       // Reset local state to empty to force fresh fetch
       setLocalExecutiveSummary("");
       setLocalTopPlayerShare("");
@@ -679,17 +612,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     // Update ref for next comparison
     previousUserRef.current = currentUserId;
   }, [currentUser?.uid]);
-
-  // Component mount - parent handles all data fetching
-  useEffect(() => {}, []);
-
-  // Handle refresh when parent triggers it - parent handles all API calls
-  useEffect(() => {
-    if (isRefreshing) {
-      setLocalError(null);
-      setLocalLoading(false); // Don't show loading since parent handles it
-    }
-  }, [isRefreshing]);
 
   // Log when competitorData changes
   useEffect(() => {
@@ -742,24 +664,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     topPlayerShare ||
     emergingPlayers ||
     fundingNews?.length > 0;
-
-  // Show loading state when no API data is available yet
-  if (isLoading) {
-    return (
-      <div className={`${isSplitView ? "flex gap-6" : ""}`}>
-        <div
-          className={`bg-white rounded-lg border border-gray-200 p-6 ${isSplitView ? "flex-1" : ""}`}
-        >
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
-              <p className="text-gray-600">Loading competitor landscape data...</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // Only show full error screen if there's an error AND no data to display
   if (displayError && !hasDataToDisplay) {
@@ -823,26 +727,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
   return (
     <div className={`${isSplitView ? "flex gap-6" : ""}`}>
-      {/* Debug info - remove this after testing */}
-      {/* {isRefreshing && (
-        <div className="mb-4 p-2 bg-yellow-100 border border-yellow-300 rounded text-sm">
-          🔄 Refreshing... Latest data: {competitorData?.timestamp || 'No timestamp'}
-        </div>
-      )}
-      {!isRefreshing && competitorData?.timestamp && (
-        <div className="mb-4 p-2 bg-green-100 border border-green-300 rounded text-sm">
-          ✅ Data updated: {competitorData.timestamp} | Executive Summary: {competitorData.executiveSummary?.substring(0, 50)}...
-        </div>
-      )}
-      {/* Debug company profile data */}
-      {isRefreshing && (
-        <div className="mb-4 p-2 bg-blue-100 border border-blue-300 rounded text-sm">
-          🔍 Company Profile: {companyProfile ? "Available" : "Not available"} | Industry:{" "}
-          {companyProfile?.industry || "Unknown"} | Company Size:{" "}
-          {companyProfile?.companySize || "Unknown"}
-        </div>
-      )}
-
       {/* API Error indicator - Show warning if there's an error but we have data to display */}
       {displayError && hasDataToDisplay && (
         <div className="mb-4 p-2 bg-yellow-100 border border-yellow-300 rounded text-sm">

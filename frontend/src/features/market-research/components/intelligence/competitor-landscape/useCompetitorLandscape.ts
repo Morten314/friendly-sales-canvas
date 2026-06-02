@@ -1,4 +1,4 @@
-import type { CompetitorLandscapeView } from "./types";
+import type { UntypedBackendApiResponse } from "./types";
 
 import {
   useRegenerateResearch,
@@ -7,7 +7,7 @@ import {
 import { RESEARCH_COMPONENTS } from "@/features/market-research/services/marketResearch";
 
 export interface UseCompetitorLandscape {
-  data: CompetitorLandscapeView | undefined;
+  data: UntypedBackendApiResponse | undefined;
   isLoading: boolean;
   isError: boolean;
   refresh: () => void;
@@ -27,7 +27,7 @@ export function useCompetitorLandscape(userId: string, orgId: string): UseCompet
   );
   const regenerate = useRegenerateResearch(userId, orgId);
   return {
-    data: query.data?.data as unknown as CompetitorLandscapeView | undefined,
+    data: query.data?.data as unknown as UntypedBackendApiResponse | undefined,
     isLoading: query.isLoading,
     isError: query.isError,
     refresh: () => regenerate.mutate(RESEARCH_COMPONENTS.competitor),

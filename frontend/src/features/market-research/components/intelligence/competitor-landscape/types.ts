@@ -70,14 +70,3 @@ export interface CompetitorLandscapeSectionProps {
   isRefreshing?: boolean;
   companyProfile?: UntypedBackendProfile;
 }
-
-/** The section's view-model (what useCompetitorLandscape resolves the 5b data into). */
-export interface CompetitorLandscapeView {
-  executiveSummary?: string;
-  topPlayerShare?: string;
-  emergingPlayers?: string;
-  fundingNews?: string[];
-  // Intentionally `unknown[]` — mirrors 5b's tolerant `.passthrough()` (no per-component schema).
-  // The typed + tested boundary is competitorUiComponents.ts (Task 3), not a runtime guard here.
-  uiComponents?: unknown[];
-}
