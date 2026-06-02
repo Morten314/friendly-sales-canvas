@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 
+import { useMarketSize } from "./useMarketSize";
+
 import type { EditRecord } from "@/components/market-research/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,11 +27,10 @@ import MiniPieChart from "@/components/ui/MiniPieChart";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { apiFetchJson } from "@/lib/api";
-import { executeWithRateLimit } from "@/lib/rateLimitManager";
-import type { UntypedBackendProfile, UntypedReportState } from "@/lib/types/escape-hatches";
+import type { UntypedBackendProfile } from "@/lib/types/escape-hatches";
 import { useAuth } from "@/shared/auth";
 import { setUserLocalStorage } from "@/utils/cacheUtils";
+
 
 interface MarketSizeSectionProps {
   isEditing: boolean;
@@ -114,22 +115,35 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   onGenerateShareableLink,
   showScoutChat,
   scoutChatPanel,
-  isLoading,
-  error,
-  onRefresh,
-  isRefreshing,
+  // isLoading / error / onRefresh / isRefreshing props are no longer destructured:
+  // section loading/error/refresh is driven by the useMarketSize hook now.
+  // (The props remain on the interface until a later task removes them.)
 }) => {
   const { currentUser, orgId } = useAuth();
   const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
+  const userId = currentUser?.uid ?? "";
+  // 5b section-data hook (memory-only TanStack cache) replaces the raw fetch.
+  const marketSize = useMarketSize(userId, orgIdToUse);
   // Track previous user to detect user switches
   const previousUserRef = useRef<string | null | undefined>(currentUser?.uid);
   // Track if we just cleared due to user switch (to prevent immediate sync with stale props)
   const justClearedRef = useRef<boolean>(false);
 
-  // API data fetching state
-  const [isLoadingData, setIsLoadingData] = useState(false);
-  const [_errorData, setErrorData] = useState<string | null>(null);
-  const [_marketSizeData, setMarketSizeData] = useState<UntypedReportState>(null);
+  // Derived display view: hook data with the drilled prop as fallback (parity
+  // bridge — a later task drops the prop fallback). Nullish arrays/records are
+  // coerced to []/{} to match the existing JSX defaults.
+  const view = {
+    executiveSummary: marketSize.data?.executiveSummary ?? executiveSummary ?? "",
+    tamValue: marketSize.data?.tamValue ?? tamValue ?? "",
+    samValue: marketSize.data?.samValue ?? samValue ?? "",
+    GrowthRate: marketSize.data?.GrowthRate ?? GrowthRate ?? "",
+    strategicRecommendations:
+      marketSize.data?.strategicRecommendations ?? strategicRecommendations ?? [],
+    marketEntry: marketSize.data?.marketEntry ?? marketEntry ?? "",
+    marketDrivers: marketSize.data?.marketDrivers ?? marketDrivers ?? [],
+    marketSizeBySegment: marketSize.data?.marketSizeBySegment ?? marketSizeBySegment ?? {},
+    growthProjections: marketSize.data?.growthProjections ?? growthProjections ?? {},
+  };
 
   // Local editing state for inline editing - initialize once and keep values
   const [localExecutiveSummary, setLocalExecutiveSummary] = useState(executiveSummary || "");
@@ -168,32 +182,20 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
     onToggleEdit();
   };
 
-  // Reset local values when editing starts
+  // Reset local values when editing starts - seed from the displayed (hook) view
   useEffect(() => {
     if (isEditing) {
-      console.log("📝 Editing started - Setting local values:", {
-        executiveSummary,
-        tamValue,
-        samValue,
-        GrowthRate,
-        marketEntry,
-        strategicRecommendations,
-        marketDrivers,
-        marketSizeBySegment,
-        growthProjections,
-      });
-
-      setLocalExecutiveSummary(executiveSummary || "");
-      setLocalTamValue(tamValue || "");
-      setLocalSamValue(samValue || "");
-      setLocalGrowthRate(GrowthRate || "");
-      setLocalMarketEntry(marketEntry || "");
-      setLocalStrategicRecommendations(strategicRecommendations || []);
-      setLocalMarketDrivers(marketDrivers || []);
-      setLocalMarketSizeBySegment(marketSizeBySegment || {});
-      setLocalGrowthProjections(growthProjections || {});
+      setLocalExecutiveSummary(view.executiveSummary || "");
+      setLocalTamValue(view.tamValue || "");
+      setLocalSamValue(view.samValue || "");
+      setLocalGrowthRate(view.GrowthRate || "");
+      setLocalMarketEntry(view.marketEntry || "");
+      setLocalStrategicRecommendations(view.strategicRecommendations || []);
+      setLocalMarketDrivers(view.marketDrivers || []);
+      setLocalMarketSizeBySegment(view.marketSizeBySegment || {});
+      setLocalGrowthProjections(view.growthProjections || {});
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- snapshot effect: re-initializes local edit buffer only when entering edit mode; intentionally ignores prop changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- snapshot effect: re-initializes local edit buffer only when entering edit mode; intentionally ignores prop/view changes
   }, [isEditing]);
 
   // Sync local state with props when they change (but only when not editing and not just saved)
@@ -205,14 +207,14 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         return;
       }
 
-      // If we just saved, check if props have caught up with our saved state
+      // If we just saved, check if the displayed view has caught up with our saved state
       if (justSavedRef.current && savedLocalStateRef.current) {
         const propsMatchSaved =
-          (executiveSummary || "") === savedLocalStateRef.current.executiveSummary &&
-          (tamValue || "") === savedLocalStateRef.current.tamValue &&
-          (samValue || "") === savedLocalStateRef.current.samValue &&
-          (GrowthRate || "") === savedLocalStateRef.current.GrowthRate &&
-          (marketEntry || "") === savedLocalStateRef.current.marketEntry;
+          (view.executiveSummary || "") === savedLocalStateRef.current.executiveSummary &&
+          (view.tamValue || "") === savedLocalStateRef.current.tamValue &&
+          (view.samValue || "") === savedLocalStateRef.current.samValue &&
+          (view.GrowthRate || "") === savedLocalStateRef.current.GrowthRate &&
+          (view.marketEntry || "") === savedLocalStateRef.current.marketEntry;
 
         if (propsMatchSaved) {
           // Props have caught up - safe to reset flag and allow normal syncing
@@ -226,57 +228,57 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
 
       // Syncing with props
 
-      // Only sync with props when they change (if not editing and not just saved)
-      // This ensures we get fresh data from parent/API, but preserves our edits
-      if (executiveSummary && executiveSummary !== localExecutiveSummary) {
-        setLocalExecutiveSummary(executiveSummary);
+      // Only sync with the displayed view when it changes (if not editing and not just saved)
+      // This ensures we get fresh data from the hook, but preserves our edits
+      if (view.executiveSummary && view.executiveSummary !== localExecutiveSummary) {
+        setLocalExecutiveSummary(view.executiveSummary);
       }
-      if (tamValue && tamValue !== localTamValue) {
-        setLocalTamValue(tamValue);
+      if (view.tamValue && view.tamValue !== localTamValue) {
+        setLocalTamValue(view.tamValue);
       }
-      if (samValue && samValue !== localSamValue) {
-        setLocalSamValue(samValue);
+      if (view.samValue && view.samValue !== localSamValue) {
+        setLocalSamValue(view.samValue);
       }
-      if (GrowthRate && GrowthRate !== localGrowthRate) {
-        setLocalGrowthRate(GrowthRate);
+      if (view.GrowthRate && view.GrowthRate !== localGrowthRate) {
+        setLocalGrowthRate(view.GrowthRate);
       }
-      if (marketEntry && marketEntry !== localMarketEntry) {
-        setLocalMarketEntry(marketEntry);
+      if (view.marketEntry && view.marketEntry !== localMarketEntry) {
+        setLocalMarketEntry(view.marketEntry);
       }
-      // Always sync arrays - update if props have data, clear if props are empty
-      if (Array.isArray(strategicRecommendations)) {
+      // Always sync arrays - update if the view has data, clear if empty
+      if (Array.isArray(view.strategicRecommendations)) {
         const currentStr = JSON.stringify(localStrategicRecommendations);
-        const newStr = JSON.stringify(strategicRecommendations);
+        const newStr = JSON.stringify(view.strategicRecommendations);
         if (currentStr !== newStr) {
           setLocalStrategicRecommendations(
-            strategicRecommendations.length > 0 ? [...strategicRecommendations] : [],
+            view.strategicRecommendations.length > 0 ? [...view.strategicRecommendations] : [],
           );
         }
       } else if (localStrategicRecommendations.length > 0) {
-        // Clear if props are not an array but local has data
+        // Clear if the view is not an array but local has data
         setLocalStrategicRecommendations([]);
       }
 
-      if (Array.isArray(marketDrivers)) {
+      if (Array.isArray(view.marketDrivers)) {
         const currentStr = JSON.stringify(localMarketDrivers);
-        const newStr = JSON.stringify(marketDrivers);
+        const newStr = JSON.stringify(view.marketDrivers);
         if (currentStr !== newStr) {
-          setLocalMarketDrivers(marketDrivers.length > 0 ? [...marketDrivers] : []);
+          setLocalMarketDrivers(view.marketDrivers.length > 0 ? [...view.marketDrivers] : []);
         }
       } else if (localMarketDrivers.length > 0) {
-        // Clear if props are not an array but local has data
+        // Clear if the view is not an array but local has data
         setLocalMarketDrivers([]);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- prop-sync effect: reads local* state for comparison only; including locals would cause infinite re-sync loops
   }, [
-    executiveSummary,
-    tamValue,
-    samValue,
-    GrowthRate,
-    marketEntry,
-    strategicRecommendations,
-    marketDrivers,
+    view.executiveSummary,
+    view.tamValue,
+    view.samValue,
+    view.GrowthRate,
+    view.marketEntry,
+    view.strategicRecommendations,
+    view.marketDrivers,
     isEditing,
     currentUser?.uid,
   ]);
@@ -457,106 +459,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
     }
   };
 
-  // Fetch Market Size data from API
-  const fetchMarketSizeData = async (refresh = false) => {
-    try {
-      setIsLoadingData(true);
-      setErrorData(null);
-
-      if (!currentUser?.uid) {
-        console.error("User not authenticated");
-        setErrorData("User not authenticated");
-        setIsLoadingData(false);
-        return;
-      }
-
-      const payload = {
-        org_id: orgIdToUse,
-        user_id: currentUser.uid,
-        component_name: "market size & opportunity", // Exact match from swagger
-        refresh: refresh,
-        force_refresh: refresh,
-        cache_bypass: refresh,
-        bypass_all_cache: refresh,
-        request_timestamp: Date.now(),
-        request_id: Math.random().toString(36).substr(2, 6),
-        data: {},
-      };
-
-      const result = await executeWithRateLimit(
-        () =>
-          apiFetchJson("market-research", {
-            method: "POST",
-            body: payload,
-          }),
-        "Market Size",
-      );
-
-      if (result.status === "success" && result.data) {
-        const apiData = result.data;
-
-        // Check if we have the expected Market Size data structure
-        // Also check for nested data structures that might be in the API response
-        const hasDirectData =
-          apiData.executiveSummary ||
-          apiData.tamValue ||
-          apiData.samValue ||
-          apiData.strategicRecommendations;
-        const hasNestedData =
-          apiData.market_size_data || apiData.marketSizeData || apiData.marketSize;
-
-        if (hasDirectData || hasNestedData) {
-          // Use nested data if available, otherwise use direct data
-          const dataToUse =
-            apiData.market_size_data || apiData.marketSizeData || apiData.marketSize || apiData;
-
-          // Store the data
-          setMarketSizeData(dataToUse);
-
-          // Update parent state with API response data (only if data exists)
-          if (dataToUse.executiveSummary) onExecutiveSummaryChange(dataToUse.executiveSummary);
-          if (dataToUse.tamValue) onTamValueChange(dataToUse.tamValue);
-          if (dataToUse.samValue) onSamValueChange(dataToUse.samValue);
-          if (dataToUse.GrowthRate) onGrowthRateChange(dataToUse.GrowthRate);
-          if (dataToUse.marketEntry) onMarketEntryChange(dataToUse.marketEntry);
-
-          // Handle strategic recommendations - check if it's an array or needs to be converted
-          if (dataToUse.strategicRecommendations) {
-            let recommendations = dataToUse.strategicRecommendations;
-            if (typeof recommendations === "string") {
-              // If it's a string, try to split it or convert to array
-              recommendations = recommendations.split("\n").filter((r) => r.trim());
-            }
-            if (Array.isArray(recommendations)) {
-              onStrategicRecommendationsChange(recommendations);
-            }
-          }
-
-          // Handle market drivers - check if it's an array or needs to be converted
-          if (dataToUse.marketDrivers) {
-            let drivers = dataToUse.marketDrivers;
-            if (typeof drivers === "string") {
-              // If it's a string, try to split it or convert to array
-              drivers = drivers.split("\n").filter((d) => d.trim());
-            }
-            if (Array.isArray(drivers)) {
-              onMarketDriversChange(drivers);
-            }
-          }
-        } else {
-          // intentional: drivers payload absent; skip update
-        }
-      } else {
-        // intentional: no fetched data to merge
-      }
-    } catch (error) {
-      console.error("❌ Market Size - Error fetching data:", error);
-      setErrorData(error instanceof Error ? error.message : "Failed to fetch market size data");
-    } finally {
-      setIsLoadingData(false);
-    }
-  };
-
   // Clear state when user changes to prevent data leakage
   useEffect(() => {
     const previousUserId = previousUserRef.current;
@@ -564,10 +466,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
 
     // Only clear if user actually changed (not on initial mount)
     if (previousUserId !== undefined && previousUserId !== currentUserId) {
-      setMarketSizeData(null);
-      setErrorData(null);
-      setIsLoadingData(false);
-      // Reset local state to empty to force fresh fetch
+      // Reset local state to empty so the hook's fresh data seeds in
       setLocalExecutiveSummary("");
       setLocalTamValue("");
       setLocalSamValue("");
@@ -595,66 +494,11 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
     return () => clearTimeout(updateTimer);
   }, [currentUser?.uid]);
 
-  // Fetch data when component mounts or user changes if no data is available
-  useEffect(() => {
-    if (!currentUser?.uid) {
-      return; // Don't fetch if user is not authenticated
-    }
-
-    // Always check if we have fresh data for this user
-    // The parent component should pass fresh data, but if not, we fetch
-    const hasData =
-      executiveSummary ||
-      tamValue ||
-      samValue ||
-      GrowthRate ||
-      strategicRecommendations.length > 0 ||
-      marketEntry ||
-      marketDrivers.length > 0;
-
-    if (!hasData && !isLoadingData) {
-      const timer = setTimeout(() => {
-        void fetchMarketSizeData(false);
-      }, 1000);
-
-      return () => clearTimeout(timer);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- conditional fetch effect: fetchMarketSizeData and isLoadingData read directly to avoid stale-closure refetch loops
-  }, [
-    currentUser?.uid,
-    executiveSummary,
-    tamValue,
-    samValue,
-    GrowthRate,
-    strategicRecommendations.length,
-    marketEntry,
-    marketDrivers.length,
-  ]);
-
-  // Handle refresh when parent triggers it
-  useEffect(() => {
-    if (isRefreshing) {
-      // Clear old data immediately to prevent showing stale data
-      setMarketSizeData(null);
-      setErrorData(null);
-      setIsLoadingData(true);
-      void fetchMarketSizeData(true);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh-trigger effect: fetchMarketSizeData stable, intentionally watches only isRefreshing edge
-  }, [isRefreshing]);
-
-  // Check if we have any meaningful data
-  const hasData =
-    executiveSummary ||
-    tamValue ||
-    samValue ||
-    GrowthRate ||
-    strategicRecommendations.length > 0 ||
-    marketEntry ||
-    marketDrivers.length > 0;
+  // Data presence is driven by the 5b hook (memory-only cache).
+  const hasData = !!marketSize.data;
 
   // Loading state
-  if (isLoadingData && !hasData) {
+  if (marketSize.isLoading && !hasData) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="text-center py-12">
@@ -666,7 +510,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   }
 
   // Empty state
-  if (!hasData && !isLoadingData) {
+  if (!hasData && !marketSize.isLoading) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="text-center py-12">
@@ -732,38 +576,40 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
           </div>
         </div>
 
-        {/* Loading and Error States */}
-        {isLoading && (
+        {/* Loading and Error States — driven by the 5b hook */}
+        {(marketSize.isRegenerating || marketSize.isLoading) && (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             <span className="ml-3 text-gray-600">Loading market data...</span>
           </div>
         )}
 
-        {error && (
+        {marketSize.isError && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-red-500"></div>
                 <span className="text-red-700 text-sm font-medium">Error loading data</span>
               </div>
-              {onRefresh && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onRefresh}
-                  className="text-red-600 border-red-200 hover:bg-red-50"
-                >
-                  Retry
-                </Button>
-              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => marketSize.regenerate()}
+                className="text-red-600 border-red-200 hover:bg-red-50"
+              >
+                Retry
+              </Button>
             </div>
-            <p className="text-red-600 text-sm mt-2">{error}</p>
+            <p className="text-red-600 text-sm mt-2">
+              {marketSize.error instanceof Error
+                ? marketSize.error.message
+                : "Failed to load market size data"}
+            </p>
           </div>
         )}
 
-        {!isLoading &&
-          !error &&
+        {!marketSize.isLoading &&
+          !marketSize.isError &&
           (isEditing ? (
             <div className="space-y-8">
               {/* Executive Summary Edit */}
@@ -1339,13 +1185,13 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                   <BarChart3 className="h-5 w-5 text-blue-600" />
                   Executive Summary
                 </h3>
-                <p className="text-gray-700 mb-6">{localExecutiveSummary || executiveSummary}</p>
+                <p className="text-gray-700 mb-6">{localExecutiveSummary || view.executiveSummary}</p>
 
                 {/* Key Metrics Cards - Always Visible */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                   <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
                     <div className="text-2xl font-bold text-blue-600">
-                      {localTamValue || tamValue}
+                      {localTamValue || view.tamValue}
                     </div>
                     <div className="text-sm font-medium text-gray-900">
                       Total Addressable Market
@@ -1354,7 +1200,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                   </div>
                   <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
                     <div className="text-2xl font-bold text-green-600">
-                      {localSamValue || samValue}
+                      {localSamValue || view.samValue}
                     </div>
                     <div className="text-sm font-medium text-gray-900">
                       Serviceable Addressable Market
@@ -1363,7 +1209,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                   </div>
                   <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg">
                     <div className="text-2xl font-bold text-purple-600">
-                      {localGrowthRate || GrowthRate}
+                      {localGrowthRate || view.GrowthRate}
                     </div>
                     <div className="text-sm font-medium text-gray-900">Growth Rate</div>
                     <div className="text-xs text-gray-600">Fastest growing region</div>
@@ -1412,9 +1258,9 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                                 {rec}
                               </li>
                             ))
-                          ) : Array.isArray(strategicRecommendations) &&
-                            strategicRecommendations.length > 0 ? (
-                            strategicRecommendations.map((rec, index) => (
+                          ) : Array.isArray(view.strategicRecommendations) &&
+                            view.strategicRecommendations.length > 0 ? (
+                            view.strategicRecommendations.map((rec, index) => (
                               <li key={index} className="flex items-start gap-2">
                                 <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
                                 {rec}
@@ -1437,7 +1283,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                         Market Entry
                       </h3>
                       <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                        <p className="text-gray-700 mb-4">{localMarketEntry || marketEntry}</p>
+                        <p className="text-gray-700 mb-4">{localMarketEntry || view.marketEntry}</p>
                       </div>
                     </div>
 
@@ -1451,18 +1297,12 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                         <div className="bg-white border border-gray-200 rounded-lg p-4">
                           <h4 className="font-medium text-gray-900 mb-3">Market Size by Segment</h4>
-                          {(() => {
-                            if (typeof marketSizeBySegment === "string") {
-                              // intentional: string form not rendered here
-                            }
-                            return null;
-                          })()}
                           <MiniPieChart
                             data={(() => {
                               const segmentsToUse =
                                 Object.keys(localMarketSizeBySegment).length > 0
                                   ? localMarketSizeBySegment
-                                  : marketSizeBySegment;
+                                  : view.marketSizeBySegment;
                               if (!segmentsToUse || Object.keys(segmentsToUse).length === 0) {
                                 return [
                                   { name: "Enterprise", value: 45, color: "#3B82F6" },
@@ -1510,18 +1350,12 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                         </div>
                         <div className="bg-white border border-gray-200 rounded-lg p-4">
                           <h4 className="font-medium text-gray-900 mb-3">Growth Projections</h4>
-                          {(() => {
-                            if (typeof growthProjections === "string") {
-                              // intentional: string form not rendered here
-                            }
-                            return null;
-                          })()}
                           <MiniLineChart
                             data={(() => {
                               const projectionsToUse =
                                 Object.keys(localGrowthProjections).length > 0
                                   ? localGrowthProjections
-                                  : growthProjections;
+                                  : view.growthProjections;
                               if (!projectionsToUse || Object.keys(projectionsToUse).length === 0) {
                                 return [
                                   { name: "2023", value: 100 },
@@ -1579,7 +1413,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                         <ul className="space-y-2 text-gray-700">
                           {(Array.isArray(localMarketDrivers) && localMarketDrivers.length > 0
                             ? localMarketDrivers
-                            : marketDrivers || []
+                            : view.marketDrivers || []
                           ).map((driver, index) => (
                             <li key={index} className="flex items-start gap-2">
                               <div className="w-2 h-2 rounded-full bg-purple-500 mt-2 flex-shrink-0"></div>
@@ -1587,7 +1421,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                             </li>
                           ))}
                           {(!localMarketDrivers || localMarketDrivers.length === 0) &&
-                            (!marketDrivers || marketDrivers.length === 0) && (
+                            (!view.marketDrivers || view.marketDrivers.length === 0) && (
                               <li className="flex items-start gap-2">
                                 <div className="w-2 h-2 rounded-full bg-purple-500 mt-2 flex-shrink-0"></div>
                                 No market drivers available
