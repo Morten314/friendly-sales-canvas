@@ -1,8 +1,5 @@
 import type { EditRecord } from "@/components/market-research/types";
-import type {
-  UntypedBackendApiResponse,
-  UntypedBackendProfile,
-} from "@/lib/types/escape-hatches";
+import type { UntypedBackendApiResponse, UntypedBackendProfile } from "@/lib/types/escape-hatches";
 
 export type { EditRecord, UntypedBackendApiResponse, UntypedBackendProfile };
 
@@ -72,19 +69,4 @@ export interface CompetitorLandscapeSectionProps {
   // Add refresh props
   isRefreshing?: boolean;
   companyProfile?: UntypedBackendProfile;
-
-  // Add centralized data prop
-  competitorData?: UntypedBackendApiResponse;
-  error?: string | null;
-}
-
-/** The section's view-model (what useCompetitorLandscape resolves the 5b data into). */
-export interface CompetitorLandscapeView {
-  executiveSummary?: string;
-  topPlayerShare?: string;
-  emergingPlayers?: string;
-  fundingNews?: string[];
-  // Intentionally `unknown[]` — mirrors 5b's tolerant `.passthrough()` (no per-component schema).
-  // The typed + tested boundary is competitorUiComponents.ts (Task 3), not a runtime guard here.
-  uiComponents?: unknown[];
 }

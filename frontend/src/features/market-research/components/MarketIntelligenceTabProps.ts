@@ -11,7 +11,6 @@ export interface MarketIntelligenceTabProps {
   companyProfile?: UntypedBackendProfile;
 
   // Add centralized data props
-  competitorData?: UntypedReportState;
   regulatoryData?: UntypedReportState;
 
   // Market Size Section
@@ -65,11 +64,6 @@ export interface MarketIntelligenceTabProps {
   competitorHasEdits: boolean;
   competitorDeletedSections: Set<string>;
   competitorEditHistory: EditRecord[];
-  competitorExecutiveSummary: string;
-  competitorTopPlayerShare: string;
-  competitorEmergingPlayers: string;
-  competitorFundingNews: string[];
-  competitorError?: string | null;
   // Regulatory Compliance props
   isRegulatoryEditing?: boolean;
   regulatoryExpanded?: boolean;

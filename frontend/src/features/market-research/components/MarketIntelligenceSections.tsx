@@ -182,23 +182,17 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       <div className={`${props.showCompetitorScoutChat ? "flex gap-6" : ""}`}>
         <div className={`${props.showCompetitorScoutChat ? "w-1/2" : ""}`}>
           <CompetitorLandscapeSection
-            key={`competitor-${props.competitorData?.timestamp || Date.now()}-${props.isRefreshing ? "refreshing" : "stable"}`}
+            key={`competitor-${props.isRefreshing ? "refreshing" : "stable"}`}
             isEditing={props.isCompetitorEditing || false}
             isSplitView={props.isSplitView}
             isExpanded={props.competitorExpanded || false}
             hasEdits={props.competitorHasEdits || false}
             deletedSections={props.competitorDeletedSections || new Set()}
             editHistory={props.competitorEditHistory || []}
-            executiveSummary={
-              props.competitorData?.executiveSummary || props.competitorExecutiveSummary || ""
-            }
-            topPlayerShare={
-              props.competitorData?.topPlayerShare || props.competitorTopPlayerShare || ""
-            }
-            emergingPlayers={
-              props.competitorData?.emergingPlayers || props.competitorEmergingPlayers || ""
-            }
-            fundingNews={props.competitorData?.fundingNews || props.competitorFundingNews || []}
+            executiveSummary=""
+            topPlayerShare=""
+            emergingPlayers=""
+            fundingNews={[]}
             onToggleEdit={props.onCompetitorToggleEdit || (() => {})}
             onScoutIconClick={props.onCompetitorScoutIconClick}
             onEditHistoryOpen={props.onCompetitorEditHistoryOpen || (() => {})}
@@ -215,8 +209,6 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
             onGenerateShareableLink={props.onGenerateShareableLink}
             isRefreshing={props.isRefreshing}
             companyProfile={props.companyProfile}
-            competitorData={props.competitorData}
-            error={props.competitorError}
           />
         </div>
         {props.showCompetitorScoutChat && competitorScoutChatPanel && (

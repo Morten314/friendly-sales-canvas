@@ -1,19 +1,30 @@
-import {
-  BarChart3,
-  Bot,
-  Edit,
-  X,
-  FileText,
-  Save,
-  Share,
-  Clock,
-  ChevronDown,
-  ChevronUp,
-  Loader2,
-  Check,
-} from "lucide-react";
+import { X, FileText, Save, Share, ChevronDown, ChevronUp } from "lucide-react";
 import React, { useState, useEffect, useRef, useReducer } from "react";
 
+import { CompetitorExecutiveSummary } from "./CompetitorExecutiveSummary";
+import { CompetitorFeatureComparison } from "./CompetitorFeatureComparison";
+import { CompetitorKeyMetrics } from "./CompetitorKeyMetrics";
+import { CompetitorLandscapeHeader } from "./CompetitorLandscapeHeader";
+import { CompetitorMarketTrends } from "./CompetitorMarketTrends";
+import { CompetitorMnaInsights } from "./CompetitorMnaInsights";
+import { CompetitorNewsFeed } from "./CompetitorNewsFeed";
+import { CompetitorReportDataPoints } from "./CompetitorReportDataPoints";
+import { CompetitorSwotAnalysis } from "./CompetitorSwotAnalysis";
+import {
+  normalizeUiComponents,
+  extractDataPoints,
+  extractCompetitorTags,
+  extractRegions,
+  extractSwotEntities,
+  extractHeadlines,
+  extractFeatures,
+  extractTools,
+  extractMnaInsights,
+  extractTrendCharts,
+  extractMetrics,
+} from "./competitorUiComponents";
+import { MajorCompetitorsList } from "./MajorCompetitorsList";
+import { MarketShareRegionsTable } from "./MarketShareRegionsTable";
 import type {
   CompetitorLandscapeSectionProps,
   DataPoint,
@@ -24,25 +35,12 @@ import type {
   TrendChart,
   UntypedBackendApiResponse,
 } from "./types";
+import { useCompetitorLandscape } from "./useCompetitorLandscape";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import MiniLineChart from "@/components/ui/MiniLineChart";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/shared/auth";
 import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
-
 
 const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   isEditing: isCompetitorLandscapeEditing,
@@ -71,51 +69,23 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   onGenerateShareableLink,
   isRefreshing = false,
   companyProfile,
-  competitorData: propCompetitorData,
-  error: propError,
 }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, orgId } = useAuth();
+  const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
   const { toast } = useToast();
   // Track previous user to detect user switches
   const previousUserRef = useRef<string | null | undefined>(currentUser?.uid);
 
-  // State for API data - parent handles loading and errors
-  const error = propError; // Use prop error from parent
-  const competitorData = propCompetitorData;
+  // Section SERVER data is sourced exclusively from the dedicated hook (Task 4).
+  // The parent no longer forwards a competitorData prop — data ownership is fully local.
+  const cl = useCompetitorLandscape(currentUser?.uid ?? "", orgIdToUse);
 
-  // Local state for error and loading management
-  const [localError, setLocalError] = useState<string | null>(null);
-  const [localLoading, setLocalLoading] = useState<boolean>(false);
+  // State for API data - hook owns the data and error state
+  const error: string | null = cl.isError ? "Failed to load competitor data" : null;
+  const competitorData = cl.data;
 
-  // Check if we're loading - show loading when local loading is true OR when parent is refreshing
-  // Don't show loading if we have data from props or parent
-  const hasPropData =
-    executiveSummary || topPlayerShare || emergingPlayers || fundingNews?.length > 0;
-
-  // Show loading only when actively loading and no data available - simplified like other components
-  const isLoading = localLoading && !hasPropData;
-
-  // Use local error if available, otherwise use prop error
-  const displayError = localError || error;
-
-  // Helper function to normalize uiComponents
-  const normalizeUiComponents = (
-    components: UntypedBackendApiResponse[],
-  ): UntypedBackendApiResponse[] => {
-    if (!Array.isArray(components)) return [];
-    return components
-      .map((comp: UntypedBackendApiResponse) => {
-        if (typeof comp === "string") {
-          try {
-            return JSON.parse(comp);
-          } catch (_e) {
-            return null;
-          }
-        }
-        return comp;
-      })
-      .filter((comp: UntypedBackendApiResponse) => comp !== null);
-  };
+  // Use hook error as display error
+  const displayError = error;
 
   // Extract uiComponents data
   const normalizedComponents = competitorData?.uiComponents
@@ -149,109 +119,43 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   });
 
   // Local state for all uiComponents data
-  const [localDataPoints, setLocalDataPoints] = useState<DataPoint[]>(
-    () => {
-      const reportComponent = normalizedComponents.find(
-        (comp: UntypedBackendApiResponse) => comp?.type === "report",
-      );
-      return reportComponent?.dataPoints || [];
-    },
+  const [localDataPoints, setLocalDataPoints] = useState<DataPoint[]>(() =>
+    extractDataPoints(normalizedComponents),
   );
-  const [localCompetitors, setLocalCompetitors] = useState<string[]>(() => {
-    const sectionComponent = normalizedComponents.find(
-      (comp: UntypedBackendApiResponse) => comp?.type === "section",
-    );
-    return sectionComponent?.tags || [];
-  });
-  const [localRegions, setLocalRegions] = useState<RegionShare[]>(() => {
-    const marketShareComponent = normalizedComponents.find(
-      (comp: UntypedBackendApiResponse) => comp?.type === "marketShareCharts",
-    );
-    return marketShareComponent?.regions || [];
-  });
-  const [localEntities, setLocalEntities] = useState<SwotEntity[]>(() => {
-    const swotComponent = normalizedComponents.find(
-      (comp: UntypedBackendApiResponse) => comp?.type === "swotAnalysis",
-    );
-    const entities = swotComponent?.entities || [];
-    // Ensure backward compatibility by adding opportunities and threats if missing
-    return entities.map(
-      (entity: SwotEntity) => ({
-        ...entity,
-        opportunities: entity.opportunities || [],
-        threats: entity.threats || [],
-      }),
-    );
-  });
+  const [localCompetitors, setLocalCompetitors] = useState<string[]>(() =>
+    extractCompetitorTags(normalizedComponents),
+  );
+  const [localRegions, setLocalRegions] = useState<RegionShare[]>(() =>
+    extractRegions(normalizedComponents),
+  );
+  const [localEntities, setLocalEntities] = useState<SwotEntity[]>(() =>
+    extractSwotEntities(normalizedComponents),
+  );
   const [localHeadlines, setLocalHeadlines] = useState<string[]>(() => {
-    const newsComponent = normalizedComponents.find(
-      (comp: UntypedBackendApiResponse) => comp?.type === "news",
-    );
-    const apiHeadlines = newsComponent?.headlines;
-    return apiHeadlines && apiHeadlines.length > 0
-      ? apiHeadlines
-      : competitorData?.fundingNews && competitorData.fundingNews.length > 0
+    return (
+      extractHeadlines(normalizedComponents) ??
+      (competitorData?.fundingNews && competitorData.fundingNews.length > 0
         ? competitorData.fundingNews
         : fundingNews && fundingNews.length > 0
           ? fundingNews
-          : [];
-  });
-  const [localFeatures, setLocalFeatures] = useState<string[]>(() => {
-    const featureComponent = normalizedComponents.find(
-      (comp: UntypedBackendApiResponse) => comp?.type === "featureComparison",
+          : [])
     );
-    return featureComponent?.features || [];
   });
-  const [localTools, setLocalTools] = useState<Record<string, string[]>>(() => {
-    const featureComponent = normalizedComponents.find(
-      (comp: UntypedBackendApiResponse) => comp?.type === "featureComparison",
-    );
-    return featureComponent?.tools || {};
-  });
-  const [localInsights, setLocalInsights] = useState<MnaInsight[]>(
-    () => {
-      const mnaComponent = normalizedComponents.find(
-        (comp: UntypedBackendApiResponse) => comp?.type === "mnaInsights",
-      );
-      let insights = mnaComponent?.insights;
-      if (typeof insights === "string") {
-        try {
-          insights = JSON.parse(insights);
-        } catch (_e) {
-          insights = null;
-        }
-      }
-      if (!insights || !Array.isArray(insights)) return [];
-      return insights
-        .map((insight: UntypedBackendApiResponse) => {
-          if (typeof insight === "string") {
-            try {
-              return JSON.parse(insight);
-            } catch (_e) {
-              return null;
-            }
-          }
-          return insight;
-        })
-        .filter(
-          (insight: UntypedBackendApiResponse) => insight && (insight.label || insight.description),
-        );
-    },
+  const [localFeatures, setLocalFeatures] = useState<string[]>(() =>
+    extractFeatures(normalizedComponents),
   );
-  const [localCharts, setLocalCharts] = useState<TrendChart[]>(
-    () => {
-      const trendsComponent = normalizedComponents.find(
-        (comp: UntypedBackendApiResponse) => comp?.type === "marketTrends",
-      );
-      return trendsComponent?.charts || [];
-    },
+  const [localTools, setLocalTools] = useState<Record<string, string[]>>(() =>
+    extractTools(normalizedComponents),
   );
-  const [localMetrics, setLocalMetrics] = useState<Metric[]>(() => {
-    const sectionComponent = normalizedComponents.find(
-      (comp: UntypedBackendApiResponse) => comp?.type === "section",
-    );
-    return sectionComponent?.metrics || [];
-  });
+  const [localInsights, setLocalInsights] = useState<MnaInsight[]>(() =>
+    extractMnaInsights(normalizedComponents),
+  );
+  const [localCharts, setLocalCharts] = useState<TrendChart[]>(() =>
+    extractTrendCharts(normalizedComponents),
+  );
+  const [localMetrics, setLocalMetrics] = useState<Metric[]>(() =>
+    extractMetrics(normalizedComponents),
+  );
 
   // Track if we just saved to prevent useEffect from overwriting our changes
   const justSavedRef = useRef(false);
@@ -331,27 +235,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           // Continue to sync below
         } else {
           // Props/competitorData haven't caught up yet - DO NOT overwrite local state
-          console.log("🛡️ Saved state (user edits):", {
-            exec: savedLocalStateRef.current.executiveSummary.substring(0, 50),
-            topPlayer: savedLocalStateRef.current.topPlayerShare.substring(0, 50),
-            emerging: savedLocalStateRef.current.emergingPlayers.substring(0, 50),
-          });
-          console.log("🛡️ Props (from parent):", {
-            exec: (executiveSummary || "").substring(0, 50),
-            topPlayer: (topPlayerShare || "").substring(0, 50),
-            emerging: (emergingPlayers || "").substring(0, 50),
-          });
-          console.log("🛡️ CompetitorData (from API - might be old):", {
-            exec: (competitorData?.executiveSummary || "").substring(0, 50),
-            topPlayer: (competitorData?.topPlayerShare || "").substring(0, 50),
-            emerging: (competitorData?.emergingPlayers || "").substring(0, 50),
-            timestamp: competitorData?.timestamp,
-          });
-          console.log("🛡️ Local state (preserved - will be used for display):", {
-            exec: localExecutiveSummary.substring(0, 50),
-            topPlayer: localTopPlayerShare.substring(0, 50),
-            emerging: localEmergingPlayers.substring(0, 50),
-          });
           return; // Exit early, don't overwrite - user's edits are preserved in local state
         }
       }
@@ -375,84 +258,52 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       const normalized = competitorData?.uiComponents
         ? normalizeUiComponents(competitorData.uiComponents)
         : [];
-      const reportComponent = normalized.find(
-        (comp: UntypedBackendApiResponse) => comp?.type === "report",
-      );
-      const sectionComponent = normalized.find(
-        (comp: UntypedBackendApiResponse) => comp?.type === "section",
-      );
-      const marketShareComponent = normalized.find(
-        (comp: UntypedBackendApiResponse) => comp?.type === "marketShareCharts",
-      );
-      const swotComponent = normalized.find(
+
+      const syncedDataPoints = extractDataPoints(normalized);
+      if (syncedDataPoints.length > 0) setLocalDataPoints(syncedDataPoints);
+
+      const syncedTags = extractCompetitorTags(normalized);
+      if (syncedTags.length > 0) setLocalCompetitors(syncedTags);
+
+      const syncedRegions = extractRegions(normalized);
+      if (syncedRegions.length > 0) setLocalRegions(syncedRegions);
+
+      const syncedEntities = extractSwotEntities(normalized);
+      // extractSwotEntities returns [] when no swotAnalysis component, and a non-empty
+      // array (with backfilled opportunities/threats) when the component is present.
+      // Mirror the original guard: only set when the source component had entities.
+      const hasSwotComponent = normalized.some(
         (comp: UntypedBackendApiResponse) => comp?.type === "swotAnalysis",
       );
-      const newsComponent = normalized.find(
-        (comp: UntypedBackendApiResponse) => comp?.type === "news",
-      );
-      const featureComponent = normalized.find(
-        (comp: UntypedBackendApiResponse) => comp?.type === "featureComparison",
-      );
-      const mnaComponent = normalized.find(
-        (comp: UntypedBackendApiResponse) => comp?.type === "mnaInsights",
-      );
-      const trendsComponent = normalized.find(
-        (comp: UntypedBackendApiResponse) => comp?.type === "marketTrends",
-      );
+      if (hasSwotComponent) setLocalEntities(syncedEntities);
 
-      if (reportComponent?.dataPoints) setLocalDataPoints(reportComponent.dataPoints);
-      if (sectionComponent?.tags) setLocalCompetitors(sectionComponent.tags);
-      if (marketShareComponent?.regions) setLocalRegions(marketShareComponent.regions);
-      if (swotComponent?.entities) {
-        // Ensure backward compatibility by adding opportunities and threats if missing
-        const normalizedEntities = swotComponent.entities.map(
-          (entity: UntypedBackendApiResponse) => ({
-            ...entity,
-            opportunities: entity.opportunities || [],
-            threats: entity.threats || [],
-          }),
-        );
-        setLocalEntities(normalizedEntities);
-      }
-      if (newsComponent?.headlines) {
-        setLocalHeadlines(newsComponent.headlines);
+      const syncedHeadlines = extractHeadlines(normalized);
+      if (syncedHeadlines !== null) {
+        setLocalHeadlines(syncedHeadlines);
       } else if (competitorData?.fundingNews) {
         setLocalHeadlines(competitorData.fundingNews);
       } else if (fundingNews) {
         setLocalHeadlines(fundingNews);
       }
-      if (featureComponent?.features) setLocalFeatures(featureComponent.features);
-      if (featureComponent?.tools) setLocalTools(featureComponent.tools);
-      if (mnaComponent?.insights) {
-        let insights = mnaComponent.insights;
-        if (typeof insights === "string") {
-          try {
-            insights = JSON.parse(insights);
-          } catch (_e) {
-            insights = null;
-          }
-        }
-        if (insights && Array.isArray(insights)) {
-          const validInsights = insights
-            .map((insight: UntypedBackendApiResponse) => {
-              if (typeof insight === "string") {
-                try {
-                  return JSON.parse(insight);
-                } catch (_e) {
-                  return null;
-                }
-              }
-              return insight;
-            })
-            .filter(
-              (insight: UntypedBackendApiResponse) =>
-                insight && (insight.label || insight.description),
-            );
-          setLocalInsights(validInsights);
-        }
-      }
-      if (trendsComponent?.charts) setLocalCharts(trendsComponent.charts);
-      if (sectionComponent?.metrics) setLocalMetrics(sectionComponent.metrics);
+
+      const syncedFeatures = extractFeatures(normalized);
+      if (syncedFeatures.length > 0) setLocalFeatures(syncedFeatures);
+
+      const syncedTools = extractTools(normalized);
+      if (Object.keys(syncedTools).length > 0) setLocalTools(syncedTools);
+
+      const syncedInsights = extractMnaInsights(normalized);
+      // Mirror original guard: only set when the source component had insights.
+      const hasMnaComponent = normalized.some(
+        (comp: UntypedBackendApiResponse) => comp?.type === "mnaInsights",
+      );
+      if (hasMnaComponent) setLocalInsights(syncedInsights);
+
+      const syncedCharts = extractTrendCharts(normalized);
+      if (syncedCharts.length > 0) setLocalCharts(syncedCharts);
+
+      const syncedMetrics = extractMetrics(normalized);
+      if (syncedMetrics.length > 0) setLocalMetrics(syncedMetrics);
     }
     // localExecutiveSummary/localTopPlayerShare/localEmergingPlayers
     // intentionally omitted: this effect is the writer for them; including
@@ -565,12 +416,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       onTopPlayerShareChange(localTopPlayerShare);
       onEmergingPlayersChange(localEmergingPlayers);
 
-      console.log("✅ Competitor Landscape - Local state preserved for immediate UI refresh:", {
-        exec: localExecutiveSummary.substring(0, 30),
-        topPlayer: localTopPlayerShare.substring(0, 30),
-        emerging: localEmergingPlayers.substring(0, 30),
-      });
-
       // Force a re-render to ensure UI updates immediately with local state values
       forceUpdate();
 
@@ -614,9 +459,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         edit_type: "modification",
       };
 
-      console.log("📤 Competitor Landscape - original_json:", editData.original_json);
-      console.log("📤 Competitor Landscape - modified_json:", editData.modified_json);
-
       // Store data for /ask API (user-specific)
       setUserLocalStorage(
         "competitor-landscape_original_json",
@@ -647,8 +489,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           redirect: "follow", // Follow redirects (307, 308, etc.)
         });
 
-        console.log("📥 GET /ask status:", response.status);
-
         // 307 is a redirect - fetch should follow it automatically, but check if final response is ok
         if (!response.ok && response.status !== 307) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -675,8 +515,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               "Content-Type": "application/json",
             },
           });
-
-          console.log("📥 GET /market_intelligence status:", getResponse.status);
 
           if (getResponse.ok) {
             getData = await getResponse.json();
@@ -716,12 +554,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         onExecutiveSummaryChange(finalExecutiveSummary);
         onTopPlayerShareChange(finalTopPlayerShare);
         onEmergingPlayersChange(finalEmergingPlayers);
-
-        console.log("✅ Competitor Landscape - Local state preserved for immediate UI refresh:", {
-          exec: finalExecutiveSummary.substring(0, 30),
-          topPlayer: finalTopPlayerShare.substring(0, 30),
-          emerging: finalEmergingPlayers.substring(0, 30),
-        });
       } else {
         // No API data - local state is already set and preserved above
         // Just ensure the saved state ref matches local state
@@ -730,12 +562,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           topPlayerShare: localTopPlayerShare,
           emergingPlayers: localEmergingPlayers,
         };
-
-        console.log("✅ Competitor Landscape - Local state values:", {
-          exec: localExecutiveSummary.substring(0, 30),
-          topPlayer: localTopPlayerShare.substring(0, 30),
-          emerging: localEmergingPlayers.substring(0, 30),
-        });
       }
 
       // Force a re-render to ensure UI updates immediately with local state values
@@ -760,12 +586,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       setLocalTopPlayerShare(localTopPlayerShare);
       setLocalEmergingPlayers(localEmergingPlayers);
 
-      console.log("✅ Competitor Landscape - Local state values:", {
-        exec: localExecutiveSummary.substring(0, 30),
-        topPlayer: localTopPlayerShare.substring(0, 30),
-        emerging: localEmergingPlayers.substring(0, 30),
-      });
-
       // Force a re-render to ensure UI updates immediately with local state values
       forceUpdate();
 
@@ -783,7 +603,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
     // Only clear if user actually changed (not on initial mount)
     if (previousUserId !== undefined && previousUserId !== currentUserId) {
-      setLocalError(null);
       // Reset local state to empty to force fresh fetch
       setLocalExecutiveSummary("");
       setLocalTopPlayerShare("");
@@ -793,17 +612,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     // Update ref for next comparison
     previousUserRef.current = currentUserId;
   }, [currentUser?.uid]);
-
-  // Component mount - parent handles all data fetching
-  useEffect(() => {}, []);
-
-  // Handle refresh when parent triggers it - parent handles all API calls
-  useEffect(() => {
-    if (isRefreshing) {
-      setLocalError(null);
-      setLocalLoading(false); // Don't show loading since parent handles it
-    }
-  }, [isRefreshing]);
 
   // Log when competitorData changes
   useEffect(() => {
@@ -856,24 +664,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     topPlayerShare ||
     emergingPlayers ||
     fundingNews?.length > 0;
-
-  // Show loading state when no API data is available yet
-  if (isLoading) {
-    return (
-      <div className={`${isSplitView ? "flex gap-6" : ""}`}>
-        <div
-          className={`bg-white rounded-lg border border-gray-200 p-6 ${isSplitView ? "flex-1" : ""}`}
-        >
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
-              <p className="text-gray-600">Loading competitor landscape data...</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // Only show full error screen if there's an error AND no data to display
   if (displayError && !hasDataToDisplay) {
@@ -937,26 +727,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
   return (
     <div className={`${isSplitView ? "flex gap-6" : ""}`}>
-      {/* Debug info - remove this after testing */}
-      {/* {isRefreshing && (
-        <div className="mb-4 p-2 bg-yellow-100 border border-yellow-300 rounded text-sm">
-          🔄 Refreshing... Latest data: {competitorData?.timestamp || 'No timestamp'}
-        </div>
-      )}
-      {!isRefreshing && competitorData?.timestamp && (
-        <div className="mb-4 p-2 bg-green-100 border border-green-300 rounded text-sm">
-          ✅ Data updated: {competitorData.timestamp} | Executive Summary: {competitorData.executiveSummary?.substring(0, 50)}...
-        </div>
-      )}
-      {/* Debug company profile data */}
-      {isRefreshing && (
-        <div className="mb-4 p-2 bg-blue-100 border border-blue-300 rounded text-sm">
-          🔍 Company Profile: {companyProfile ? "Available" : "Not available"} | Industry:{" "}
-          {companyProfile?.industry || "Unknown"} | Company Size:{" "}
-          {companyProfile?.companySize || "Unknown"}
-        </div>
-      )}
-
       {/* API Error indicator - Show warning if there's an error but we have data to display */}
       {displayError && hasDataToDisplay && (
         <div className="mb-4 p-2 bg-yellow-100 border border-yellow-300 rounded text-sm">
@@ -966,283 +736,36 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       <div
         className={`bg-white rounded-lg border border-gray-200 p-6 ${isSplitView ? "flex-1" : ""}`}
       >
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <BarChart3 className="h-6 w-6 text-blue-600" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">Competitor Landscape</h2>
-              <p className="text-sm text-gray-600">
-                Comprehensive analysis of competitive environment
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {competitorLandscapeHasEdits && !isCompetitorLandscapeEditing && (
-              <Badge
-                variant="secondary"
-                className="bg-orange-100 text-orange-700 border-orange-200"
-              >
-                <Clock className="h-3 w-3 mr-1" />
-                Unsaved
-              </Badge>
-            )}
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onCompetitorLandscapeToggleEdit}
-              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    onScoutIconClick("competitor-landscape", competitorLandscapeHasEdits);
-                  }}
-                  className="text-orange-600 hover:text-orange-700 transition-all duration-200 relative"
-                >
-                  <div className="absolute inset-0 rounded-md bg-gradient-to-r from-orange-400/20 to-red-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
-                  <Bot className="h-4 w-4 relative z-10" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Chat with Scout</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        </div>
+        <CompetitorLandscapeHeader
+          isEditing={isCompetitorLandscapeEditing}
+          hasEdits={competitorLandscapeHasEdits}
+          onToggleEdit={onCompetitorLandscapeToggleEdit}
+          onScoutIconClick={onScoutIconClick}
+        />
 
         {/* Executive Summary - Always visible */}
-        <div className="mb-6 relative group">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <FileText className="h-5 w-5 text-blue-600" />
-              Executive Summary
-            </h3>
-            {isCompetitorLandscapeEditing && (
-              <div className="flex items-center gap-1">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleSaveExecutiveSummary}
-                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
-                      title="Commit changes"
-                    >
-                      <Check className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Commit changes</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            )}
-          </div>
-          {isCompetitorLandscapeEditing ? (
-            <Textarea
-              value={localExecutiveSummary}
-              onChange={(e) => setLocalExecutiveSummary(e.target.value)}
-              className="w-full"
-              rows={4}
-              placeholder="Enter executive summary..."
-            />
-          ) : (
-            <p className="text-gray-700 leading-relaxed">{displayExecutiveSummary}</p>
-          )}
-        </div>
+        <CompetitorExecutiveSummary
+          isEditing={isCompetitorLandscapeEditing}
+          value={localExecutiveSummary}
+          onChange={setLocalExecutiveSummary}
+          onCommit={handleSaveExecutiveSummary}
+          displayValue={displayExecutiveSummary}
+        />
 
         {/* Key Metrics Section - Always visible */}
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {(() => {
-              // Try to get metrics from API's section component first
-              const apiMetrics = localMetrics;
-
-              // If we have API metrics OR we're in edit mode (to allow adding), show metrics section
-              if (
-                (apiMetrics && Array.isArray(apiMetrics) && apiMetrics.length > 0) ||
-                isCompetitorLandscapeEditing
-              ) {
-                // If no metrics but in edit mode, show empty state with ability to add
-                if (!apiMetrics || apiMetrics.length === 0) {
-                  return (
-                    <div className="col-span-2 text-center py-4 text-gray-500">
-                      No metrics yet. Click "Add Metric" below to add one.
-                    </div>
-                  );
-                }
-
-                return apiMetrics.map((metric: UntypedBackendApiResponse, index: number) => (
-                  <div key={index} className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                    <div className="flex items-center">
-                      <div className="flex-1">
-                        {isCompetitorLandscapeEditing ? (
-                          <div className="space-y-2">
-                            <Input
-                              value={metric.value || ""}
-                              onChange={(e) => {
-                                const updated = [...localMetrics];
-                                updated[index] = { ...updated[index], value: e.target.value };
-                                setLocalMetrics(updated);
-                              }}
-                              className="text-2xl font-bold text-blue-600 bg-white"
-                              placeholder="Value"
-                            />
-                            <Input
-                              value={metric.label || ""}
-                              onChange={(e) => {
-                                const updated = [...localMetrics];
-                                updated[index] = { ...updated[index], label: e.target.value };
-                                setLocalMetrics(updated);
-                              }}
-                              className="text-sm text-gray-700 bg-white"
-                              placeholder="Label"
-                            />
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setLocalMetrics(localMetrics.filter((_, i) => i !== index));
-                              }}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="text-2xl font-bold text-blue-600">
-                              {metric.value || "N/A"}
-                            </div>
-                            <div className="text-sm text-gray-700">{metric.label || "Metric"}</div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ));
-              }
-
-              // Fallback to original props-based display
-              return (
-                <>
-                  {/* Top Player Market Share */}
-                  <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg relative group">
-                    {isCompetitorLandscapeEditing && (
-                      <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={handleSaveTopPlayerShare}
-                              className="text-gray-400 hover:text-green-600 hover:bg-green-50"
-                              title="Commit changes"
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Commit changes</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                    )}
-                    <div className="flex items-center">
-                      <div className="flex-1">
-                        {isCompetitorLandscapeEditing ? (
-                          <div className="space-y-2">
-                            <Input
-                              value={localTopPlayerShare}
-                              onChange={(e) => setLocalTopPlayerShare(e.target.value)}
-                              className="text-2xl font-bold text-blue-600 bg-white"
-                              placeholder="Top Player Market Share"
-                            />
-                            <div className="text-sm text-gray-700">Top Player Market Share</div>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="text-2xl font-bold text-blue-600">
-                              {displayTopPlayerShare}
-                            </div>
-                            <div className="text-sm text-gray-700">Top Player Market Share</div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Emerging Players */}
-                  <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg relative group">
-                    {isCompetitorLandscapeEditing && (
-                      <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={handleSaveEmergingPlayers}
-                              className="text-gray-400 hover:text-green-600 hover:bg-green-50"
-                              title="Commit changes"
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Commit changes</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                    )}
-                    <div className="flex items-center">
-                      <div className="flex-1">
-                        {isCompetitorLandscapeEditing ? (
-                          <div className="space-y-2">
-                            <Input
-                              value={localEmergingPlayers}
-                              onChange={(e) => setLocalEmergingPlayers(e.target.value)}
-                              className="text-2xl font-bold text-blue-600 bg-white"
-                              placeholder="Emerging Players Added"
-                            />
-                            <div className="text-sm text-gray-700">Emerging Players Added</div>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="text-2xl font-bold text-blue-600">
-                              {displayEmergingPlayers}
-                            </div>
-                            <div className="text-sm text-gray-700">Emerging Players Added</div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-          {isCompetitorLandscapeEditing && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setLocalMetrics([...localMetrics, { label: "", value: "" }])}
-              className="mt-2"
-            >
-              Add Metric
-            </Button>
-          )}
-        </div>
+        <CompetitorKeyMetrics
+          isEditing={isCompetitorLandscapeEditing}
+          localMetrics={localMetrics}
+          setLocalMetrics={setLocalMetrics}
+          localTopPlayerShare={localTopPlayerShare}
+          setLocalTopPlayerShare={setLocalTopPlayerShare}
+          localEmergingPlayers={localEmergingPlayers}
+          setLocalEmergingPlayers={setLocalEmergingPlayers}
+          displayTopPlayerShare={displayTopPlayerShare}
+          displayEmergingPlayers={displayEmergingPlayers}
+          handleSaveTopPlayerShare={handleSaveTopPlayerShare}
+          handleSaveEmergingPlayers={handleSaveEmergingPlayers}
+        />
 
         {/* Read More Button - Only show when not expanded, not in split view, and not in edit mode */}
         {!competitorLandscapeExpanded && !isSplitView && !isCompetitorLandscapeEditing && (
@@ -1264,1204 +787,69 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             {/* Executive Summary section is now moved above for collapsed view */}
 
             {/* Competitor Report Data */}
-            {(() => {
-              const dataPoints = localDataPoints;
-
-              if (!dataPoints || dataPoints.length === 0) return null;
-
-              return (
-                <div className="mb-8 relative group">
-                  {isCompetitorLandscapeEditing && (
-                    <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleSaveCompetitorReport}
-                            className="text-gray-400 hover:text-green-600 hover:bg-green-50"
-                            title="Commit changes"
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Commit changes</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  )}
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Competitor Analysis Report
-                  </h3>
-                  <div className="grid grid-cols-1 gap-4">
-                    {dataPoints.map((dataPoint, index) => (
-                      <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        {isCompetitorLandscapeEditing ? (
-                          <div className="space-y-2">
-                            <Input
-                              value={dataPoint.label}
-                              onChange={(e) => {
-                                const updated = [...localDataPoints];
-                                updated[index] = { ...updated[index], label: e.target.value };
-                                setLocalDataPoints(updated);
-                              }}
-                              className="font-medium text-blue-800 bg-white"
-                              placeholder="Label"
-                            />
-                            <Textarea
-                              value={dataPoint.value}
-                              onChange={(e) => {
-                                const updated = [...localDataPoints];
-                                updated[index] = { ...updated[index], value: e.target.value };
-                                setLocalDataPoints(updated);
-                              }}
-                              className="text-blue-700 bg-white"
-                              placeholder="Value"
-                              rows={2}
-                            />
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setLocalDataPoints(localDataPoints.filter((_, i) => i !== index));
-                              }}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <>
-                            <h4 className="font-medium text-blue-800 mb-2">{dataPoint.label}</h4>
-                            <p className="text-blue-700">{dataPoint.value}</p>
-                          </>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  {isCompetitorLandscapeEditing && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setLocalDataPoints([...localDataPoints, { label: "", value: "" }])
-                      }
-                      className="mt-2"
-                    >
-                      Add Data Point
-                    </Button>
-                  )}
-                </div>
-              );
-            })()}
+            <CompetitorReportDataPoints
+              isEditing={isCompetitorLandscapeEditing}
+              dataPoints={localDataPoints}
+              setDataPoints={setLocalDataPoints}
+              onCommit={handleSaveCompetitorReport}
+            />
 
             {/* Top Players */}
-            {(() => {
-              const tags = localCompetitors;
-
-              if (!tags || tags.length === 0) return null;
-
-              return (
-                <div className="relative group">
-                  {isCompetitorLandscapeEditing && (
-                    <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleSaveMajorCompetitors}
-                            className="text-gray-400 hover:text-green-600 hover:bg-green-50"
-                            title="Commit changes"
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Commit changes</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  )}
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-blue-600" />
-                    Major Competitors
-                  </h3>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    {tags.map((competitor, index) => (
-                      <div
-                        key={index}
-                        className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                      >
-                        {isCompetitorLandscapeEditing ? (
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex-1">
-                              <Input
-                                value={competitor}
-                                onChange={(e) => {
-                                  const updated = [...localCompetitors];
-                                  updated[index] = e.target.value;
-                                  setLocalCompetitors(updated);
-                                }}
-                                className="font-semibold text-gray-900 bg-white"
-                                placeholder="Competitor name"
-                              />
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge
-                                variant="secondary"
-                                className="bg-green-100 text-green-700 border-green-200"
-                              >
-                                Competitor
-                              </Badge>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setLocalCompetitors(
-                                    localCompetitors.filter((_, i) => i !== index),
-                                  );
-                                }}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-start justify-between mb-3">
-                            <div>
-                              <h4 className="font-semibold text-gray-900">{competitor}</h4>
-                              <p className="text-sm text-blue-600 font-medium">Market Player</p>
-                            </div>
-                            <Badge
-                              variant="secondary"
-                              className="bg-green-100 text-green-700 border-green-200"
-                            >
-                              Competitor
-                            </Badge>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  {isCompetitorLandscapeEditing && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setLocalCompetitors([...localCompetitors, ""])}
-                      className="mb-8"
-                    >
-                      Add Competitor
-                    </Button>
-                  )}
-                </div>
-              );
-            })()}
+            <MajorCompetitorsList
+              isEditing={isCompetitorLandscapeEditing}
+              localCompetitors={localCompetitors}
+              setLocalCompetitors={setLocalCompetitors}
+              handleSaveMajorCompetitors={handleSaveMajorCompetitors}
+            />
 
             {/* Market Share Charts */}
-            {(() => {
-              const regions = localRegions;
-
-              if (!regions || regions.length === 0) return null;
-
-              return (
-                <div className="mb-8 relative group">
-                  {isCompetitorLandscapeEditing && (
-                    <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleSaveMarketShareCharts}
-                            className="text-gray-400 hover:text-green-600 hover:bg-green-50"
-                            title="Commit changes"
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Commit changes</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  )}
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Market Share Analysis
-                  </h3>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {regions.map((region, regionIndex) => (
-                      <div
-                        key={regionIndex}
-                        className="bg-white border border-gray-200 rounded-lg p-4"
-                      >
-                        {isCompetitorLandscapeEditing ? (
-                          <div className="space-y-3">
-                            <Input
-                              value={region.name}
-                              onChange={(e) => {
-                                const updated = [...localRegions];
-                                updated[regionIndex] = {
-                                  ...updated[regionIndex],
-                                  name: e.target.value,
-                                };
-                                setLocalRegions(updated);
-                              }}
-                              className="font-medium text-gray-900 bg-white"
-                              placeholder="Region name"
-                            />
-                            <div className="space-y-2">
-                              {Object.entries(region.data).map(
-                                ([company, share], _companyIndex) => (
-                                  <div key={company} className="flex gap-2 items-center">
-                                    <Input
-                                      value={company}
-                                      onChange={(e) => {
-                                        const updated = [...localRegions];
-                                        const newData = { ...updated[regionIndex].data };
-                                        delete newData[company];
-                                        newData[e.target.value] = share;
-                                        updated[regionIndex] = {
-                                          ...updated[regionIndex],
-                                          data: newData,
-                                        };
-                                        setLocalRegions(updated);
-                                      }}
-                                      className="flex-1 text-sm text-gray-700 bg-white"
-                                      placeholder="Company"
-                                    />
-                                    <Input
-                                      value={String(share)}
-                                      onChange={(e) => {
-                                        const updated = [...localRegions];
-                                        const newData = { ...updated[regionIndex].data };
-                                        newData[company] = e.target.value;
-                                        updated[regionIndex] = {
-                                          ...updated[regionIndex],
-                                          data: newData,
-                                        };
-                                        setLocalRegions(updated);
-                                      }}
-                                      className="w-24 text-sm font-medium text-blue-600 bg-white"
-                                      placeholder="Share"
-                                    />
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => {
-                                        const updated = [...localRegions];
-                                        const newData = { ...updated[regionIndex].data };
-                                        delete newData[company];
-                                        updated[regionIndex] = {
-                                          ...updated[regionIndex],
-                                          data: newData,
-                                        };
-                                        setLocalRegions(updated);
-                                      }}
-                                      className="text-red-600 hover:text-red-700"
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                ),
-                              )}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  const updated = [...localRegions];
-                                  const newData = { ...updated[regionIndex].data };
-                                  newData[""] = "";
-                                  updated[regionIndex] = { ...updated[regionIndex], data: newData };
-                                  setLocalRegions(updated);
-                                }}
-                              >
-                                Add Company
-                              </Button>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setLocalRegions(localRegions.filter((_, i) => i !== regionIndex));
-                              }}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <X className="h-4 w-4 mr-1" />
-                              Remove Region
-                            </Button>
-                          </div>
-                        ) : (
-                          <>
-                            <h4 className="font-medium text-gray-900 mb-3">{region.name}</h4>
-                            <div className="space-y-2">
-                              {Object.entries(region.data).map(([company, share]) => (
-                                <div key={company} className="flex justify-between items-center">
-                                  <span className="text-sm text-gray-700">{company}</span>
-                                  <span className="text-sm font-medium text-blue-600">
-                                    {String(share)}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  {isCompetitorLandscapeEditing && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setLocalRegions([...localRegions, { name: "", data: {} }])}
-                      className="mt-2"
-                    >
-                      Add Region
-                    </Button>
-                  )}
-                </div>
-              );
-            })()}
+            <MarketShareRegionsTable
+              isEditing={isCompetitorLandscapeEditing}
+              localRegions={localRegions}
+              setLocalRegions={setLocalRegions}
+              handleSaveMarketShareCharts={handleSaveMarketShareCharts}
+            />
 
             {/* SWOT Analysis */}
-            {(() => {
-              const entities = localEntities;
-
-              if (!entities || entities.length === 0) return null;
-
-              return (
-                <div className="mb-8 relative group">
-                  {isCompetitorLandscapeEditing && (
-                    <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleSaveSwotAnalysis}
-                            className="text-gray-400 hover:text-green-600 hover:bg-green-50"
-                            title="Commit changes"
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Commit changes</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  )}
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">SWOT Analysis</h3>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {entities.map((entity, entityIndex) => (
-                      <div
-                        key={entityIndex}
-                        className="bg-white border border-gray-200 rounded-lg p-4"
-                      >
-                        {isCompetitorLandscapeEditing ? (
-                          <div className="space-y-3">
-                            <Input
-                              value={entity.name}
-                              onChange={(e) => {
-                                const updated = [...localEntities];
-                                updated[entityIndex] = {
-                                  ...updated[entityIndex],
-                                  name: e.target.value,
-                                };
-                                setLocalEntities(updated);
-                              }}
-                              className="font-medium text-gray-900 bg-white"
-                              placeholder="Entity name"
-                            />
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <h5 className="text-sm font-medium text-green-600 mb-2">
-                                  Strengths
-                                </h5>
-                                <div className="space-y-2">
-                                  {entity.strengths.map((strength, idx) => (
-                                    <div key={idx} className="flex gap-2">
-                                      <Input
-                                        value={strength}
-                                        onChange={(e) => {
-                                          const updated = [...localEntities];
-                                          updated[entityIndex].strengths[idx] = e.target.value;
-                                          setLocalEntities(updated);
-                                        }}
-                                        className="flex-1 text-sm text-gray-700 bg-white"
-                                        placeholder="Strength"
-                                      />
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => {
-                                          const updated = [...localEntities];
-                                          updated[entityIndex].strengths = updated[
-                                            entityIndex
-                                          ].strengths.filter((_, i) => i !== idx);
-                                          setLocalEntities(updated);
-                                        }}
-                                        className="text-red-600 hover:text-red-700"
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  ))}
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      const updated = [...localEntities];
-                                      updated[entityIndex].strengths = [
-                                        ...updated[entityIndex].strengths,
-                                        "",
-                                      ];
-                                      setLocalEntities(updated);
-                                    }}
-                                  >
-                                    Add Strength
-                                  </Button>
-                                </div>
-                              </div>
-                              <div>
-                                <h5 className="text-sm font-medium text-blue-600 mb-2">
-                                  Opportunities
-                                </h5>
-                                <div className="space-y-2">
-                                  {(entity.opportunities || []).map((opportunity, idx) => (
-                                    <div key={idx} className="flex gap-2">
-                                      <Input
-                                        value={opportunity}
-                                        onChange={(e) => {
-                                          const updated = [...localEntities];
-                                          if (!updated[entityIndex].opportunities)
-                                            updated[entityIndex].opportunities = [];
-                                          updated[entityIndex].opportunities[idx] = e.target.value;
-                                          setLocalEntities(updated);
-                                        }}
-                                        className="flex-1 text-sm text-gray-700 bg-white"
-                                        placeholder="Opportunity"
-                                      />
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => {
-                                          const updated = [...localEntities];
-                                          if (updated[entityIndex].opportunities) {
-                                            updated[entityIndex].opportunities = updated[
-                                              entityIndex
-                                            ].opportunities.filter((_, i) => i !== idx);
-                                            setLocalEntities(updated);
-                                          }
-                                        }}
-                                        className="text-red-600 hover:text-red-700"
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  ))}
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      const updated = [...localEntities];
-                                      if (!updated[entityIndex].opportunities)
-                                        updated[entityIndex].opportunities = [];
-                                      updated[entityIndex].opportunities = [
-                                        ...updated[entityIndex].opportunities,
-                                        "",
-                                      ];
-                                      setLocalEntities(updated);
-                                    }}
-                                  >
-                                    Add Opportunity
-                                  </Button>
-                                </div>
-                              </div>
-                              <div>
-                                <h5 className="text-sm font-medium text-red-600 mb-2">
-                                  Weaknesses
-                                </h5>
-                                <div className="space-y-2">
-                                  {entity.weaknesses.map((weakness, idx) => (
-                                    <div key={idx} className="flex gap-2">
-                                      <Input
-                                        value={weakness}
-                                        onChange={(e) => {
-                                          const updated = [...localEntities];
-                                          updated[entityIndex].weaknesses[idx] = e.target.value;
-                                          setLocalEntities(updated);
-                                        }}
-                                        className="flex-1 text-sm text-gray-700 bg-white"
-                                        placeholder="Weakness"
-                                      />
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => {
-                                          const updated = [...localEntities];
-                                          updated[entityIndex].weaknesses = updated[
-                                            entityIndex
-                                          ].weaknesses.filter((_, i) => i !== idx);
-                                          setLocalEntities(updated);
-                                        }}
-                                        className="text-red-600 hover:text-red-700"
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  ))}
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      const updated = [...localEntities];
-                                      updated[entityIndex].weaknesses = [
-                                        ...updated[entityIndex].weaknesses,
-                                        "",
-                                      ];
-                                      setLocalEntities(updated);
-                                    }}
-                                  >
-                                    Add Weakness
-                                  </Button>
-                                </div>
-                              </div>
-                              <div>
-                                <h5 className="text-sm font-medium text-orange-600 mb-2">
-                                  Threats
-                                </h5>
-                                <div className="space-y-2">
-                                  {(entity.threats || []).map((threat, idx) => (
-                                    <div key={idx} className="flex gap-2">
-                                      <Input
-                                        value={threat}
-                                        onChange={(e) => {
-                                          const updated = [...localEntities];
-                                          if (!updated[entityIndex].threats)
-                                            updated[entityIndex].threats = [];
-                                          updated[entityIndex].threats[idx] = e.target.value;
-                                          setLocalEntities(updated);
-                                        }}
-                                        className="flex-1 text-sm text-gray-700 bg-white"
-                                        placeholder="Threat"
-                                      />
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => {
-                                          const updated = [...localEntities];
-                                          if (updated[entityIndex].threats) {
-                                            updated[entityIndex].threats = updated[
-                                              entityIndex
-                                            ].threats.filter((_, i) => i !== idx);
-                                            setLocalEntities(updated);
-                                          }
-                                        }}
-                                        className="text-red-600 hover:text-red-700"
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  ))}
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      const updated = [...localEntities];
-                                      if (!updated[entityIndex].threats)
-                                        updated[entityIndex].threats = [];
-                                      updated[entityIndex].threats = [
-                                        ...updated[entityIndex].threats,
-                                        "",
-                                      ];
-                                      setLocalEntities(updated);
-                                    }}
-                                  >
-                                    Add Threat
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setLocalEntities(localEntities.filter((_, i) => i !== entityIndex));
-                              }}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <X className="h-4 w-4 mr-1" />
-                              Remove Entity
-                            </Button>
-                          </div>
-                        ) : (
-                          <>
-                            <h4 className="font-medium text-gray-900 mb-3">{entity.name}</h4>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div className="bg-green-50 p-3 rounded border border-green-100">
-                                <h5 className="text-sm font-medium text-green-700 mb-2">
-                                  Strengths
-                                </h5>
-                                <ul className="text-sm text-gray-700 space-y-1">
-                                  {entity.strengths.length > 0 ? (
-                                    entity.strengths.map((strength, idx) => (
-                                      <li key={idx} className="flex items-start gap-2">
-                                        <span className="text-green-600 mt-1">•</span>
-                                        {strength}
-                                      </li>
-                                    ))
-                                  ) : (
-                                    <li className="text-gray-400 text-xs italic">
-                                      No data available
-                                    </li>
-                                  )}
-                                </ul>
-                              </div>
-                              <div className="bg-blue-50 p-3 rounded border border-blue-100">
-                                <h5 className="text-sm font-medium text-blue-700 mb-2">
-                                  Opportunities
-                                </h5>
-                                <ul className="text-sm text-gray-700 space-y-1">
-                                  {(entity.opportunities || []).length > 0 ? (
-                                    (entity.opportunities || []).map((opportunity, idx) => (
-                                      <li key={idx} className="flex items-start gap-2">
-                                        <span className="text-blue-600 mt-1">•</span>
-                                        {opportunity}
-                                      </li>
-                                    ))
-                                  ) : (
-                                    <li className="text-gray-400 text-xs italic">
-                                      No data available
-                                    </li>
-                                  )}
-                                </ul>
-                              </div>
-                              <div className="bg-orange-50 p-3 rounded border border-orange-100">
-                                <h5 className="text-sm font-medium text-orange-700 mb-2">
-                                  Weaknesses
-                                </h5>
-                                <ul className="text-sm text-gray-700 space-y-1">
-                                  {entity.weaknesses.length > 0 ? (
-                                    entity.weaknesses.map((weakness, idx) => (
-                                      <li key={idx} className="flex items-start gap-2">
-                                        <span className="text-orange-600 mt-1">•</span>
-                                        {weakness}
-                                      </li>
-                                    ))
-                                  ) : (
-                                    <li className="text-gray-400 text-xs italic">
-                                      No data available
-                                    </li>
-                                  )}
-                                </ul>
-                              </div>
-                              <div className="bg-red-50 p-3 rounded border border-red-100">
-                                <h5 className="text-sm font-medium text-red-700 mb-2">Threats</h5>
-                                <ul className="text-sm text-gray-700 space-y-1">
-                                  {(entity.threats || []).length > 0 ? (
-                                    (entity.threats || []).map((threat, idx) => (
-                                      <li key={idx} className="flex items-start gap-2">
-                                        <span className="text-red-600 mt-1">•</span>
-                                        {threat}
-                                      </li>
-                                    ))
-                                  ) : (
-                                    <li className="text-gray-400 text-xs italic">
-                                      No data available
-                                    </li>
-                                  )}
-                                </ul>
-                              </div>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  {isCompetitorLandscapeEditing && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setLocalEntities([
-                          ...localEntities,
-                          {
-                            name: "",
-                            strengths: [],
-                            weaknesses: [],
-                            opportunities: [],
-                            threats: [],
-                          },
-                        ])
-                      }
-                      className="mt-2"
-                    >
-                      Add Entity
-                    </Button>
-                  )}
-                </div>
-              );
-            })()}
+            <CompetitorSwotAnalysis
+              isEditing={isCompetitorLandscapeEditing}
+              localEntities={localEntities}
+              setLocalEntities={setLocalEntities}
+              handleSaveSwotAnalysis={handleSaveSwotAnalysis}
+            />
 
             {/* News Headlines */}
-            {(() => {
-              const displayHeadlines = localHeadlines;
-
-              if (!displayHeadlines || displayHeadlines.length === 0) return null;
-
-              return (
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Latest News</h3>
-                  <div className="space-y-3">
-                    {displayHeadlines.map((headline, index) => (
-                      <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                        {isCompetitorLandscapeEditing ? (
-                          <div className="flex gap-2">
-                            <Textarea
-                              value={headline}
-                              onChange={(e) => {
-                                const updated = [...localHeadlines];
-                                updated[index] = e.target.value;
-                                setLocalHeadlines(updated);
-                              }}
-                              className="flex-1 text-gray-900 bg-white"
-                              placeholder="News headline"
-                              rows={2}
-                            />
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setLocalHeadlines(localHeadlines.filter((_, i) => i !== index));
-                              }}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <p className="text-gray-900">{headline}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  {isCompetitorLandscapeEditing && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setLocalHeadlines([...localHeadlines, ""])}
-                      className="mt-2"
-                    >
-                      Add News Headline
-                    </Button>
-                  )}
-                </div>
-              );
-            })()}
+            <CompetitorNewsFeed
+              isEditing={isCompetitorLandscapeEditing}
+              localHeadlines={localHeadlines}
+              setLocalHeadlines={setLocalHeadlines}
+            />
 
             {/* Feature Comparison */}
-            {(() => {
-              const features = localFeatures;
-              const tools = localTools;
-
-              if (!features || !tools || Object.keys(tools).length === 0) return null;
-
-              return (
-                <div className="mb-8 relative group">
-                  {isCompetitorLandscapeEditing && (
-                    <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleSaveFeatureComparison}
-                            className="text-gray-400 hover:text-green-600 hover:bg-green-50"
-                            title="Commit changes"
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Commit changes</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  )}
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Feature Comparison</h3>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Feature</TableHead>
-                          {Object.keys(tools).map((tool, toolIndex) => (
-                            <TableHead key={tool}>
-                              {isCompetitorLandscapeEditing ? (
-                                <div className="flex gap-2 items-center">
-                                  <Input
-                                    value={tool}
-                                    onChange={(e) => {
-                                      const updated = { ...localTools };
-                                      const oldTool = Object.keys(tools)[toolIndex];
-                                      updated[e.target.value] = updated[oldTool];
-                                      delete updated[oldTool];
-                                      setLocalTools(updated);
-                                    }}
-                                    className="bg-white"
-                                    placeholder="Tool name"
-                                  />
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      const updated = { ...localTools };
-                                      delete updated[tool];
-                                      setLocalTools(updated);
-                                    }}
-                                    className="text-red-600 hover:text-red-700"
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              ) : (
-                                tool
-                              )}
-                            </TableHead>
-                          ))}
-                          {isCompetitorLandscapeEditing && (
-                            <TableHead>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setLocalTools({
-                                    ...localTools,
-                                    "": Array(features.length).fill(""),
-                                  });
-                                }}
-                              >
-                                Add Tool
-                              </Button>
-                            </TableHead>
-                          )}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {features.map((feature, featureIndex) => (
-                          <TableRow key={featureIndex}>
-                            <TableCell className="font-medium">
-                              {isCompetitorLandscapeEditing ? (
-                                <Input
-                                  value={feature}
-                                  onChange={(e) => {
-                                    const updated = [...localFeatures];
-                                    updated[featureIndex] = e.target.value;
-                                    setLocalFeatures(updated);
-                                  }}
-                                  className="bg-white"
-                                  placeholder="Feature name"
-                                />
-                              ) : (
-                                feature
-                              )}
-                            </TableCell>
-                            {Object.keys(tools).map((tool) => (
-                              <TableCell key={tool}>
-                                {isCompetitorLandscapeEditing ? (
-                                  <Input
-                                    value={tools[tool][featureIndex] || ""}
-                                    onChange={(e) => {
-                                      const updated = { ...localTools };
-                                      updated[tool] = [...updated[tool]];
-                                      updated[tool][featureIndex] = e.target.value;
-                                      setLocalTools(updated);
-                                    }}
-                                    className="bg-white"
-                                    placeholder="-"
-                                  />
-                                ) : (
-                                  tools[tool][featureIndex] || "-"
-                                )}
-                              </TableCell>
-                            ))}
-                            {isCompetitorLandscapeEditing && (
-                              <TableCell>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setLocalFeatures(
-                                      localFeatures.filter((_, i) => i !== featureIndex),
-                                    );
-                                    const updated = { ...localTools };
-                                    Object.keys(updated).forEach((tool) => {
-                                      updated[tool] = updated[tool].filter(
-                                        (_, i) => i !== featureIndex,
-                                      );
-                                    });
-                                    setLocalTools(updated);
-                                  }}
-                                  className="text-red-600 hover:text-red-700"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </TableCell>
-                            )}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                  {isCompetitorLandscapeEditing && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setLocalFeatures([...localFeatures, ""]);
-                        const updated = { ...localTools };
-                        Object.keys(updated).forEach((tool) => {
-                          updated[tool] = [...updated[tool], ""];
-                        });
-                        setLocalTools(updated);
-                      }}
-                      className="mt-2"
-                    >
-                      Add Feature
-                    </Button>
-                  )}
-                </div>
-              );
-            })()}
+            <CompetitorFeatureComparison
+              isEditing={isCompetitorLandscapeEditing}
+              localFeatures={localFeatures}
+              setLocalFeatures={setLocalFeatures}
+              localTools={localTools}
+              setLocalTools={setLocalTools}
+              handleSaveFeatureComparison={handleSaveFeatureComparison}
+            />
 
             {/* M&A Insights */}
-            {(() => {
-              const insights = localInsights;
-
-              if (!insights || insights.length === 0) return null;
-
-              return (
-                <div className="mb-8 relative group">
-                  {isCompetitorLandscapeEditing && (
-                    <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleSaveMnaInsights}
-                            className="text-gray-400 hover:text-green-600 hover:bg-green-50"
-                            title="Commit changes"
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Commit changes</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  )}
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">M&A Insights</h3>
-                  <div className="grid grid-cols-1 gap-4">
-                    {insights.map((insight: UntypedBackendApiResponse, index: number) => {
-                      return (
-                        <div
-                          key={index}
-                          className="bg-yellow-50 border border-yellow-200 rounded-lg p-4"
-                        >
-                          {isCompetitorLandscapeEditing ? (
-                            <div className="space-y-2">
-                              <Input
-                                value={insight?.label || ""}
-                                onChange={(e) => {
-                                  const updated = [...localInsights];
-                                  updated[index] = { ...updated[index], label: e.target.value };
-                                  setLocalInsights(updated);
-                                }}
-                                className="font-medium text-yellow-800 bg-white"
-                                placeholder="Insight label"
-                              />
-                              <Textarea
-                                value={insight?.description || ""}
-                                onChange={(e) => {
-                                  const updated = [...localInsights];
-                                  updated[index] = {
-                                    ...updated[index],
-                                    description: e.target.value,
-                                  };
-                                  setLocalInsights(updated);
-                                }}
-                                className="text-yellow-700 bg-white"
-                                placeholder="Insight description"
-                                rows={3}
-                              />
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setLocalInsights(localInsights.filter((_, i) => i !== index));
-                                }}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <X className="h-4 w-4 mr-1" />
-                                Remove Insight
-                              </Button>
-                            </div>
-                          ) : (
-                            <>
-                              <h4 className="font-medium text-yellow-800 mb-2">
-                                {insight?.label || "No label available"}
-                              </h4>
-                              <p className="text-yellow-700">
-                                {insight?.description || "No description available"}
-                              </p>
-                            </>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {isCompetitorLandscapeEditing && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setLocalInsights([...localInsights, { label: "", description: "" }])
-                      }
-                      className="mt-2"
-                    >
-                      Add M&A Insight
-                    </Button>
-                  )}
-                </div>
-              );
-            })()}
+            <CompetitorMnaInsights
+              isEditing={isCompetitorLandscapeEditing}
+              localInsights={localInsights}
+              setLocalInsights={setLocalInsights}
+              handleSaveMnaInsights={handleSaveMnaInsights}
+            />
 
             {/* Market Trends */}
-            {(() => {
-              const charts = localCharts;
-
-              if (!charts || charts.length === 0) return null;
-
-              // Helper function to generate trend data from x-axis labels
-              // Creates a deterministic growth trend based on chart index for consistency
-              const generateTrendData = (
-                xAxis: string | string[],
-                chartIndex: number,
-              ): { name: string; value: number }[] => {
-                const labels = Array.isArray(xAxis) ? xAxis : [xAxis];
-                const baseValue = 25 + chartIndex * 5; // Different starting point per chart
-                const growthRate = 12 + chartIndex * 3; // Different growth rate per chart
-
-                return labels.map((label, index) => {
-                  // Deterministic value based on index (no randomness for consistency)
-                  const value = baseValue + index * growthRate + index * 2;
-                  return {
-                    name: label,
-                    value: Math.round(value * 10) / 10, // Round to 1 decimal place
-                  };
-                });
-              };
-
-              return (
-                <div className="mb-8 relative group">
-                  {isCompetitorLandscapeEditing && (
-                    <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleSaveMarketTrends}
-                            className="text-gray-400 hover:text-green-600 hover:bg-green-50"
-                            title="Commit changes"
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Commit changes</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  )}
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Market Trends</h3>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {charts.map((chart: UntypedBackendApiResponse, index: number) => {
-                      const chartData = generateTrendData(chart.xAxis, index);
-                      return (
-                        <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
-                          {isCompetitorLandscapeEditing ? (
-                            <div className="space-y-3">
-                              <Input
-                                value={chart.name}
-                                onChange={(e) => {
-                                  const updated = [...localCharts];
-                                  updated[index] = { ...updated[index], name: e.target.value };
-                                  setLocalCharts(updated);
-                                }}
-                                className="font-medium text-gray-900 bg-white mb-3"
-                                placeholder="Chart name"
-                              />
-                              <Textarea
-                                value={
-                                  Array.isArray(chart.xAxis) ? chart.xAxis.join(", ") : chart.xAxis
-                                }
-                                onChange={(e) => {
-                                  const updated = [...localCharts];
-                                  const xAxisArray = e.target.value
-                                    .split(",")
-                                    .map((s) => s.trim())
-                                    .filter((s) => s);
-                                  updated[index] = {
-                                    ...updated[index],
-                                    xAxis: xAxisArray.length === 1 ? xAxisArray[0] : xAxisArray,
-                                  };
-                                  setLocalCharts(updated);
-                                }}
-                                className="text-sm text-gray-700 bg-white"
-                                placeholder="X-axis labels (comma-separated)"
-                                rows={2}
-                              />
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setLocalCharts(localCharts.filter((_, i) => i !== index));
-                                }}
-                                className="text-red-600 hover:text-red-700 mt-2"
-                              >
-                                <X className="h-4 w-4 mr-1" />
-                                Remove Chart
-                              </Button>
-                            </div>
-                          ) : (
-                            <MiniLineChart
-                              data={chartData}
-                              title={chart.name}
-                              color={index === 0 ? "#3b82f6" : "#10b981"} // Blue for first, green for second
-                            />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {isCompetitorLandscapeEditing && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setLocalCharts([...localCharts, { name: "", xAxis: [] }])}
-                      className="mt-2"
-                    >
-                      Add Chart
-                    </Button>
-                  )}
-                </div>
-              );
-            })()}
+            <CompetitorMarketTrends
+              isEditing={isCompetitorLandscapeEditing}
+              localCharts={localCharts}
+              setLocalCharts={setLocalCharts}
+              handleSaveMarketTrends={handleSaveMarketTrends}
+            />
 
             {/* Action Buttons */}
             {isCompetitorLandscapeEditing && (
