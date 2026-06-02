@@ -1,5 +1,4 @@
 import {
-  BarChart3,
   Bot,
   Target,
   TrendingUp,
@@ -12,6 +11,7 @@ import {
 } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 
+import { ExecutiveSummary } from "./ExecutiveSummary";
 import { ExportOptions } from "./ExportOptions";
 import { segmentsToPieData, projectionsToLineData } from "./marketSize";
 import { MarketSizeHeader } from "./MarketSizeHeader";
@@ -548,58 +548,15 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
           (isEditing ? (
             <div className="space-y-8">
               {/* Executive Summary Edit */}
-              {!deletedSections.has("executive-summary") && (
-                <div className="relative group">
-                  <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleSaveExecutiveSummary}
-                          className="text-gray-400 hover:text-green-600 hover:bg-green-50"
-                          title="Commit changes"
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Commit changes</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onDeleteSection("executive-summary")}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Delete this section</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <div>
-                    <Label
-                      htmlFor="executiveSummary"
-                      className="text-sm font-medium text-gray-700 mb-2 block"
-                    >
-                      Executive Summary
-                    </Label>
-                    <Textarea
-                      id="executiveSummary"
-                      value={localExecutiveSummary}
-                      onChange={(e) => setLocalExecutiveSummary(e.target.value)}
-                      className="w-full h-32 resize-none"
-                      placeholder="Enter executive summary..."
-                    />
-                  </div>
-                </div>
-              )}
+              <ExecutiveSummary
+                editing={isEditing}
+                deleted={deletedSections.has("executive-summary")}
+                summary={localExecutiveSummary || view.executiveSummary}
+                draft={localExecutiveSummary}
+                onChange={setLocalExecutiveSummary}
+                onCommit={handleSaveExecutiveSummary}
+                onDelete={() => onDeleteSection("executive-summary")}
+              />
 
               {/* Key Metrics Edit */}
               {!deletedSections.has("key-metrics") && (
@@ -1089,11 +1046,15 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
             <div className="space-y-6">
               {/* Executive Summary - Always Visible */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5 text-blue-600" />
-                  Executive Summary
-                </h3>
-                <p className="text-gray-700 mb-6">{localExecutiveSummary || view.executiveSummary}</p>
+                <ExecutiveSummary
+                  editing={isEditing}
+                  deleted={deletedSections.has("executive-summary")}
+                  summary={localExecutiveSummary || view.executiveSummary}
+                  draft={localExecutiveSummary}
+                  onChange={setLocalExecutiveSummary}
+                  onCommit={handleSaveExecutiveSummary}
+                  onDelete={() => onDeleteSection("executive-summary")}
+                />
 
                 {/* Key Metrics Cards - Always Visible */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
