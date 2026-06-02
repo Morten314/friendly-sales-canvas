@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import React, { useState, useEffect, useRef, useReducer } from "react";
 
+import { CompetitorExecutiveSummary } from "./CompetitorExecutiveSummary";
 import { CompetitorLandscapeHeader } from "./CompetitorLandscapeHeader";
 import {
   normalizeUiComponents,
@@ -875,45 +876,13 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         />
 
         {/* Executive Summary - Always visible */}
-        <div className="mb-6 relative group">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <FileText className="h-5 w-5 text-blue-600" />
-              Executive Summary
-            </h3>
-            {isCompetitorLandscapeEditing && (
-              <div className="flex items-center gap-1">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleSaveExecutiveSummary}
-                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
-                      title="Commit changes"
-                    >
-                      <Check className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Commit changes</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            )}
-          </div>
-          {isCompetitorLandscapeEditing ? (
-            <Textarea
-              value={localExecutiveSummary}
-              onChange={(e) => setLocalExecutiveSummary(e.target.value)}
-              className="w-full"
-              rows={4}
-              placeholder="Enter executive summary..."
-            />
-          ) : (
-            <p className="text-gray-700 leading-relaxed">{displayExecutiveSummary}</p>
-          )}
-        </div>
+        <CompetitorExecutiveSummary
+          isEditing={isCompetitorLandscapeEditing}
+          value={localExecutiveSummary}
+          onChange={setLocalExecutiveSummary}
+          onCommit={handleSaveExecutiveSummary}
+          displayValue={displayExecutiveSummary}
+        />
 
         {/* Key Metrics Section - Always visible */}
         <div className="mb-6">
