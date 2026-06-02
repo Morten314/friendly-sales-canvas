@@ -5,6 +5,7 @@ import { EditToolbar } from "./EditToolbar";
 import { ExecutiveSummary } from "./ExecutiveSummary";
 import { ExportFooter } from "./ExportFooter";
 import { KeyMetrics } from "./KeyMetrics";
+import { RegionalHotspots } from "./RegionalHotspots";
 import { SectionHeader } from "./SectionHeader";
 import { ErrorState, LoadingState, NoDataState } from "./states";
 import { TrendSnapshots } from "./TrendSnapshots";
@@ -742,107 +743,15 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           />
 
           {/* Regional Hotspots Edit */}
-          {!normalizedDeletedSections.has("regional-hotspots") && (
-            <div className="relative group">
-              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleSaveRegionalHotspots}
-                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
-                      title="Commit changes"
-                    >
-                      <Check className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Commit changes</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onIndustryTrendsDeleteSection("regional-hotspots")}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50 pointer-events-auto z-50"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Delete this section</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Regional Hotspots</h3>
-                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="text-center">
-                      <Label
-                        htmlFor="regionalHotspotAPAC"
-                        className="text-sm font-medium text-gray-700 mb-2 block"
-                      >
-                        APAC
-                      </Label>
-                      <Input
-                        id="regionalHotspotAPAC"
-                        value={editRegionalHotspots.APAC}
-                        onChange={(e) =>
-                          setEditRegionalHotspots({ ...editRegionalHotspots, APAC: e.target.value })
-                        }
-                        className="text-2xl font-bold text-blue-600 border-blue-200 focus:border-blue-400 text-center"
-                        placeholder="e.g., 60%"
-                      />
-                    </div>
-                    <div className="text-center">
-                      <Label
-                        htmlFor="regionalHotspotEurope"
-                        className="text-sm font-medium text-gray-700 mb-2 block"
-                      >
-                        Europe
-                      </Label>
-                      <Input
-                        id="regionalHotspotEurope"
-                        value={editRegionalHotspots.Europe}
-                        onChange={(e) =>
-                          setEditRegionalHotspots({
-                            ...editRegionalHotspots,
-                            Europe: e.target.value,
-                          })
-                        }
-                        className="text-2xl font-bold text-blue-600 border-blue-200 focus:border-blue-400 text-center"
-                        placeholder="e.g., 45%"
-                      />
-                    </div>
-                    <div className="text-center">
-                      <Label
-                        htmlFor="regionalHotspotNorthAmerica"
-                        className="text-sm font-medium text-gray-700 mb-2 block"
-                      >
-                        North America
-                      </Label>
-                      <Input
-                        id="regionalHotspotNorthAmerica"
-                        value={editRegionalHotspots["North America"]}
-                        onChange={(e) =>
-                          setEditRegionalHotspots({
-                            ...editRegionalHotspots,
-                            "North America": e.target.value,
-                          })
-                        }
-                        className="text-2xl font-bold text-blue-600 border-blue-200 focus:border-blue-400 text-center"
-                        placeholder="e.g., 55%"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          <RegionalHotspots
+            editing
+            deleted={normalizedDeletedSections.has("regional-hotspots")}
+            regionalHotspots={propRegionalHotspots || industryTrendsData?.regionalHotspots || {}}
+            draft={editRegionalHotspots}
+            onChange={setEditRegionalHotspots}
+            onCommit={handleSaveRegionalHotspots}
+            onDelete={() => onIndustryTrendsDeleteSection("regional-hotspots")}
+          />
 
           {/* Strategic Recommendations Edit */}
           {!normalizedDeletedSections.has("strategic-recommendations") && (
@@ -1269,26 +1178,15 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 />
 
                 {/* Regional Hotspots */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Regional Hotspots</h3>
-                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    {industryTrendsData?.regionalHotspots &&
-                    Object.keys(industryTrendsData.regionalHotspots).length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {Object.entries(industryTrendsData.regionalHotspots).map(
-                          ([region, value]) => (
-                            <div key={region} className="text-center">
-                              <div className="text-2xl font-bold text-blue-600">{value}</div>
-                              <div className="text-sm text-gray-700">{region}</div>
-                            </div>
-                          ),
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-gray-500">No regional hotspots data available</p>
-                    )}
-                  </div>
-                </div>
+                <RegionalHotspots
+                  editing={false}
+                  deleted={false}
+                  regionalHotspots={industryTrendsData?.regionalHotspots ?? {}}
+                  draft={{ APAC: "", Europe: "", "North America": "" }}
+                  onChange={() => {}}
+                  onCommit={() => {}}
+                  onDelete={() => {}}
+                />
 
                 {/* Strategic Recommendations */}
                 <div className="mb-8">
