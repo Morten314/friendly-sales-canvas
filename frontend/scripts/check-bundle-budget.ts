@@ -2,6 +2,7 @@
 import { existsSync } from "node:fs";
 import { readFile, readdir, stat } from "node:fs/promises";
 import { basename, extname, join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { gzipSize } from "gzip-size";
 
@@ -242,7 +243,19 @@ async function main(): Promise<void> {
   compareAndPrint(loadResult.baseline, current);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+// Only execute the CLI when run directly (`tsx scripts/check-bundle-budget.ts`),
+// not when imported. check-bundle-budget.test.ts imports this module for its pure
+// helpers; importing used to run main() as a side effect, and main() calls
+// process.exit(1) when dist/ is absent. During preflight, `npm run test` (vitest)
+// runs before `npm run build`, so on a clean tree there is no dist/ yet at test
+// time — the stray process.exit made `vitest run` exit 1 (caught as an unhandled
+// rejection) even though every test passed, failing the gate spuriously.
+const invokedDirectly =
+  process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (invokedDirectly) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
