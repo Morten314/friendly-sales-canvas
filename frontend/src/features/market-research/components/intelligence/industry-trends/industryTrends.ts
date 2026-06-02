@@ -60,25 +60,25 @@ export interface BudgetChartEntry {
  *   - Entries whose final numeric value is 0 are dropped (`filter(item => item.value > 0)`).
  *   - Colors cycle through an 8-entry palette.
  */
-export function budgetToChartData(allocation: Record<string, string>): BudgetChartEntry[] {
-  const colors = [
-    "#8B5CF6",
-    "#3B82F6",
-    "#10B981",
-    "#F59E0B",
-    "#EF4444",
-    "#06B6D4",
-    "#84CC16",
-    "#EC4899",
-  ];
+const BUDGET_COLORS = [
+  "#8B5CF6",
+  "#3B82F6",
+  "#10B981",
+  "#F59E0B",
+  "#EF4444",
+  "#06B6D4",
+  "#84CC16",
+  "#EC4899",
+];
 
+export function budgetToChartData(allocation: Record<string, string>): BudgetChartEntry[] {
   return Object.entries(allocation)
     .map(([name, value], index) => {
       const numericValue = value ? parseInt(String(value).replace("%", "")) : 0;
       return {
         name: name,
         value: isNaN(numericValue) ? 0 : numericValue,
-        color: colors[index % colors.length],
+        color: BUDGET_COLORS[index % BUDGET_COLORS.length],
       };
     })
     .filter((item) => item.value > 0);

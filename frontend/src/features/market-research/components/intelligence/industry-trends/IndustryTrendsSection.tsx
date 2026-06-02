@@ -107,7 +107,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       trendSnapshots: (it.data?.trendSnapshots ?? []).map((s) => ({
         title: s.title ?? "",
         metric: s.metric ?? "",
-        type: s.type ?? undefined,
+        type: s.type ?? "growth",
       })) as TrendSnapshot[],
       regionalHotspots: (it.data?.regionalHotspots ?? {}) as { [key: string]: string },
       strategicRecommendations: {
