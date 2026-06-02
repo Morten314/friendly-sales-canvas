@@ -7,6 +7,7 @@ import { ExportFooter } from "./ExportFooter";
 import { KeyMetrics } from "./KeyMetrics";
 import { RegionalHotspots } from "./RegionalHotspots";
 import { SectionHeader } from "./SectionHeader";
+import { StrategicRecommendations } from "./StrategicRecommendations";
 import { ErrorState, LoadingState, NoDataState } from "./states";
 import { TrendSnapshots } from "./TrendSnapshots";
 import type {
@@ -21,7 +22,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import MiniLineChart from "@/components/ui/MiniLineChart";
 import MiniPieChart from "@/components/ui/MiniPieChart";
-import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetchJson } from "@/lib/api";
@@ -754,92 +754,19 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           />
 
           {/* Strategic Recommendations Edit */}
-          {!normalizedDeletedSections.has("strategic-recommendations") && (
-            <div className="relative group">
-              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleSaveStrategicRecommendations}
-                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
-                      title="Commit changes"
-                    >
-                      <Check className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Commit changes</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onIndustryTrendsDeleteSection("strategic-recommendations")}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50 pointer-events-auto z-50"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Delete this section</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Strategic Recommendations
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                    <Label
-                      htmlFor="primaryFocus"
-                      className="text-sm font-medium text-green-900 mb-2 block"
-                    >
-                      Primary Focus
-                    </Label>
-                    <Textarea
-                      id="primaryFocus"
-                      value={editStrategicRecommendations.primaryFocus}
-                      onChange={(e) =>
-                        setEditStrategicRecommendations({
-                          ...editStrategicRecommendations,
-                          primaryFocus: e.target.value,
-                        })
-                      }
-                      className="text-green-700 text-sm border-green-200 focus:border-green-400"
-                      placeholder="Enter primary focus recommendation..."
-                      rows={4}
-                    />
-                  </div>
-                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    <Label
-                      htmlFor="marketEntry"
-                      className="text-sm font-medium text-blue-900 mb-2 block"
-                    >
-                      Market Entry
-                    </Label>
-                    <Textarea
-                      id="marketEntry"
-                      value={editStrategicRecommendations.marketEntry}
-                      onChange={(e) =>
-                        setEditStrategicRecommendations({
-                          ...editStrategicRecommendations,
-                          marketEntry: e.target.value,
-                        })
-                      }
-                      className="text-blue-700 text-sm border-blue-200 focus:border-blue-400"
-                      placeholder="Enter market entry recommendation..."
-                      rows={4}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          <StrategicRecommendations
+            editing
+            deleted={normalizedDeletedSections.has("strategic-recommendations")}
+            recommendations={
+              propRecommendations ||
+              industryTrendsData?.strategicRecommendations ||
+              industryTrendsData?.recommendations || { primaryFocus: "", marketEntry: "" }
+            }
+            draft={editStrategicRecommendations}
+            onChange={setEditStrategicRecommendations}
+            onCommit={handleSaveStrategicRecommendations}
+            onDelete={() => onIndustryTrendsDeleteSection("strategic-recommendations")}
+          />
 
           {/* Risks & Watchouts Edit */}
           {!normalizedDeletedSections.has("risks") && (
@@ -1189,29 +1116,24 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 />
 
                 {/* Strategic Recommendations */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Strategic Recommendations
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                      <h4 className="font-medium text-green-900 mb-2">Primary Focus</h4>
-                      <p className="text-green-700 text-sm">
-                        {propRecommendations?.primaryFocus ||
-                          industryTrendsData?.strategicRecommendations?.primaryFocus ||
-                          "No recommendations available"}
-                      </p>
-                    </div>
-                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                      <h4 className="font-medium text-blue-900 mb-2">Market Entry</h4>
-                      <p className="text-blue-700 text-sm">
-                        {propRecommendations?.marketEntry ||
-                          industryTrendsData?.strategicRecommendations?.marketEntry ||
-                          "No recommendations available"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <StrategicRecommendations
+                  editing={false}
+                  deleted={false}
+                  recommendations={{
+                    primaryFocus:
+                      propRecommendations?.primaryFocus ||
+                      industryTrendsData?.strategicRecommendations?.primaryFocus ||
+                      "",
+                    marketEntry:
+                      propRecommendations?.marketEntry ||
+                      industryTrendsData?.strategicRecommendations?.marketEntry ||
+                      "",
+                  }}
+                  draft={{ primaryFocus: "", marketEntry: "" }}
+                  onChange={() => {}}
+                  onCommit={() => {}}
+                  onDelete={() => {}}
+                />
 
                 {/* Risks & Watchouts */}
                 <div className="mb-8">
