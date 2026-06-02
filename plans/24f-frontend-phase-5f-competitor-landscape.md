@@ -18,7 +18,7 @@
 
 **Prerequisite (hard):** **5c (`plans/24c-frontend-phase-5c-page-decomposition.md`) merged to `master`.** 5f operates on the section as rendered by the 5c-created intelligence tab (the page is a thin shell + tab router; sections read 5b hooks). Post-5a the section lives under `features/market-research/components/` (5a `git mv`); Task 0 confirms the exact path. 5b (data layer) is a transitive prerequisite, merged before 5c. Branch off the latest `master`. This plan re-identifies seams **by reading the moved file**, not by the line numbers below (a pre-5a anchor from the live `src/components/market-research/CompetitorLandscapeSection.tsx`).
 
-**Conventions for every task:** as 24a–24e. File ops (`mkdir`, `git mv`, `sed`, `grep`, `npm`, `eslint --fix`) run from `frontend/`; `git add`/`git commit` from the monorepo root `/projects/Brewra/brewra-gtm-intelligence`. There is no root-level `package.json`. After each rewrite/extraction run `npx eslint --fix src` (settles `import-x/order`), then `npm run lint` and `npx tsc --noEmit -p tsconfig.app.json` must be green before committing; run `npx vitest run <files>` for touched tests and `npx knip --strict --no-progress` where reachability changed. Commit messages: `type(scope):` form, scope `fe`; **no `Co-Authored-By` footer**; **no `[N/M]`**. **One commit per extracted sub-component** (file + its test). **Visual-parity guard for all of Phase 5 is behavioral E2E `journeys/04` + Vitest/RTL + `npm run preflight` — NO market-research pixel VR; do NOT add `toHaveScreenshot` for market-research** (5a TD-FE; spec §8/§12 R4). Transitional import exception applies: `features/market-research` may import legacy dirs (`@/components/*`, `@/lib/*`, `@/hooks/*`, `@/utils/*`, `@/contexts/*`) plus `@/components/ui/*`, `@/shared/*`, npm.
+**Conventions for every task:** as 24a–24e. File ops (`mkdir`, `git mv`, `sed`, `grep`, `npm`, `eslint --fix`) run from `frontend/`; `git add`/`git commit` from the monorepo root `/projects/Brewra/brewra-gtm-intelligence`. There is no root-level `package.json`. After each rewrite/extraction run `npx eslint --fix src` (settles `import-x/order`), then `npm run lint` and `npx tsc --noEmit -p tsconfig.app.json` must be green before committing; run `npx vitest run <files>` for touched tests and `npx knip --strict --no-progress` where reachability changed. Commit messages: `type(scope):` form, scope `fe`; **no `Co-Authored-By` footer**; **no `[N/M]`**. **One commit per extracted sub-component** (file + its test). **Visual-parity guard for all of Phase 5 is behavioral E2E `journeys/04` + Vitest/RTL + `npm run preflight` — NO market-research pixel VR; do NOT add `toHaveScreenshot` for market-research** (5a TD-FE; spec §8/§12 R4). Transitional import exception applies: `features/market-research` may import legacy dirs (`@/components/*`, `@/lib/*`, `@/hooks/*`, `@/utils/*`, `@/contexts/*`) plus `@/components/ui/*`, `@/shared/*`, npm. **Section copy:** keep this section's hard-coded display strings inline verbatim — do **not** migrate them to `sectionCopy.ts` (see the *Section-copy note* below for the full rationale + the 5c-migrated fallback).
 
 **Decomposition template (applies to every sub-component task).** Each extraction follows the same TDD loop:
 1. **Red:** write the sub-component test (RTL render from fixture props) — or a unit test for a pure helper — and run it red.
@@ -68,6 +68,7 @@ test -f src/features/market-research/services/marketResearch.ts && echo "OK: 5b 
 test -f src/features/market-research/contracts.ts && echo "OK: 5b contracts"
 grep -q 'competitor' src/features/market-research/services/marketResearch.ts && echo "OK: RESEARCH_COMPONENTS.competitor present"
 grep -q 'market-research' src/test/msw/handlers.ts && echo "OK: MSW handlers (5b)"
+ls -d src/features/market-research/components/intelligence/{market-entry,regulatory-compliance} 2>/dev/null | head -1 && echo "OK: a sibling decomposed section exists (the 5d/5e per-section pattern 5f mirrors)" || echo "WARN: no sibling section dir — the pattern 5f mirrors may not have landed (5d/5e unmerged); derive the hook/unwrap shape from contracts.ts instead of a sibling"
 ```
 Expected: all OK. Likely target `src/features/market-research/components/intelligence/CompetitorLandscapeSection.tsx` (5a moves to `components/`, 5c may move it under `intelligence/`); use whatever `find` reports. Any STOP → abort 1.
 
@@ -221,15 +222,18 @@ export interface CompetitorLandscapeView {
   topPlayerShare?: string;
   emergingPlayers?: string;
   fundingNews?: string[];
+  // Intentionally `unknown[]` — mirrors 5b's tolerant `.passthrough()` (no per-component schema; see §"Locked data-layer contract").
+  // The typed + tested boundary is competitorUiComponents.ts (Task 3), not a runtime guard here.
   uiComponents?: unknown[];
 }
 ```
 Re-point the moved section file (and the soon-to-be-extracted children) to import these from `./types` (transitional intra-section import).
 
-- [ ] **Step 2: tsc + lint + commit**
+- [ ] **Step 2: tsc + lint + knip + commit**
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
 npx tsc --noEmit -p tsconfig.app.json && npm run lint
+npx knip --strict --no-progress   # the type move changes reachability — catch an orphaned old inline type (per the Conventions "knip where reachability changed")
 ```
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
@@ -319,6 +323,11 @@ describe("useCompetitorLandscape", () => {
     const { result } = renderHook(() => useCompetitorLandscape("user-1", "org-1"), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data).toBeDefined();
+    // shape contract (abort-4 guard): the mapped view must expose what the section renders
+    expect(Array.isArray(result.current.data?.uiComponents)).toBe(true);
+    expect(result.current.data).toEqual(
+      expect.objectContaining({ executiveSummary: expect.any(String) }),
+    );
     expect(typeof result.current.refresh).toBe("function");
   });
   it("is disabled without an orgId", () => {
@@ -370,8 +379,9 @@ cd /projects/Brewra/brewra-gtm-intelligence/frontend
 F=src/features/market-research/components/intelligence/competitor-landscape/CompetitorLandscapeSection.tsx
 echo "=== READ-path localStorage gone (expect only edit-write survivors, if any) ==="; grep -nE 'getUserLocalStorage|setUserLocalStorage' "$F"
 echo "=== research read no longer via props-as-data sync (effects thinned) ==="; grep -cE 'useEffect' "$F"
+echo "=== surviving fetches (expect ONLY the two in handleCompetitorLandscapeSaveChanges) ==="; grep -nE 'fetch\(' "$F"
 ```
-> The `/api/ask` edit-write `fetch` (L697) + its `/api/market_intelligence` re-read (L727) are the **write** path inside `handleCompetitorLandscapeSaveChanges` — **leave them as-is** this phase (flag for review; candidate `TD-FE`). If removing the read fetch/sync makes `journeys/04` fail because the section no longer hydrates, the hook's `enabled`/auto-fetch isn't matching the old behavior — fix the hook wiring, do NOT re-add the read fetch.
+> **The two surviving fetches inside `handleCompetitorLandscapeSaveChanges`** (the Step-3 `grep 'fetch('` above lists exactly these — confirm no others remain): the `/api/ask` edit-write (L697) and the `/api/market_intelligence` post-save re-read (L727). The `/ask` call is a pure write; the re-read is functionally a **read-refresh** that, once the hook owns the read path, runs *parallel* to the TanStack cache — it sets local state from a raw fetch, so the hook's cached copy and the post-save state can diverge. **Decision (this phase): keep BOTH as-is** — they ride together with the deferred write path; do **not** route the re-read through `cl.refresh()`/query-invalidation in 5f. Log BOTH in the single write-path `TD-FE` (Task N+2 Step 7, which already names `/api/ask` + `/api/market_intelligence`) and flag the cache-divergence caveat for the reviewer. **Deferred end-state (NOT done here):** post-save refresh should become `cl.refresh()`/query-invalidation so the hook cache stays the single source of truth — deferred to that same write-path TD-FE (trigger: migrating `/ask` off raw fetch). If removing the read fetch/sync makes `journeys/04` fail because the section no longer hydrates, the hook's `enabled`/auto-fetch isn't matching the old behavior — fix the hook wiring, do NOT re-add the read fetch.
 
 - [ ] **Step 4: Boundary — confirm only (no wrap added).** Per the Task 0 Step 5 decision: 5c wraps the whole intelligence tab in `<FeatureErrorBoundary>` and 5d added none, so 5f adds **no** section-level boundary. Just confirm the tab-level wrap still covers this section and note it in the PR. (No separate commit — there is nothing to add or split out.)
 
@@ -432,7 +442,11 @@ npx knip --strict --no-progress   # every sub-component reachable from the conta
 
 > Spec §6, R3. Stop consuming the data/loading/refresh props for this section; source them from `useCompetitorLandscape`. **`MarketIntelligenceTabProps.ts` is retained** — other sections still consume it; it is deleted by the **last** converting section (≤5h), and 5i's dead-code sweep confirms it gone (abort 7 if already deleted). Remove here **only** competitor-exclusive **data** fields; keep cross-section fields and any edit-callback the section still calls.
 
-- [ ] **Step 1: Identify competitor-exclusive data fields.** From Task 0, the candidates are `competitorData`, `competitorExecutiveSummary`, `competitorTopPlayerShare`, `competitorEmergingPlayers`, `competitorFundingNews`, `competitorError`, `competitorExpanded`, `competitorHasEdits`, `competitorDeletedSections`, `competitorEditHistory`, `competitorLastEditedField`, `competitorCustomMessage`. A field is removable only if no other section reads it:
+- [ ] **Step 1: Identify competitor-exclusive data fields.** From Task 0, split the competitor-prefixed fields into two groups — do **not** treat them as one undifferentiated candidate list:
+  - **Data fields (the hook now owns → removable):** `competitorData`, `competitorExecutiveSummary`, `competitorTopPlayerShare`, `competitorEmergingPlayers`, `competitorFundingNews`, `competitorError`.
+  - **Per-section view/edit-state fields (`competitorExpanded`, `competitorHasEdits`, `competitorDeletedSections`, `competitorEditHistory`, `competitorLastEditedField`, `competitorCustomMessage`):** these may be **container-local now** (the hook-first 5c extraction) **or** still forwarded by the parent — the plan cannot decide this on paper. **Confirm ownership against the merged tree at Task 0 and default to KEEPING them**; drop one only if Task 0 shows the container self-manages it and nothing forwards it.
+
+  A field is removable only if no other section reads it:
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
 P=src/features/market-research/components/MarketIntelligenceTabProps.ts
