@@ -17,6 +17,7 @@ import {
 import React, { useState, useEffect, useRef } from "react";
 
 import { segmentsToPieData, projectionsToLineData } from "./marketSize";
+import { ErrorState, LoadingState, NoDataState } from "./states";
 import { useMarketSize } from "./useMarketSize";
 
 import type { EditRecord } from "@/components/market-research/types";
@@ -500,38 +501,21 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
 
   // Loading state
   if (marketSize.isLoading && !hasData) {
-    return (
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading market size data...</p>
-        </div>
-      </div>
-    );
+    return <LoadingState />;
   }
 
   // Empty state
   if (!hasData && !marketSize.isLoading) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="text-center py-12">
-          <p className="text-gray-600 mb-4">No market size data available</p>
-          <Button
-            onClick={() => {
-              // onScoutIconClick('market-size');
-              toast({
-                title: "Coming Soon",
-                description: "Scout feature is coming soon!",
-              });
-            }}
-            variant="outline"
-            className="opacity-50"
-          >
-            <Bot className="h-4 w-4 mr-2 text-gray-400" />
-            Generate Report with Scout
-          </Button>
-        </div>
-      </div>
+      <NoDataState
+        onGenerate={() => {
+          // onScoutIconClick('market-size');
+          toast({
+            title: "Coming Soon",
+            description: "Scout feature is coming soon!",
+          });
+        }}
+      />
     );
   }
 
@@ -586,27 +570,10 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         )}
 
         {marketSize.isError && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                <span className="text-red-700 text-sm font-medium">Error loading data</span>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => marketSize.regenerate()}
-                className="text-red-600 border-red-200 hover:bg-red-50"
-              >
-                Retry
-              </Button>
-            </div>
-            <p className="text-red-600 text-sm mt-2">
-              {marketSize.error instanceof Error
-                ? marketSize.error.message
-                : "Failed to load market size data"}
-            </p>
-          </div>
+          <ErrorState
+            message={marketSize.error instanceof Error ? marketSize.error.message : undefined}
+            onRetry={() => marketSize.regenerate()}
+          />
         )}
 
         {!marketSize.isLoading &&
