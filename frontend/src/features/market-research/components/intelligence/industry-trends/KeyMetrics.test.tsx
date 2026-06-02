@@ -109,11 +109,7 @@ describe("KeyMetrics", () => {
 
   it("editing + deleted renders nothing", () => {
     const { container } = renderWithProvider(
-      <KeyMetrics
-        {...defaultReadProps}
-        editing={true}
-        deleted={true}
-      />,
+      <KeyMetrics {...defaultReadProps} editing={true} deleted={true} />,
     );
     expect(container.querySelector("input")).toBeNull();
     expect(container.querySelector(".grid")).toBeNull();
@@ -121,13 +117,7 @@ describe("KeyMetrics", () => {
 
   it("edit mode commit button fires onCommit", () => {
     const handleCommit = vi.fn();
-    renderWithProvider(
-      <KeyMetrics
-        {...defaultReadProps}
-        editing={true}
-        onCommit={handleCommit}
-      />,
-    );
+    renderWithProvider(<KeyMetrics {...defaultReadProps} editing={true} onCommit={handleCommit} />);
     // The Check button is always visible (no opacity-0 class)
     const buttons = screen.getAllByRole("button");
     // First button is the Check/commit button
@@ -137,13 +127,7 @@ describe("KeyMetrics", () => {
 
   it("edit mode delete button fires onDelete", () => {
     const handleDelete = vi.fn();
-    renderWithProvider(
-      <KeyMetrics
-        {...defaultReadProps}
-        editing={true}
-        onDelete={handleDelete}
-      />,
-    );
+    renderWithProvider(<KeyMetrics {...defaultReadProps} editing={true} onDelete={handleDelete} />);
     // Second button is the X/delete button
     const buttons = screen.getAllByRole("button");
     fireEvent.click(buttons[1]);

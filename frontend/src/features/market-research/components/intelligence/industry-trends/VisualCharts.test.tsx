@@ -78,9 +78,7 @@ describe("VisualCharts", () => {
       );
       // MiniLineChart renders a recharts ResponsiveContainer or svg
       // Assert the empty-state hint is NOT shown (chart rendered instead)
-      expect(
-        screen.queryByText("No AI adoption trends data available"),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText("No AI adoption trends data available")).not.toBeInTheDocument();
       // Container should have some rendered chart output (recharts injects divs/svgs)
       expect(container.querySelector(".recharts-wrapper, svg, [class*='recharts']")).toBeTruthy();
     });
@@ -149,9 +147,7 @@ describe("VisualCharts", () => {
       expect(
         screen.queryByText("No valid budget allocation data available"),
       ).not.toBeInTheDocument();
-      expect(
-        screen.queryByText("Error loading budget allocation chart"),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText("Error loading budget allocation chart")).not.toBeInTheDocument();
     });
   });
 

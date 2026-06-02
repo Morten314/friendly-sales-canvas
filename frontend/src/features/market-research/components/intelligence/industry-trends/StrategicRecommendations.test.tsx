@@ -5,7 +5,6 @@ import { StrategicRecommendations } from "./StrategicRecommendations";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-
 function renderWithProvider(ui: React.ReactElement) {
   return render(<TooltipProvider>{ui}</TooltipProvider>);
 }

@@ -8,7 +8,11 @@ import type { ResearchComponentResponse } from "@/features/market-research/contr
 
 // Re-export the shared trio from the legacy types directory.
 // These belong to the not-yet-migrated MarketIntelligenceTabProps group; do not fork them.
-export type { EditRecord, TrendSnapshot, IndustryTrendsRecommendations } from "@/components/market-research/types";
+export type {
+  EditRecord,
+  TrendSnapshot,
+  IndustryTrendsRecommendations,
+} from "@/components/market-research/types";
 
 /** Industry-trends per-component `data` view-model.
  *  Fields confirmed against the section's inline IndustryTrendsData and the live fetch

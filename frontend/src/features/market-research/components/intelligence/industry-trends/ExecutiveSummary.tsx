@@ -81,7 +81,5 @@ export function ExecutiveSummary({
     );
   }
 
-  return (
-    <p className="text-gray-700 mb-6">{summary}</p>
-  );
+  return <p className="text-gray-700 mb-6">{summary}</p>;
 }

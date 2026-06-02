@@ -15,12 +15,7 @@ export function ExportFooter({
 }: ExportFooterProps) {
   return (
     <>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={onExportPDF}
-        className="flex items-center gap-2"
-      >
+      <Button variant="outline" size="sm" onClick={onExportPDF} className="flex items-center gap-2">
         <FileText className="h-4 w-4" />
         Save PDF
       </Button>

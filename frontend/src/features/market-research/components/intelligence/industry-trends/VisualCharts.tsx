@@ -265,9 +265,7 @@ export function VisualCharts({
                 } catch (error) {
                   console.error("Error rendering budget allocation chart:", error);
                   return (
-                    <p className="text-gray-500 text-sm">
-                      Error loading budget allocation chart
-                    </p>
+                    <p className="text-gray-500 text-sm">Error loading budget allocation chart</p>
                   );
                 }
               })()}

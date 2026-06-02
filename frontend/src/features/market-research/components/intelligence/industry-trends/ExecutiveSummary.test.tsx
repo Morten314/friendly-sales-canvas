@@ -5,7 +5,6 @@ import { ExecutiveSummary } from "./ExecutiveSummary";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-
 function renderWithProvider(ui: React.ReactElement) {
   return render(<TooltipProvider>{ui}</TooltipProvider>);
 }
@@ -23,9 +22,7 @@ describe("ExecutiveSummary", () => {
         onDelete={vi.fn()}
       />,
     );
-    expect(
-      screen.getByText("Industry is growing rapidly."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Industry is growing rapidly.")).toBeInTheDocument();
   });
 
   it("read mode renders even when deleted is true", () => {

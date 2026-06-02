@@ -70,27 +70,21 @@ describe("TrendSnapshots", () => {
   });
 
   it("edit mode renders per-snapshot title and metric inputs", () => {
-    renderWithProvider(
-      <TrendSnapshots {...defaultProps} editing={true} />,
-    );
+    renderWithProvider(<TrendSnapshots {...defaultProps} editing={true} />);
     const inputs = screen.getAllByRole("textbox");
     // 2 inputs per snapshot: title + metric
     expect(inputs).toHaveLength(sampleSnapshots.length * 2);
   });
 
   it("edit mode inputs are pre-filled from draft", () => {
-    renderWithProvider(
-      <TrendSnapshots {...defaultProps} editing={true} />,
-    );
+    renderWithProvider(<TrendSnapshots {...defaultProps} editing={true} />);
     expect(screen.getByDisplayValue("Market Growth")).toBeInTheDocument();
     expect(screen.getByDisplayValue("25% YoY")).toBeInTheDocument();
   });
 
   it("edit mode title change calls onChange with immutably-updated array", () => {
     const handleChange = vi.fn();
-    renderWithProvider(
-      <TrendSnapshots {...defaultProps} editing={true} onChange={handleChange} />,
-    );
+    renderWithProvider(<TrendSnapshots {...defaultProps} editing={true} onChange={handleChange} />);
     const titleInput = screen.getByDisplayValue("Market Growth");
     fireEvent.change(titleInput, { target: { value: "Market Surge" } });
     expect(handleChange).toHaveBeenCalledTimes(1);
@@ -104,9 +98,7 @@ describe("TrendSnapshots", () => {
 
   it("edit mode metric change calls onChange with immutably-updated array", () => {
     const handleChange = vi.fn();
-    renderWithProvider(
-      <TrendSnapshots {...defaultProps} editing={true} onChange={handleChange} />,
-    );
+    renderWithProvider(<TrendSnapshots {...defaultProps} editing={true} onChange={handleChange} />);
     const metricInput = screen.getByDisplayValue("25% YoY");
     fireEvent.change(metricInput, { target: { value: "30% YoY" } });
     expect(handleChange).toHaveBeenCalledTimes(1);
@@ -118,9 +110,7 @@ describe("TrendSnapshots", () => {
 
   it("edit mode commit button fires onCommit", () => {
     const handleCommit = vi.fn();
-    renderWithProvider(
-      <TrendSnapshots {...defaultProps} editing={true} onCommit={handleCommit} />,
-    );
+    renderWithProvider(<TrendSnapshots {...defaultProps} editing={true} onCommit={handleCommit} />);
     const buttons = screen.getAllByRole("button");
     // First button is the Check/commit button
     fireEvent.click(buttons[0]);
@@ -129,9 +119,7 @@ describe("TrendSnapshots", () => {
 
   it("edit mode delete button fires onDelete", () => {
     const handleDelete = vi.fn();
-    renderWithProvider(
-      <TrendSnapshots {...defaultProps} editing={true} onDelete={handleDelete} />,
-    );
+    renderWithProvider(<TrendSnapshots {...defaultProps} editing={true} onDelete={handleDelete} />);
     const buttons = screen.getAllByRole("button");
     // Second button is the X/delete button
     fireEvent.click(buttons[1]);

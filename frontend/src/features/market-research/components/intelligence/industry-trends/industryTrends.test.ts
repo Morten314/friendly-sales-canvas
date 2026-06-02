@@ -1,10 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import {
-  normalizeDeletedSections,
-  budgetToChartData,
-  buildEditSnapshot,
-} from "./industryTrends";
+import { normalizeDeletedSections, budgetToChartData, buildEditSnapshot } from "./industryTrends";
 
 // ---------------------------------------------------------------------------
 // normalizeDeletedSections
@@ -183,7 +179,11 @@ describe("buildEditSnapshot", () => {
   });
 
   it("falls back to prop values when industryTrendsData is null", () => {
-    const propRegionalHotspots = { APAC: "Prop APAC", Europe: "Prop EU", "North America": "Prop NA" };
+    const propRegionalHotspots = {
+      APAC: "Prop APAC",
+      Europe: "Prop EU",
+      "North America": "Prop NA",
+    };
     const propRecommendations = { primaryFocus: "Prop Focus", marketEntry: "Prop Entry" };
     const propRisks = ["Prop Risk"];
     const propVisualCharts = {
@@ -207,7 +207,15 @@ describe("buildEditSnapshot", () => {
   });
 
   it("uses default fallbacks when both data and props are null/undefined", () => {
-    const { originalData } = buildEditSnapshot(null, undefined, undefined, undefined, undefined, undefined, baseDrafts);
+    const { originalData } = buildEditSnapshot(
+      null,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      baseDrafts,
+    );
     expect(originalData.executiveSummary).toBe("");
     expect(originalData.regionalHotspots).toEqual({});
     expect(originalData.strategicRecommendations).toEqual({ primaryFocus: "", marketEntry: "" });
@@ -224,17 +232,36 @@ describe("buildEditSnapshot", () => {
       strategicRecommendations: { primaryFocus: "Strategic", marketEntry: "S-Entry" },
       recommendations: { primaryFocus: "Rec", marketEntry: "R-Entry" },
     };
-    const { originalData } = buildEditSnapshot(dataWithBoth, null, null, null, [], null, baseDrafts);
+    const { originalData } = buildEditSnapshot(
+      dataWithBoth,
+      null,
+      null,
+      null,
+      [],
+      null,
+      baseDrafts,
+    );
     expect(originalData.strategicRecommendations.primaryFocus).toBe("Strategic");
   });
 
   it("falls back to data.recommendations when strategicRecommendations is missing", () => {
     const dataNoStrategic = {
       ...baseData,
-      strategicRecommendations: undefined as unknown as { primaryFocus: string; marketEntry: string },
+      strategicRecommendations: undefined as unknown as {
+        primaryFocus: string;
+        marketEntry: string;
+      },
       recommendations: { primaryFocus: "Rec Only", marketEntry: "Rec Entry" },
     };
-    const { originalData } = buildEditSnapshot(dataNoStrategic, null, null, null, [], null, baseDrafts);
+    const { originalData } = buildEditSnapshot(
+      dataNoStrategic,
+      null,
+      null,
+      null,
+      [],
+      null,
+      baseDrafts,
+    );
     expect(originalData.strategicRecommendations.primaryFocus).toBe("Rec Only");
   });
 });

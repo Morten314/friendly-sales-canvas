@@ -5,11 +5,7 @@
  * No React, no fetch, no localStorage, no toast. Safe to unit-test in isolation.
  */
 
-import type {
-  IndustryTrendsData,
-  IndustryTrendsRecommendations,
-  TrendSnapshot,
-} from "./types";
+import type { IndustryTrendsData, IndustryTrendsRecommendations, TrendSnapshot } from "./types";
 
 // ---------------------------------------------------------------------------
 // normalizeDeletedSections
@@ -64,9 +60,7 @@ export interface BudgetChartEntry {
  *   - Entries whose final numeric value is 0 are dropped (`filter(item => item.value > 0)`).
  *   - Colors cycle through an 8-entry palette.
  */
-export function budgetToChartData(
-  allocation: Record<string, string>,
-): BudgetChartEntry[] {
+export function budgetToChartData(allocation: Record<string, string>): BudgetChartEntry[] {
   const colors = [
     "#8B5CF6",
     "#3B82F6",
@@ -80,9 +74,7 @@ export function budgetToChartData(
 
   return Object.entries(allocation)
     .map(([name, value], index) => {
-      const numericValue = value
-        ? parseInt(String(value).replace("%", ""))
-        : 0;
+      const numericValue = value ? parseInt(String(value).replace("%", "")) : 0;
       return {
         name: name,
         value: isNaN(numericValue) ? 0 : numericValue,
@@ -172,10 +164,8 @@ export function buildEditSnapshot(
     cloudMigration: industryTrendsData?.cloudMigration || "",
     regulatory: industryTrendsData?.regulatory || "",
     trendSnapshots: industryTrendsData?.trendSnapshots || [],
-    regionalHotspots:
-      industryTrendsData?.regionalHotspots || propRegionalHotspots || {},
-    strategicRecommendations:
-      industryTrendsData?.strategicRecommendations ||
+    regionalHotspots: industryTrendsData?.regionalHotspots || propRegionalHotspots || {},
+    strategicRecommendations: industryTrendsData?.strategicRecommendations ||
       industryTrendsData?.recommendations ||
       propRecommendations || {
         primaryFocus: "",

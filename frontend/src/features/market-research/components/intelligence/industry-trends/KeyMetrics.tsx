@@ -78,10 +78,7 @@ export function KeyMetrics({
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <Label
-                htmlFor="aiAdoption"
-                className="text-sm font-medium text-gray-700 mb-2 block"
-              >
+              <Label htmlFor="aiAdoption" className="text-sm font-medium text-gray-700 mb-2 block">
                 AI Adoption Rate
               </Label>
               <Input
@@ -108,10 +105,7 @@ export function KeyMetrics({
               />
             </div>
             <div>
-              <Label
-                htmlFor="regulatory"
-                className="text-sm font-medium text-gray-700 mb-2 block"
-              >
+              <Label htmlFor="regulatory" className="text-sm font-medium text-gray-700 mb-2 block">
                 Regulatory Changes
               </Label>
               <Input

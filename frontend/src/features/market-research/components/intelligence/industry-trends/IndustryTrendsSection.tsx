@@ -394,130 +394,23 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           onScoutIconClick={onScoutIconClick}
         />
 
-      {isIndustryTrendsEditing ? (
-        <div className="space-y-8">
-          {/* Executive Summary Edit */}
-          <ExecutiveSummary
-            editing
-            deleted={normalizedDeletedSections.has("executive-summary")}
-            draft={editExecutiveSummary}
-            summary={displayData.executiveSummary}
-            onChange={setEditExecutiveSummary}
-            onCommit={handleSaveExecutiveSummary}
-            onDelete={() => onIndustryTrendsDeleteSection("executive-summary")}
-          />
-
-          {/* Key Metrics Edit */}
-          <KeyMetrics
-            editing
-            deleted={normalizedDeletedSections.has("key-metrics")}
-            aiAdoption={displayData.aiAdoption}
-            cloudMigration={displayData.cloudMigration}
-            regulatory={displayData.regulatory}
-            aiAdoptionDraft={editAiAdoption}
-            cloudMigrationDraft={editCloudMigration}
-            regulatoryDraft={editRegulatory}
-            onAiAdoptionChange={setEditAiAdoption}
-            onCloudMigrationChange={setEditCloudMigration}
-            onRegulatoryChange={setEditRegulatory}
-            onCommit={handleSaveKeyMetrics}
-            onDelete={() => onIndustryTrendsDeleteSection("key-metrics")}
-          />
-
-          {/* Trend Snapshots Edit */}
-          <TrendSnapshots
-            editing
-            deleted={normalizedDeletedSections.has("trend-snapshots")}
-            snapshots={displayData.trendSnapshots}
-            draft={editTrendSnapshots}
-            onChange={setEditTrendSnapshots}
-            onCommit={handleSaveTrendSnapshots}
-            onDelete={() => onIndustryTrendsDeleteSection("trend-snapshots")}
-          />
-
-          {/* Regional Hotspots Edit */}
-          <RegionalHotspots
-            editing
-            deleted={normalizedDeletedSections.has("regional-hotspots")}
-            regionalHotspots={displayData.regionalHotspots}
-            draft={editRegionalHotspots}
-            onChange={setEditRegionalHotspots}
-            onCommit={handleSaveRegionalHotspots}
-            onDelete={() => onIndustryTrendsDeleteSection("regional-hotspots")}
-          />
-
-          {/* Strategic Recommendations Edit */}
-          <StrategicRecommendations
-            editing
-            deleted={normalizedDeletedSections.has("strategic-recommendations")}
-            recommendations={displayData.strategicRecommendations}
-            draft={editStrategicRecommendations}
-            onChange={setEditStrategicRecommendations}
-            onCommit={handleSaveStrategicRecommendations}
-            onDelete={() => onIndustryTrendsDeleteSection("strategic-recommendations")}
-          />
-
-          {/* Risks & Watchouts Edit */}
-          <RisksWatchouts
-            editing
-            deleted={normalizedDeletedSections.has("risks")}
-            risks={displayData.risks}
-            draft={editRisks}
-            onChange={setEditRisks}
-            onCommit={handleSaveRisks}
-            onDelete={() => onIndustryTrendsDeleteSection("risks")}
-          />
-
-          {/* Visual Charts Edit */}
-          <VisualCharts
-            editing
-            deleted={normalizedDeletedSections.has("visual-charts")}
-            visualCharts={displayData.visualCharts}
-            draft={editVisualCharts}
-            onChange={setEditVisualCharts}
-            onCommit={handleSaveVisualCharts}
-            onDelete={() => onIndustryTrendsDeleteSection("visual-charts")}
-          />
-
-          {/* Save/Cancel Buttons */}
-          <EditToolbar
-            onSave={handleSaveChanges}
-            onCancel={onIndustryTrendsCancelEdit}
-            onHistory={onIndustryTrendsEditHistoryOpen}
-            historyCount={industryTrendsEditHistory.length}
-            onScout={() => onScoutIconClick("industry-trends")}
-          />
-
-          {/* Export Options in Edit Mode */}
-          <div className="border-t pt-6">
-            <h4 className="text-sm font-medium text-gray-900 mb-3">Export Options</h4>
-            <div className="flex flex-wrap gap-3">
-              <ExportFooter
-                onExportPDF={onExportPDF}
-                onSaveToWorkspace={onSaveToWorkspace}
-                onGenerateShareableLink={onGenerateShareableLink}
-              />
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {/* Default View */}
-          <div>
+        {isIndustryTrendsEditing ? (
+          <div className="space-y-8">
+            {/* Executive Summary Edit */}
             <ExecutiveSummary
-              editing={false}
-              deleted={false}
-              summary={displayData.executiveSummary}
+              editing
+              deleted={normalizedDeletedSections.has("executive-summary")}
               draft={editExecutiveSummary}
+              summary={displayData.executiveSummary}
               onChange={setEditExecutiveSummary}
               onCommit={handleSaveExecutiveSummary}
               onDelete={() => onIndustryTrendsDeleteSection("executive-summary")}
             />
 
-            {/* Key Metrics Cards */}
+            {/* Key Metrics Edit */}
             <KeyMetrics
-              editing={false}
-              deleted={false}
+              editing
+              deleted={normalizedDeletedSections.has("key-metrics")}
               aiAdoption={displayData.aiAdoption}
               cloudMigration={displayData.cloudMigration}
               regulatory={displayData.regulatory}
@@ -530,110 +423,217 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
               onCommit={handleSaveKeyMetrics}
               onDelete={() => onIndustryTrendsDeleteSection("key-metrics")}
             />
-          </div>
 
-          {/* Read More Button */}
-          {!industryTrendsExpanded && !isSplitView && (
-            <div className="flex justify-center pt-4">
-              <Button
-                onClick={() => onIndustryTrendsExpandToggle(true)}
-                variant="outline"
-                className="flex items-center space-x-2 text-sm hover:bg-gray-50"
-              >
-                <span>Read More</span>
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+            {/* Trend Snapshots Edit */}
+            <TrendSnapshots
+              editing
+              deleted={normalizedDeletedSections.has("trend-snapshots")}
+              snapshots={displayData.trendSnapshots}
+              draft={editTrendSnapshots}
+              onChange={setEditTrendSnapshots}
+              onCommit={handleSaveTrendSnapshots}
+              onDelete={() => onIndustryTrendsDeleteSection("trend-snapshots")}
+            />
 
-          {/* Expanded Content */}
-          {(industryTrendsExpanded || isSplitView) && (
-            <div className="animate-fade-in space-y-8">
-              <div className="border-t pt-6">
-                {/* Key Trend Snapshots */}
-                <TrendSnapshots
-                  editing={false}
-                  deleted={false}
-                  snapshots={displayData.trendSnapshots}
-                  draft={editTrendSnapshots}
-                  onChange={setEditTrendSnapshots}
-                  onCommit={handleSaveTrendSnapshots}
-                  onDelete={() => onIndustryTrendsDeleteSection("trend-snapshots")}
+            {/* Regional Hotspots Edit */}
+            <RegionalHotspots
+              editing
+              deleted={normalizedDeletedSections.has("regional-hotspots")}
+              regionalHotspots={displayData.regionalHotspots}
+              draft={editRegionalHotspots}
+              onChange={setEditRegionalHotspots}
+              onCommit={handleSaveRegionalHotspots}
+              onDelete={() => onIndustryTrendsDeleteSection("regional-hotspots")}
+            />
+
+            {/* Strategic Recommendations Edit */}
+            <StrategicRecommendations
+              editing
+              deleted={normalizedDeletedSections.has("strategic-recommendations")}
+              recommendations={displayData.strategicRecommendations}
+              draft={editStrategicRecommendations}
+              onChange={setEditStrategicRecommendations}
+              onCommit={handleSaveStrategicRecommendations}
+              onDelete={() => onIndustryTrendsDeleteSection("strategic-recommendations")}
+            />
+
+            {/* Risks & Watchouts Edit */}
+            <RisksWatchouts
+              editing
+              deleted={normalizedDeletedSections.has("risks")}
+              risks={displayData.risks}
+              draft={editRisks}
+              onChange={setEditRisks}
+              onCommit={handleSaveRisks}
+              onDelete={() => onIndustryTrendsDeleteSection("risks")}
+            />
+
+            {/* Visual Charts Edit */}
+            <VisualCharts
+              editing
+              deleted={normalizedDeletedSections.has("visual-charts")}
+              visualCharts={displayData.visualCharts}
+              draft={editVisualCharts}
+              onChange={setEditVisualCharts}
+              onCommit={handleSaveVisualCharts}
+              onDelete={() => onIndustryTrendsDeleteSection("visual-charts")}
+            />
+
+            {/* Save/Cancel Buttons */}
+            <EditToolbar
+              onSave={handleSaveChanges}
+              onCancel={onIndustryTrendsCancelEdit}
+              onHistory={onIndustryTrendsEditHistoryOpen}
+              historyCount={industryTrendsEditHistory.length}
+              onScout={() => onScoutIconClick("industry-trends")}
+            />
+
+            {/* Export Options in Edit Mode */}
+            <div className="border-t pt-6">
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Export Options</h4>
+              <div className="flex flex-wrap gap-3">
+                <ExportFooter
+                  onExportPDF={onExportPDF}
+                  onSaveToWorkspace={onSaveToWorkspace}
+                  onGenerateShareableLink={onGenerateShareableLink}
                 />
-
-                {/* Regional Hotspots */}
-                <RegionalHotspots
-                  editing={false}
-                  deleted={false}
-                  regionalHotspots={displayData.regionalHotspots}
-                  draft={{ APAC: "", Europe: "", "North America": "" }}
-                  onChange={() => {}}
-                  onCommit={() => {}}
-                  onDelete={() => {}}
-                />
-
-                {/* Strategic Recommendations */}
-                <StrategicRecommendations
-                  editing={false}
-                  deleted={false}
-                  recommendations={displayData.strategicRecommendations}
-                  draft={{ primaryFocus: "", marketEntry: "" }}
-                  onChange={() => {}}
-                  onCommit={() => {}}
-                  onDelete={() => {}}
-                />
-
-                {/* Risks & Watchouts */}
-                <RisksWatchouts
-                  editing={false}
-                  deleted={false}
-                  risks={displayData.risks}
-                  draft={[]}
-                  onChange={() => {}}
-                  onCommit={() => {}}
-                  onDelete={() => {}}
-                />
-
-                {/* Visual Charts Section */}
-                <VisualCharts
-                  editing={false}
-                  deleted={false}
-                  visualCharts={displayData.visualCharts}
-                  draft={{ aiAdoptionTrends: [], technologyBudgetAllocation: {} }}
-                  onChange={() => {}}
-                  onCommit={() => {}}
-                  onDelete={() => {}}
-                />
-
-                {/* Export Footer */}
-                <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 -mx-6 -mb-6 rounded-b-lg">
-                  <div className="flex flex-wrap gap-3 justify-center">
-                    <ExportFooter
-                      onExportPDF={onExportPDF}
-                      onSaveToWorkspace={onSaveToWorkspace}
-                      onGenerateShareableLink={onGenerateShareableLink}
-                    />
-                  </div>
-                </div>
-
-                {/* Show Less Button - Only when not in split view */}
-                {!isSplitView && (
-                  <div className="flex justify-center pt-4">
-                    <Button
-                      onClick={() => onIndustryTrendsExpandToggle(false)}
-                      variant="outline"
-                      className="flex items-center space-x-2 text-sm"
-                    >
-                      <span>Show Less</span>
-                      <ChevronUp className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
               </div>
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Default View */}
+            <div>
+              <ExecutiveSummary
+                editing={false}
+                deleted={false}
+                summary={displayData.executiveSummary}
+                draft={editExecutiveSummary}
+                onChange={setEditExecutiveSummary}
+                onCommit={handleSaveExecutiveSummary}
+                onDelete={() => onIndustryTrendsDeleteSection("executive-summary")}
+              />
+
+              {/* Key Metrics Cards */}
+              <KeyMetrics
+                editing={false}
+                deleted={false}
+                aiAdoption={displayData.aiAdoption}
+                cloudMigration={displayData.cloudMigration}
+                regulatory={displayData.regulatory}
+                aiAdoptionDraft={editAiAdoption}
+                cloudMigrationDraft={editCloudMigration}
+                regulatoryDraft={editRegulatory}
+                onAiAdoptionChange={setEditAiAdoption}
+                onCloudMigrationChange={setEditCloudMigration}
+                onRegulatoryChange={setEditRegulatory}
+                onCommit={handleSaveKeyMetrics}
+                onDelete={() => onIndustryTrendsDeleteSection("key-metrics")}
+              />
+            </div>
+
+            {/* Read More Button */}
+            {!industryTrendsExpanded && !isSplitView && (
+              <div className="flex justify-center pt-4">
+                <Button
+                  onClick={() => onIndustryTrendsExpandToggle(true)}
+                  variant="outline"
+                  className="flex items-center space-x-2 text-sm hover:bg-gray-50"
+                >
+                  <span>Read More</span>
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+
+            {/* Expanded Content */}
+            {(industryTrendsExpanded || isSplitView) && (
+              <div className="animate-fade-in space-y-8">
+                <div className="border-t pt-6">
+                  {/* Key Trend Snapshots */}
+                  <TrendSnapshots
+                    editing={false}
+                    deleted={false}
+                    snapshots={displayData.trendSnapshots}
+                    draft={editTrendSnapshots}
+                    onChange={setEditTrendSnapshots}
+                    onCommit={handleSaveTrendSnapshots}
+                    onDelete={() => onIndustryTrendsDeleteSection("trend-snapshots")}
+                  />
+
+                  {/* Regional Hotspots */}
+                  <RegionalHotspots
+                    editing={false}
+                    deleted={false}
+                    regionalHotspots={displayData.regionalHotspots}
+                    draft={{ APAC: "", Europe: "", "North America": "" }}
+                    onChange={() => {}}
+                    onCommit={() => {}}
+                    onDelete={() => {}}
+                  />
+
+                  {/* Strategic Recommendations */}
+                  <StrategicRecommendations
+                    editing={false}
+                    deleted={false}
+                    recommendations={displayData.strategicRecommendations}
+                    draft={{ primaryFocus: "", marketEntry: "" }}
+                    onChange={() => {}}
+                    onCommit={() => {}}
+                    onDelete={() => {}}
+                  />
+
+                  {/* Risks & Watchouts */}
+                  <RisksWatchouts
+                    editing={false}
+                    deleted={false}
+                    risks={displayData.risks}
+                    draft={[]}
+                    onChange={() => {}}
+                    onCommit={() => {}}
+                    onDelete={() => {}}
+                  />
+
+                  {/* Visual Charts Section */}
+                  <VisualCharts
+                    editing={false}
+                    deleted={false}
+                    visualCharts={displayData.visualCharts}
+                    draft={{ aiAdoptionTrends: [], technologyBudgetAllocation: {} }}
+                    onChange={() => {}}
+                    onCommit={() => {}}
+                    onDelete={() => {}}
+                  />
+
+                  {/* Export Footer */}
+                  <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 -mx-6 -mb-6 rounded-b-lg">
+                    <div className="flex flex-wrap gap-3 justify-center">
+                      <ExportFooter
+                        onExportPDF={onExportPDF}
+                        onSaveToWorkspace={onSaveToWorkspace}
+                        onGenerateShareableLink={onGenerateShareableLink}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Show Less Button - Only when not in split view */}
+                  {!isSplitView && (
+                    <div className="flex justify-center pt-4">
+                      <Button
+                        onClick={() => onIndustryTrendsExpandToggle(false)}
+                        variant="outline"
+                        className="flex items-center space-x-2 text-sm"
+                      >
+                        <span>Show Less</span>
+                        <ChevronUp className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </FeatureErrorBoundary>
   );

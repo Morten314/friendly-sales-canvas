@@ -5,7 +5,6 @@ import { SectionHeader } from "./SectionHeader";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-
 function renderWithTooltip(ui: React.ReactElement) {
   return render(<TooltipProvider>{ui}</TooltipProvider>);
 }

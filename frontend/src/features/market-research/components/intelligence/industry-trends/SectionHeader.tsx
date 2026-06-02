@@ -6,9 +6,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 export interface SectionHeaderProps {
   onModify: () => void;
   isSplitView: boolean;
-  onScoutIconClick: (
-    context?: "market-size" | "industry-trends" | "competitor-landscape",
-  ) => void;
+  onScoutIconClick: (context?: "market-size" | "industry-trends" | "competitor-landscape") => void;
 }
 
 export function SectionHeader({ onModify, isSplitView, onScoutIconClick }: SectionHeaderProps) {

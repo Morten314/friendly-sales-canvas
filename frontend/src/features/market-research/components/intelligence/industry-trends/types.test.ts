@@ -20,9 +20,7 @@ describe("parseIndustryTrends", () => {
         cloudMigration: "70% migrated",
         regulatory: "GDPR compliance required",
         risks: ["market saturation", "regulatory pressure"],
-        trendSnapshots: [
-          { title: "AI Growth", metric: "42%", type: "growth" },
-        ],
+        trendSnapshots: [{ title: "AI Growth", metric: "42%", type: "growth" }],
         recommendations: { primaryFocus: "Cloud", marketEntry: "SaaS" },
         regionalHotspots: { "North America": "High", Europe: "Medium" },
         visualCharts: {

@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-
 interface StrategicRecommendationsProps {
   editing: boolean;
   deleted: boolean;
@@ -66,9 +65,7 @@ export function StrategicRecommendations({
           </Tooltip>
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Strategic Recommendations
-          </h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Strategic Recommendations</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-green-50 p-4 rounded-lg border border-green-200">
               <Label
@@ -92,10 +89,7 @@ export function StrategicRecommendations({
               />
             </div>
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <Label
-                htmlFor="marketEntry"
-                className="text-sm font-medium text-blue-900 mb-2 block"
-              >
+              <Label htmlFor="marketEntry" className="text-sm font-medium text-blue-900 mb-2 block">
                 Market Entry
               </Label>
               <Textarea
