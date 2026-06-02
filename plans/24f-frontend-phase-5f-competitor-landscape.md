@@ -30,7 +30,7 @@ Each sub-component **receives typed props** (from `types.ts`); it does **not** c
 
 **Abort criteria (whole-branch — report to the controller and halt; do NOT force-push, amend pushed commits, or revert without sign-off):** per-task STOP conditions handle "fix this step and continue." Abandon the *branch* and escalate when:
 1. **5c is not actually merged** (Task 0 fails its check) — the `intelligence/` section pattern is absent.
-2. The Task 0 baseline preflight (or its lighter subset) is RED **before any 5f change**.
+2. The Task 0 baseline **full** preflight is RED **before any 5f change**.
 3. The seam audit (Task 0) contradicts this plan's sub-component list in a way that changes the **number** of blocks or reveals a seam this plan didn't anticipate — the audit wins; update the task list, record the delta in the PR, continue **only if** mechanical. If it implies a behavior change not covered by a test, STOP.
 4. `useResearchComponent`'s `data` cannot supply a field the section renders (the parsed competitor shape — `uiComponents` and the four scalar fields — is unavailable through the 5b hook), so the read path can't be migrated without re-inferring a contract — escalate to revisit 5b (do NOT re-introduce a permanent prop or a raw research `fetch`). See Task 4's reconcile step.
 5. Replacing the in-component read fetch/cache (Task 4) reveals cross-section coupling the 5b/5c page-rewire depends on (e.g. the parent expects this section to hydrate shared props via `on*Change`) that cannot be cleanly cut — that is a 5b/5c boundary question (revert Task 4 and replan), not 5f's to force.
@@ -75,7 +75,7 @@ Expected: all OK. Likely target `src/features/market-research/components/intelli
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
-npm run preflight   # or the lighter typecheck+lint+test subset; the final task is the real gate
+npm run preflight   # FULL preflight at baseline — NO lighter subset. A ~15-commit refactor branch needs a clean end-to-end start so a pre-broken build / journeys-04 / knip is caught here as "already red", not misattributed to 5f at Task N+2.
 ```
 Expected: PASS. RED before any change → STOP (abort 2).
 
@@ -96,13 +96,13 @@ echo "=== charts (expect MiniLineChart only; NO recharts) ==="; grep -nE 'MiniLi
 echo "=== importers ==="; grep -rln 'CompetitorLandscapeSection' src --include=*.ts --include=*.tsx
 ```
 
-**Confirmed live structure (verify each; reconcile any drift — the audit wins, abort 3 on a behavior-changing divergence):**
+**Confirmed live structure (verify each; reconcile any drift — the audit wins, abort 3 on a behavior-changing divergence). Every `L###` below is a pre-5a/5b/5c anchor — re-derive each seam from this Step's grep output; do NOT use the literal line numbers:**
 
 - **LOC 2,648. Single layer** — `const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({ … }) => {` (L84), `export default CompetitorLandscapeSection;` (L2648). **No inner `…Component` wrapper.**
 - **Props slice consumed (L46–82 interface; L84–113 destructure):** view flags `isEditing`(→`isCompetitorLandscapeEditing`)/`isSplitView`/`isExpanded`/`hasEdits`, `deletedSections`/`editHistory` (both **unused** — destructured as `_`-prefixed), **data** `executiveSummary`/`topPlayerShare`/`emergingPlayers`/`fundingNews: string[]`, plus the blob `competitorData?: UntypedBackendApiResponse` and `error?: string | null`; ~17 `on*` callbacks (`onToggleEdit`, `onScoutIconClick`, `onEditHistoryOpen`(unused), `onDeleteSection`(unused), `onSaveChanges`, `onCancelEdit`, `onExpandToggle`, `onExecutiveSummaryChange`, `onTopPlayerShareChange`, `onEmergingPlayersChange`, `onFundingNewsChange`, `onExportPDF`, `onSaveToWorkspace`, `onGenerateShareableLink`); `isRefreshing?`, `companyProfile?: UntypedBackendProfile`.
 - **State (16 `useState` + `useReducer`):** `localError`, `localLoading`, `localExecutiveSummary`, `localTopPlayerShare`, `localEmergingPlayers`, `localDataPoints`, `localCompetitors`, `localRegions`, `localEntities` (SWOT), `localHeadlines`, `localFeatures`, `localTools`, `localInsights`, `localCharts`, `localMetrics`, and `forceUpdate` (`useReducer`). The three scalar locals + the ten `uiComponents`-derived locals all initialize from `competitorData` ⊕ props ⊕ `getUserLocalStorage(...)`.
 - **`uiComponents` parsing → `competitorUiComponents.ts`:** `normalizeUiComponents` (L139, JSON-parses string entries, filters null) + the per-type extractors keyed by `comp?.type` ∈ {`report`,`section`,`marketShareCharts`,`swotAnalysis`,`news`,`featureComparison`,`mnaInsights`,`marketTrends`} + `generateTrendData(xAxis)` (the sparkline data builder, L2189/L2424 — appears twice, "reused from competitor"). These are pure → lift + TDD (Task 3).
-- **In-component data machinery to handle in Task 4 (the gnarly part):** `useAuth()` → `{ currentUser }` (L114); `getUserLocalStorage`/`setUserLocalStorage` per-user cache for `competitor_executiveSummary`/`competitor_topPlayerShare`/`competitor_emergingPlayers` (L163-186 init, L323-339 write effects); the big props↔local **sync effect** with the `justSavedRef`/`savedLocalStateRef` guard (L344-525); user-switch clear effect (L835-850); refresh effect (L856-861); `competitorData`-change effect (L864-871); props-sync effect (L886-903). `handleCompetitorLandscapeSaveChanges` (L602) is the **edit-write** path: builds `original_json`/`modified_json`, `setUserLocalStorage(...modified_json...)`, then `fetch("/api/ask?…")` (L697) and on success `fetch("/api/market_intelligence")` (L727) to re-read. **The hook (Tasks 3–4) replaces the READ path** (props-as-data + localStorage-read fallbacks + the read-sync effects). **The `/ask` edit-write `fetch` stays this phase** — it rides with the edit handlers; migrating it to a mutation is out of 5f scope (flag for review; log a `TD-FE` if it should move). Do **not** silently drop it (that drops save behavior).
+- **In-component data machinery to handle in Task 4 (the gnarly part):** `useAuth()` → `{ currentUser }` (L114); `getUserLocalStorage`/`setUserLocalStorage` per-user cache for `competitor_executiveSummary`/`competitor_topPlayerShare`/`competitor_emergingPlayers` (L163-186 init, L323-339 write effects); the big props↔local **sync effect** with the `justSavedRef`/`savedLocalStateRef` guard (L344-525); user-switch clear effect (L835-850); refresh effect (L856-861); `competitorData`-change effect (L864-871); props-sync effect (L886-903). `handleCompetitorLandscapeSaveChanges` (L602) is the **edit-write** path: builds `original_json`/`modified_json`, `setUserLocalStorage(...modified_json...)`, then `fetch("/api/ask?…")` (L697) and on success `fetch("/api/market_intelligence")` (L727) to re-read. **The hook (Tasks 3–4) replaces the READ path** (props-as-data + localStorage-read fallbacks + the read-sync effects). **The `/ask` edit-write `fetch` stays this phase** — it rides with the edit handlers; migrating it to a mutation is out of 5f scope (flag for review; log a `TD-FE` if it should move). Do **not** silently drop it (that drops save behavior). **If Task 0 finds the read fetch/cache already absent** (5b/5c removed this section's read machinery ahead of 5f): the section already sources server data through other wiring — derive the read seams from that wiring, **shrink or skip Task 4's read-path deletion** (it collapses to hook-adoption-only, or a no-op), and record the reduced scope in the PR. This is *distinct* from abort 5 (un-cuttable cross-section coupling): a clean prior removal is NOT an abort, just a smaller Task 4.
 - **Render blocks (the sub-component list — each an `isEditing`-gated inline block with a `handleSave*`; confirm + reconcile):**
   1. **Header** (`BarChart3` icon + title "Competitor Landscape" + "Unsaved" badge + Edit + Scout buttons, L1024-1076) → `CompetitorLandscapeHeader.tsx`
   2. **Executive Summary** (always-visible; Textarea in edit, `handleSaveExecutiveSummary`, L1078-1117) → `CompetitorExecutiveSummary.tsx`
@@ -128,7 +128,7 @@ echo "=== importers ==="; grep -rn 'CompetitorLandscapeSection' src --include=*.
 echo "=== how sections are wrapped (per-tab vs per-section) ==="; grep -rnE 'FeatureErrorBoundary' src/features/market-research
 echo "=== props passed to the section at the call site ==="; sed -n '180,215p' src/features/market-research/components/intelligence/MarketIntelligenceSections.tsx 2>/dev/null || grep -n 'CompetitorLandscapeSection' $(grep -rl 'CompetitorLandscapeSection' src)
 ```
-**Boundary decision:** if 5c already wraps the whole intelligence tab (or each section slot) in `<FeatureErrorBoundary>`, **do not add a second** — note it in the PR (the contract's "if warranted" is satisfied). If sections are NOT individually wrapped, a section-level `<FeatureErrorBoundary featureName="Competitor Landscape">` is warranted here (this section now owns a data read + parses free-form AI `uiComponents`) — add it in Task 4/Task N+1, matching the convention 5d/5e used.
+**Boundary decision (resolved against merged `master`, 2026-06-02):** 5c wraps the **entire intelligence tab** in one `<FeatureErrorBoundary featureName="Market Intelligence">` (`IntelligenceTab.tsx`, around `<MarketIntelligenceSections />`), and the merged 5d `market-entry/` section adds **no** section-level boundary — `FeatureErrorBoundary` appears nowhere else in `features/market-research/`. Convention is **per-tab, not per-section**. → **5f adds NO boundary.** This step is confirm-only: re-verify the tab-level wrap is intact and note in the PR that the section inherits it (the contract's "if warranted" is satisfied). Do **not** add a section-level boundary — that would diverge from the 5d convention.
 
 No commit (audit only). If reality diverges from Step 4/5, STOP and reconcile this plan (abort 3). Record the finalized seam list for Tasks 1–N.
 
@@ -329,6 +329,8 @@ describe("useCompetitorLandscape", () => {
 ```
 > If 5b's MSW handler doesn't return competitor-shaped `data` (the four scalars + a `uiComponents` array), extend it in `src/test/msw/handlers.ts` to echo a realistic `"competitor landscape"` payload — commit that tweak with this task.
 
+> **Behavioral signal at the structural gate (this is the heaviest, riskiest commit).** Also add a container-level test that renders `CompetitorLandscapeSection` with the hook live against MSW and asserts it **auto-hydrates** the section content from `useCompetitorLandscape` (no props-as-data), and that the empty-state Scout affordance calls `cl.refresh` and is disabled while `cl.isRefreshing`. `journeys/04` (spec §8's primary proof that behavior was preserved) otherwise runs only at Task N+2 — this RTL assertion carries the auto-hydrate/refresh contract at the point of maximum risk, so a Task 4 regression fails *here* rather than after Tasks 5–N.
+
 - [ ] **Step 2: Run red, then implement `useCompetitorLandscape.ts`** (mirror 5d/5e shape):
 ```ts
 import { useCallback, useMemo } from "react";
@@ -371,15 +373,19 @@ echo "=== research read no longer via props-as-data sync (effects thinned) ===";
 ```
 > The `/api/ask` edit-write `fetch` (L697) + its `/api/market_intelligence` re-read (L727) are the **write** path inside `handleCompetitorLandscapeSaveChanges` — **leave them as-is** this phase (flag for review; candidate `TD-FE`). If removing the read fetch/sync makes `journeys/04` fail because the section no longer hydrates, the hook's `enabled`/auto-fetch isn't matching the old behavior — fix the hook wiring, do NOT re-add the read fetch.
 
-- [ ] **Step 4: (if warranted) wrap in `<FeatureErrorBoundary>`** per the Task 0 Step 5 boundary decision (only if 5c doesn't already wrap this section).
+- [ ] **Step 4: Boundary — confirm only (no wrap added).** Per the Task 0 Step 5 decision: 5c wraps the whole intelligence tab in `<FeatureErrorBoundary>` and 5d added none, so 5f adds **no** section-level boundary. Just confirm the tab-level wrap still covers this section and note it in the PR. (No separate commit — there is nothing to add or split out.)
 
 - [ ] **Step 5: Settle, typecheck, lint, test, knip, commit**
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
 npx eslint --fix src && npm run lint && npx tsc --noEmit -p tsconfig.app.json
 npx vitest run src/features/market-research/components/intelligence/competitor-landscape
+# Checkpoint behavioral run — Task 4 is the single riskiest commit (read-path swap). Kill any orphan vite preview on :5173 first so Playwright can't false-green against a stale build, then run §8's journey:
+pkill -f 'vite preview' 2>/dev/null || true
+npx playwright test e2e/journeys/04-market-research-5-components.spec.ts
 npx knip --strict --no-progress
 ```
+> If the journey reds here, the swap changed behavior (a block not rendering, the refresh wiring, the hook's `enabled`/auto-fetch not matching the old behavior, or lost edit state) — fix the hook wiring, do NOT re-add the read fetch. This is the one mid-branch Playwright run; the rest of Phase 5's behavioral gating stays at Task N+2.
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
 git add -A frontend/src
@@ -405,7 +411,7 @@ git commit -m "feat(fe): add useCompetitorLandscape hook; CompetitorLandscape re
 - [ ] **Task 13 — `CompetitorNewsFeed.tsx`** (presentational). `localHeadlines` news/funding list add/remove/edit. Commit: `refactor(fe): extract CompetitorNewsFeed from CompetitorLandscapeSection`.
 - [ ] **Task 14 — `CompetitorFeatureComparison.tsx`** (logic-bearing — TDD). `localFeatures`/`localTools` comparison + `handleSaveFeatureComparison`. Commit: `refactor(fe): extract CompetitorFeatureComparison from CompetitorLandscapeSection`.
 - [ ] **Task 15 — `CompetitorMnaInsights.tsx`** (presentational). `localInsights` list + `handleSaveMnaInsights`. Commit: `refactor(fe): extract CompetitorMnaInsights from CompetitorLandscapeSection`.
-- [ ] **(reconcile) Add/drop tasks** to match Task 0's confirmed blocks (e.g. a `CompetitorLandscapeFooter.tsx` for the export/workspace/share actions if sizeable; a `CompetitorLandscapeStates.tsx` for the loading/empty blocks if large; collapse the two trend sites). Drop any task whose block does not exist.
+- [ ] **(reconcile) Add/drop tasks** to match Task 0's confirmed blocks (e.g. a `CompetitorLandscapeFooter.tsx` for the export/workspace/share actions if sizeable; a `CompetitorLandscapeStates.tsx` for the loading/empty blocks if large; collapse the two trend sites). Drop any task whose block does not exist. **If the block count changes, re-number the subsequent concrete tasks accordingly** — the load-bearing references use the `N+1`/`N+2` abstraction, which stays stable regardless of the renumber.
 
 After the last extraction the container is a thin coordinator over `useCompetitorLandscape` + the edit/local state + the composed sub-components. Sanity:
 ```bash
@@ -433,7 +439,7 @@ P=src/features/market-research/components/MarketIntelligenceTabProps.ts
 grep -niE 'competitor' "$P"
 echo "=== consumers that must remain ==="; grep -rln 'MarketIntelligenceTabProps' src --include=*.ts --include=*.tsx
 ```
-The **data** fields (`competitorData`/`competitor{ExecutiveSummary,TopPlayerShare,EmergingPlayers,FundingNews,Error}`) the hook now owns are removable. Keep cross-section coordination (`orgId`/global search/active section) and any edit callback the container still uses; when in doubt, leave the field (the last section deletes the interface anyway).
+The **data** fields (`competitorData`/`competitor{ExecutiveSummary,TopPlayerShare,EmergingPlayers,FundingNews,Error}`) the hook now owns are removable. Keep cross-section coordination (`orgId`/global search/active section) and any edit callback the container still uses; when in doubt, leave the field (the last section deletes the interface anyway). **The hard regression backstop is Step 4's `tsc --noEmit`:** removing a field a sibling section still references is a compile error — trust `tsc` over grep/judgment. If Step 4 type-checks green, nothing else depended on the dropped field.
 
 - [ ] **Step 2: Drop the exclusive data fields + stop forwarding them.** Remove them from `MarketIntelligenceTabProps.ts`; in `MarketIntelligenceSections.tsx` stop passing them to `<CompetitorLandscapeSection>` (render `<CompetitorLandscapeSection orgId={…} />` plus whatever edit props remain); in the container drop the corresponding destructured props (read from the hook now). Remove now-dead page-side wiring that only fed them if 5b/5c left any.
 
@@ -500,7 +506,7 @@ Expected: a history-preserving rename into `intelligence/competitor-landscape/`;
 7. `knip --strict` clean; `journeys/04` + Vitest + `npm run preflight` green; **no `toHaveScreenshot` added for market-research**.
 
 - [ ] **Step 7: Hand off for review + merge**
-Per Spec §10: `/review-impl` → `/synthesize-impl-review` (loop until nit-or-below; depth is the orchestrator's call — this is a large section, so likely a fuller sign-off). Then the controller runs `npm run preflight` once more and, on green, merges `phase-5f-competitor-landscape` → `master`. If any task regresses, revert that task's commit (per-sub-phase revert discipline). Flag for the reviewer: (a) the reconciled seam list (Task 0); (b) that the **edit-write path (`/ask` `fetch`) stayed as-is** (5f migrated the read path only) — confirm acceptable or schedule it; (c) the remaining `MarketIntelligenceTabProps` consumers; (d) section copy kept inline (a 5c gap). **Next: 5g/5h** (IndustryTrends, then MarketSize — the last section, which deletes `MarketIntelligenceTabProps.ts`; 5i confirms).
+Per Spec §10: `/review-impl` → `/synthesize-impl-review` (loop until nit-or-below; depth is the orchestrator's call — this is a large section, so likely a fuller sign-off). Then the controller runs `npm run preflight` once more and, on green, merges `phase-5f-competitor-landscape` → `master`. If any task regresses, revert that task's commit (per-sub-phase revert discipline). Flag for the reviewer: (a) the reconciled seam list (Task 0); (b) that the **edit-write path (`/ask` `fetch`) stayed as-is** (5f migrated the read path only) — **and log it as a `TD-FE` (next free number) in `docs/TECH_DEBT.md`**: a raw `fetch` surviving inside a feature being migrated off raw fetch is an accepted compromise the register must record (current state = section's edit-save still calls `/api/ask` + `/api/market_intelligence` directly; should-be = a 5b mutation; trigger = next touch of the write path). Append the entry **surgically — do NOT run prettier on `TECH_DEBT.md`** (it sits outside the frontend prettier gate and reformatting corrupts its markdown); (c) the remaining `MarketIntelligenceTabProps` consumers; (d) section copy kept inline (a 5c gap). **Next: 5g/5h** (IndustryTrends, then MarketSize — the last section, which deletes `MarketIntelligenceTabProps.ts`; 5i confirms).
 
 ---
 
