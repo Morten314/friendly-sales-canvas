@@ -56,7 +56,7 @@ export const handlers = [
     HttpResponse.json({ access_token: "mock_jwt_token", expires_in: 3600 }),
   ),
 
-  // 6. Market research — Phase 5b (generic) + Phase 5d (market-entry shape).
+  // 6. Market research — Phase 5b (generic) + Phase 5d (market-entry) + Phase 5e (regulatory) + Phase 5g (industry-trends).
   http.post("/api/market-research", async ({ request }) => {
     const body = (await request.json()) as { component_name?: string };
     const name = body.component_name ?? "market size & opportunity";
@@ -82,6 +82,43 @@ export const handlers = [
             weaknesses: ["Limited footprint"],
             opportunities: ["Growing segment"],
             threats: ["Price competition"],
+          },
+        },
+      });
+    }
+
+    // Phase 5g: industry-trends section needs a realistically-shaped payload so
+    // useIndustryTrends can parse a non-trivial view-model. Match the
+    // "industry trends report" component case-insensitively.
+    if (lower === "industry trends report" || lower.includes("industry trends")) {
+      return HttpResponse.json({
+        status: "success",
+        data: {
+          executiveSummary: "AI adoption accelerating across enterprise verticals.",
+          aiAdoption: "68% of enterprises piloting AI solutions in 2025.",
+          cloudMigration: "Cloud-native architectures now dominant at 74% adoption.",
+          regulatory: "EU AI Act compliance deadlines approaching for high-risk systems.",
+          risks: ["Talent shortage in AI/ML roles", "Regulatory uncertainty in APAC"],
+          trendSnapshots: [
+            { title: "AI Adoption Rate", metric: "68%", type: "adoption" },
+            { title: "Cloud Migration", metric: "74%", type: "performance" },
+          ],
+          recommendations: {
+            primaryFocus: "Accelerate AI pilot programmes with defined ROI metrics.",
+            marketEntry: "Target mid-market enterprises with proven AI use-cases.",
+          },
+          regionalHotspots: {
+            "North America": "Leading AI investment, $120B in 2025.",
+            Europe: "Regulatory-driven adoption with strong privacy focus.",
+          },
+          visualCharts: {
+            aiAdoptionTrends: ["2023: 45%", "2024: 58%", "2025: 68%"],
+            technologyBudgetAllocation: {
+              AI: "32%",
+              Cloud: "28%",
+              Security: "20%",
+              Other: "20%",
+            },
           },
         },
       });
