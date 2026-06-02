@@ -1,7 +1,7 @@
 import React from "react";
 
-import IndustryTrendsSection from "./IndustryTrendsSection";
 import CompetitorLandscapeSection from "./intelligence/competitor-landscape/CompetitorLandscapeSection";
+import IndustryTrendsSection from "./intelligence/industry-trends/IndustryTrendsSection";
 import RegulatoryComplianceSection from "./intelligence/regulatory-compliance/RegulatoryComplianceSection";
 import type { MarketIntelligenceTabProps } from "./MarketIntelligenceTabProps";
 import MarketSizeSection from "./MarketSizeSection";
@@ -154,18 +154,9 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
             onSaveToWorkspace={props.onSaveToWorkspace}
             onGenerateShareableLink={props.onGenerateShareableLink}
             isRefreshing={props.isRefreshing}
-            companyProfile={props.companyProfile}
-            // Pass Industry Trends data props
-            executiveSummary={props.industryTrendsExecutiveSummary}
-            aiAdoption={props.industryTrendsAiAdoption}
-            cloudMigration={props.industryTrendsCloudMigration}
-            regulatory={props.industryTrendsRegulatory}
-            trendSnapshots={props.industryTrendSnapshots}
-            recommendations={props.industryTrendsRecommendations}
-            risks={props.industryTrendsRisks}
-            regionalHotspots={props.industryTrendsRegionalHotspots}
-            visualCharts={props.industryTrendsVisualCharts}
-            // Pass individual field update functions
+            // Industry-trends data props removed — the section now sources its data
+            // via useIndustryTrends (Phase 5g task 8). Pass individual field update functions
+
             onIndustryTrendsExecutiveSummaryChange={props.onIndustryTrendsExecutiveSummaryChange}
             onIndustryTrendsAiAdoptionChange={props.onIndustryTrendsAiAdoptionChange}
             onIndustryTrendsCloudMigrationChange={props.onIndustryTrendsCloudMigrationChange}

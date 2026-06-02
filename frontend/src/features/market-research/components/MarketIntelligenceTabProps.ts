@@ -1,8 +1,4 @@
-import type {
-  EditRecord,
-  TrendSnapshot,
-  IndustryTrendsRecommendations,
-} from "@/components/market-research/types";
+import type { EditRecord, TrendSnapshot } from "@/components/market-research/types";
 import type { UntypedBackendProfile, UntypedReportState } from "@/lib/types/escape-hatches";
 
 export interface MarketIntelligenceTabProps {
@@ -40,22 +36,11 @@ export interface MarketIntelligenceTabProps {
   industryTrendsHasEdits: boolean;
   industryTrendsDeletedSections: Set<string>;
   industryTrendsEditHistory: EditRecord[];
-  industryTrendsExecutiveSummary: string;
-  industryTrendsAiAdoption: string;
-  industryTrendsCloudMigration: string;
-  industryTrendsRegulatory: string;
-  industryTrendSnapshots: TrendSnapshot[];
-  industryTrendsRecommendations: IndustryTrendsRecommendations;
-  industryTrendsRisks: string[];
-  industryTrendsRegionalHotspots?: Record<string, string>; // Accept any object structure from backend (e.g., { "US": "38%", "Europe": "28%", "Canada": "12%", "Australia": "9%" })
-  industryTrendsVisualCharts?: {
-    aiAdoptionTrends: string[];
-    technologyBudgetAllocation: {
-      "AI/ML": string;
-      Cloud: string;
-      Security: string;
-    };
-  };
+  // NOTE: Industry-trends read-path data fields (executiveSummary, aiAdoption,
+  // cloudMigration, regulatory, trendSnapshots, recommendations, risks,
+  // regionalHotspots, visualCharts) were removed here — that data is now sourced
+  // via the useIndustryTrends hook inside IndustryTrendsSection (Phase 5g task 8).
+  // The orchestration + per-field change callbacks below stay (same as market-entry).
   industryTrendsLastEditedField: string;
 
   // Competitor Landscape Section

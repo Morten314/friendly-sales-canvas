@@ -116,7 +116,6 @@ const MarketResearch = React.memo(() => {
     setMarketData,
     marketIntelligenceData,
     setMarketIntelligenceData,
-    industryTrendsData,
     competitorData,
     regulatoryData,
     companyProfile,
@@ -561,7 +560,6 @@ const MarketResearch = React.memo(() => {
                         setMarketData={setMarketData}
                         marketIntelligenceData={marketIntelligenceData}
                         setMarketIntelligenceData={setMarketIntelligenceData}
-                        industryTrendsData={industryTrendsData}
                         currentUser={currentUser}
                         editHistory={editHistory}
                         editHistoryContext={editHistoryContext}
