@@ -13,6 +13,7 @@ import React, { useState, useEffect, useRef } from "react";
 
 import { ExecutiveSummary } from "./ExecutiveSummary";
 import { ExportOptions } from "./ExportOptions";
+import { KeyMetrics } from "./KeyMetrics";
 import { segmentsToPieData, projectionsToLineData } from "./marketSize";
 import { MarketSizeHeader } from "./MarketSizeHeader";
 import { ErrorState, LoadingState, NoDataState } from "./states";
@@ -559,90 +560,21 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
               />
 
               {/* Key Metrics Edit */}
-              {!deletedSections.has("key-metrics") && (
-                <div className="relative group">
-                  <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleSaveKeyMetrics}
-                          className="text-gray-400 hover:text-green-600 hover:bg-green-50"
-                          title="Commit changes"
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Commit changes</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onDeleteSection("key-metrics")}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Delete this section</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <Label
-                          htmlFor="tamValue"
-                          className="text-sm font-medium text-gray-700 mb-2 block"
-                        >
-                          Total Addressable Market
-                        </Label>
-                        <Input
-                          id="tamValue"
-                          value={localTamValue}
-                          onChange={(e) => setLocalTamValue(e.target.value)}
-                          placeholder="e.g., $4.2B"
-                        />
-                      </div>
-                      <div>
-                        <Label
-                          htmlFor="samValue"
-                          className="text-sm font-medium text-gray-700 mb-2 block"
-                        >
-                          Serviceable Addressable Market
-                        </Label>
-                        <Input
-                          id="samValue"
-                          value={localSamValue}
-                          onChange={(e) => setLocalSamValue(e.target.value)}
-                          placeholder="e.g., $2.1B"
-                        />
-                      </div>
-                      <div>
-                        <Label
-                          htmlFor="GrowthRate"
-                          className="text-sm font-medium text-gray-700 mb-2 block"
-                        >
-                          Growth Rate
-                        </Label>
-                        <Input
-                          id="GrowthRate"
-                          value={localGrowthRate}
-                          onChange={(e) => setLocalGrowthRate(e.target.value)}
-                          placeholder="e.g., 25%"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <KeyMetrics
+                editing={isEditing}
+                deleted={deletedSections.has("key-metrics")}
+                tamValue={localTamValue || view.tamValue}
+                samValue={localSamValue || view.samValue}
+                growthRate={localGrowthRate || view.GrowthRate}
+                tamDraft={localTamValue}
+                samDraft={localSamValue}
+                growthRateDraft={localGrowthRate}
+                onTamChange={setLocalTamValue}
+                onSamChange={setLocalSamValue}
+                onGrowthRateChange={setLocalGrowthRate}
+                onCommit={handleSaveKeyMetrics}
+                onDelete={() => onDeleteSection("key-metrics")}
+              />
 
               {/* Strategic Recommendations Edit */}
               {!deletedSections.has("strategic-recommendations") && (
@@ -1057,33 +989,21 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                 />
 
                 {/* Key Metrics Cards - Always Visible */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
-                    <div className="text-2xl font-bold text-blue-600">
-                      {localTamValue || view.tamValue}
-                    </div>
-                    <div className="text-sm font-medium text-gray-900">
-                      Total Addressable Market
-                    </div>
-                    <div className="text-xs text-gray-600">Growing 15% YoY</div>
-                  </div>
-                  <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
-                    <div className="text-2xl font-bold text-green-600">
-                      {localSamValue || view.samValue}
-                    </div>
-                    <div className="text-sm font-medium text-gray-900">
-                      Serviceable Addressable Market
-                    </div>
-                    <div className="text-xs text-gray-600">Mid-market focus</div>
-                  </div>
-                  <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg">
-                    <div className="text-2xl font-bold text-purple-600">
-                      {localGrowthRate || view.GrowthRate}
-                    </div>
-                    <div className="text-sm font-medium text-gray-900">Growth Rate</div>
-                    <div className="text-xs text-gray-600">Fastest growing region</div>
-                  </div>
-                </div>
+                <KeyMetrics
+                  editing={isEditing}
+                  deleted={deletedSections.has("key-metrics")}
+                  tamValue={localTamValue || view.tamValue}
+                  samValue={localSamValue || view.samValue}
+                  growthRate={localGrowthRate || view.GrowthRate}
+                  tamDraft={localTamValue}
+                  samDraft={localSamValue}
+                  growthRateDraft={localGrowthRate}
+                  onTamChange={setLocalTamValue}
+                  onSamChange={setLocalSamValue}
+                  onGrowthRateChange={setLocalGrowthRate}
+                  onCommit={handleSaveKeyMetrics}
+                  onDelete={() => onDeleteSection("key-metrics")}
+                />
               </div>
 
               {/* Read More Button - Only show when not expanded and not in split view */}
