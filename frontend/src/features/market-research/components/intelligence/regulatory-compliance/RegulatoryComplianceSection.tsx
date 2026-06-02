@@ -118,7 +118,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     );
   });
 
-  // Update local state when regulatoryData prop changes (for API data updates)
+  // Update local state when regulatoryData (from useRegulatoryCompliance) changes (for API data updates)
   useEffect(() => {
     if (regulatoryData && !isEditing) {
       // Update local state with new API data
@@ -622,12 +622,12 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only listener subscription; handler reads currentUser?.uid + orgIdToUse at fire time intentionally
   }, []);
 
-  // Also listen for companyProfile prop changes (skip if parent is refreshing – parent cascade will provide data).
-  // Only depend on companyProfile so we don't refetch when isRefreshing flips to false (cascade just finished), which would overwrite fresh data and cause flicker.
+  // Also refresh when the companyProfile prop identity changes (the hook re-fetches via refresh()).
+  // Depend only on companyProfile (not refresh) so the effect fires on profile change, not on hook re-renders.
   useEffect(() => {
     if (!companyProfile) return;
     refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally watches only companyProfile to avoid overwriting fresh cascade data when isRefreshing flips to false
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally watches only companyProfile; refresh is excluded to avoid re-firing on hook identity changes
   }, [companyProfile]);
 
   // Initialize local state for regional data and visual data cards when not editing

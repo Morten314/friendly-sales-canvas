@@ -899,3 +899,30 @@ Optionally wrap `MarketEntrySection` (or each extracted section, as a 5e–5h pa
 - The 5e–5h section extractions — decide section-level `FeatureErrorBoundary` as a uniform pattern there — or earlier if a market-entry crash is observed disrupting the rest of the intelligence tab.
 
 **Owner:** TBD.
+
+**Update (2026-06-02, Plan 24e / 5e):** Decision made for the uniform pattern — **no section-level boundary added.** The intelligence surface is already wrapped one level up (`IntelligenceTab.tsx` wraps `<MarketIntelligenceSections>` in `<FeatureErrorBoundary featureName="Market Intelligence">`, plus the `App.tsx` route-level "Market Research" boundary). Per-section boundaries would be redundant with that and inconsistent across siblings. `RegulatoryComplianceSection` (5e) follows the same no-section-boundary convention as `MarketEntrySection` (5d). This TD remains open only as the record of that decision; close it (or the remaining 5f–5h sections inherit the same choice) at 5i.
+
+---
+
+## TD-FE-23 — Compliance Analytics cards key on `card.type` but backend emits `chartType`
+
+**Date logged:** 2026-06-02
+**Origin:** Plan 24e Phase 5e final holistic impl review — surfaced (not introduced) when `ComplianceVisualCard` was extracted into an isolated, testable unit.
+
+**Current state:**
+`ComplianceVisualCard.tsx` (and the original inline code it was lifted from) switches the chart renderer on `card.type` (`"bar-chart"` / `"pie-chart"` / `"line-chart"` / `"timeline"` / `"percentage"`). The live backend (`POST /market-research`, `component_name = "regulatory & compliance highlights"`, confirmed 2026-06-02 against `https://brewra-gtm-intelligence.onrender.com`) returns `visualDataCards[]` whose chart-type field is named **`chartType`**, not `type`. With `card.type === undefined`, every backend card falls through to the `!card.type` icon + the bar-chart-style default render — so the Compliance Analytics section has effectively always rendered its hardcoded default cards rather than the backend's `visualDataCards`. This is **pre-existing** behavior (the container's `visualDataCards = regulatoryData?.visualDataCards || [defaults]` fallback + the `type` switch were byte-identical before 5e); the decomposition only made it visible and unit-testable.
+
+**What it should be:**
+Normalize the field in `ComplianceVisualCard` (e.g. `const chartType = card.type ?? card.chartType;` and switch on that), or adapt the shape in `useRegulatoryCompliance` / `regulatoryHelpers` (a `deriveVisualDataCards` mapper). Confirm the exact backend field set first (live `/market-research` call — no auto-generated client per CLAUDE.md). Add a `ComplianceVisualCard` unit test asserting a `chartType`-keyed card renders the right chart once normalized.
+
+**Why we deferred:**
+- Out of scope for 5e, whose mandate was a byte-identical structural decomposition (visual parity guarded by behavioral E2E + Vitest, NOT pixel VR) — changing the chart-type resolution would be a behavior change, explicitly disallowed mid-extraction (Plan 24e abort criterion 3).
+- It is pre-existing and not a regression; the section renders coherent (default) cards today.
+
+**What we lose by staying as-is:**
+- The Compliance Analytics charts show hardcoded defaults instead of the backend's real `visualDataCards`, even when the backend returns populated data.
+
+**Pull-forward trigger:**
+- When real `visualDataCards` need to render (pre-launch data-fidelity pass), or the 24i market-research phase-close sweep, or alongside any backend market-research contract typing work.
+
+**Owner:** TBD.
