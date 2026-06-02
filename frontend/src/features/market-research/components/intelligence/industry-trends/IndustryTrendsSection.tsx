@@ -1,16 +1,8 @@
-import {
-  Bot,
-  X,
-  FileText,
-  Save,
-  Share,
-  Clock,
-  ChevronDown,
-  ChevronUp,
-  Check,
-} from "lucide-react";
+import { Check, ChevronDown, ChevronUp, X } from "lucide-react";
 import React, { useState, useEffect } from "react";
 
+import { EditToolbar } from "./EditToolbar";
+import { ExportFooter } from "./ExportFooter";
 import { SectionHeader } from "./SectionHeader";
 import { ErrorState, LoadingState, NoDataState } from "./states";
 import type {
@@ -1382,82 +1374,23 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           )}
 
           {/* Save/Cancel Buttons */}
-          <div className="flex items-center gap-3 pt-6 border-t">
-            <Button onClick={handleSaveChanges}>Save Changes</Button>
-            <Button variant="outline" onClick={onIndustryTrendsCancelEdit}>
-              Cancel
-            </Button>
-            <div className="flex-1"></div>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onIndustryTrendsEditHistoryOpen}
-                  className={`text-gray-600 hover:text-gray-700 hover:bg-gray-50 transition-all duration-200 ${industryTrendsEditHistory.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
-                  disabled={industryTrendsEditHistory.length === 0}
-                >
-                  <Clock className="h-4 w-4" />
-                  Edit History
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>View changes made to this report</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    onScoutIconClick("industry-trends");
-                  }}
-                  className="text-purple-600 hover:text-purple-700 transition-all duration-200 relative"
-                >
-                  <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
-                  <Bot className="h-4 w-4 relative z-10" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Chat with Scout</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
+          <EditToolbar
+            onSave={handleSaveChanges}
+            onCancel={onIndustryTrendsCancelEdit}
+            onHistory={onIndustryTrendsEditHistoryOpen}
+            historyCount={industryTrendsEditHistory.length}
+            onScout={() => onScoutIconClick("industry-trends")}
+          />
 
           {/* Export Options in Edit Mode */}
           <div className="border-t pt-6">
             <h4 className="text-sm font-medium text-gray-900 mb-3">Export Options</h4>
             <div className="flex flex-wrap gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onExportPDF}
-                className="flex items-center gap-2"
-              >
-                <FileText className="h-4 w-4" />
-                Save PDF
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onSaveToWorkspace}
-                className="flex items-center gap-2"
-              >
-                <Save className="h-4 w-4" />
-                Save to Workspace
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onGenerateShareableLink}
-                className="flex items-center gap-2"
-              >
-                <Share className="h-4 w-4" />
-                Shareable Link
-              </Button>
+              <ExportFooter
+                onExportPDF={onExportPDF}
+                onSaveToWorkspace={onSaveToWorkspace}
+                onGenerateShareableLink={onGenerateShareableLink}
+              />
             </div>
           </div>
         </div>
@@ -1696,33 +1629,11 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 {/* Export Footer */}
                 <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 -mx-6 -mb-6 rounded-b-lg">
                   <div className="flex flex-wrap gap-3 justify-center">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={onExportPDF}
-                      className="flex items-center gap-2"
-                    >
-                      <FileText className="h-4 w-4" />
-                      Save PDF
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={onSaveToWorkspace}
-                      className="flex items-center gap-2"
-                    >
-                      <Save className="h-4 w-4" />
-                      Save to Workspace
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={onGenerateShareableLink}
-                      className="flex items-center gap-2"
-                    >
-                      <Share className="h-4 w-4" />
-                      Shareable Link
-                    </Button>
+                    <ExportFooter
+                      onExportPDF={onExportPDF}
+                      onSaveToWorkspace={onSaveToWorkspace}
+                      onGenerateShareableLink={onGenerateShareableLink}
+                    />
                   </div>
                 </div>
 
