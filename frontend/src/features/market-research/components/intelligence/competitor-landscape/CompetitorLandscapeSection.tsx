@@ -69,8 +69,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   onGenerateShareableLink,
   isRefreshing = false,
   companyProfile,
-  competitorData: propCompetitorData,
-  error: propError,
 }) => {
   const { currentUser, orgId } = useAuth();
   const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
@@ -78,14 +76,15 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   // Track previous user to detect user switches
   const previousUserRef = useRef<string | null | undefined>(currentUser?.uid);
 
-  // Section SERVER data is now sourced (hook-first) from the dedicated 5b
-  // TanStack hook (memory-only cache). The prop `competitorData` + localStorage
-  // fallbacks below are retained (5e parity) for backward compatibility.
+  // Section SERVER data is sourced exclusively from the dedicated hook (Task 4).
+  // The parent no longer forwards a competitorData prop — data ownership is fully local.
   const cl = useCompetitorLandscape(currentUser?.uid ?? "", orgIdToUse);
 
-  // State for API data - parent handles loading and errors
-  const error = propError; // Use prop error from parent
-  const competitorData = cl.data ?? propCompetitorData;
+  // State for API data - hook owns the data and error state
+  const error: string | null = cl.isError ? "Failed to load competitor data" : null;
+  // Cast to UntypedBackendApiResponse so internal sync logic can access dynamic
+  // backend fields (timestamp, user_id) not tracked in CompetitorLandscapeView.
+  const competitorData = cl.data as UntypedBackendApiResponse | undefined;
 
   // Local state for error and loading management
   const [localError, setLocalError] = useState<string | null>(null);

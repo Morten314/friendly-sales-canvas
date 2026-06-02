@@ -69,10 +69,6 @@ export interface CompetitorLandscapeSectionProps {
   // Add refresh props
   isRefreshing?: boolean;
   companyProfile?: UntypedBackendProfile;
-
-  // Add centralized data prop
-  competitorData?: UntypedBackendApiResponse;
-  error?: string | null;
 }
 
 /** The section's view-model (what useCompetitorLandscape resolves the 5b data into). */
