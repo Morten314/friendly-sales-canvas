@@ -65,9 +65,7 @@ export function StrategicRecommendationsSection({
             <X className="h-4 w-4 text-red-600" />
           </button>
         </div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Strategic Recommendations
-        </h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Strategic Recommendations</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="flex items-start space-x-3">
@@ -274,9 +272,7 @@ export function StrategicRecommendationsSection({
                           <Input
                             value={item}
                             onChange={(e) => {
-                              const updated = [
-                                ...localStrategicRecommendations.goToMarketStrategy,
-                              ];
+                              const updated = [...localStrategicRecommendations.goToMarketStrategy];
                               updated[idx] = e.target.value;
                               setLocalStrategicRecommendations({
                                 ...localStrategicRecommendations,
@@ -336,9 +332,7 @@ export function StrategicRecommendationsSection({
 
   return (
     <div>
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">
-        Strategic Recommendations
-      </h3>
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">Strategic Recommendations</h3>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="flex items-start space-x-3">

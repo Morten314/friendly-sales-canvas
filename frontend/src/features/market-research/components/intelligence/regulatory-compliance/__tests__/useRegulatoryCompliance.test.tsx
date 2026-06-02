@@ -16,7 +16,12 @@ describe("useRegulatoryCompliance", () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.regulatoryData).toBeDefined();
     expect(Object.keys(result.current.regulatoryData ?? {})).toEqual(
-      expect.arrayContaining(["keyUpdates", "visualDataCards", "regionalData", "strategicRecommendations"]),
+      expect.arrayContaining([
+        "keyUpdates",
+        "visualDataCards",
+        "regionalData",
+        "strategicRecommendations",
+      ]),
     );
   });
   it("exposes refresh() and isRefreshing", () => {

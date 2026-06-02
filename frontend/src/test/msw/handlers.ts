@@ -95,7 +95,11 @@ export const handlers = [
         data: {
           keyUpdates: [{ title: "EU AI Act", description: "starts Q1 2026", tag: "New" }],
           visualDataCards: [
-            { title: "Compliance Adoption Rates", chartType: "bar-chart", data: [{ name: "GDPR", value: 80 }] },
+            {
+              title: "Compliance Adoption Rates",
+              chartType: "bar-chart",
+              data: [{ name: "GDPR", value: 80 }],
+            },
           ],
           regionalData: [{ region: "EU", deadline: "Q1 2026", requirements: "GDPR + AI Act" }],
           strategicRecommendations: {

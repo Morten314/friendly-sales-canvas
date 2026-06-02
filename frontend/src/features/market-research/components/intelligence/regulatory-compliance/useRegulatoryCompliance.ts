@@ -17,7 +17,10 @@ export interface UseRegulatoryComplianceResult {
 /** Section-data hook for the regulatory-compliance section. Reads the
  *  "regulatory & compliance highlights" component via the 5b TanStack hooks
  *  (memory-only cache) and passes the raw data envelope through unchanged. */
-export function useRegulatoryCompliance(userId: string, orgId: string): UseRegulatoryComplianceResult {
+export function useRegulatoryCompliance(
+  userId: string,
+  orgId: string,
+): UseRegulatoryComplianceResult {
   const query = useResearchComponent(userId, orgId, RESEARCH_COMPONENTS.regulatory);
   const regenerate = useRegenerateResearch(userId, orgId);
   return {

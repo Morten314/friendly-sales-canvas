@@ -7,7 +7,6 @@ import type { RegulatoryKeyDataPoint, UntypedRegulatoryUpdate } from "./types";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 
-
 export interface KeyRegulatoryUpdatesSectionProps {
   isEditing: boolean;
   normalizedDeletedSections: Set<string>;

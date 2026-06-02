@@ -1,7 +1,6 @@
 import { Check, Trash2, X } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 
-
 import type { UntypedRegionData } from "./types";
 
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +15,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-
 
 export interface RegionalComplianceSectionProps {
   isEditing: boolean;
@@ -76,9 +74,7 @@ export function RegionalComplianceSection({
             <X className="h-4 w-4 text-red-600" />
           </button>
         </div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Regional Compliance Overview
-        </h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Regional Compliance Overview</h3>
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
@@ -219,9 +215,7 @@ export function RegionalComplianceSection({
                           variant="ghost"
                           size="sm"
                           onClick={() => {
-                            setLocalRegionalData(
-                              localRegionalData.filter((_, i) => i !== index),
-                            );
+                            setLocalRegionalData(localRegionalData.filter((_, i) => i !== index));
                           }}
                           className="text-red-600 hover:text-red-700"
                         >
@@ -264,9 +258,7 @@ export function RegionalComplianceSection({
 
   return (
     <div>
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">
-        Regional Compliance Overview
-      </h3>
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">Regional Compliance Overview</h3>
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
@@ -309,9 +301,7 @@ export function RegionalComplianceSection({
                     {region.status}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-sm text-gray-600">
-                  {region.requirements}
-                </TableCell>
+                <TableCell className="text-sm text-gray-600">{region.requirements}</TableCell>
               </TableRow>
             ))}
           </TableBody>

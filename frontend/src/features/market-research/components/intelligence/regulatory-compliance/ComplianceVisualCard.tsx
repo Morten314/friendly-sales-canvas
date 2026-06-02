@@ -7,7 +7,6 @@ import MiniPieChart from "@/components/MiniPieChart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-
 export interface ComplianceVisualCardProps {
   card: UntypedVisualDataCard;
   cardIndex: number;

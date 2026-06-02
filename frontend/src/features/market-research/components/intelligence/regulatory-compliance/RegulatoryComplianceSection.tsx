@@ -22,7 +22,6 @@ import type {
 import { useAuth } from "@/shared/auth";
 import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
 
-
 const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = ({
   isEditing,
   isSplitView,

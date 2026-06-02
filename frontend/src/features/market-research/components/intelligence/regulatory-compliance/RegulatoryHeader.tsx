@@ -14,7 +14,11 @@ export interface RegulatoryHeaderProps {
   ) => void;
 }
 
-export function RegulatoryHeader({ hasEdits, onToggleEdit, onScoutIconClick }: RegulatoryHeaderProps) {
+export function RegulatoryHeader({
+  hasEdits,
+  onToggleEdit,
+  onScoutIconClick,
+}: RegulatoryHeaderProps) {
   return (
     <CardHeader className="pb-4">
       <div className="flex items-start justify-between">

@@ -57,9 +57,7 @@ describe("StrategicRecommendationsSection", () => {
         {...buildProps({ isEditing: false, regulatoryData: undefined })}
       />,
     );
-    expect(
-      screen.getByText("• Implement privacy by design principles"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("• Implement privacy by design principles")).toBeInTheDocument();
   });
 
   it("(isEditing=true) editing an item input calls setLocalStrategicRecommendations", () => {

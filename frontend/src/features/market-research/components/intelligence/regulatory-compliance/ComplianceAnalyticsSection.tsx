@@ -1,6 +1,5 @@
 import { Check, X } from "lucide-react";
 
-
 import { ComplianceVisualCard } from "./ComplianceVisualCard";
 import type { UntypedVisualDataCard } from "./types";
 

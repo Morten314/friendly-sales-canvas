@@ -73,12 +73,7 @@ describe("RegulatoryFooter", () => {
   describe("expanded footer (isEditing=false, isExpanded=true, isSplitView=false)", () => {
     it("renders Export Options and Show Less", () => {
       render(
-        <RegulatoryFooter
-          {...baseProps}
-          isEditing={false}
-          isExpanded={true}
-          isSplitView={false}
-        />,
+        <RegulatoryFooter {...baseProps} isEditing={false} isExpanded={true} isSplitView={false} />,
       );
       expect(screen.getByText("Save PDF")).toBeInTheDocument();
       expect(screen.getByText("Save to Workspace")).toBeInTheDocument();
@@ -128,12 +123,7 @@ describe("RegulatoryFooter", () => {
   describe("expanded footer in split view (isExpanded=true, isSplitView=true)", () => {
     it("does NOT render Show Less", () => {
       render(
-        <RegulatoryFooter
-          {...baseProps}
-          isEditing={false}
-          isExpanded={true}
-          isSplitView={true}
-        />,
+        <RegulatoryFooter {...baseProps} isEditing={false} isExpanded={true} isSplitView={true} />,
       );
       expect(screen.queryByText("Show Less")).not.toBeInTheDocument();
     });

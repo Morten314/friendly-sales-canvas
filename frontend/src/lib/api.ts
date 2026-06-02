@@ -12,8 +12,7 @@ const isLocalhost =
 export const BACKEND_BASE_URL = "https://brewra-gtm-intelligence.onrender.com";
 
 // Use proxy in development, Vercel, and localhost; direct URL elsewhere.
-export const API_BASE_URL =
-  isDevelopment || isVercel || isLocalhost ? "/api" : BACKEND_BASE_URL;
+export const API_BASE_URL = isDevelopment || isVercel || isLocalhost ? "/api" : BACKEND_BASE_URL;
 
 // Helper function to build API URLs
 export const buildApiUrl = (endpoint: string): string => {

@@ -139,8 +139,7 @@ export function deriveKeyDataPoints(
       value: fields.potentialFines,
       badge: "Risk",
       badgeColor: "bg-red-100 text-red-800",
-      tooltip:
-        "Maximum penalty levels for non-compliance with major data protection regulations.",
+      tooltip: "Maximum penalty levels for non-compliance with major data protection regulations.",
     },
     {
       id: "data-localization",

@@ -93,9 +93,7 @@ describe("KeyRegulatoryUpdatesSection", () => {
 
   it("fires onDeleteSection and onScoutIconClick when delete button clicked in editing mode", () => {
     const props = baseProps();
-    const { container } = render(
-      <KeyRegulatoryUpdatesSection {...props} isEditing={true} />,
-    );
+    const { container } = render(<KeyRegulatoryUpdatesSection {...props} isEditing={true} />);
 
     // The chrome buttons are the two <button> elements at the top; the second is delete (X).
     const buttons = container.querySelectorAll("button");

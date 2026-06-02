@@ -54,9 +54,7 @@ describe("RegionalComplianceSection", () => {
   it("(isEditing=true) editing a region cell input calls setLocalRegionalData", () => {
     const setLocalRegionalData = vi.fn();
     render(
-      <RegionalComplianceSection
-        {...buildProps({ isEditing: true, setLocalRegionalData })}
-      />,
+      <RegionalComplianceSection {...buildProps({ isEditing: true, setLocalRegionalData })} />,
     );
     const regionInput = screen.getByDisplayValue("EU");
     fireEvent.change(regionInput, { target: { value: "EMEA" } });
@@ -66,9 +64,7 @@ describe("RegionalComplianceSection", () => {
   it("(isEditing=true) Add Region button calls setLocalRegionalData", () => {
     const setLocalRegionalData = vi.fn();
     render(
-      <RegionalComplianceSection
-        {...buildProps({ isEditing: true, setLocalRegionalData })}
-      />,
+      <RegionalComplianceSection {...buildProps({ isEditing: true, setLocalRegionalData })} />,
     );
     fireEvent.click(screen.getByText("Add Region"));
     expect(setLocalRegionalData).toHaveBeenCalled();
@@ -77,9 +73,7 @@ describe("RegionalComplianceSection", () => {
   it("(isEditing=true) delete-row Trash2 button calls setLocalRegionalData", () => {
     const setLocalRegionalData = vi.fn();
     render(
-      <RegionalComplianceSection
-        {...buildProps({ isEditing: true, setLocalRegionalData })}
-      />,
+      <RegionalComplianceSection {...buildProps({ isEditing: true, setLocalRegionalData })} />,
     );
     // Row delete buttons live in the table body. The section chrome buttons
     // (Check / X) are the first two buttons; "Add Region" has visible text.
