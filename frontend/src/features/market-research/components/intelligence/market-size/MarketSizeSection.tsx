@@ -1,6 +1,5 @@
 import {
   Bot,
-  Target,
   TrendingUp,
   PieChart,
   X,
@@ -17,6 +16,7 @@ import { KeyMetrics } from "./KeyMetrics";
 import { segmentsToPieData, projectionsToLineData } from "./marketSize";
 import { MarketSizeHeader } from "./MarketSizeHeader";
 import { ErrorState, LoadingState, NoDataState } from "./states";
+import { StrategicRecommendations } from "./StrategicRecommendations";
 import { useMarketSize } from "./useMarketSize";
 
 import type { EditRecord } from "@/components/market-research/types";
@@ -577,61 +577,19 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
               />
 
               {/* Strategic Recommendations Edit */}
-              {!deletedSections.has("strategic-recommendations") && (
-                <div className="relative group">
-                  <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleSaveStrategicRecommendations}
-                          className="text-gray-400 hover:text-green-600 hover:bg-green-50"
-                          title="Commit changes"
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Commit changes</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onDeleteSection("strategic-recommendations")}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Delete this section</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                      Strategic Recommendations
-                    </Label>
-                    {localStrategicRecommendations.map((rec, index) => (
-                      <Textarea
-                        key={index}
-                        value={rec}
-                        onChange={(e) => {
-                          const newRecs = [...localStrategicRecommendations];
-                          newRecs[index] = e.target.value;
-                          setLocalStrategicRecommendations(newRecs);
-                        }}
-                        className="w-full h-20 resize-none mb-3"
-                        placeholder={`Strategic recommendation ${index + 1}...`}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
+              <StrategicRecommendations
+                editing={isEditing}
+                deleted={deletedSections.has("strategic-recommendations")}
+                recommendations={
+                  localStrategicRecommendations.length > 0
+                    ? localStrategicRecommendations
+                    : view.strategicRecommendations
+                }
+                draft={localStrategicRecommendations}
+                onChange={setLocalStrategicRecommendations}
+                onCommit={handleSaveStrategicRecommendations}
+                onDelete={() => onDeleteSection("strategic-recommendations")}
+              />
 
               {/* Market Entry Edit */}
               {!deletedSections.has("market-entry") && (
@@ -1029,41 +987,19 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                     </h2>
 
                     {/* Strategic Recommendations */}
-                    <div className="mb-8">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <Target className="h-5 w-5 text-green-600" />
-                        Strategic Recommendations
-                      </h3>
-                      <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                        <ul className="space-y-2 text-gray-700">
-                          {(() => {
-                            return null;
-                          })()}
-                          {Array.isArray(localStrategicRecommendations) &&
-                          localStrategicRecommendations.length > 0 ? (
-                            localStrategicRecommendations.map((rec, index) => (
-                              <li key={index} className="flex items-start gap-2">
-                                <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
-                                {rec}
-                              </li>
-                            ))
-                          ) : Array.isArray(view.strategicRecommendations) &&
-                            view.strategicRecommendations.length > 0 ? (
-                            view.strategicRecommendations.map((rec, index) => (
-                              <li key={index} className="flex items-start gap-2">
-                                <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
-                                {rec}
-                              </li>
-                            ))
-                          ) : (
-                            <li className="flex items-start gap-2">
-                              <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
-                              No strategic recommendations available
-                            </li>
-                          )}
-                        </ul>
-                      </div>
-                    </div>
+                    <StrategicRecommendations
+                      editing={isEditing}
+                      deleted={deletedSections.has("strategic-recommendations")}
+                      recommendations={
+                        localStrategicRecommendations.length > 0
+                          ? localStrategicRecommendations
+                          : view.strategicRecommendations
+                      }
+                      draft={localStrategicRecommendations}
+                      onChange={setLocalStrategicRecommendations}
+                      onCommit={handleSaveStrategicRecommendations}
+                      onDelete={() => onDeleteSection("strategic-recommendations")}
+                    />
 
                     {/* Market Entry */}
                     <div className="mb-8">
