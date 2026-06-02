@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { EditToolbar } from "./EditToolbar";
 import { ExecutiveSummary } from "./ExecutiveSummary";
 import { ExportFooter } from "./ExportFooter";
+import { KeyMetrics } from "./KeyMetrics";
 import { SectionHeader } from "./SectionHeader";
 import { ErrorState, LoadingState, NoDataState } from "./states";
 import type {
@@ -712,93 +713,21 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           />
 
           {/* Key Metrics Edit */}
-          {!normalizedDeletedSections.has("key-metrics") && (
-            <div className="relative group">
-              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleSaveKeyMetrics}
-                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
-                      title="Commit changes"
-                    >
-                      <Check className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Commit changes</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onIndustryTrendsDeleteSection("key-metrics")}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50 pointer-events-auto z-50"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Delete this section</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label
-                      htmlFor="aiAdoption"
-                      className="text-sm font-medium text-gray-700 mb-2 block"
-                    >
-                      AI Adoption Rate
-                    </Label>
-                    <Input
-                      id="aiAdoption"
-                      value={editAiAdoption}
-                      onChange={(e) => setEditAiAdoption(e.target.value)}
-                      className="text-2xl font-bold text-blue-600 border-blue-200 focus:border-blue-400"
-                      placeholder="e.g., 78%"
-                    />
-                  </div>
-                  <div>
-                    <Label
-                      htmlFor="cloudMigration"
-                      className="text-sm font-medium text-gray-700 mb-2 block"
-                    >
-                      Cloud Migration Increase
-                    </Label>
-                    <Input
-                      id="cloudMigration"
-                      value={editCloudMigration}
-                      onChange={(e) => setEditCloudMigration(e.target.value)}
-                      className="text-2xl font-bold text-green-600 border-green-200 focus:border-green-400"
-                      placeholder="e.g., +45%"
-                    />
-                  </div>
-                  <div>
-                    <Label
-                      htmlFor="regulatory"
-                      className="text-sm font-medium text-gray-700 mb-2 block"
-                    >
-                      Regulatory Changes
-                    </Label>
-                    <Input
-                      id="regulatory"
-                      value={editRegulatory}
-                      onChange={(e) => setEditRegulatory(e.target.value)}
-                      className="text-2xl font-bold text-purple-600 border-purple-200 focus:border-purple-400"
-                      placeholder="e.g., 12 new"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          <KeyMetrics
+            editing
+            deleted={normalizedDeletedSections.has("key-metrics")}
+            aiAdoption={propAiAdoption || industryTrendsData?.aiAdoption || ""}
+            cloudMigration={propCloudMigration || industryTrendsData?.cloudMigration || ""}
+            regulatory={propRegulatory || industryTrendsData?.regulatory || ""}
+            aiAdoptionDraft={editAiAdoption}
+            cloudMigrationDraft={editCloudMigration}
+            regulatoryDraft={editRegulatory}
+            onAiAdoptionChange={setEditAiAdoption}
+            onCloudMigrationChange={setEditCloudMigration}
+            onRegulatoryChange={setEditRegulatory}
+            onCommit={handleSaveKeyMetrics}
+            onDelete={() => onIndustryTrendsDeleteSection("key-metrics")}
+          />
 
           {/* Trend Snapshots Edit */}
           {!normalizedDeletedSections.has("trend-snapshots") && (
@@ -1367,29 +1296,21 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
             />
 
             {/* Key Metrics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
-                <div className="text-2xl font-bold text-blue-600">
-                  {propAiAdoption || industryTrendsData?.aiAdoption || ""}
-                </div>
-                <div className="text-sm font-medium text-gray-900">AI Adoption Rate</div>
-                <div className="text-xs text-gray-600">Enterprise pilots</div>
-              </div>
-              <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
-                <div className="text-2xl font-bold text-green-600">
-                  {propCloudMigration || industryTrendsData?.cloudMigration || ""}
-                </div>
-                <div className="text-sm font-medium text-gray-900">Cloud Migration Increase</div>
-                <div className="text-xs text-gray-600">Year over year</div>
-              </div>
-              <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg">
-                <div className="text-2xl font-bold text-purple-600">
-                  {propRegulatory || industryTrendsData?.regulatory || ""}
-                </div>
-                <div className="text-sm font-medium text-gray-900">Regulatory Changes</div>
-                <div className="text-xs text-gray-600">Impacting sector</div>
-              </div>
-            </div>
+            <KeyMetrics
+              editing={false}
+              deleted={false}
+              aiAdoption={propAiAdoption || industryTrendsData?.aiAdoption || ""}
+              cloudMigration={propCloudMigration || industryTrendsData?.cloudMigration || ""}
+              regulatory={propRegulatory || industryTrendsData?.regulatory || ""}
+              aiAdoptionDraft={editAiAdoption}
+              cloudMigrationDraft={editCloudMigration}
+              regulatoryDraft={editRegulatory}
+              onAiAdoptionChange={setEditAiAdoption}
+              onCloudMigrationChange={setEditCloudMigration}
+              onRegulatoryChange={setEditRegulatory}
+              onCommit={handleSaveKeyMetrics}
+              onDelete={() => onIndustryTrendsDeleteSection("key-metrics")}
+            />
           </div>
 
           {/* Read More Button */}
