@@ -22,7 +22,6 @@ import { VisualCharts } from "./VisualCharts";
 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import type { UntypedBackendProfile } from "@/lib/types/escape-hatches";
 import { useAuth } from "@/shared/auth";
 import { FeatureErrorBoundary } from "@/shared/components";
 import { setUserLocalStorage } from "@/utils/cacheUtils";
@@ -46,24 +45,12 @@ interface IndustryTrendsSectionProps {
   onGenerateShareableLink: () => void;
   // Add refresh props
   isRefreshing?: boolean;
-  companyProfile?: UntypedBackendProfile;
-  // Add data props
-  executiveSummary?: string;
-  aiAdoption?: string;
-  cloudMigration?: string;
-  regulatory?: string;
-  trendSnapshots?: TrendSnapshot[];
-  recommendations?: IndustryTrendsRecommendations;
-  risks?: string[];
-  regionalHotspots?: {
-    [key: string]: string;
-  };
-  visualCharts?: {
-    aiAdoptionTrends: string[];
-    technologyBudgetAllocation: {
-      [key: string]: string;
-    };
-  };
+  // NOTE: The industry-trends read-path data props (executiveSummary, aiAdoption,
+  // cloudMigration, regulatory, trendSnapshots, recommendations, risks,
+  // regionalHotspots, visualCharts) and the section's companyProfile prop were
+  // removed here — the section now sources its server data exclusively from the
+  // useIndustryTrends hook (Phase 5g task 8). Orchestration + per-field change
+  // callbacks below are kept (the 5d upward-commit pattern).
   // Add individual field update functions
   onIndustryTrendsExecutiveSummaryChange?: (value: string) => void;
   onIndustryTrendsAiAdoptionChange?: (value: string) => void;

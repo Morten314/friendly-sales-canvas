@@ -110,7 +110,6 @@ type IntelligenceHookSlice = Pick<
   | "handleViewEditDetails"
   | "hasEdits"
   | "industryTrendsCustomMessage"
-  | "industryTrendsData"
   | "industryTrendsDeletedSections"
   | "industryTrendsEditHistory"
   | "industryTrendsExpanded"
@@ -193,7 +192,6 @@ const IntelligenceTab: React.FC<IntelligenceTabProps> = ({
   setMarketData,
   marketIntelligenceData,
   setMarketIntelligenceData,
-  industryTrendsData,
   currentUser,
   editHistory,
   editHistoryContext,
@@ -387,15 +385,10 @@ const IntelligenceTab: React.FC<IntelligenceTabProps> = ({
     industryTrendsHasEdits,
     industryTrendsDeletedSections,
     industryTrendsEditHistory,
-    industryTrendsExecutiveSummary: industryTrendsData?.executiveSummary,
-    industryTrendsAiAdoption: industryTrendsData?.aiAdoption,
-    industryTrendsCloudMigration: industryTrendsData?.cloudMigration,
-    industryTrendsRegulatory: industryTrendsData?.regulatory,
-    industryTrendSnapshots: industryTrendsData?.trendSnapshots,
-    industryTrendsRecommendations: industryTrendsData?.recommendations,
-    industryTrendsRisks: industryTrendsData?.risks,
-    industryTrendsRegionalHotspots: industryTrendsData?.regionalHotspots,
-    industryTrendsVisualCharts: industryTrendsData?.visualCharts,
+    // Industry-trends data slices are no longer threaded by the shell — the section
+    // sources its data via useIndustryTrends (Phase 5g task 8 step 6a). The page-level
+    // industryTrendsData fetch/cache slice in useMarketResearchData is retained
+    // (cascade producer for 5h) — see TD-FE entry.
     industryTrendsLastEditedField,
     // Competitor Landscape props - pass structured data
 

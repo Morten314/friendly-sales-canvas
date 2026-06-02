@@ -1004,3 +1004,21 @@ Either route the five write effects through `setUserLocalStorage(key, value, cur
 - A localStorage/caching cleanup pass or the 24i market-research phase-close sweep.
 
 **Owner:** TBD.
+
+---
+
+## TD-FE-27 — Industry-trends page-level fetch/state/cache slice retained in `useMarketResearchData.ts`
+
+**Date logged:** 2026-06-02
+**Origin:** Phase 5g Task 8 Step 6b (deferred).
+
+**Current state:**
+Industry-trends page-level fetch/state/cache slice retained in `useMarketResearchData.ts` — Phase 5g Task 8 Step 6b deferred. The section now sources its data via `useIndustryTrends` (5b), but the page-level slice is a cascade producer consumed downstream by 5h (market-size) through the `previousContext` chain; removing it before 5h is decomposed would hollow the cascade. The orphaned slice is tsc-safe internal state. Same posture as 5d/5e.
+
+**Why we deferred:**
+- The slice is cascade-coupled: it feeds 5h (market-size) via the sequential `previousContext` chain. Removing it before 5h is decomposed would hollow the cascade.
+
+**Pull-forward trigger:**
+- When 5h is decomposed (or the cascade is retired), remove the industry-trends slice from `useMarketResearchData.ts`; this also feeds 24i's zero-raw-fetch gate.
+
+**Owner:** TBD.
