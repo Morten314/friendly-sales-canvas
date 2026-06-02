@@ -926,3 +926,81 @@ Normalize the field in `ComplianceVisualCard` (e.g. `const chartType = card.type
 - When real `visualDataCards` need to render (pre-launch data-fidelity pass), or the 24i market-research phase-close sweep, or alongside any backend market-research contract typing work.
 
 **Owner:** TBD.
+
+---
+
+## TD-FE-24 — Regulatory default data duplicated across ~5 sites
+
+**Date logged:** 2026-06-02
+**Origin:** Plan 24e Phase 5e impl review round 1 (`docs/reviews/phase-5e-regulatory-compliance-impl-review-1.md`, finding #1) + synthesis round 1.
+
+**Current state:**
+The hardcoded fallback datasets in the regulatory feature are copy-pasted verbatim across multiple code sites:
+- Default **regional data** (EU/US/China/UK rows) and default **visual data cards** (Compliance Adoption Rates / Regulatory Timeline / Risk Indicators) appear in `RegulatoryComplianceSection.tsx` in three places — the render-time `regionalData`/`visualDataCards = regulatoryData?.* || [defaults]` derivations, inside `handleModify`, and inside the init `useEffect`.
+- Default **strategic recommendations** lists are hardcoded in `StrategicRecommendationsSection.tsx` non-editing fallbacks (the three `mitigateRegulatoryRisks`/`competitivePositioning`/`goToMarketStrategy` `<li>` blocks).
+A default change must be made in 3–5 places simultaneously. This is **pre-existing** (byte-identical to the `master` monolith) and was an explicit Plan 24e Task 2 scope decision (the plan considered lifting `deriveVisualDataCards`/`deriveRegionalData` into `regulatoryHelpers.ts` and declined, to keep the decomposition a pure structural move).
+
+**What it should be:**
+A single source for the defaults — a `regulatoryDefaults.ts` constants module (or `deriveVisualDataCards`/`deriveRegionalData`/`deriveStrategicRecommendations` in `regulatoryHelpers.ts`) consumed by every fallback site, with unit tests asserting the default shape.
+
+**Why we deferred:**
+- Pre-existing duplication, not introduced by 5e; consolidating it would be a behavior-touching change beyond 5e's byte-identical decomposition mandate (abort criterion 3).
+- Plan 24e Task 2 deliberately scoped it out.
+
+**What we lose by staying as-is:**
+- A maintenance trap: editing one default and missing the other 2–4 copies yields inconsistent fallbacks across edit/non-edit/init paths.
+
+**Pull-forward trigger:**
+- A defaults-consolidation follow-up, or the 24i market-research phase-close sweep, or whenever a regulatory default actually needs to change.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-25 — Read-only Strategic Recommendations ignores `localStrategicRecommendations` (state-coherence quirk)
+
+**Date logged:** 2026-06-02
+**Origin:** Plan 24e Phase 5e impl review round 1 (finding #2) + synthesis round 1.
+
+**Current state:**
+`StrategicRecommendationsSection.tsx` renders the three recommendation lists from `regulatoryData?.strategicRecommendations?.{mitigateRegulatoryRisks,competitivePositioning,goToMarketStrategy}` (or hardcoded fallbacks) in **non-editing** mode, and from `localStrategicRecommendations` only in **editing** mode. After a user edits the recommendations and exits edit mode, the read-only view can revert to the API/default data, visually discarding the local edits. This is **pre-existing** and byte-identical to the `master` monolith (verified: read-only read `regulatoryData?.strategicRecommendations?.X` at 3 sites; `localStrategicRecommendations` used only in the edit path). It is also **inconsistent** with `ExecutiveSummarySection`, which correctly falls back through `currentExecutiveSummary = localExecutiveSummary || regulatoryData?.executiveSummary || executiveSummary` in both modes.
+
+**Open question (resolve before fixing):** unlike the five editable string fields (which each have an `on*Change` parent callback), `localStrategicRecommendations` appears to have **no parent-bound change callback**, so strategic edits may never round-trip to the parent/API even via `handleRegulatoryComplianceSaveChanges`. This determines whether the correct fix is "read `localStrategicRecommendations` first in the read-only path" or "wire a persist callback so edits survive a real save+refetch" (or both).
+
+**What it should be:**
+Align the read-only fallback chain with `ExecutiveSummarySection` (`local* || regulatoryData?.* || defaults`), and/or wire strategic-recommendation edits to a parent callback so they persist.
+
+**Why we deferred:**
+- Pre-existing behavior; changing the read-only data source is a behavior change disallowed mid-decomposition (Plan 24e abort criterion 3 / byte-identical mandate).
+
+**What we lose by staying as-is:**
+- Edited strategic recommendations can silently disappear from the read-only view after save; the section behaves inconsistently with the sibling Executive Summary section.
+
+**Pull-forward trigger:**
+- Pre-launch data-fidelity pass (alongside TD-FE-23's `visualDataCards`/`chartType` gap — same theme), or the 24i sweep.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-26 — Dead non-user-scoped `localStorage` writes in RegulatoryComplianceSection
+
+**Date logged:** 2026-06-02
+**Origin:** Plan 24e Phase 5e impl review round 1 (finding #4) + synthesis round 1.
+
+**Current state:**
+The container runs five effects writing `localStorage.setItem("regulatory_executiveSummary"/"regulatory_euAiActDeadline"/…, value)` — **non-user-scoped** raw keys. But the `useState` initializers read these values via `getUserLocalStorage("regulatory_executiveSummary", currentUser?.uid)` — **user-scoped** keys (a different keyspace). The raw writes can therefore never be read back; they write to dead keys. (The JSON-blob writes for the Scout API at save time correctly use `setUserLocalStorage(..., currentUser?.uid)`.) This is **pre-existing** (5 occurrences on `master`), carried forward byte-identically by 5e.
+
+**What it should be:**
+Either route the five write effects through `setUserLocalStorage(key, value, currentUser?.uid)` (so they share the keyspace the initializers read), or delete them if the cache-rehydrate-on-mount behavior isn't wanted. Removing them is behavior-neutral (they're already dead).
+
+**Why we deferred:**
+- Pre-existing dead writes, not introduced by 5e; 5e carried the effects forward unchanged as part of the byte-identical decomposition.
+
+**What we lose by staying as-is:**
+- Misleading code (five effects that look like they persist editable fields but write to keys nothing reads); minor wasted writes on every edit keystroke.
+
+**Pull-forward trigger:**
+- A localStorage/caching cleanup pass or the 24i market-research phase-close sweep.
+
+**Owner:** TBD.
