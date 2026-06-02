@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Tool caches — incremental tsc (typecheck) + eslint --cache. Warm re-runs only
+# re-check changed files; safe to delete, regenerated on next run.
+.tsbuildinfo
+.eslintcache
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

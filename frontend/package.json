@@ -9,10 +9,13 @@
     "build:dev": "vite build --mode development",
     "bundle:check": "tsx scripts/check-bundle-budget.ts",
     "bundle:rebaseline": "vite build && tsx scripts/capture-bundle-baseline.ts",
-    "lint": "eslint . --max-warnings 0",
+    "lint": "eslint . --max-warnings 0 --cache",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "preflight": "npm run typecheck && npm run lint && npm run format:check && npm run test && npm run build && npm run bundle:check && npm run test:e2e && npx knip --strict --no-progress",
+    "knip": "knip --strict --no-progress",
+    "preflight": "npm run typecheck && npm run lint && npm run format:check && npm run test && npm run build && npm run bundle:check && npm run test:e2e && npm run knip",
+    "preflight:par": "node scripts/preflight.mjs",
+    "verify": "npm run typecheck && npm run lint && npm run test",
     "preview": "vite preview",
     "scaffold:feature": "tsx scripts/scaffold-feature.ts",
     "test": "vitest run",
@@ -22,7 +25,7 @@
     "test:e2e:update-snapshots": "playwright test --update-snapshots",
     "test:e2e:ui": "playwright test --ui",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json"
+    "typecheck": "tsc --noEmit -p tsconfig.app.json --incremental --tsBuildInfoFile ./.tsbuildinfo"
   },
   "engines": {
     "node": ">=21.2.0"

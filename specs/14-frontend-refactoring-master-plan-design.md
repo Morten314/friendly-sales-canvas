@@ -240,6 +240,41 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 | 13 | LOC reduction pass #2 (post-modularization audit) | Phase-L-proper. With strict types + tests + features in place, systematic per-file audit on the whole tree. Codemods extracted into `frontend/scripts/`. |
 | 14 | Agent affordances | Per-feature README backfill, ADR conventions consolidated, agent-callable scripts (feature scaffolder, codemod runner), preflight watchers (bundle, dead-code, stale-doc grep). Amend root `AGENTS.md`/`CLAUDE.md` only where the new structure makes existing guidance stale. |
 
+### Parallel execution protocol (Phases 6–12)
+
+> Forward-looking scheduling guidance for the feature-extraction stretch — not an amendment to any shipped phase's intent. Re-evaluate before kicking off (the preflight-speed work of 2026-06-02 already shifted the constraints once).
+
+Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / coupling points" blocks, the hard dependencies are:
+
+| Phase | Hard dependency | Why |
+|---|---|---|
+| 6 — mission-control | Phase 5 + foundation only | independent of 7–10 |
+| 7 — customers | **6** | consumes `mission-control/index.ts` ICP-CRUD surface |
+| 8 — signals + strategist | Phase 5 only | only *records* a dedup handoff for 9; doesn't modify 6/7 |
+| 9 — scout + profiler | **6, 7, and 8** | reads 6+7 Profiler-disposition sections + 8's chat-history handoff — the join point |
+| 10 — settings + tenant + auth | foundation only (3, 4b — done) | auth/tenant already in `shared/`; **fully independent of 6–9** |
+| 11 — shared utility extraction | **5–10 all done** | promotes utilities demonstrated used by ≥2 features — hard barrier |
+| 12 — small-pages sweep | independent leaf pages | not claimed by 5–10; must precede 11's empty-`pages/` check |
+
+**Critical path:** `5 → 6 → 7 → 9 → 11`. Everything else (8, 10, 12) folds into the gaps.
+
+**Concurrency cap: at most 3 phases in flight** (review bandwidth, not infra, is the ceiling). Suggested waves:
+
+| Wave | Concurrent (≤3) |
+|---|---|
+| 1 (after 5 merges) | 6 · 8 · 10 |
+| 2 | 7 · 12 |
+| 3 | 9 |
+| 4 | 11 |
+
+**Operating rules for concurrent sessions:**
+
+- **Inner loop = `npm run verify`** (typecheck + lint + test; bounded — vitest capped at 4 workers, incremental tsc, cached lint). Run this freely in every session.
+- **Do NOT run `npm run preflight:par` or standalone `npm run test:e2e` while another session is active** — the parallel/e2e path spikes CPU and flakes the visual-regression snapshots under concurrent load, and the e2e preview server binds a shared `:5173` (`reuseExistingServer` → wrong-build false results). See `docs/TECH_DEBT.md` TD-FE-29.
+- **Merge gate = serial `npm run preflight` (with e2e), one branch at a time, controller-run** — this is the existing merge ceremony (root `CLAUDE.md` §AI-native flow) and is what keeps the e2e contention from ever materializing.
+- **Integration via merge, not rebase** — refresh a branch with `git merge master`; land it with a `--no-ff` merge commit (the repo's existing `Merge phase-…` pattern). No history rewrite, no force-push.
+- **Per-feature route registry** — to avoid every phase editing `App.tsx`'s `<Routes>` table (a guaranteed parallel-merge conflict), each feature exposes its routes from its own `routes.tsx`/`index.ts` and a thin `src/app/routes.tsx` composes them (append-only). Land this as the **first enabling task of the Phase 6 plan** (after 5h/5i stabilize market-research's `index.ts`), not earlier; document the convention in `src/features/README.md`.
+
 ### Phase 0 — Inventory + full safety net
 
 **Mission:** establish the audit baseline and the safety net that every subsequent phase relies on.

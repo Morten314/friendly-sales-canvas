@@ -40,9 +40,11 @@ for s in market-entry regulatory-compliance competitor-landscape industry-trends
 done
 test ! -f src/features/market-research/components/MarketIntelligenceTabProps.ts && echo "OK: MarketIntelligenceTabProps deleted (5h)" || echo "STOP: prop interface still present — finish 5h"
 grep -rn 'MarketIntelligenceTabProps' src && echo "STOP: prop interface still imported" || echo "OK: no MarketIntelligenceTabProps importers"
-grep -rn 'fetch(' src/features/market-research && echo "STOP: raw fetch in feature (5b/5c gap)" || echo "OK: no raw fetch in feature"
+# Informational only here — the hard zero-raw-fetch gate is at phase close (Task 4 Step 3, per spec §11).
+# This may legitimately still match useMarketResearchData.ts if 5h *deferred* its slice removal (24h abort-3 fallback) — see Task 4.
+grep -rn 'fetch(' src/features/market-research && echo "INFO: raw fetch still present — must be zero by Task 4 (confirm 5h removed, not deferred, its slice)" || echo "OK: no raw fetch in feature"
 ```
-Expected: all OK; the two `STOP` greps print nothing. If any section dir is missing or the prop interface survives, the corresponding sub-phase is incomplete (abort 1/3).
+Expected: all OK; the `MarketIntelligenceTabProps` `STOP` grep prints nothing. If any section dir is missing or the prop interface survives, the corresponding sub-phase is incomplete (abort 1/3). The `fetch(` line is **informational** — a non-empty result is not an abort here, but it must reach zero by Task 4 (if it does not, 5h deferred its slice removal and 24i must remove it — see Task 4 Step 3).
 
 - [ ] **Step 3: Green baseline** — `cd frontend && npm run preflight`. RED before any change → STOP (abort 2).
 
@@ -74,9 +76,8 @@ The likely surface: the research-report types from `contracts.ts` (`ResearchComp
 // Cross-feature consumers (signals, Phase 8) import from "@/features/market-research", never a deep path.
 export type { ResearchComponentResponse } from "./contracts";
 export { useResearchComponent } from "./hooks/useMarketResearch";
-// Add the report/result type signals actually consumes once Phase 8's need is known.
 ```
-Adjust the exported set to the real surface (do not over-export internals; the dependency-lint forbids deep cross-feature imports, so anything a consumer needs must be here).
+**`index.ts` exports only what exists now — it is complete at this commit, not a stub with a deferred TODO** (matches spec §7 / Task 4 DoD item 1 "index.ts complete"). Do **not** leave an "add the type signals will consume later" comment in the file: Phase 8 adds its required export when its need is known, via its own change. If a genuinely-anticipated-but-currently-unconsumed export *must* ship now (e.g. to lock the surface), that is the TD-FE path of Step 4 (logged, not a bare TODO), not an open comment. Adjust the exported set to the real surface (do not over-export internals; the dependency-lint forbids deep cross-feature imports, so anything a consumer needs must be here).
 
 - [ ] **Step 4: Green (incl. knip + react-refresh) + commit**
 ```bash
@@ -107,14 +108,16 @@ cd /projects/Brewra/brewra-gtm-intelligence/frontend
 echo "=== still-leaving components ==="; ls -R src/components/market-research
 echo "=== each carries a HANDOFF marker ==="; grep -rL 'HANDOFF →' src/components/market-research --include=*.ts --include=*.tsx
 ```
-Expected: only leaving components remain (StrategistWorkspace → strategist; `lead-stream/*` incl. the 5c-extracted `LeadStreamTab` → customers; ScoutChatPanel/ChatWithScout → scout; the confirmed `Scout*` cluster → scout); every file carries a `HANDOFF →` marker. Write the table to match the live dir (LOC per the §1.2 anchor):
+Expected: only leaving components remain (StrategistWorkspace → strategist; `lead-stream/*` incl. the 5c-extracted `LeadStreamTab` → customers; `EditDropdownMenu` → customers; ScoutChatPanel/ChatWithScout → scout; the `Scout*` config cluster → scout; `AddLeadModal`/`SuggestedCompaniesSection` → scout); every file carries a `HANDOFF →` marker. **`ScoutCapabilities.tsx` is NOT a leaver — it is `// DEAD CODE` (zero importers, deleted in Task 3); do not list it here.** Write the table to match the live dir (the example below is the current authoritative set, confirmed against `README.md` + importer traces; LOC per the §1.2 anchor):
 
 | Component(s) (in `src/components/market-research/`) | Target feature | Claiming phase |
 |---|---|---|
 | `StrategistWorkspace.tsx` | strategist | per naming map |
-| `lead-stream/*` (`LeadsTable`, `leadData`, `OpportunityDashboard`, `LeadStreamTab`) | customers | 7 |
+| `lead-stream/*` (`LeadsTable`, `leadData`, `OpportunityDashboard`) incl. the 5c-extracted `LeadStreamTab` | customers | 7 |
+| `EditDropdownMenu.tsx` (sole importer `customers/SuggestedICPCards`) | customers | 7 |
 | `ScoutChatPanel.tsx`, `ChatWithScout.tsx` | scout | per naming map |
-| `Scout*` cluster (`ScoutSettingsForm`, `ScoutDeploymentDetails`, `ScoutLeadStream`, `ScoutCapabilities`) | scout | per naming map |
+| `Scout*` config cluster (`ScoutSettingsForm`, `ScoutDeploymentDetails`, `ScoutLeadStream`) | scout | per naming map |
+| `AddLeadModal.tsx`, `SuggestedCompaniesSection.tsx` (sole importer `signals/ScoutChatWithHistory`) | scout | per naming map |
 
 > The dir is **deleted once empty** (≤ Phase 9) — that deletion is the claiming phases' job, not 5i's.
 
@@ -136,7 +139,7 @@ git commit -m "docs(fe): backfill market-research README (public surface, key fi
 **Files:**
 - Possibly delete: dead modules/exports the sweep surfaces inside the feature.
 
-> Spec 24 §7, §11. The first-time decomposition (5c–5h) may leave orphaned helpers, unused exports, or a stray `Safe*` wrapper. Sweep them — but distinguish a removable leftover from a missed handoff or a real consumer.
+> Spec 24 §7, §11. Two removal duties: (a) the first-time decomposition (5c–5h) may leave orphaned helpers, unused exports, or a stray `Safe*` wrapper inside the feature; and (b) the 8 `// DEAD CODE → delete in 5i` files in the legacy `src/components/market-research/` dir are 5i's to delete (spec §7 done-when: zero `// DEAD CODE` annotations remain). Sweep both — but distinguish a removable leftover / annotated dead file from a missed handoff or a real consumer.
 
 - [ ] **Step 1: Run the strict sweep**
 ```bash
@@ -146,7 +149,8 @@ npx knip --strict --no-progress
 
 - [ ] **Step 2: Triage each finding**
 - **Dead leftover** inside `src/features/market-research/` (an export nothing imports, a helper orphaned by decomposition) → delete it; re-run knip.
-- **A leaving component flagged** (in `src/components/market-research/`) → do **not** delete; it is consumed by the page's transitional render or awaits its claiming phase. If knip flags it as unused, confirm the page/tab still renders it; if genuinely now-unrendered, that is a finding for the claiming phase — note it, don't delete (abort 4).
+- **A `// DEAD CODE`-annotated legacy file** in `src/components/market-research/` (zero live importers, no target feature per spec §7) → **delete it.** These are 5i's explicit responsibility: the 8 files annotated `// DEAD CODE → delete in 5i` (currently `CompetitorAnalysis`, `CompetitorAnalysisDrawer`, `ComponentStatusLoadingScreen`, `DataHistoryDialog`, `EmergingTrends`, `EmergingTrendsDrawer`, `RecentMarketResearch`, `ScoutCapabilities` — verify the live set with `grep -rln 'DEAD CODE' src/components/market-research`). Spec §7 done-when requires **zero `// DEAD CODE` annotations remain**. Delete each; re-run knip + the importer grep to confirm nothing referenced them.
+- **A leaving component flagged** (in `src/components/market-research/`, carrying a `HANDOFF →` marker — distinct from `DEAD CODE` above) → do **not** delete; it is consumed by the page's transitional render or awaits its claiming phase. If knip flags it as unused, confirm the page/tab still renders it; if genuinely now-unrendered, that is a finding for the claiming phase — note it, don't delete (abort 4).
 - **An anticipated-but-unconsumed `index.ts` export** (Task 1) → handle per Task 1 Step 4 (keep minimal; TD-FE if it must stay), not by deleting a real intended surface.
 
 - [ ] **Step 3: Green + commit (only if something was removed)**
@@ -157,9 +161,9 @@ npm run lint && npx tsc --noEmit -p tsconfig.app.json && npx knip --strict --no-
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
 git add -A frontend/src
-git commit -m "chore(fe): dead-code sweep within market-research feature (knip --strict clean)"
+git commit -m "chore(fe): delete market-research dead code (8 legacy DEAD CODE files + knip --strict clean)"
 ```
-(If the sweep found nothing removable, skip the commit — record that knip was already clean.)
+(The 8 annotated legacy dead files are always removed here; if the in-feature sweep additionally found nothing, the commit still stands for the legacy deletions. Record knip's final clean state either way.)
 
 ---
 
@@ -183,11 +187,16 @@ git commit -m "chore(fe): dead-code sweep within market-research feature (knip -
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/frontend
 npm run preflight
+# Hard zero-raw-fetch / zero-localStorage-cache gate (spec §11 places it at phase close, not Task 0):
+grep -rn 'fetch(' src/features/market-research && echo "STOP: raw fetch remains in feature" || echo "OK: zero raw fetch"
+grep -rn 'CACHE_DURATION\|localStorage' src/features/market-research && echo "STOP: cache machinery remains" || echo "OK: no localStorage cache"
 ```
+> **If the `fetch(`/cache grep is non-empty**, 5h *deferred* its `useMarketResearchData()` market-size slice removal to 5i (the 24h abort-3 documented-deferral fallback). 5i must then complete that removal *here* before the gate passes: source the section's display data from `useMarketSize`/5b, drop or migrate the cascade/timestamp/edit-history per spec §6, delete the slice, and re-run the grep. This is the only behavior-bearing work 5i may inherit; if it is more than a slice removal, STOP and escalate (it means 5d–5h left more than one slice — see §9 systemic note).
+>
 Confirm each (spec §11):
 1. `src/features/market-research/` holds page + tab router + decomposed sections + hooks/services + `contracts.ts` + `types.ts` + `README.md` + `index.ts`.
-2. `src/pages/MarketResearch.tsx` gone; only annotated leaving components remain in `src/components/market-research/`.
-3. Data layer is TanStack (memory-only); no raw `fetch`/localStorage cache in the feature.
+2. `src/pages/MarketResearch.tsx` gone; only `HANDOFF →`-annotated leaving components remain in `src/components/market-research/` — **zero `// DEAD CODE` annotations** (`grep -rn 'DEAD CODE' src/components/market-research` prints nothing; Task 3 deleted all 8).
+3. Data layer is TanStack (memory-only); no raw `fetch`/localStorage cache in the feature (the grep gate above is green).
 4. Routes resolve to the feature; URLs unchanged.
 5. Vitest + RTL coverage for logic-bearing units; `journeys/04` green; `npm run preflight` green.
 6. Both ADRs (0003 feature-local contracts; 0004 memory-only cache) merged.
@@ -207,7 +216,7 @@ Then `/review-impl` → `/synthesize-impl-review` (5i is mechanical/confirmatory
 
 ## Self-review notes (plan author)
 
-- **Spec coverage:** §7 index.ts + README + handoff table + dead-code sweep (Tasks 1–3); §2.2 anticipated surface + surface-extraction restructure (Task 1); §9 all deltas incl. phase-number reconciliation + Phase-13 boundary (Task 4); §11 phase Definition-of-done (Task 4 Step 3); §13 final `index.ts` surface locked here informed by Phase 8.
-- **Guards:** `MarketIntelligenceTabProps` deletion is 5h's job — 5i only *confirms* it (abort 3); the knip sweep distinguishes removable leftovers from leaving components / anticipated surface (abort 4), and avoids `knip.json` edits (prefer minimal surface or a TD-FE).
+- **Spec coverage:** §7 index.ts + README + authoritative handoff table (6 live leaver rows; `ScoutCapabilities` excluded as dead) + dead-code sweep incl. deletion of the 8 `// DEAD CODE` legacy files so zero annotations remain (Tasks 1–3); §2.2 anticipated surface + surface-extraction restructure (Task 1); §9 all deltas incl. phase-number reconciliation + Phase-13 boundary (Task 4); §11 phase Definition-of-done incl. the hard zero-raw-`fetch`/zero-cache gate placed at phase close (Task 4 Step 3, not Task 0); §13 final `index.ts` surface locked here informed by Phase 8.
+- **Guards:** `MarketIntelligenceTabProps` deletion is 5h's job — 5i only *confirms* it (abort 3); the knip sweep distinguishes removable leftovers / annotated dead files from `HANDOFF →` leaving components / anticipated surface (abort 4), and avoids `knip.json` edits (prefer minimal surface or a TD-FE). `index.ts` is complete-at-commit (no deferred-TODO comment). The Task 0 `fetch(` grep is informational; the hard gate is Task 4 — and if 5h *deferred* its slice removal, Task 4 Step 3 inherits and completes that one slice removal before the gate passes (escalate if it is more than one slice).
 - **Visual guard:** behavioral E2E + Vitest only (no MR pixel VR) — consistent across 5a–5i; the post-Phase-5 MR-VR re-establishment remains the 5a-logged TD-FE.
 - **Handoff:** the table is the authoritative input for Phases 7/8/9; the empty-dir deletion (≤ Phase 9) is the claiming phases' job, not 5i's.
