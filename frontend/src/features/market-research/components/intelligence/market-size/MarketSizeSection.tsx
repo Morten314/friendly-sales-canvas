@@ -29,15 +29,6 @@ interface MarketSizeSectionProps {
   hasEdits: boolean;
   deletedSections: Set<string>;
   editHistory: EditRecord[];
-  executiveSummary: string;
-  tamValue: string;
-  samValue: string;
-  GrowthRate: string;
-  strategicRecommendations: string[];
-  marketEntry: string;
-  marketDrivers: string[];
-  marketSizeBySegment?: Record<string, string>;
-  growthProjections?: Record<string, string>;
   onToggleEdit: () => void;
   onScoutIconClick: (
     context?: "market-size" | "industry-trends" | "competitor-landscape",
@@ -77,15 +68,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   hasEdits: _hasEdits,
   deletedSections,
   editHistory,
-  executiveSummary,
-  tamValue,
-  samValue,
-  GrowthRate,
-  strategicRecommendations,
-  marketEntry,
-  marketDrivers,
-  marketSizeBySegment,
-  growthProjections,
   onToggleEdit,
   onScoutIconClick,
   onEditHistoryOpen,
@@ -119,37 +101,36 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   // Track if we just cleared due to user switch (to prevent immediate sync with stale props)
   const justClearedRef = useRef<boolean>(false);
 
-  // Derived display view: hook data with the drilled prop as fallback (parity
-  // bridge — a later task drops the prop fallback). Nullish arrays/records are
-  // coerced to []/{} to match the existing JSX defaults.
+  // Derived display view: all data sourced from the useMarketSize hook. Nullish
+  // arrays/records are coerced to []/{} to match the existing JSX defaults.
   const view = {
-    executiveSummary: marketSize.data?.executiveSummary ?? executiveSummary ?? "",
-    tamValue: marketSize.data?.tamValue ?? tamValue ?? "",
-    samValue: marketSize.data?.samValue ?? samValue ?? "",
-    GrowthRate: marketSize.data?.GrowthRate ?? GrowthRate ?? "",
-    strategicRecommendations:
-      marketSize.data?.strategicRecommendations ?? strategicRecommendations ?? [],
-    marketEntry: marketSize.data?.marketEntry ?? marketEntry ?? "",
-    marketDrivers: marketSize.data?.marketDrivers ?? marketDrivers ?? [],
-    marketSizeBySegment: marketSize.data?.marketSizeBySegment ?? marketSizeBySegment ?? {},
-    growthProjections: marketSize.data?.growthProjections ?? growthProjections ?? {},
+    executiveSummary: marketSize.data?.executiveSummary ?? "",
+    tamValue: marketSize.data?.tamValue ?? "",
+    samValue: marketSize.data?.samValue ?? "",
+    GrowthRate: marketSize.data?.GrowthRate ?? "",
+    strategicRecommendations: marketSize.data?.strategicRecommendations ?? [],
+    marketEntry: marketSize.data?.marketEntry ?? "",
+    marketDrivers: marketSize.data?.marketDrivers ?? [],
+    marketSizeBySegment: marketSize.data?.marketSizeBySegment ?? {},
+    growthProjections: marketSize.data?.growthProjections ?? {},
   };
 
-  // Local editing state for inline editing - initialize once and keep values
-  const [localExecutiveSummary, setLocalExecutiveSummary] = useState(executiveSummary || "");
-  const [localTamValue, setLocalTamValue] = useState(tamValue || "");
-  const [localSamValue, setLocalSamValue] = useState(samValue || "");
-  const [localGrowthRate, setLocalGrowthRate] = useState(GrowthRate || "");
-  const [localMarketEntry, setLocalMarketEntry] = useState(marketEntry || "");
+  // Local editing state for inline editing - seeded from the hook view (data is
+  // sourced from useMarketSize; the prop-sync effect below keeps these current).
+  const [localExecutiveSummary, setLocalExecutiveSummary] = useState(view.executiveSummary || "");
+  const [localTamValue, setLocalTamValue] = useState(view.tamValue || "");
+  const [localSamValue, setLocalSamValue] = useState(view.samValue || "");
+  const [localGrowthRate, setLocalGrowthRate] = useState(view.GrowthRate || "");
+  const [localMarketEntry, setLocalMarketEntry] = useState(view.marketEntry || "");
   const [localStrategicRecommendations, setLocalStrategicRecommendations] = useState<string[]>(
-    strategicRecommendations || [],
+    view.strategicRecommendations || [],
   );
-  const [localMarketDrivers, setLocalMarketDrivers] = useState<string[]>(marketDrivers || []);
+  const [localMarketDrivers, setLocalMarketDrivers] = useState<string[]>(view.marketDrivers || []);
   const [localMarketSizeBySegment, setLocalMarketSizeBySegment] = useState<Record<string, string>>(
-    marketSizeBySegment || {},
+    view.marketSizeBySegment || {},
   );
   const [localGrowthProjections, setLocalGrowthProjections] = useState<Record<string, string>>(
-    growthProjections || {},
+    view.growthProjections || {},
   );
 
   // Track if we just saved to prevent useEffect from overwriting our changes
@@ -329,17 +310,17 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
 
   const handleSave = async () => {
     try {
-      // Prepare original and modified data
+      // Prepare original and modified data (original = current hook view)
       const originalData = {
-        executiveSummary,
-        tamValue,
-        samValue,
-        GrowthRate,
-        marketEntry,
-        strategicRecommendations,
-        marketDrivers,
-        marketSizeBySegment: marketSizeBySegment || {},
-        growthProjections: growthProjections || {},
+        executiveSummary: view.executiveSummary,
+        tamValue: view.tamValue,
+        samValue: view.samValue,
+        GrowthRate: view.GrowthRate,
+        marketEntry: view.marketEntry,
+        strategicRecommendations: view.strategicRecommendations,
+        marketDrivers: view.marketDrivers,
+        marketSizeBySegment: view.marketSizeBySegment || {},
+        growthProjections: view.growthProjections || {},
       };
 
       const modifiedData = {
