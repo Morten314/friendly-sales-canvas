@@ -7,6 +7,7 @@ import { ExportFooter } from "./ExportFooter";
 import { KeyMetrics } from "./KeyMetrics";
 import { SectionHeader } from "./SectionHeader";
 import { ErrorState, LoadingState, NoDataState } from "./states";
+import { TrendSnapshots } from "./TrendSnapshots";
 import type {
   EditRecord,
   TrendSnapshot,
@@ -730,90 +731,15 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           />
 
           {/* Trend Snapshots Edit */}
-          {!normalizedDeletedSections.has("trend-snapshots") && (
-            <div className="relative group">
-              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleSaveTrendSnapshots}
-                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
-                      title="Commit changes"
-                    >
-                      <Check className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Commit changes</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onIndustryTrendsDeleteSection("trend-snapshots")}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50 pointer-events-auto z-50"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Delete this section</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Trend Snapshots</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {editTrendSnapshots?.map((trend, index) => (
-                    <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
-                      <div className="mb-3">
-                        <Label
-                          htmlFor={`trendTitle-${index}`}
-                          className="text-sm font-medium text-gray-700 mb-1 block"
-                        >
-                          Title
-                        </Label>
-                        <Input
-                          id={`trendTitle-${index}`}
-                          value={trend.title}
-                          onChange={(e) => {
-                            const updated = [...editTrendSnapshots];
-                            updated[index] = { ...trend, title: e.target.value };
-                            setEditTrendSnapshots(updated);
-                          }}
-                          className="font-medium text-gray-900"
-                          placeholder="Trend title"
-                        />
-                      </div>
-                      <div>
-                        <Label
-                          htmlFor={`trendMetric-${index}`}
-                          className="text-sm font-medium text-gray-700 mb-1 block"
-                        >
-                          Metric
-                        </Label>
-                        <Input
-                          id={`trendMetric-${index}`}
-                          value={trend.metric}
-                          onChange={(e) => {
-                            const updated = [...editTrendSnapshots];
-                            updated[index] = { ...trend, metric: e.target.value };
-                            setEditTrendSnapshots(updated);
-                          }}
-                          className="text-sm text-gray-600"
-                          placeholder="Trend metric"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+          <TrendSnapshots
+            editing
+            deleted={normalizedDeletedSections.has("trend-snapshots")}
+            snapshots={propTrendSnapshots || industryTrendsData?.trendSnapshots || []}
+            draft={editTrendSnapshots}
+            onChange={setEditTrendSnapshots}
+            onCommit={handleSaveTrendSnapshots}
+            onDelete={() => onIndustryTrendsDeleteSection("trend-snapshots")}
+          />
 
           {/* Regional Hotspots Edit */}
           {!normalizedDeletedSections.has("regional-hotspots") && (
@@ -1332,20 +1258,15 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
             <div className="animate-fade-in space-y-8">
               <div className="border-t pt-6">
                 {/* Key Trend Snapshots */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Trend Snapshots</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {(propTrendSnapshots || industryTrendsData?.trendSnapshots)?.map(
-                      (trend, index) => (
-                        <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
-                          <h4 className="font-medium text-gray-900 mb-2">{trend.title}</h4>
-                          <p className="text-sm text-gray-600 mb-3">{trend.metric}</p>
-                          <div className="h-8 bg-gradient-to-r from-purple-100 to-blue-100 rounded"></div>
-                        </div>
-                      ),
-                    ) || <p className="text-gray-500">No trend snapshots available</p>}
-                  </div>
-                </div>
+                <TrendSnapshots
+                  editing={false}
+                  deleted={false}
+                  snapshots={propTrendSnapshots || industryTrendsData?.trendSnapshots || []}
+                  draft={editTrendSnapshots}
+                  onChange={setEditTrendSnapshots}
+                  onCommit={handleSaveTrendSnapshots}
+                  onDelete={() => onIndustryTrendsDeleteSection("trend-snapshots")}
+                />
 
                 {/* Regional Hotspots */}
                 <div className="mb-8">
