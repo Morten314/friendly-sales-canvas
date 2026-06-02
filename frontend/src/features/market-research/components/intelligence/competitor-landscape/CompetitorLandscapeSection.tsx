@@ -14,6 +14,20 @@ import {
 } from "lucide-react";
 import React, { useState, useEffect, useRef, useReducer } from "react";
 
+import {
+  normalizeUiComponents,
+  extractDataPoints,
+  extractCompetitorTags,
+  extractRegions,
+  extractSwotEntities,
+  extractHeadlines,
+  extractFeatures,
+  extractTools,
+  extractMnaInsights,
+  extractTrendCharts,
+  extractMetrics,
+  generateTrendData,
+} from "./competitorUiComponents";
 import type {
   CompetitorLandscapeSectionProps,
   DataPoint,
@@ -24,6 +38,7 @@ import type {
   TrendChart,
   UntypedBackendApiResponse,
 } from "./types";
+
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -98,25 +113,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   // Use local error if available, otherwise use prop error
   const displayError = localError || error;
 
-  // Helper function to normalize uiComponents
-  const normalizeUiComponents = (
-    components: UntypedBackendApiResponse[],
-  ): UntypedBackendApiResponse[] => {
-    if (!Array.isArray(components)) return [];
-    return components
-      .map((comp: UntypedBackendApiResponse) => {
-        if (typeof comp === "string") {
-          try {
-            return JSON.parse(comp);
-          } catch (_e) {
-            return null;
-          }
-        }
-        return comp;
-      })
-      .filter((comp: UntypedBackendApiResponse) => comp !== null);
-  };
-
   // Extract uiComponents data
   const normalizedComponents = competitorData?.uiComponents
     ? normalizeUiComponents(competitorData.uiComponents)
@@ -150,108 +146,42 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
   // Local state for all uiComponents data
   const [localDataPoints, setLocalDataPoints] = useState<DataPoint[]>(
-    () => {
-      const reportComponent = normalizedComponents.find(
-        (comp: UntypedBackendApiResponse) => comp?.type === "report",
-      );
-      return reportComponent?.dataPoints || [];
-    },
+    () => extractDataPoints(normalizedComponents),
   );
-  const [localCompetitors, setLocalCompetitors] = useState<string[]>(() => {
-    const sectionComponent = normalizedComponents.find(
-      (comp: UntypedBackendApiResponse) => comp?.type === "section",
-    );
-    return sectionComponent?.tags || [];
-  });
-  const [localRegions, setLocalRegions] = useState<RegionShare[]>(() => {
-    const marketShareComponent = normalizedComponents.find(
-      (comp: UntypedBackendApiResponse) => comp?.type === "marketShareCharts",
-    );
-    return marketShareComponent?.regions || [];
-  });
-  const [localEntities, setLocalEntities] = useState<SwotEntity[]>(() => {
-    const swotComponent = normalizedComponents.find(
-      (comp: UntypedBackendApiResponse) => comp?.type === "swotAnalysis",
-    );
-    const entities = swotComponent?.entities || [];
-    // Ensure backward compatibility by adding opportunities and threats if missing
-    return entities.map(
-      (entity: SwotEntity) => ({
-        ...entity,
-        opportunities: entity.opportunities || [],
-        threats: entity.threats || [],
-      }),
-    );
-  });
+  const [localCompetitors, setLocalCompetitors] = useState<string[]>(
+    () => extractCompetitorTags(normalizedComponents),
+  );
+  const [localRegions, setLocalRegions] = useState<RegionShare[]>(
+    () => extractRegions(normalizedComponents),
+  );
+  const [localEntities, setLocalEntities] = useState<SwotEntity[]>(
+    () => extractSwotEntities(normalizedComponents),
+  );
   const [localHeadlines, setLocalHeadlines] = useState<string[]>(() => {
-    const newsComponent = normalizedComponents.find(
-      (comp: UntypedBackendApiResponse) => comp?.type === "news",
-    );
-    const apiHeadlines = newsComponent?.headlines;
-    return apiHeadlines && apiHeadlines.length > 0
-      ? apiHeadlines
-      : competitorData?.fundingNews && competitorData.fundingNews.length > 0
+    return (
+      extractHeadlines(normalizedComponents) ??
+      (competitorData?.fundingNews && competitorData.fundingNews.length > 0
         ? competitorData.fundingNews
         : fundingNews && fundingNews.length > 0
           ? fundingNews
-          : [];
-  });
-  const [localFeatures, setLocalFeatures] = useState<string[]>(() => {
-    const featureComponent = normalizedComponents.find(
-      (comp: UntypedBackendApiResponse) => comp?.type === "featureComparison",
+          : [])
     );
-    return featureComponent?.features || [];
   });
-  const [localTools, setLocalTools] = useState<Record<string, string[]>>(() => {
-    const featureComponent = normalizedComponents.find(
-      (comp: UntypedBackendApiResponse) => comp?.type === "featureComparison",
-    );
-    return featureComponent?.tools || {};
-  });
+  const [localFeatures, setLocalFeatures] = useState<string[]>(
+    () => extractFeatures(normalizedComponents),
+  );
+  const [localTools, setLocalTools] = useState<Record<string, string[]>>(
+    () => extractTools(normalizedComponents),
+  );
   const [localInsights, setLocalInsights] = useState<MnaInsight[]>(
-    () => {
-      const mnaComponent = normalizedComponents.find(
-        (comp: UntypedBackendApiResponse) => comp?.type === "mnaInsights",
-      );
-      let insights = mnaComponent?.insights;
-      if (typeof insights === "string") {
-        try {
-          insights = JSON.parse(insights);
-        } catch (_e) {
-          insights = null;
-        }
-      }
-      if (!insights || !Array.isArray(insights)) return [];
-      return insights
-        .map((insight: UntypedBackendApiResponse) => {
-          if (typeof insight === "string") {
-            try {
-              return JSON.parse(insight);
-            } catch (_e) {
-              return null;
-            }
-          }
-          return insight;
-        })
-        .filter(
-          (insight: UntypedBackendApiResponse) => insight && (insight.label || insight.description),
-        );
-    },
+    () => extractMnaInsights(normalizedComponents),
   );
   const [localCharts, setLocalCharts] = useState<TrendChart[]>(
-    () => {
-      const trendsComponent = normalizedComponents.find(
-        (comp: UntypedBackendApiResponse) => comp?.type === "marketTrends",
-      );
-      return trendsComponent?.charts || [];
-    },
+    () => extractTrendCharts(normalizedComponents),
   );
-  const [localMetrics, setLocalMetrics] = useState<Metric[]>(() => {
-    const sectionComponent = normalizedComponents.find(
-      (comp: UntypedBackendApiResponse) => comp?.type === "section",
-    );
-    return sectionComponent?.metrics || [];
-  });
+  const [localMetrics, setLocalMetrics] = useState<Metric[]>(
+    () => extractMetrics(normalizedComponents),
+  );
 
   // Track if we just saved to prevent useEffect from overwriting our changes
   const justSavedRef = useRef(false);
@@ -375,84 +305,52 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       const normalized = competitorData?.uiComponents
         ? normalizeUiComponents(competitorData.uiComponents)
         : [];
-      const reportComponent = normalized.find(
-        (comp: UntypedBackendApiResponse) => comp?.type === "report",
-      );
-      const sectionComponent = normalized.find(
-        (comp: UntypedBackendApiResponse) => comp?.type === "section",
-      );
-      const marketShareComponent = normalized.find(
-        (comp: UntypedBackendApiResponse) => comp?.type === "marketShareCharts",
-      );
-      const swotComponent = normalized.find(
+
+      const syncedDataPoints = extractDataPoints(normalized);
+      if (syncedDataPoints.length > 0) setLocalDataPoints(syncedDataPoints);
+
+      const syncedTags = extractCompetitorTags(normalized);
+      if (syncedTags.length > 0) setLocalCompetitors(syncedTags);
+
+      const syncedRegions = extractRegions(normalized);
+      if (syncedRegions.length > 0) setLocalRegions(syncedRegions);
+
+      const syncedEntities = extractSwotEntities(normalized);
+      // extractSwotEntities returns [] when no swotAnalysis component, and a non-empty
+      // array (with backfilled opportunities/threats) when the component is present.
+      // Mirror the original guard: only set when the source component had entities.
+      const hasSwotComponent = normalized.some(
         (comp: UntypedBackendApiResponse) => comp?.type === "swotAnalysis",
       );
-      const newsComponent = normalized.find(
-        (comp: UntypedBackendApiResponse) => comp?.type === "news",
-      );
-      const featureComponent = normalized.find(
-        (comp: UntypedBackendApiResponse) => comp?.type === "featureComparison",
-      );
-      const mnaComponent = normalized.find(
-        (comp: UntypedBackendApiResponse) => comp?.type === "mnaInsights",
-      );
-      const trendsComponent = normalized.find(
-        (comp: UntypedBackendApiResponse) => comp?.type === "marketTrends",
-      );
+      if (hasSwotComponent) setLocalEntities(syncedEntities);
 
-      if (reportComponent?.dataPoints) setLocalDataPoints(reportComponent.dataPoints);
-      if (sectionComponent?.tags) setLocalCompetitors(sectionComponent.tags);
-      if (marketShareComponent?.regions) setLocalRegions(marketShareComponent.regions);
-      if (swotComponent?.entities) {
-        // Ensure backward compatibility by adding opportunities and threats if missing
-        const normalizedEntities = swotComponent.entities.map(
-          (entity: UntypedBackendApiResponse) => ({
-            ...entity,
-            opportunities: entity.opportunities || [],
-            threats: entity.threats || [],
-          }),
-        );
-        setLocalEntities(normalizedEntities);
-      }
-      if (newsComponent?.headlines) {
-        setLocalHeadlines(newsComponent.headlines);
+      const syncedHeadlines = extractHeadlines(normalized);
+      if (syncedHeadlines !== null) {
+        setLocalHeadlines(syncedHeadlines);
       } else if (competitorData?.fundingNews) {
         setLocalHeadlines(competitorData.fundingNews);
       } else if (fundingNews) {
         setLocalHeadlines(fundingNews);
       }
-      if (featureComponent?.features) setLocalFeatures(featureComponent.features);
-      if (featureComponent?.tools) setLocalTools(featureComponent.tools);
-      if (mnaComponent?.insights) {
-        let insights = mnaComponent.insights;
-        if (typeof insights === "string") {
-          try {
-            insights = JSON.parse(insights);
-          } catch (_e) {
-            insights = null;
-          }
-        }
-        if (insights && Array.isArray(insights)) {
-          const validInsights = insights
-            .map((insight: UntypedBackendApiResponse) => {
-              if (typeof insight === "string") {
-                try {
-                  return JSON.parse(insight);
-                } catch (_e) {
-                  return null;
-                }
-              }
-              return insight;
-            })
-            .filter(
-              (insight: UntypedBackendApiResponse) =>
-                insight && (insight.label || insight.description),
-            );
-          setLocalInsights(validInsights);
-        }
-      }
-      if (trendsComponent?.charts) setLocalCharts(trendsComponent.charts);
-      if (sectionComponent?.metrics) setLocalMetrics(sectionComponent.metrics);
+
+      const syncedFeatures = extractFeatures(normalized);
+      if (syncedFeatures.length > 0) setLocalFeatures(syncedFeatures);
+
+      const syncedTools = extractTools(normalized);
+      if (Object.keys(syncedTools).length > 0) setLocalTools(syncedTools);
+
+      const syncedInsights = extractMnaInsights(normalized);
+      // Mirror original guard: only set when the source component had insights.
+      const hasMnaComponent = normalized.some(
+        (comp: UntypedBackendApiResponse) => comp?.type === "mnaInsights",
+      );
+      if (hasMnaComponent) setLocalInsights(syncedInsights);
+
+      const syncedCharts = extractTrendCharts(normalized);
+      if (syncedCharts.length > 0) setLocalCharts(syncedCharts);
+
+      const syncedMetrics = extractMetrics(normalized);
+      if (syncedMetrics.length > 0) setLocalMetrics(syncedMetrics);
     }
     // localExecutiveSummary/localTopPlayerShare/localEmergingPlayers
     // intentionally omitted: this effect is the writer for them; including
@@ -2345,26 +2243,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               const charts = localCharts;
 
               if (!charts || charts.length === 0) return null;
-
-              // Helper function to generate trend data from x-axis labels
-              // Creates a deterministic growth trend based on chart index for consistency
-              const generateTrendData = (
-                xAxis: string | string[],
-                chartIndex: number,
-              ): { name: string; value: number }[] => {
-                const labels = Array.isArray(xAxis) ? xAxis : [xAxis];
-                const baseValue = 25 + chartIndex * 5; // Different starting point per chart
-                const growthRate = 12 + chartIndex * 3; // Different growth rate per chart
-
-                return labels.map((label, index) => {
-                  // Deterministic value based on index (no randomness for consistency)
-                  const value = baseValue + index * growthRate + index * 2;
-                  return {
-                    name: label,
-                    value: Math.round(value * 10) / 10, // Round to 1 decimal place
-                  };
-                });
-              };
 
               return (
                 <div className="mb-8 relative group">
