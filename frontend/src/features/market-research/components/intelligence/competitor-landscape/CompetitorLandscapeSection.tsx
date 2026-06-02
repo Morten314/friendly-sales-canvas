@@ -13,6 +13,7 @@ import React, { useState, useEffect, useRef, useReducer } from "react";
 
 import { CompetitorExecutiveSummary } from "./CompetitorExecutiveSummary";
 import { CompetitorLandscapeHeader } from "./CompetitorLandscapeHeader";
+import { CompetitorReportDataPoints } from "./CompetitorReportDataPoints";
 import {
   normalizeUiComponents,
   extractDataPoints,
@@ -1087,97 +1088,12 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             {/* Executive Summary section is now moved above for collapsed view */}
 
             {/* Competitor Report Data */}
-            {(() => {
-              const dataPoints = localDataPoints;
-
-              if (!dataPoints || dataPoints.length === 0) return null;
-
-              return (
-                <div className="mb-8 relative group">
-                  {isCompetitorLandscapeEditing && (
-                    <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleSaveCompetitorReport}
-                            className="text-gray-400 hover:text-green-600 hover:bg-green-50"
-                            title="Commit changes"
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Commit changes</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  )}
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Competitor Analysis Report
-                  </h3>
-                  <div className="grid grid-cols-1 gap-4">
-                    {dataPoints.map((dataPoint, index) => (
-                      <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        {isCompetitorLandscapeEditing ? (
-                          <div className="space-y-2">
-                            <Input
-                              value={dataPoint.label}
-                              onChange={(e) => {
-                                const updated = [...localDataPoints];
-                                updated[index] = { ...updated[index], label: e.target.value };
-                                setLocalDataPoints(updated);
-                              }}
-                              className="font-medium text-blue-800 bg-white"
-                              placeholder="Label"
-                            />
-                            <Textarea
-                              value={dataPoint.value}
-                              onChange={(e) => {
-                                const updated = [...localDataPoints];
-                                updated[index] = { ...updated[index], value: e.target.value };
-                                setLocalDataPoints(updated);
-                              }}
-                              className="text-blue-700 bg-white"
-                              placeholder="Value"
-                              rows={2}
-                            />
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setLocalDataPoints(localDataPoints.filter((_, i) => i !== index));
-                              }}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <>
-                            <h4 className="font-medium text-blue-800 mb-2">{dataPoint.label}</h4>
-                            <p className="text-blue-700">{dataPoint.value}</p>
-                          </>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  {isCompetitorLandscapeEditing && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setLocalDataPoints([...localDataPoints, { label: "", value: "" }])
-                      }
-                      className="mt-2"
-                    >
-                      Add Data Point
-                    </Button>
-                  )}
-                </div>
-              );
-            })()}
+            <CompetitorReportDataPoints
+              isEditing={isCompetitorLandscapeEditing}
+              dataPoints={localDataPoints}
+              setDataPoints={setLocalDataPoints}
+              onCommit={handleSaveCompetitorReport}
+            />
 
             {/* Top Players */}
             {(() => {
