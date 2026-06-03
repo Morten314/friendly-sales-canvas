@@ -76,7 +76,9 @@ export default function DataSourceUploader({
             >
               <Upload className="h-5 w-5 text-muted-foreground shrink-0" />
               {selectedLeadFile ? (
-                <span className="text-foreground font-medium truncate">{selectedLeadFile.name}</span>
+                <span className="text-foreground font-medium truncate">
+                  {selectedLeadFile.name}
+                </span>
               ) : (
                 <span className="text-muted-foreground">
                   Click to browse or drag and drop a CSV, XLSX, or XLS file here
