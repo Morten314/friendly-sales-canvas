@@ -175,6 +175,29 @@ export const handlers = [
       });
     }
 
+    // Phase 5h: market-size section needs a realistically-shaped payload so
+    // useMarketSize can parse a non-trivial 9-field view-model. Match the
+    // "market size & opportunity" component case-insensitively.
+    if (lower === "market size & opportunity" || lower.includes("market size")) {
+      return HttpResponse.json({
+        status: "success",
+        data: {
+          // Echo the requested component_name like the generic branch, so the 5b
+          // service test's ResearchComponentResponse round-trip assertion holds.
+          component_name: name,
+          executiveSummary: "Test executive summary for market size & opportunity.",
+          tamValue: "$50B",
+          samValue: "$12B",
+          GrowthRate: "14%",
+          strategicRecommendations: ["Expand enterprise sales", "Invest in SMB self-serve"],
+          marketEntry: "Land-and-expand via mid-market beachhead accounts.",
+          marketDrivers: ["Digital transformation budgets", "AI adoption tailwinds"],
+          marketSizeBySegment: { Enterprise: "40%", SMB: "35%", Startup: "25%" },
+          growthProjections: { "2024": "10", "2025": "14", "2026": "19" },
+        },
+      });
+    }
+
     // All other components: preserve the existing generic 5b response.
     return HttpResponse.json({
       status: "success",

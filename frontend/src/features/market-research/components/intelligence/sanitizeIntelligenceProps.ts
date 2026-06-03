@@ -1,6 +1,6 @@
 import React from "react";
 
-import type { MarketIntelligenceTabProps } from "../MarketIntelligenceTabProps";
+import type { MarketIntelligenceSectionsProps } from "../MarketIntelligenceSections";
 
 /**
  * Recursive prop-sanitization formerly performed inside SafeMarketIntelligenceTab.
@@ -15,8 +15,8 @@ import type { MarketIntelligenceTabProps } from "../MarketIntelligenceTabProps";
  * characterization test pins the four round-trip-fragile behaviors.
  */
 export function sanitizeIntelligenceProps(
-  props: MarketIntelligenceTabProps,
-): MarketIntelligenceTabProps {
+  props: MarketIntelligenceSectionsProps,
+): MarketIntelligenceSectionsProps {
   // Check for problematic objects before rendering
   const checkForObjects = (obj: unknown, path = "") => {
     // Skip regionalHotspots - it's correctly an object from backend with region keys
@@ -137,5 +137,5 @@ export function sanitizeIntelligenceProps(
     }
   });
 
-  return sanitizedProps as MarketIntelligenceTabProps;
+  return sanitizedProps as MarketIntelligenceSectionsProps;
 }

@@ -2,14 +2,230 @@ import React from "react";
 
 import CompetitorLandscapeSection from "./intelligence/competitor-landscape/CompetitorLandscapeSection";
 import IndustryTrendsSection from "./intelligence/industry-trends/IndustryTrendsSection";
+import MarketSizeSection from "./intelligence/market-size/MarketSizeSection";
 import RegulatoryComplianceSection from "./intelligence/regulatory-compliance/RegulatoryComplianceSection";
-import type { MarketIntelligenceTabProps } from "./MarketIntelligenceTabProps";
-import MarketSizeSection from "./MarketSizeSection";
 
 import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
+import type { EditRecord, TrendSnapshot } from "@/components/market-research/types";
 import MarketEntrySection from "@/features/market-research/components/intelligence/market-entry/MarketEntrySection";
+import type { UntypedBackendProfile, UntypedReportState } from "@/lib/types/escape-hatches";
 
-type MarketIntelligenceSectionsProps = MarketIntelligenceTabProps;
+export interface MarketIntelligenceSectionsProps {
+  // General refresh state for all components
+  isRefreshing?: boolean;
+  companyProfile?: UntypedBackendProfile;
+
+  // Add centralized data props
+  regulatoryData?: UntypedReportState;
+
+  // Market Size Section
+  isEditing: boolean;
+  isSplitView: boolean;
+  isExpanded: boolean;
+  hasEdits: boolean;
+  deletedSections: Set<string>;
+  editHistory: EditRecord[];
+  // NOTE: Market-size read-path data fields (executiveSummary, tamValue, samValue,
+  // GrowthRate, strategicRecommendations, marketEntry, marketDrivers,
+  // marketSizeBySegment, growthProjections) were removed here — that data is now
+  // sourced via the useMarketSize hook inside MarketSizeSection (Phase 5h). The
+  // orchestration + per-field change callbacks below stay (same as the other sections).
+  marketSizeDeletedSections: Set<string>;
+  isMarketSizeLoading?: boolean;
+  marketSizeError?: string | null;
+  onMarketSizeRefresh?: () => void;
+
+  // Industry Trends Section
+  isIndustryTrendsEditing: boolean;
+  industryTrendsExpanded: boolean;
+  industryTrendsHasEdits: boolean;
+  industryTrendsDeletedSections: Set<string>;
+  industryTrendsEditHistory: EditRecord[];
+  // NOTE: Industry-trends read-path data fields (executiveSummary, aiAdoption,
+  // cloudMigration, regulatory, trendSnapshots, recommendations, risks,
+  // regionalHotspots, visualCharts) were removed here — that data is now sourced
+  // via the useIndustryTrends hook inside IndustryTrendsSection (Phase 5g task 8).
+  // The orchestration + per-field change callbacks below stay (same as market-entry).
+  industryTrendsLastEditedField: string;
+
+  // Competitor Landscape Section
+  isCompetitorEditing: boolean;
+  competitorExpanded: boolean;
+  competitorHasEdits: boolean;
+  competitorDeletedSections: Set<string>;
+  competitorEditHistory: EditRecord[];
+  // Regulatory Compliance props
+  isRegulatoryEditing?: boolean;
+  regulatoryExpanded?: boolean;
+  regulatoryHasEdits?: boolean;
+  regulatoryDeletedSections?: Set<string>;
+  regulatoryEditHistory?: EditRecord[];
+  regulatoryExecutiveSummary?: string;
+  regulatoryEuAiActDeadline?: string;
+  regulatoryGdprCompliance?: string;
+  regulatoryPotentialFines?: string;
+  regulatoryDataLocalization?: string;
+  // Market Entry props
+  // NOTE: MarketEntry's read-path data fields (executiveSummary, entryBarriers,
+  // recommendedChannel, timeToMarket, topBarrier, competitiveDifferentiation,
+  // strategicRecommendations, riskAssessment) and its loading/error/refresh wiring
+  // were removed here — that data is now owned by the useMarketEntry hook inside
+  // MarketEntrySection. The cross-section coordination + scout fields below stay.
+  isMarketEntryEditing?: boolean;
+  marketEntryExpanded?: boolean;
+  marketEntryHasEdits?: boolean;
+  marketEntryDeletedSections?: Set<string>;
+  marketEntryEditHistory?: EditRecord[];
+  onCompetitorRefresh?: () => void;
+  onToggleEdit: () => void;
+  onMarketSizeScoutIconClick: (
+    context?:
+      | "market-size"
+      | "industry-trends"
+      | "competitor-landscape"
+      | "regulatory-compliance"
+      | "market-entry",
+    hasEdits?: boolean,
+    lastEditedField?: string,
+  ) => void | Promise<void>;
+  onIndustryTrendsScoutIconClick: (
+    context?:
+      | "market-size"
+      | "industry-trends"
+      | "competitor-landscape"
+      | "regulatory-compliance"
+      | "market-entry",
+    hasEdits?: boolean,
+    lastEditedField?: string,
+  ) => void | Promise<void>;
+  onCompetitorScoutIconClick: (
+    context?:
+      | "market-size"
+      | "industry-trends"
+      | "competitor-landscape"
+      | "regulatory-compliance"
+      | "market-entry",
+    hasEdits?: boolean,
+    lastEditedField?: string,
+  ) => void | Promise<void>;
+  onRegulatoryScoutIconClick?: (
+    context?:
+      | "market-size"
+      | "industry-trends"
+      | "competitor-landscape"
+      | "regulatory-compliance"
+      | "market-entry",
+    hasEdits?: boolean,
+    lastEditedField?: string,
+  ) => void | Promise<void>;
+  onMarketEntryScoutIconClick?: (
+    context?:
+      | "market-size"
+      | "industry-trends"
+      | "competitor-landscape"
+      | "regulatory-compliance"
+      | "market-entry",
+    hasEdits?: boolean,
+    customMessage?: string,
+  ) => void | Promise<void>;
+  onEditHistoryOpen: () => void;
+  onDeleteSection: (sectionId: string) => void;
+  onMarketSizeDeleteSection: (sectionId: string) => void;
+  onSaveChanges: () => void;
+  onCancelEdit: () => void;
+  onExpandToggle: (expanded: boolean) => void;
+  onExecutiveSummaryChange: (value: string) => void;
+  onTamValueChange: (value: string) => void;
+  onSamValueChange: (value: string) => void;
+  onGrowthRateChange: (value: string) => void;
+  onStrategicRecommendationsChange: (recommendations: string[]) => void;
+  onMarketEntryChange: (value: string) => void;
+  onMarketDriversChange: (drivers: string[]) => void;
+  // Industry Trends handlers
+  onIndustryTrendsToggleEdit: () => void;
+  onIndustryTrendsSaveChanges: () => void;
+  onIndustryTrendsCancelEdit: () => void;
+  onIndustryTrendsDeleteSection: (sectionId: string) => void;
+  onIndustryTrendsEditHistoryOpen: () => void;
+  onIndustryTrendsExpandToggle: (expanded: boolean) => void;
+  onIndustryTrendsExecutiveSummaryChange: (value: string) => void;
+  onIndustryTrendsAiAdoptionChange: (value: string) => void;
+  onIndustryTrendsCloudMigrationChange: (value: string) => void;
+  onIndustryTrendsRegulatoryChange: (value: string) => void;
+  onIndustryTrendSnapshotsChange: (snapshots: TrendSnapshot[]) => void;
+  // Competitor Landscape handlers (optional to maintain backward compatibility)
+  onCompetitorToggleEdit?: () => void;
+  onCompetitorSaveChanges?: () => void;
+  onCompetitorCancelEdit?: () => void;
+  onCompetitorDeleteSection?: (sectionId: string) => void;
+  onCompetitorEditHistoryOpen?: () => void;
+  onCompetitorExpandToggle?: (expanded: boolean) => void;
+  onCompetitorExecutiveSummaryChange?: (value: string) => void;
+  onCompetitorTopPlayerShareChange?: (value: string) => void;
+  onCompetitorEmergingPlayersChange?: (value: string) => void;
+  onCompetitorFundingNewsChange?: (news: string[]) => void;
+  // Regulatory Compliance handlers
+  onRegulatoryToggleEdit?: () => void;
+  onRegulatorySaveChanges?: () => void;
+  onRegulatoryCancelEdit?: () => void;
+  onRegulatoryDeleteSection?: (sectionId: string) => void;
+  onRegulatoryEditHistoryOpen?: () => void;
+  onRegulatoryExpandToggle?: (expanded: boolean) => void;
+  onRegulatoryExecutiveSummaryChange?: (value: string) => void;
+  onRegulatoryEuAiActDeadlineChange?: (value: string) => void;
+  onRegulatoryGdprComplianceChange?: (value: string) => void;
+  onRegulatoryPotentialFinesChange?: (value: string) => void;
+  onRegulatoryDataLocalizationChange?: (value: string) => void;
+  // Market Entry handlers
+  onMarketEntryToggleEdit?: () => void;
+  onMarketEntrySaveChanges?: () => void;
+  onMarketEntryCancelEdit?: () => void;
+  onMarketEntryDeleteSection?: (sectionId: string) => void;
+  onMarketEntryEditHistoryOpen?: () => void;
+  onMarketEntryExpandToggle?: (expanded: boolean) => void;
+  onMarketEntryExecutiveSummaryChange?: (value: string) => void;
+  onMarketEntryBarriersChange?: (barriers: string[]) => void;
+  onMarketEntryRecommendedChannelChange?: (value: string) => void;
+  onMarketEntryTimeToMarketChange?: (value: string) => void;
+  onMarketEntryTopBarrierChange?: (value: string) => void;
+  onMarketEntryCompetitiveDifferentiationChange?: (differentiation: string[]) => void;
+  onMarketEntryStrategicRecommendationsChange?: (recommendations: string[]) => void;
+  onMarketEntryRiskAssessmentChange?: (risks: string[]) => void;
+
+  // Scout panel visibility states
+  showMarketSizeScoutChat?: boolean;
+  showIndustryTrendsScoutChat?: boolean;
+  showCompetitorScoutChat?: boolean;
+  showRegulatoryScoutChat?: boolean;
+  showMarketEntryScoutChat?: boolean;
+
+  // Scout panel props
+  marketSizeHasEdits?: boolean;
+  marketSizeLastEditedField?: string;
+  marketSizeCustomMessage?: string;
+  // industryTrendsLastEditedField already defined above
+  industryTrendsCustomMessage?: string;
+  competitorLastEditedField?: string;
+  competitorCustomMessage?: string;
+  regulatoryLastEditedField?: string;
+  regulatoryCustomMessage?: string;
+  regulatoryIsPostSave?: boolean;
+  marketEntryLastEditedField?: string;
+  marketEntryCustomMessage?: string;
+  marketEntryIsPostSave?: boolean;
+
+  // Scout panel close handlers
+  onMarketSizeScoutClose?: () => void;
+  onIndustryTrendsScoutClose?: () => void;
+  onCompetitorScoutClose?: () => void;
+  onRegulatoryScoutClose?: () => void;
+  onMarketEntryScoutClose?: () => void;
+
+  onViewOpportunityLeads?: (sectionContext: string) => void;
+  onExportPDF: () => void;
+  onSaveToWorkspace: () => void;
+  onGenerateShareableLink: () => void;
+}
 
 const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (props) => {
   // Scout Market Intelligence refresh is driven only by MarketResearch.smartRefresh (single
@@ -98,15 +314,6 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         hasEdits={props.hasEdits}
         deletedSections={props.marketSizeDeletedSections}
         editHistory={props.editHistory}
-        executiveSummary={props.executiveSummary}
-        tamValue={props.tamValue}
-        samValue={props.samValue}
-        GrowthRate={props.GrowthRate}
-        strategicRecommendations={props.strategicRecommendations}
-        marketEntry={props.marketEntry}
-        marketDrivers={props.marketDrivers}
-        marketSizeBySegment={props.marketSizeBySegment}
-        growthProjections={props.growthProjections}
         onToggleEdit={props.onToggleEdit}
         onScoutIconClick={props.onMarketSizeScoutIconClick}
         onEditHistoryOpen={props.onEditHistoryOpen}

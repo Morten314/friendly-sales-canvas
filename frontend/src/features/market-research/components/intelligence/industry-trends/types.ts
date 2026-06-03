@@ -7,7 +7,7 @@ import type {
 import type { ResearchComponentResponse } from "@/features/market-research/contracts";
 
 // Re-export the shared trio from the legacy types directory.
-// These belong to the not-yet-migrated MarketIntelligenceTabProps group; do not fork them.
+// These are consumed by MarketIntelligenceSectionsProps and its sections; do not fork them.
 export type {
   EditRecord,
   TrendSnapshot,
