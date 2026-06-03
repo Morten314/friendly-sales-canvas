@@ -17,6 +17,15 @@ import {
 } from "lucide-react";
 import React, { useState, useRef, useEffect, useCallback } from "react";
 
+import { useDataSources } from "../../hooks/useDataSources";
+import { useLeadStreamStatus } from "../../hooks/useLeadStreamStatus";
+import type {
+  DataSource,
+  DataSourceType,
+  DataSourceStatus,
+  LeadStreamFileApiRow,
+} from "../../types";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,39 +64,6 @@ import { buildApiUrl } from "@/lib/api";
 import jwtManager from "@/lib/jwt";
 import type { UntypedBackendDocument } from "@/lib/types/escape-hatches";
 
-// Types
-type SourceType = "url" | "file" | "system";
-type SourceStatus = "active" | "failed" | "processing" | "completed";
-
-interface DataSource {
-  id: string;
-  fileId?: string; // The actual file_id that backend expects for deletion (from doc.file_id or doc._id)
-  type: SourceType;
-  name: string;
-  url?: string;
-  fileName?: string;
-  description?: string;
-  tags: string[];
-  status: SourceStatus;
-  createdAt: Date;
-}
-
-/** Row from GET /leads/stream/status */
-interface LeadStreamFileApiRow {
-  file_id: string;
-  filename: string;
-  uploaded_at?: string;
-  last_processed_at?: string;
-  total_rows?: number;
-  created_count?: number;
-  error_count?: number;
-  processing_status?: string;
-  /** Some APIs use `status` instead of `processing_status`. */
-  status?: string;
-  /** Some backends mark Lead_Stream_Files as deleted separately from processing_status */
-  tracking_status?: string;
-}
-
 interface CompanyProfile {
   companyName?: string;
   companyUrl?: string;
@@ -108,6 +84,16 @@ const DataSourcesManager: React.FC = () => {
   const { toast } = useToast();
   const { currentUser, orgId } = useAuth();
   const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
+
+  // Read hooks (TanStack Query). The two GET reads are served by these hooks; the
+  // mapping/merge into component state stays here (sync-effects below). Writes
+  // still use raw fetch + getAuthHeader (deferred).
+  const dataSourcesQuery = useDataSources(orgIdToUse);
+  const leadStreamQuery = useLeadStreamStatus(currentUser?.uid ?? "", orgIdToUse);
+  // React Query refetch fns are stable across renders — destructure so the thin
+  // refresh wrappers can depend on them without re-creating on every render.
+  const { refetch: refetchLeadStream } = leadStreamQuery;
+
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [_isSaving, setIsSaving] = useState(false);
@@ -361,7 +347,7 @@ const DataSourcesManager: React.FC = () => {
   // Check processing status for a specific file
   const checkDocumentStatus = async (
     fileKey: string,
-  ): Promise<{ status: SourceStatus; chunks_count?: number; timestamps?: unknown }> => {
+  ): Promise<{ status: DataSourceStatus; chunks_count?: number; timestamps?: unknown }> => {
     if (!currentUser?.uid) {
       throw new Error("User not authenticated");
     }
@@ -384,7 +370,7 @@ const DataSourcesManager: React.FC = () => {
 
     const payload = await response.json();
     return {
-      status: (payload.status || "processing") as SourceStatus,
+      status: (payload.status || "processing") as DataSourceStatus,
       chunks_count: payload.chunks_count,
       timestamps: payload.timestamps,
     };
@@ -415,35 +401,13 @@ const DataSourcesManager: React.FC = () => {
     });
   };
 
-  // Load documents from backend (separate storage, not company profile)
-  const loadDataSourcesFromBackend = async () => {
-    if (!currentUser?.uid) {
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const authHeader = await getAuthHeader();
-      const url = buildApiUrl(`user-documents?org_id=${orgIdToUse}`);
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          ...(authHeader && { Authorization: authHeader }),
-        },
-      });
-
-      if (!response.ok) {
-        console.log("DataSourcesManager: No existing documents found in backend");
-        return;
-      }
-
-      const data = await response.json();
-      const documents = Array.isArray(data)
-        ? data
-        : data.documents || data.files || data.data || [];
-
-      if (Array.isArray(documents)) {
+  // Map the backend documents (from the useDataSources read) into the merged
+  // DataSource[] state. The hook already unwrapped the {documents|files|data}
+  // envelope to a raw array; this reproduces the original loadDataSourcesFromBackend
+  // mapping/merge verbatim, just sourced from the query instead of a raw fetch.
+  const applyBackendDocuments = useCallback((documents: unknown[]) => {
+    if (Array.isArray(documents)) {
+      {
         console.log(
           "📋 DataSourcesManager - Loading documents from backend:",
           documents.length,
@@ -575,7 +539,7 @@ const DataSourcesManager: React.FC = () => {
               url: urlValue,
               description: doc.description || undefined,
               tags: parsedTags,
-              status: (doc.status || "active") as SourceStatus,
+              status: (doc.status || "active") as DataSourceStatus,
               createdAt: doc.uploaded_at
                 ? new Date(doc.uploaded_at)
                 : doc.created_at
@@ -598,7 +562,7 @@ const DataSourcesManager: React.FC = () => {
               url: doc.file_url,
               description: doc.description || undefined,
               tags: parsedTags,
-              status: (doc.status || "processing") as SourceStatus,
+              status: (doc.status || "processing") as DataSourceStatus,
               createdAt: doc.uploaded_at
                 ? new Date(doc.uploaded_at)
                 : doc.created_at
@@ -823,24 +787,48 @@ const DataSourcesManager: React.FC = () => {
         });
         console.log("Data sources loaded from dedicated backend:", loadedSources);
       }
-    } catch (error) {
-      console.error("Error loading data sources:", error);
-    } finally {
-      setIsLoading(false);
+    }
+  }, []);
+
+  // Sync the useDataSources read into component state. Re-runs whenever the query
+  // returns fresh documents (initial fetch + every refetch after a mutation),
+  // preserving the merge-with-existing behavior of the original load function.
+  useEffect(() => {
+    if (dataSourcesQuery.data) {
+      applyBackendDocuments(dataSourcesQuery.data);
+    }
+  }, [dataSourcesQuery.data, applyBackendDocuments]);
+
+  // Keep the data-sources loading flag in sync with the query's fetch state so the
+  // existing isLoading UI still reflects in-flight reads.
+  useEffect(() => {
+    setIsLoading(dataSourcesQuery.isFetching);
+  }, [dataSourcesQuery.isFetching]);
+
+  // Load documents from backend (separate storage, not company profile).
+  // Thin wrapper over the query refetch. The sync-effect above also re-maps query
+  // data into state, but it only fires on a LATER render after the cache updates —
+  // so callers that `await loadDataSourcesFromBackend()` and then immediately
+  // `setDataSources((prev) => …applyMetadata…)` (the add-with-metadata flows) would
+  // see a `prev` WITHOUT the just-refetched doc. To preserve the original inline-
+  // setState timing, apply the refetched documents into state synchronously here
+  // (inside the awaited fn) so the merge updater is enqueued BEFORE the caller's
+  // metadata-apply updater — React then chains the functional updaters in order,
+  // exactly as the pre-refactor load did. applyBackendDocuments is idempotent, so
+  // the duplicate apply from the sync-effect is a harmless no-op.
+  const loadDataSourcesFromBackend = async () => {
+    if (!currentUser?.uid) {
+      return;
+    }
+    const { data } = await dataSourcesQuery.refetch();
+    if (data) {
+      applyBackendDocuments(data);
     }
   };
 
-  // Load data sources on mount
-  useEffect(() => {
-    if (currentUser?.uid) {
-      void loadDataSourcesFromBackend();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadDataSourcesFromBackend is stable within scope; intentionally watches only user identity edge
-  }, [currentUser?.uid]);
-
   // Form state
   const [isAddingInline, setIsAddingInline] = useState(false);
-  const [selectedType, setSelectedType] = useState<SourceType | "">("");
+  const [selectedType, setSelectedType] = useState<DataSourceType | "">("");
   const [sourceName, setSourceName] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -893,7 +881,7 @@ const DataSourcesManager: React.FC = () => {
     resetInlineForm();
   };
 
-  const handleTypeSelect = (type: SourceType) => {
+  const handleTypeSelect = (type: DataSourceType) => {
     setSelectedType(type);
     // Clear URL/file when switching types
     if (type === "url") {
@@ -1796,7 +1784,7 @@ const DataSourcesManager: React.FC = () => {
         // Other types (system) - stored locally only
         const newSource: DataSource = {
           id: editingId || `source-${Date.now()}`,
-          type: selectedType as SourceType,
+          type: selectedType as DataSourceType,
           name: sourceName.trim(),
           url: undefined,
           description: sourceDescription.trim() || undefined,
@@ -2637,7 +2625,7 @@ const DataSourcesManager: React.FC = () => {
     return row.processing_status ?? row.status ?? "";
   };
 
-  const mapProcessingStatusToSourceStatus = (status?: string): SourceStatus => {
+  const mapProcessingStatusToSourceStatus = (status?: string): DataSourceStatus => {
     const s = (status || "").toLowerCase();
     if (s === "deleted") return "completed";
     if (
@@ -2656,7 +2644,25 @@ const DataSourcesManager: React.FC = () => {
     return "processing";
   };
 
-  /** GET /leads/stream/status — list uploads + processing stats for user/org */
+  // Sync the useLeadStreamStatus read into component state. Prunes the
+  // optimistic-delete ref to ids that are gone from the backend, then applies the
+  // visibility filter (which still hides ids in deletedLeadStreamFileIdsRef +
+  // rows the API marks deleted). Re-runs on every query result (initial + refetch).
+  useEffect(() => {
+    const files = leadStreamQuery.data;
+    if (!files) return;
+    const idsInResponse = new Set(files.map((f) => f.file_id));
+    for (const id of [...deletedLeadStreamFileIdsRef.current]) {
+      if (!idsInResponse.has(id)) deletedLeadStreamFileIdsRef.current.delete(id);
+    }
+    setLeadStreamFiles(filterVisibleLeadStreamFiles(files));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- filterVisibleLeadStreamFiles is a non-memoized helper reading only refs; re-runs are driven by the query data, not the helper identity
+  }, [leadStreamQuery.data]);
+
+  /** GET /leads/stream/status — thin refetch over useLeadStreamStatus. The
+   *  sync-effect above re-maps the result into state. `silent` drives only the
+   *  loading flag: a non-silent refresh shows the loading state, the poll does not.
+   *  Kept (name + `{ silent }` signature + call sites) so refreshes still work. */
   const refreshLeadStreamStatus = useCallback(
     async (opts?: { silent?: boolean }) => {
       const silent = opts?.silent === true;
@@ -2670,47 +2676,15 @@ const DataSourcesManager: React.FC = () => {
         setLeadStreamStatusLoading(true);
       }
       try {
-        const authHeader = await getAuthHeader();
-        const qs = new URLSearchParams({
-          user_id: userId,
-          org_id: orgIdToUse,
-        });
-        const url = buildApiUrl(`leads/stream/status?${qs.toString()}`);
-        const response = await fetch(url, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            ...(authHeader && { Authorization: authHeader }),
-          },
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Failed to fetch lead stream status: ${response.status} - ${errorText}`);
-        }
-
-        const data = await response.json();
-        let files: LeadStreamFileApiRow[] = [];
-        if (data && typeof data === "object" && Array.isArray(data.files)) {
-          files = data.files;
-        } else if (Array.isArray(data)) {
-          files = data;
-        }
-        const idsInResponse = new Set(files.map((f) => f.file_id));
-        for (const id of [...deletedLeadStreamFileIdsRef.current]) {
-          if (!idsInResponse.has(id)) deletedLeadStreamFileIdsRef.current.delete(id);
-        }
-        setLeadStreamFiles(filterVisibleLeadStreamFiles(files));
-      } catch (e) {
-        console.error("DataSourcesManager refreshLeadStreamStatus:", e);
+        await refetchLeadStream();
       } finally {
         if (!silent) {
           setLeadStreamStatusLoading(false);
         }
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- filterVisibleLeadStreamFiles is a non-memoized helper reading only refs; including it would defeat useCallback memoization without behavior change
-    [currentUser?.uid, orgIdToUse],
+    // refetchLeadStream is React Query's stable refetch fn (does not change identity)
+    [currentUser?.uid, refetchLeadStream],
   );
 
   /** DELETE /leads/by-file/{file_id} — removes all leads for file (user/org scoped) and updates stream tracking */
@@ -3205,7 +3179,7 @@ const DataSourcesManager: React.FC = () => {
     }
   };
 
-  const getStatusBadge = (status: SourceStatus) => {
+  const getStatusBadge = (status: DataSourceStatus) => {
     switch (status) {
       case "active":
       case "completed":
@@ -3238,7 +3212,7 @@ const DataSourcesManager: React.FC = () => {
     }
   };
 
-  const getTypeIcon = (type: SourceType) => {
+  const getTypeIcon = (type: DataSourceType) => {
     switch (type) {
       case "url":
         return <Globe className="h-4 w-4 text-muted-foreground" />;
@@ -3249,7 +3223,7 @@ const DataSourcesManager: React.FC = () => {
     }
   };
 
-  const getTypeLabel = (type: SourceType) => {
+  const getTypeLabel = (type: DataSourceType) => {
     switch (type) {
       case "url":
         return "URL";
@@ -3292,7 +3266,7 @@ const DataSourcesManager: React.FC = () => {
                   <Label htmlFor="source-type">Source Type *</Label>
                   <Select
                     value={selectedType}
-                    onValueChange={(value) => handleTypeSelect(value as SourceType)}
+                    onValueChange={(value) => handleTypeSelect(value as DataSourceType)}
                   >
                     <SelectTrigger id="source-type">
                       <SelectValue placeholder="Select type" />
