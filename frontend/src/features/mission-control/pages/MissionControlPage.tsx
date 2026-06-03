@@ -17,8 +17,9 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
-import DataSourcesManager from "@/components/mission-control/DataSourcesManager";
-import ICPManager from "@/components/mission-control/ICPManager";
+import DataSourcesManager from "../components/data-sources/DataSourcesManager";
+import ICPManager from "../components/icp/ICPManager";
+
 import {
   Accordion,
   AccordionContent,
@@ -120,7 +121,7 @@ interface Connector {
   isNew?: boolean;
 }
 
-const MissionControl = () => {
+const MissionControlPage = () => {
   const [activeTab, setActiveTab] = useState("profile");
   const [isCompanyProfileSaved, setIsCompanyProfileSaved] = useState(false);
   const [isCustomerProfileSaved, setIsCustomerProfileSaved] = useState(false);
@@ -4368,4 +4369,4 @@ const MissionControl = () => {
   );
 };
 
-export default MissionControl;
+export default MissionControlPage;

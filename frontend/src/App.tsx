@@ -2,13 +2,13 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
+import MissionControl from "./features/mission-control/pages/MissionControlPage";
 import Artifacts from "./pages/Artifacts";
 import Calendar from "./pages/Calendar";
 import Customers from "./pages/Customers";
 import Deals from "./pages/Deals";
 import Insights from "./pages/Insights";
 import Login from "./pages/Login";
-import MissionControl from "./pages/MissionControl";
 import NotFound from "./pages/NotFound";
 import Reports from "./pages/Reports";
 import ScoutDeploymentPage from "./pages/ScoutDeployment";
