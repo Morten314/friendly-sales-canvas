@@ -21,7 +21,6 @@ import type { UntypedBackendProfile } from "@/lib/types/escape-hatches";
 import { useAuth } from "@/shared/auth";
 import { setUserLocalStorage } from "@/utils/cacheUtils";
 
-
 interface MarketSizeSectionProps {
   isEditing: boolean;
   isSplitView: boolean;

@@ -37,9 +37,7 @@ describe("StrategicRecommendations", () => {
     renderWithTooltip(
       <StrategicRecommendations {...baseProps} editing={false} recommendations={[]} />,
     );
-    expect(
-      screen.getByText("No strategic recommendations available"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("No strategic recommendations available")).toBeInTheDocument();
   });
 
   it("edit mode binds one textarea per draft item", () => {
@@ -47,9 +45,7 @@ describe("StrategicRecommendations", () => {
     expect(screen.getByPlaceholderText("Strategic recommendation 1...")).toHaveValue(
       "Focus on enterprise",
     );
-    expect(screen.getByPlaceholderText("Strategic recommendation 2...")).toHaveValue(
-      "Expand APAC",
-    );
+    expect(screen.getByPlaceholderText("Strategic recommendation 2...")).toHaveValue("Expand APAC");
   });
 
   it("edit mode editing an item fires onChange with the mutated draft", () => {

@@ -43,13 +43,7 @@ describe("KeyMetrics", () => {
   it("read mode degrades gracefully when values are empty", () => {
     expect(() =>
       renderWithTooltip(
-        <KeyMetrics
-          {...baseProps}
-          editing={false}
-          tamValue=""
-          samValue=""
-          growthRate=""
-        />,
+        <KeyMetrics {...baseProps} editing={false} tamValue="" samValue="" growthRate="" />,
       ),
     ).not.toThrow();
     // The static labels still render.
@@ -67,9 +61,7 @@ describe("KeyMetrics", () => {
 
   it("edit mode fires the per-field change callbacks", () => {
     const onTamChange = vi.fn();
-    renderWithTooltip(
-      <KeyMetrics {...baseProps} editing={true} onTamChange={onTamChange} />,
-    );
+    renderWithTooltip(<KeyMetrics {...baseProps} editing={true} onTamChange={onTamChange} />);
     fireEvent.change(screen.getByPlaceholderText("e.g., $4.2B"), {
       target: { value: "$5B" },
     });

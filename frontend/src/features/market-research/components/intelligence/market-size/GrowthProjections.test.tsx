@@ -25,9 +25,7 @@ describe("GrowthProjections", () => {
 
   it("read mode does not throw on an empty record", () => {
     expect(() =>
-      render(
-        <GrowthProjections editing={false} projections={{}} draft={{}} onChange={vi.fn()} />,
-      ),
+      render(<GrowthProjections editing={false} projections={{}} draft={{}} onChange={vi.fn()} />),
     ).not.toThrow();
   });
 

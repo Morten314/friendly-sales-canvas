@@ -9,7 +9,11 @@ export interface MarketSizeHeaderProps {
   onScoutIconClick: (context?: "market-size" | "industry-trends" | "competitor-landscape") => void;
 }
 
-export function MarketSizeHeader({ onModify, isSplitView, onScoutIconClick }: MarketSizeHeaderProps) {
+export function MarketSizeHeader({
+  onModify,
+  isSplitView,
+  onScoutIconClick,
+}: MarketSizeHeaderProps) {
   return (
     <div className="flex items-center justify-between mb-6">
       <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">

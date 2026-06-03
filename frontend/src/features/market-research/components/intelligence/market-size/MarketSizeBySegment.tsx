@@ -23,7 +23,9 @@ export function MarketSizeBySegment({
   if (editing) {
     return (
       <div className="bg-white border border-gray-200 rounded-lg p-4">
-        <Label className="text-sm font-medium text-gray-900 mb-3 block">Market Size by Segment</Label>
+        <Label className="text-sm font-medium text-gray-900 mb-3 block">
+          Market Size by Segment
+        </Label>
         <div className="space-y-3">
           {Object.entries(draft).map(([segment, value], index) => (
             <div key={index} className="flex items-center gap-2">

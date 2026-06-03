@@ -63,7 +63,10 @@ export function ExecutiveSummary({
           </Tooltip>
         </div>
         <div>
-          <Label htmlFor="executiveSummary" className="text-sm font-medium text-gray-700 mb-2 block">
+          <Label
+            htmlFor="executiveSummary"
+            className="text-sm font-medium text-gray-700 mb-2 block"
+          >
             Executive Summary
           </Label>
           <Textarea

@@ -41,9 +41,7 @@ describe("MarketDrivers", () => {
   it("edit mode binds one textarea per draft item", () => {
     renderWithTooltip(<MarketDrivers {...baseProps} editing={true} />);
     expect(screen.getByPlaceholderText("Market driver 1...")).toHaveValue("Cloud adoption");
-    expect(screen.getByPlaceholderText("Market driver 2...")).toHaveValue(
-      "Regulatory pressure",
-    );
+    expect(screen.getByPlaceholderText("Market driver 2...")).toHaveValue("Regulatory pressure");
   });
 
   it("edit mode editing an item fires onChange with the mutated draft", () => {

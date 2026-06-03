@@ -32,7 +32,11 @@ describe("MarketSizeHeader", () => {
   it("renders the Scout button when not in split view and fires onScoutIconClick", () => {
     const onScoutIconClick = vi.fn();
     renderWithTooltip(
-      <MarketSizeHeader {...defaultProps} isSplitView={false} onScoutIconClick={onScoutIconClick} />,
+      <MarketSizeHeader
+        {...defaultProps}
+        isSplitView={false}
+        onScoutIconClick={onScoutIconClick}
+      />,
     );
     const buttons = screen.getAllByRole("button");
     expect(buttons).toHaveLength(2);

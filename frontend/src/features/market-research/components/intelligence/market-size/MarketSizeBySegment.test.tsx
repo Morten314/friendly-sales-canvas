@@ -26,9 +26,7 @@ describe("MarketSizeBySegment", () => {
 
   it("read mode does not throw on an empty record", () => {
     expect(() =>
-      render(
-        <MarketSizeBySegment editing={false} segments={{}} draft={{}} onChange={vi.fn()} />,
-      ),
+      render(<MarketSizeBySegment editing={false} segments={{}} draft={{}} onChange={vi.fn()} />),
     ).not.toThrow();
   });
 
@@ -55,9 +53,7 @@ describe("MarketSizeBySegment", () => {
 
   it("edit mode Add Segment fires onChange with a new entry", () => {
     const onChange = vi.fn();
-    render(
-      <MarketSizeBySegment editing={true} segments={{}} draft={{}} onChange={onChange} />,
-    );
+    render(<MarketSizeBySegment editing={true} segments={{}} draft={{}} onChange={onChange} />);
     fireEvent.click(screen.getByText("Add Segment"));
     expect(onChange).toHaveBeenCalledWith({ "New Segment": "" });
   });
