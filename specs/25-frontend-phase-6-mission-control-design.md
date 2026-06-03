@@ -1,9 +1,9 @@
 # Spec 25 — Frontend Phase 6: mission-control feature extraction
 
-**Status:** Design — round 1 (revised per spec-review-1 synthesis — see `docs/reviews/25-frontend-phase-6-mission-control-design-spec-synthesis-1.md`)
+**Status:** Design — reconciled with plan-writing recon 2026-06-03 (review rounds 1–2 synthesized; see `docs/reviews/25-frontend-phase-6-mission-control-design-spec-synthesis-1.md`, `…-synthesis-2.md`)
 **Date:** 2026-06-03
 **Type:** Phase spec (Phase 6 of master Spec 14 §4)
-**Paired plan:** `plans/25-frontend-phase-6-mission-control.md` — _not yet written; **one plan, executed sequentially** (see §7)_
+**Paired plan:** `plans/25-frontend-phase-6-mission-control.md` — **written**; **one plan, executed sequentially** (see §7). Facts verified during plan-writing are folded back into this spec (data-source endpoint, lint starting state, read-hook typing, the two `DataSource` shapes) — flagged _(reconciled)_ inline.
 
 ---
 
@@ -28,12 +28,13 @@ Salient facts that shape this spec:
 
 - **Route:** `/mission-control`, wrapped in `<ProtectedRoute requireTenant>`. Tabs switch via `?tab=` URL param. **Not** wrapped in `<FeatureErrorBoundary>` (market-research is — this phase adds it).
 - **No cascade.** Unlike market-research's sequential `previousContext` chain, mission-control's fetches are **independent** (company profile, ICPs, data-sources/lead-stream status). This is the key simplifier: there is no cascade root to hollow, so the read-path migration is clean.
-- **Data layer:** 19 active raw `fetch()` sites (2 more sit in ICPManager's commented dead code, removed in stage 2), **zero** TanStack. `localStorage company_profile_{uid}` is a failover store (read+write across MissionControl + DataSourcesManager); `sessionStorage slackSourceToConnect` is a Slack-OAuth bridge. No `CACHE_DURATION`/`_cb`/`_r` cache-busting.
+- **Data layer:** 19 active raw `fetch()` sites (2 more sit in ICPManager's commented dead code, removed in stage 2), **zero** TanStack. `localStorage company_profile_{uid}` is a failover store (read+write across MissionControl + DataSourcesManager); `sessionStorage slackSourceToConnect` is a Slack-OAuth bridge. No `CACHE_DURATION`/`_cb`/`_r` cache-busting. Reads (endpoints resolved at plan-writing): ICP rows via `GET /api/profile/company` → `GET /api/customer_profile`; data-source list `GET /api/user-documents`; lead-stream status `GET /api/leads/stream/status`; company profile `GET /api/profile/company`.
 - **Dead code:** ICPManager carries ~1,500–1,600 lines of commented-out legacy (≈1,569 comment lines of 3,320; an old localStorage-era component shadow).
 - **Profiler coupling:** ICPManager merges profiler-accepted ICP metadata via a cluster of three utils — `@/utils/profilerAcceptedIcpDisplay.ts`, `@/utils/profileIcpsExtract.ts`, `@/lib/missionProfilerSessionCache.ts` — **all three** of which `customers/SuggestedICPCards` also imports (verified: lines 74, 60/`fetchIcpsRowsForOrg`, 56). That cluster + the ICP read surface are what Phase 7 (customers) and Phase 9 (scout + profiler) inherit.
 - **Escape-hatches in play:** `UntypedBackendApiResponse` (MissionControl), `UntypedProfilerIcpRecord` (ICPManager), `UntypedBackendDocument` (DataSourcesManager).
 - **Parity net (strong, unlike Phase 5):** behavioral E2E covers all three monsters — journey `01-login-tenant-mission` (page load, with VR snapshot `04-mission-control-loaded`), `02-csv-upload-leads` (DataSourcesManager), `05-icp-create` (ICPManager, with VR snapshot `01-mission-control-empty-icp`).
 - **Existing reusable hook:** `useCompanyProfile(orgId)` (TanStack, Phase 3) at `src/components/settings/useCompanyProfile.ts`, currently consumed only by settings.
+- **Enabling-infra starting state _(reconciled at plan-writing)_:** routing is fully centralized in `src/App.tsx` (one `<Routes>` table) — there is **no `src/app/` dir and no per-feature `routes.tsx` yet**; market-research's route is wired via a deep page import. The `index.ts`-only cross-feature lint is **not implemented** — only `no-restricted-paths` zones + `no-cycle` exist in `eslint.config.js` (`eslint-plugin-import-x` ~4.15 is installed); `src/features/README.md` documents the deep-import ban but lint does not enforce it. So stage 1 **adds** the registry and the lint from scratch.
 
 ### 1.3 Relation to the master plan
 
@@ -45,11 +46,11 @@ Implements master Spec 14 §4 "Phase 6 — Feature: mission-control" and its "Fi
 
 ### 2.1 In scope
 
-- Cross-feature **enabling infra**: per-feature route registry (`src/app/routes.tsx`, append-only) + finalize the `index.ts`-only cross-feature lint (`import-x/no-internal-modules`, forbid-form) — resolves **TD-FE-15**.
+- Cross-feature **enabling infra**: per-feature route registry (`src/app/routes.tsx`, **created this phase**, append-only) + **add** the `index.ts`-only cross-feature lint (`import-x/no-internal-modules`, forbid-form — it does not exist yet; only `no-restricted-paths` + `no-cycle` do) — resolves **TD-FE-15**. The forbid globs (`@/features/*/*`, `@/features/*/**`) also match same-feature alias deep imports, so intra-feature imports adopt a **relative-path convention** (the `@/features/<X>/…` alias is reserved for cross-feature, index-only); market-research's existing alias self-imports are converted to relative as part of stage 1.
 - Scaffold `src/features/mission-control/` and relocate the three files into it (parity move).
 - Wrap the routed page in `<FeatureErrorBoundary>`.
 - Delete ICPManager's ~1,500–1,600 lines of commented-dead code.
-- Promote the three shared profiler-ICP utils (`profilerAcceptedIcpDisplay.ts`, `profileIcpsExtract.ts`, `missionProfilerSessionCache.ts`) → `src/shared/` — all three are imported by both mission-control and `customers/SuggestedICPCards`.
+- Promote the three shared profiler-ICP utils (`profilerAcceptedIcpDisplay.ts`, `profileIcpsExtract.ts`, `missionProfilerSessionCache.ts`) → `src/shared/profiler/` (a new subdir + barrel) — all three are imported by both mission-control and `customers/SuggestedICPCards`.
 - **Read-path** TanStack migration: ICP list, data-sources + lead-stream status, company-profile (via reuse — §4).
 - Structural decomposition of all three monsters into single-purpose components + hooks.
 - `index.ts` public surface, `README.md`, and the Profiler-disposition section (§6).
@@ -92,7 +93,9 @@ src/features/mission-control/
 
 Tests live in co-located `__tests__/` dirs per the Phase 5 convention (e.g. `hooks/__tests__/`, `services/__tests__/`, `components/<area>/__tests__/`, plus a feature-root `__tests__/`).
 
-**Dependency rules (Spec 14 §3.3):** may import `@/features/mission-control/*` (self), `@/shared/*`, `@/components/ui/*`, npm; transitionally (Phases 4b–12) the legacy dirs (`@/hooks`, `@/lib`, `@/utils`, `@/components/settings/*`, …). Cross-feature consumers import only via `@/features/mission-control` (the index). The reuse of `useCompanyProfile` from `components/settings/` is a **legacy-dir** import (settings is not yet a feature), permitted by the transitional exception.
+**Dependency rules (Spec 14 §3.3):** may import `@/features/mission-control/*` (self), `@/shared/*`, `@/components/ui/*`, npm; transitionally (Phases 4b–12) the legacy dirs (`@/hooks`, `@/lib`, `@/utils`, `@/components/settings/*`, …). Cross-feature consumers import only via `@/features/mission-control` (the index). The reuse of `useCompanyProfile` from `components/settings/` is a **legacy-dir** import (settings is not yet a feature), permitted by the transitional exception. Per the new relative-self-import convention (§2.1), the feature's own internals are imported with relative paths, not the `@/features/mission-control/…` alias.
+
+**Two `DataSource` shapes _(reconciled at plan-writing)_:** the feature `types.ts` `DataSource` is the **read-list** shape (from `GET /api/user-documents`, used by the data-sources tab). `MissionControl.tsx` separately uses a **richer** `DataSource` shape for the connector catalog (icon/platform/syncFrequency/…); the two are **not** unified this phase — the connector/write surface is deferred. Also: the company-profile "form" is **inline JSX** in `MissionControl.tsx` (~250 lines), not a pre-existing component — extracting it (stage 4) is the heaviest single carve, and only its **read** migrates to `useCompanyProfile` (`handleSave` stays raw).
 
 ---
 
@@ -102,12 +105,12 @@ Tests live in co-located `__tests__/` dirs per the Phase 5 convention (e.g. `hoo
 
 | Read | Endpoint (confirm live before wiring) | Hook |
 |---|---|---|
-| ICP list | `GET /api/customer_profile?org_id=…` (and `?user_id=…` variant) | `useICPs` (feature-local) |
-| Lead-stream file status | `GET /leads/stream/status` | `useLeadStreamStatus` (feature-local) |
-| Data-source list | _one of DataSourcesManager's fetches — name + confirm live at stage 3_ | `useDataSources` (feature-local) |
+| ICP list | `GET /api/profile/company?org_id=…` → `GET /api/customer_profile?org_id=…` (the two reads inside the shared `fetchIcpsRowsForOrg`) | `useICPs` — **reuses `fetchIcpsRowsForOrg` from `@/shared/profiler`** (parity with the customers consumer), not a fresh feature fetch |
+| Lead-stream file status | `GET /api/leads/stream/status` | `useLeadStreamStatus` (feature-local; `apiGet` + loose zod) |
+| Data-source list | `GET /api/user-documents?org_id=…` _(resolved at plan-writing; was unnamed)_ | `useDataSources` (feature-local; `apiGet` + loose zod) |
 | Company profile | `GET /api/profile/company?org_id=…` | **reuse `useCompanyProfile`** (see 4.3) |
 
-Endpoint paths above are written as they appear in the FE `fetch()` calls — the `/api` prefix is the Vite proxy surface (`vite.config.ts`), and `/leads/stream/status` may carry or omit it; confirm the exact prefix live (§12). Hooks are built **before** the components that consume them are decomposed (Spec 14 R3, hook-first). zod schemas land in `contracts.ts`; `.parse` at the fetch boundary. Per CLAUDE.md polyglot rule, confirm each response shape against a live backend call before writing FE types (no auto-generated client).
+Endpoint paths above carry the `/api` Vite-proxy prefix (`vite.config.ts`). _(Reconciled:)_ the ICP and company-profile reads hardcode the literal `/api/…` string, while the data-source-list and lead-stream reads go through `buildApiUrl(...)` (prepends `/api` in dev/Vercel, raw Render URL in prod) — `useDataSources`/`useLeadStreamStatus` instead call the shared `apiGet`, which the proxy resolves the same way. Hooks are built **before** the components that consume them are decomposed (Spec 14 R3, hook-first). zod schemas land in `contracts.ts`; `.parse` at the fetch boundary. Per CLAUDE.md polyglot rule, confirm each response shape against a live backend call before writing FE types (no auto-generated client).
 
 ### 4.2 Writes / cache deferred (TD-FE)
 
@@ -115,7 +118,16 @@ Write/mutation paths stay on raw `fetch` this phase; the `localStorage company_p
 
 ### 4.3 Company-profile read — reuse decision
 
-Mission-control reuses the existing `useCompanyProfile(orgId)` (TanStack, Phase 3) via a transitional import from `src/components/settings/`, rather than duplicating the read or promoting the hook now. Rationale: no duplication; `useCompanyProfile` is shared with **settings** (not customers), and settings is not extracted until Phase 10 — so its promotion to `src/shared/api` is its own move once a second *migrated* consumer exists (Phase 10 settings / Phase 11), separate from the profiler-util cluster promoted this phase. A TD-FE records the promotion candidate (it is read by settings + mission-control, and a market-research path duplicates it — see TD-FE-13's note).
+Mission-control reuses the existing `useCompanyProfile(orgId)` (TanStack, Phase 3) via a transitional import from `src/components/settings/`, rather than duplicating the read or promoting the hook now. Rationale: no duplication; `useCompanyProfile` is shared with **settings** (not customers), and settings is not extracted until Phase 10 — so its promotion to `src/shared/api` is its own move once a second *migrated* consumer exists (Phase 10 settings / Phase 11), separate from the profiler-util cluster promoted this phase. A TD-FE records the promotion candidate (it is read by settings + mission-control, and a market-research path duplicates it — see TD-FE-13's note). Note _(reconciled)_: only the company-profile **read** (the mount `GET /api/profile/company`) moves to `useCompanyProfile`; `handleSave` (the `POST`) and the `localStorage` failover stay as-is (write deferred — §2.2).
+
+### 4.4 Read-hook typing _(decided at plan-writing)_
+
+The migrated reads return **raw, loosely-typed data**; the view-model mapping stays in the consuming components this phase (honest typing for a flexible, un-annotated backend):
+
+- `useICPs` wraps the shared `fetchIcpsRowsForOrg` (`@/shared/profiler`, raw `fetch`, hits `profile/company` then `customer_profile`) and returns the **raw ICP rows (`unknown[]`)**. There is **no feature-local zod contract for ICPs** — the shared extractor does the shaping, and the ICP component maps rows → the `ICP` view-model via the `@/shared/profiler` helpers (the same path `customers` uses).
+- `useDataSources` (`GET /api/user-documents`) returns the **raw documents (`unknown[]`)**; the ~20-field doc → `DataSource` mapping stays in the data-sources component (stage 5). `useLeadStreamStatus` (`GET /api/leads/stream/status`) returns the typed `LeadStreamFileApiRow[]`. Both go through `@/shared/api/client` `apiGet` + **loose zod** (`contracts.ts`, `.passthrough()`/`.nullish()`).
+
+Tightening `useICPs`/`useDataSources` to return typed view-models (mapping pushed into the service) is a candidate follow-up, not done this phase.
 
 ---
 
@@ -126,7 +138,7 @@ Exports the minimum cross-feature surface Phase 7 (customers) needs:
 - the **ICP type(s)** (the shape a customers consumer reads), and
 - the **`useICPs` read hook**.
 
-The ICP **mutation** surface is deferred with the write paths (§2.2); Phase 7 receives reads + types now, and the write surface lands when the ICP write path migrates. The three promoted profiler-ICP utils are consumed from `@/shared` (promoted in stage 2), **not** re-exported here. No deep paths: the §2.1 lint enforces index-only cross-feature import from this phase forward.
+The ICP **mutation** surface is deferred with the write paths (§2.2); Phase 7 receives reads + types now, and the write surface lands when the ICP write path migrates. _(Reconciled:)_ `useICPs` returns the **raw ICP rows** (`unknown[]`, via the shared `fetchIcpsRowsForOrg`); the exported `ICP` type is the FE **view-model** a consumer maps those rows into (using the `@/shared/profiler` helpers) — see §4.4. The three promoted profiler-ICP utils are consumed from `@/shared/profiler` (promoted in stage 2b), **not** re-exported here. No deep paths: the §2.1 lint enforces index-only cross-feature import from this phase forward.
 
 ---
 
@@ -136,9 +148,9 @@ Per Spec 14 §4 Phase 6, this section is the authoritative handoff record. Phase
 
 | Item | Current (pre-6) | Phase-6 home | Intended final home |
 |---|---|---|---|
-| `profilerAcceptedIcpDisplay.ts` (merge/display helpers) | `src/utils/` | **→ `src/shared/`** (stage 2) | shared |
-| `profileIcpsExtract.ts` (`extractIcpsDataFromFlexibleApiResponse`, `fetchIcpsRowsForOrg`) | `src/utils/` | **→ `src/shared/`** (stage 2) | shared |
-| `missionProfilerSessionCache.ts` | `src/lib/` | **→ `src/shared/`** (stage 2) | shared |
+| `profilerAcceptedIcpDisplay.ts` (merge/display helpers) | `src/utils/` | **→ `src/shared/profiler/`** (stage 2b) | shared |
+| `profileIcpsExtract.ts` (`extractIcpsDataFromFlexibleApiResponse`, `fetchIcpsRowsForOrg`) | `src/utils/` | **→ `src/shared/profiler/`** (stage 2b) | shared |
+| `missionProfilerSessionCache.ts` | `src/lib/` | **→ `src/shared/profiler/`** (stage 2b) | shared |
 | ICP profiler-merge logic | inline in ICPManager | stays in mission-control `components/icp/`; customers reads via `index.ts` + the shared util | Phase 9 resolves |
 | `UntypedProfilerIcpRecord` typing | escape-hatch | unchanged (Phase 13) | real contract type |
 
@@ -150,9 +162,9 @@ Profiler is **not** a feature yet; Phase 9 owns the scout/profiler split and the
 
 Each stage is a green checkpoint (preflight green, journeys + VR intact) and a commit-series within the one branch. A failed stage reverts to the last green stage (Spec 14 §5.7) without reverting the whole phase.
 
-1. **Enabling infra** — two separate commits/checkpoints (registry first, lint second) for a finer rollback boundary; the plan breaks these into tasks. **(1a) Route registry:** each feature exposes routes via `routes.tsx` (re-exported from `index.ts`); a thin `src/app/routes.tsx` composes them append-only so phases never edit a shared `<Routes>` table. Convert the existing market-research route as the worked example; this also removes `App.tsx`'s deep page import — the reason the registry lands before the lint (1b). Document the convention in `src/features/README.md`. **(1b) Lint:** finalize the `index.ts`-only lint (forbid-form `import-x/no-internal-modules`) and verify the **4a probe** — the lint-acceptance test from the Phase 4a spike (TD-FE-15): a deep `@/features/<x>/…` import from outside is flagged, the `@/features/<x>` index import is allowed, and the ~95 pre-existing legitimate relative/external deep imports are not. Resolve TD-FE-15; update Spec 14 §8 Q16.
+1. **Enabling infra** — two separate commits/checkpoints (registry first, lint second) for a finer rollback boundary; the plan breaks these into tasks. **(1a) Route registry:** `src/app/routes.tsx` and per-feature `routes.tsx` are **created this phase** (neither exists today; market-research's route is currently a deep page import in `App.tsx`). Each feature exposes routes via `routes.tsx` (re-exported from `index.ts`); a thin `src/app/routes.tsx` composes them append-only so phases never edit a shared `<Routes>` table. Convert the existing market-research route as the worked example; this also removes `App.tsx`'s deep page import — the reason the registry lands before the lint (1b). Document the convention in `src/features/README.md`. **(1b) Lint:** **add** the `index.ts`-only lint (forbid-form `import-x/no-internal-modules`; `eslint-plugin-import-x` is already installed). There is **no pre-existing "4a probe" file** — 1b establishes the acceptance check: a deep `@/features/<x>/…` import from outside is flagged, the `@/features/<x>` index import is allowed, and the ~95 pre-existing legitimate relative/external deep imports are not. Because the forbid globs also match same-feature alias deep imports, market-research's alias self-imports are **converted to relative first** so the rule lands green. Resolve TD-FE-15; update Spec 14 §8 Q16.
 
-2. **Scaffold + relocate (parity)** — two checkpoints for a finer revert boundary (the plan breaks these into tasks). **(2a) Relocate (intra-feature):** scaffold `features/mission-control/` (`types.ts`/`index.ts` + a minimal placeholder `README.md`, finalized in stage 6); mechanically move the three files into `pages/` + `components/` (and register mission-control's route in the stage-1 `src/app/routes.tsx`); wrap the route in `<FeatureErrorBoundary featureName="Mission Control">`; **delete ICPManager's ~1,500–1,600 lines of commented-dead code**; repoint all moved-file imports. **(2b) Promote cluster (touches `customers`):** promote the three shared profiler-ICP utils (`profilerAcceptedIcpDisplay.ts`, `profileIcpsExtract.ts`, `missionProfilerSessionCache.ts`) → `src/shared/` and repoint their importers (mission-control + the external `customers/SuggestedICPCards`). No logic change; journeys `01`/`02`/`05` + VR green after each checkpoint.
+2. **Scaffold + relocate (parity)** — two checkpoints for a finer revert boundary (the plan breaks these into tasks). **(2a) Relocate (intra-feature):** scaffold `features/mission-control/` (`types.ts`/`index.ts` + a minimal placeholder `README.md`, finalized in stage 6); mechanically move the three files into `pages/` + `components/` (and register mission-control's route in the stage-1 `src/app/routes.tsx`); wrap the route in `<FeatureErrorBoundary featureName="Mission Control">`; **delete ICPManager's ~1,500–1,600 lines of commented-dead code**; repoint all moved-file imports. **(2b) Promote cluster (touches `customers`):** promote the three shared profiler-ICP utils (`profilerAcceptedIcpDisplay.ts`, `profileIcpsExtract.ts`, `missionProfilerSessionCache.ts`) → `src/shared/profiler/` and repoint their importers (mission-control + the external `customers/SuggestedICPCards`). No logic change; journeys `01`/`02`/`05` + VR green after each checkpoint.
 
 3. **Read-path data layer.** `contracts.ts` (zod) + `services/` + read hooks `useICPs`, `useDataSources`/`useLeadStreamStatus`; wire the company-profile read to the reused `useCompanyProfile`. MSW handlers for each. Hook-first; components not yet decomposed.
 
@@ -176,7 +188,7 @@ Each stage is a green checkpoint (preflight green, journeys + VR intact) and a c
 
 ## §9 Dead code & deferred tech debt
 
-- **ICPManager dead code:** ~1,500–1,600 lines of commented legacy (≈1,569 comment lines of 3,320; old localStorage component shadow) — deleted in stage 2, confirmed gone at finalize. Do not carry forward.
+- **ICPManager dead code:** ~1,500–1,600 lines of commented legacy (≈1,569 comment lines of 3,320; old localStorage component shadow) — **one contiguous block, lines 1–1634 of the file** (verified at plan-writing) — deleted in stage 2a, confirmed gone at finalize. Do not carry forward.
 - **TD-FE entries to allocate at finalize** (verify the actual highest TD-FE number at finalize — TD-FE-32 is the spec-writing-time ceiling), each with current-state / should-be / trigger:
   1. mission-control **write/mutation paths** remain raw `fetch` (ICP CRUD, data-source CRUD, company-profile save, connector approve/deny) — later mutation pass.
   2. `localStorage company_profile_{uid}` failover + `sessionStorage slackSourceToConnect` bridge retained.
@@ -194,7 +206,7 @@ On `master` after the single merge:
 2. Route resolves via the per-feature route registry; `/mission-control` URL + `requireTenant` unchanged; page wrapped in `<FeatureErrorBoundary>`.
 3. `index.ts`-only cross-feature lint live and green (TD-FE-15 resolved); Spec 14 §8 Q16 updated.
 4. Read paths (ICP list, data-sources/lead-stream, company-profile) on TanStack; `useCompanyProfile` reused; writes/localStorage carried as TD-FE.
-5. The three profiler-ICP utils (`profilerAcceptedIcpDisplay.ts`, `profileIcpsExtract.ts`, `missionProfilerSessionCache.ts`) in `src/shared/`, all importers (mission-control + `customers`) repointed.
+5. The three profiler-ICP utils (`profilerAcceptedIcpDisplay.ts`, `profileIcpsExtract.ts`, `missionProfilerSessionCache.ts`) in `src/shared/profiler/`, all importers (mission-control + `customers`) repointed.
 6. ICPManager's commented legacy blocks deleted (no commented-out component shadow remains); the feature carries no `// DEAD CODE`/`// HANDOFF` annotation markers (none expected — the dead code is commented blocks).
 7. `README.md` + Profiler-disposition section written; deferred TD-FE allocated.
 8. Vitest + RTL unit tests for new hooks/components; journeys `01`/`02`/`05` + VR green; serial `npm run preflight` green.
@@ -211,7 +223,7 @@ On `master` after the single merge:
 
 ## §12 Open questions
 
-- Exact `/leads/stream/status` and `/customer_profile` response shapes — confirm live (stage 3) before zod contracts.
+- Top-level endpoint **paths** are now resolved (data-source list = `GET /api/user-documents`; lead-stream = `GET /api/leads/stream/status`; ICP = `GET /api/profile/company` → `GET /api/customer_profile`; company profile = `GET /api/profile/company`). Residual: **field-level** response shapes — confirm live (stage 3) before relying on any single field; the zod contracts are deliberately loose (`.passthrough()`/`.nullish()`) to tolerate drift.
 
 ---
 
