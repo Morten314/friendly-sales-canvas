@@ -5,8 +5,6 @@ import {
   Database,
   Trash2,
   Edit,
-  X,
-  Check,
   Building2,
   Users,
   ChevronDown,
@@ -27,10 +25,10 @@ import { getStatusBadge, getTypeIcon } from "./dataSourceBadges";
 import DataSourceUploader from "./DataSourceUploader";
 import { getLeadStreamRowStatus, isTerminalLeadStreamStatus } from "./leadStreamStatus";
 import LeadStreamTable from "./LeadStreamTable";
+import SourceForm from "./SourceForm";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,15 +40,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -59,7 +48,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { buildApiUrl } from "@/lib/api";
@@ -70,17 +58,6 @@ interface CompanyProfile {
   companyName?: string;
   companyUrl?: string;
 }
-
-// Suggested tags
-const SUGGESTED_TAGS = [
-  "Competitor",
-  "Product",
-  "Pricing",
-  "Messaging",
-  "Customer Proof",
-  "Sales Enablement",
-  "Market Research",
-];
 
 const DataSourcesManager: React.FC = () => {
   const { toast } = useToast();
@@ -3163,210 +3140,6 @@ const DataSourcesManager: React.FC = () => {
           ? true // When editing, file is optional - can update metadata without new file
           : selectedFile); // When adding new, file is required
 
-  // Render the add/edit form
-  const renderAddForm = () => {
-    if (!isAddingInline) return null;
-
-    return (
-      <div ref={formCardRef}>
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>{editingId ? "Edit Data Source" : "Add Data Source"}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-6">
-              {/* Row 1: Source Type and Name side by side */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Type Selection - smaller, takes 1/3 width */}
-                <div className="space-y-2">
-                  <Label htmlFor="source-type">Source Type *</Label>
-                  <Select
-                    value={selectedType}
-                    onValueChange={(value) => handleTypeSelect(value as DataSourceType)}
-                  >
-                    <SelectTrigger id="source-type">
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="url">
-                        <div className="flex items-center gap-2">
-                          <LinkIcon className="h-4 w-4" />
-                          <span>Add URL</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="file">
-                        <div className="flex items-center gap-2">
-                          <Upload className="h-4 w-4" />
-                          <span>Upload File</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="system" disabled>
-                        <div className="flex items-center gap-2 opacity-50">
-                          <Database className="h-4 w-4" />
-                          <span>Connect System (Use dropdown)</span>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Name - takes 2/3 width */}
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="source-name">Name *</Label>
-                  <Input
-                    id="source-name"
-                    placeholder="e.g., Competitor Pricing Page"
-                    value={sourceName}
-                    onChange={(e) => setSourceName(e.target.value)}
-                    disabled={!!editingId && selectedType === "url"}
-                    className={
-                      editingId && selectedType === "url"
-                        ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                        : ""
-                    }
-                  />
-                </div>
-              </div>
-
-              {/* Row 2: URL or File - full width, more prominent */}
-              {selectedType === "url" && (
-                <div className="space-y-2">
-                  <Label htmlFor="source-url" className="text-base font-medium">
-                    Website URL *
-                  </Label>
-                  <Input
-                    id="source-url"
-                    type="url"
-                    placeholder="https://example.com"
-                    value={sourceUrl}
-                    onChange={(e) => setSourceUrl(e.target.value)}
-                    className={`text-base ${editingId ? "bg-gray-100 text-gray-500 cursor-not-allowed" : ""}`}
-                    disabled={!!editingId}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Enter the full URL of the website you want to add as a data source
-                  </p>
-                </div>
-              )}
-
-              {selectedType === "file" && (
-                <div className="space-y-2">
-                  <Label htmlFor="source-file" className="text-base font-medium">
-                    Upload File *
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      onChange={handleFileChange}
-                      className="hidden"
-                      id="source-file"
-                      accept=".pdf,.docx,.pptx,.csv,.xlsx"
-                    />
-                    <label
-                      htmlFor="source-file"
-                      className="flex-1 inline-flex items-center gap-3 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors bg-muted/20"
-                    >
-                      <Upload className="h-5 w-5 text-muted-foreground" />
-                      {selectedFile ? (
-                        <span className="text-foreground font-medium">{selectedFile.name}</span>
-                      ) : existingFileName ? (
-                        <span className="text-foreground font-medium">{existingFileName}</span>
-                      ) : (
-                        <span className="text-muted-foreground">
-                          Click to browse or drag and drop files here
-                        </span>
-                      )}
-                    </label>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Supported formats: PDF, DOCX, PPTX, CSV, XLSX
-                  </p>
-                </div>
-              )}
-
-              {/* Description */}
-              <div className="space-y-2">
-                <Label htmlFor="source-description">Description</Label>
-                <Textarea
-                  id="source-description"
-                  placeholder="Brief description of this data source..."
-                  value={sourceDescription}
-                  onChange={(e) => setSourceDescription(e.target.value)}
-                  rows={3}
-                />
-              </div>
-
-              {/* Tags */}
-              <div className="space-y-2">
-                <Label>Tags</Label>
-                <div className="space-y-3">
-                  <div className="flex flex-wrap gap-2">
-                    {SUGGESTED_TAGS.map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant={selectedTags.includes(tag) ? "default" : "outline"}
-                        className="cursor-pointer"
-                        onClick={() => handleTagToggle(tag)}
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      placeholder="Add custom tag..."
-                      value={customTag}
-                      onChange={(e) => setCustomTag(e.target.value)}
-                      onKeyDown={handleCustomTagKeyDown}
-                      className="max-w-xs"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleAddCustomTag}
-                      disabled={!customTag.trim()}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add
-                    </Button>
-                  </div>
-                  {selectedTags.filter((t) => !SUGGESTED_TAGS.includes(t)).length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedTags
-                        .filter((tag) => !SUGGESTED_TAGS.includes(tag))
-                        .map((tag) => (
-                          <Badge key={tag} variant="secondary" className="gap-1">
-                            {tag}
-                            <X
-                              className="h-3 w-3 cursor-pointer"
-                              onClick={() => handleTagToggle(tag)}
-                            />
-                          </Badge>
-                        ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button variant="outline" onClick={handleCancelInline}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveSource} disabled={!canSave}>
-                <Check className="h-4 w-4 mr-2" />
-                {editingId ? "Update" : "Add"} Data Source
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  };
-
   const showTable = dataSources.length > 0;
   const showDataSourcesEmptyState =
     dataSources.length === 0 && leadStreamFiles.length === 0 && !showLeadUpload;
@@ -3485,7 +3258,33 @@ const DataSourcesManager: React.FC = () => {
       </div>
 
       {/* Add/Edit Form */}
-      {renderAddForm()}
+      {isAddingInline && (
+        <SourceForm
+          editingId={editingId}
+          selectedType={selectedType}
+          sourceName={sourceName}
+          sourceUrl={sourceUrl}
+          selectedFile={selectedFile}
+          existingFileName={existingFileName}
+          selectedTags={selectedTags}
+          customTag={customTag}
+          sourceDescription={sourceDescription}
+          canSave={!!canSave}
+          fileInputRef={fileInputRef}
+          formCardRef={formCardRef}
+          onTypeSelect={handleTypeSelect}
+          onNameChange={setSourceName}
+          onUrlChange={setSourceUrl}
+          onFileChange={handleFileChange}
+          onTagToggle={handleTagToggle}
+          onCustomTagChange={setCustomTag}
+          onAddCustomTag={handleAddCustomTag}
+          onCustomTagKeyDown={handleCustomTagKeyDown}
+          onDescriptionChange={setSourceDescription}
+          onSave={handleSaveSource}
+          onCancel={handleCancelInline}
+        />
+      )}
 
       {/* Empty State — only when there are no data sources and no lead stream file */}
       {showDataSourcesEmptyState && (
