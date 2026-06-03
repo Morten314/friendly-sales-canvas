@@ -793,6 +793,8 @@ Post-Phase-5, when the decomposed tab/section components are stable enough to sn
 
 ## TD-FE-18 — market-research dead code (8 files, no live importer) awaiting the 5i sweep
 
+**Resolved:** 2026-06-03 (Plan 24i Phase 5i dead-code sweep). All 8 files deleted in commit `31c6ef7` — `CompetitorAnalysis`, `CompetitorAnalysisDrawer`, `ComponentStatusLoadingScreen`, `DataHistoryDialog`, `EmergingTrends`, `EmergingTrendsDrawer`, `RecentMarketResearch`, `ScoutCapabilities` — with `tsc` + `knip --strict` confirmed green on the phase branch and on merged `master` (`d88b813`). Original entry preserved below.
+
 **Date logged:** 2026-05-30
 **Origin:** Plan 24a Phase 5a (plans/24a-frontend-phase-5a-relocate.md), Task 0 import trace.
 
@@ -878,6 +880,8 @@ Migrate the market-entry edit-write path to a mutation hook (a `useMutation` POS
 ---
 
 ## TD-FE-22 — MarketEntrySection owns a data fetch but has no `<FeatureErrorBoundary>` wrapping
+
+**Resolved:** 2026-06-03 (Plan 24i Phase 5i close). Decision finalized per the 2026-06-02 update below: **no section-level boundary**. The intelligence surface is already wrapped one level up (`IntelligenceTab.tsx` → `<FeatureErrorBoundary featureName="Market Intelligence">`) plus the `App.tsx` route-level boundary; per-section boundaries would be redundant and inconsistent across the five sibling sections (5d–5h all inherited the same choice). No code change. Original entry preserved below.
 
 **Date logged:** 2026-06-01
 **Origin:** Plan 24d Phase 5d impl review round 1 (`docs/reviews/phase-5d-market-entry-impl-review-1.md` Nit "No `<FeatureErrorBoundary>` wrapping"). Plan Task 4 Step 5 marked the boundary **optional**.
@@ -1124,6 +1128,8 @@ Migrate the market-size edit-write path to a mutation hook (a POST with a JSON *
 ---
 
 ## TD-FE-32 — Feature phase-number disagreement: master Spec 14 §4 vs features/README naming map
+
+**Resolved:** 2026-06-03 (Phase 6 pre-planning). Reconciled `frontend/src/features/README.md`'s naming map to the master Spec 14 §4 phase sequence — the authoritative, kept-current source per Spec 14 §7 R7 (§4 is internally consistent: Phase 8 = signals + strategist, Phase 9 = scout + profiler, Phase 10 = settings + tenant + auth). Changes: `signals` 6→8, `scout` 8→9, `settings` 11→10 (`strategist`=8, `customers`=7, `mission-control`=6, `auth`/`tenant`=10 already agreed). The by-name handoff convention (Spec 24 §7) stays the robust default. Original entry preserved below.
 
 **Date logged:** 2026-06-03
 **Origin:** Phase 5 close (24i). Surfaced (not caused) by Phase 5 — recorded at the Phase 5 close per Spec 24 §9 delta 4.

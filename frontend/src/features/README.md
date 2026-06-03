@@ -25,10 +25,10 @@ Add a feature's name here **before** scaffolding it. Backend uses snake_case; th
 | `customers`       | 7                                                          |
 | `market-research` | 5                                                          |
 | `mission-control` | 6                                                          |
-| `scout`           | 8                                                          |
-| `settings`        | 11                                                         |
+| `scout`           | 9                                                          |
+| `settings`        | 10                                                         |
 | `shell`           | 4b                                                         |
-| `signals`         | 6                                                          |
+| `signals`         | 8                                                          |
 | `strategist`      | 8                                                          |
 | `tenant`          | 10 (UI) — primitive lives in `shared/tenant` from Phase 4b |
 
