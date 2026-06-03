@@ -27,6 +27,18 @@ const COMPONENT = RESEARCH_COMPONENTS.marketSize; // "market size & opportunity"
 
 describe("useResearchComponent", () => {
   it("fetches and returns parsed data from the MSW handler", async () => {
+    // Install a generic round-trip handler for the duration of this test. The shared
+    // handler now returns a section-specific rich payload for "market size & opportunity"
+    // (5h's useMarketSize fixture); this test only verifies generic fetch+parse, so it
+    // owns its response shape — matching the server.use() pattern of the tests below.
+    server.use(
+      http.post("/api/market-research", () =>
+        HttpResponse.json({
+          status: "success",
+          data: { component_name: COMPONENT, title: "Test", summary: "Test summary" },
+        }),
+      ),
+    );
     const { Wrapper } = wrapper();
     const { result } = renderHook(() => useResearchComponent(USER_ID, ORG_ID, COMPONENT), {
       wrapper: Wrapper,
