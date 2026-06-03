@@ -22,8 +22,6 @@ interface LeadStreamTableProps {
   deletingFileId: string | null;
   /** When the upload card is open, row deletes are disabled. */
   showLeadUpload: boolean;
-  /** Whether a status refresh is in flight (owned/displayed by the container header). */
-  isStatusLoading: boolean;
   /** Delete handler — the write stays in the container. */
   onDeleteFile: (fileId: string) => void;
 }

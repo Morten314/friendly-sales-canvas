@@ -3485,7 +3485,6 @@ const DataSourcesManager: React.FC = () => {
               files={leadStreamFiles}
               deletingFileId={deletingLeadStreamFileId}
               showLeadUpload={showLeadUpload}
-              isStatusLoading={leadStreamStatusLoading}
               onDeleteFile={handleDeleteLeadStream}
             />
           </div>
