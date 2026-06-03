@@ -1074,3 +1074,49 @@ Three commands: `npm run preflight` = serial `&&` chain (the merge gate); `npm r
 - Make the VR e2e contention-robust — Playwright retries on the VR specs, a higher `toHaveScreenshot` stabilization timeout, a lower default `PREFLIGHT_JOBS`, or scheduling e2e in its own non-concurrent wave so it never renders under a CPU spike — then flip `preflight` → `preflight:par`. Trigger: the serial merge-gate wall-clock becomes a real bottleneck, or concurrent-worktree development ends (single-session steady state).
 
 **Owner:** TBD.
+
+---
+
+## TD-FE-30 — Market-size page-level fetch/state/cache slice (the cascade ROOT) retained in `useMarketResearchData.ts`
+
+**Date logged:** 2026-06-03
+**Origin:** Phase 5h Task 4 Step 2 (deferred — plan `plans/24h-frontend-phase-5h-market-size.md` done-when #5, deferral fallback). Spec §6 assigns each section sub-phase the removal of its page-level raw-`fetch`/cache slice; 5h is the last section, so the plan's default was to remove the market-size slice here.
+
+**Current state:**
+`MarketSizeSection` now sources its display data via `useMarketSize` (5b), and the composition layer no longer drills the market-size data slice (the 9 data fields + `MarketIntelligenceTabProps` are gone). But the page-level `marketData` state and its `fetchMarketSizeData` producer in `useMarketResearchData.ts` are **retained** — unlike a leaf slice, this one is the **cascade ROOT**: `fetchMarketSizeData` is the priority-1 producer whose result is threaded as `previousContext` into the four downstream sections (market-entry, regulatory, competitor, industry-trends) that fetch sequentially after it. `marketData` also drives readiness/progress reporting and the `marketIntelligenceData` mirror. Removing it before the cascade itself is retired would hollow the sequential research chain for every other section (abort-criterion-3 cross-section coupling). The retained slice is tsc-safe internal state, no longer drilled to the (now self-fetching) market-size section. Same posture as 5d/5e/5g (TD-FE-19, TD-FE-28), escalated because this slice is the producer the others depend on, not a peer.
+
+**Why we deferred:**
+- The slice is the cascade root: its output feeds all four downstream sections via the `previousContext` chain. It cannot be removed section-by-section; it is removed only when the cascade as a whole is retired.
+
+**What it should be:**
+- The per-section 5b hooks (or a small orchestration replacement) supply each section's `previousContext` so `useMarketResearchData`'s raw `fetch`/`CACHE_DURATION` cascade can be deleted wholesale, leaving zero raw `fetch`/cache in the feature.
+
+**Pull-forward trigger:**
+- 24i's phase-close check (zero raw `fetch` + zero `CACHE_DURATION` in the feature) — this is the last and root remaining slice; 5i/24i must either retire the cascade or explicitly accept it as the documented closing exception (alongside TD-FE-19/28). The market-size slice cannot be removed in isolation before then.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-31 — Market-size edit-save retains the legacy `/api/ask` GET write path
+
+**Date logged:** 2026-06-03
+**Origin:** Phase 5h Task 2 / Task 5 (deferred — plan `plans/24h-frontend-phase-5h-market-size.md` scoped the edit-save path out of 5b: "the `/api/ask` save path is OUT of 5b's scope … kept this phase, flag a TD-FE"). Mirrors TD-FE-21 (the identical market-entry deferral).
+
+**Current state:**
+`MarketSizeSection.tsx`'s `handleSave` (the edit-save handler) retains the legacy `/api/ask` write pattern, untouched by 5h:
+- **GET with JSON in the query string.** It sends the edit payload to `GET /api/ask?...` (a different endpoint from the 5b `market-research` data layer). For substantial payloads this risks browser URL-length limits, exposes edit data in server access logs / browser history / referrers, and uses GET for a mutation.
+- **Write-path `localStorage`.** `setUserLocalStorage("market-size_original_json" / "market-size_modified_json", …)` writes the edit payload to localStorage just before the GET. The read-path cache was retired in 5h; these write-path calls rode along with the preserved `/ask` fetch and are not read anywhere else.
+
+**What it should be:**
+Migrate the market-size edit-write path to a mutation hook (a POST with a JSON **body**, replacing the GET-with-query-params), and drop the write-path `localStorage` calls (unused elsewhere). Backend `/ask` contract should be confirmed against a live call before rewiring (no auto-generated client — per CLAUDE.md polyglot rule).
+
+**Why we deferred:**
+- The `/api/ask` endpoint is outside 5b's `market-research` data layer; rewiring it during the structural decomposition would have mixed two concerns and changed how edits persist mid-refactor.
+- A mutation-hook migration is its own coordinated FE (+ backend contract confirmation) change warranting a focused phase, not a drive-by during a structural extraction.
+
+**Pull-forward trigger:**
+- The lead-stream / Phase 7-era mutation-hook pass that migrates the `/ask` edit-write paths, or 24i's phase-close check (this `/ask` GET is one of the remaining raw fetches; see TD-FE-19, TD-FE-21).
+- Earlier if an edit-save URL-length failure is observed.
+
+**Owner:** TBD.
