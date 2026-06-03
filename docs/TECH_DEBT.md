@@ -821,7 +821,7 @@ Spec 24 §7 (sub-phase 5i). Earlier only if one of these files becomes a build/p
 The page-level raw `fetch` + localStorage-cache removal moves to **5c (page decomposition)** and **5d–5h (section extraction)**. As each section is extracted to consume `useResearchComponent`/`useRegenerateResearch`, its slice of the editable-state/cascade/timestamp logic moves with it (or is intentionally dropped per its section plan), and the corresponding page `fetch` + cache machinery is deleted then. The data layer existing now already satisfies Spec 24 R3 (hooks precede section conversion).
 
 **Pull-forward trigger:**
-5c/5d–5h as each section converts; 24i confirms zero raw `fetch` + zero `CACHE_DURATION` remain in the feature at phase close. Earlier only if the legacy page cache causes a parity/regression issue. See ADR-0004 scope note.
+5c/5d–5h as each section converts; 24i confirms zero raw `fetch` + zero `CACHE_DURATION` remain in the feature at phase close. Earlier only if the legacy page cache causes a parity/regression issue. See ADR-0004 scope note. — **UPDATE 2026-06-03:** Phase 5 closed (24i) with this gate RELAXED to advisory (CTO pre-launch posture); this item was NOT retired and is carried forward — Phase 7 lead-stream-era mutation pass / Phase 13 audit. See Spec 24 §9 delta 11.
 
 **Owner:** TBD.
 
@@ -870,7 +870,7 @@ Migrate the market-entry edit-write path to a mutation hook (a `useMutation` POS
 - The container stays larger than the section tree's single-purpose target until the handler is extracted.
 
 **Pull-forward trigger:**
-- The market-entry edit-write migration phase (a future 5d+ / Phase 7-era mutation-hook pass), or 24i's phase-close check (zero raw `fetch` + zero `CACHE_DURATION` in the feature — this `/ask` GET is one of the remaining raw fetches; see TD-FE-19).
+- The market-entry edit-write migration phase (a future 5d+ / Phase 7-era mutation-hook pass), or 24i's phase-close check (zero raw `fetch` + zero `CACHE_DURATION` in the feature — this `/ask` GET is one of the remaining raw fetches; see TD-FE-19). — **UPDATE 2026-06-03:** Phase 5 closed (24i) with this gate RELAXED to advisory (CTO pre-launch posture); this item was NOT retired and is carried forward — Phase 7 lead-stream-era mutation pass / Phase 13 audit. See Spec 24 §9 delta 11.
 - Earlier if an edit-save URL-length failure or a SWOT fake-default appearing in saved data is observed.
 
 **Owner:** TBD.
@@ -1033,7 +1033,7 @@ Migrate the edit-write path to a 5b mutation hook (a `useMutation` POSTing a JSO
 - Display can diverge from the query cache after a save until the next refetch reconciles.
 
 **Pull-forward trigger:**
-- Before 5i's zero-raw-fetch confirmation (spec §11 item 3) — migrate the competitor write path, or 5i's gate explicitly accepts this documented exception (alongside TD-FE-21 for market-entry; see also TD-FE-19).
+- Before 5i's zero-raw-fetch confirmation (spec §11 item 3) — migrate the competitor write path, or 5i's gate explicitly accepts this documented exception (alongside TD-FE-21 for market-entry; see also TD-FE-19). — **UPDATE 2026-06-03:** Phase 5 closed (24i) with this gate RELAXED to advisory (CTO pre-launch posture); this item was NOT retired and is carried forward — Phase 7 lead-stream-era mutation pass / Phase 13 audit. See Spec 24 §9 delta 11.
 - Earlier if an edit-save URL-length failure or a visible post-save cache-divergence is observed.
 
 **Owner:** TBD.
@@ -1052,7 +1052,7 @@ Industry-trends page-level fetch/state/cache slice retained in `useMarketResearc
 - The slice is cascade-coupled: it feeds 5h (market-size) via the sequential `previousContext` chain. Removing it before 5h is decomposed would hollow the cascade.
 
 **Pull-forward trigger:**
-- When 5h is decomposed (or the cascade is retired), remove the industry-trends slice from `useMarketResearchData.ts`; this also feeds 24i's zero-raw-fetch gate.
+- When 5h is decomposed (or the cascade is retired), remove the industry-trends slice from `useMarketResearchData.ts`; this also feeds 24i's zero-raw-fetch gate. — **UPDATE 2026-06-03:** Phase 5 closed (24i) with this gate RELAXED to advisory (CTO pre-launch posture); this item was NOT retired and is carried forward — Phase 7 lead-stream-era mutation pass / Phase 13 audit. See Spec 24 §9 delta 11.
 
 **Owner:** TBD.
 
@@ -1092,7 +1092,7 @@ Three commands: `npm run preflight` = serial `&&` chain (the merge gate); `npm r
 - The per-section 5b hooks (or a small orchestration replacement) supply each section's `previousContext` so `useMarketResearchData`'s raw `fetch`/`CACHE_DURATION` cascade can be deleted wholesale, leaving zero raw `fetch`/cache in the feature.
 
 **Pull-forward trigger:**
-- 24i's phase-close check (zero raw `fetch` + zero `CACHE_DURATION` in the feature) — this is the last and root remaining slice; 5i/24i must either retire the cascade or explicitly accept it as the documented closing exception (alongside TD-FE-19/28). The market-size slice cannot be removed in isolation before then.
+- 24i's phase-close check (zero raw `fetch` + zero `CACHE_DURATION` in the feature) — this is the last and root remaining slice; 5i/24i must either retire the cascade or explicitly accept it as the documented closing exception (alongside TD-FE-19/28). The market-size slice cannot be removed in isolation before then. — **UPDATE 2026-06-03:** Phase 5 closed (24i) with this gate RELAXED to advisory (CTO pre-launch posture); this item was NOT retired and is carried forward — Phase 7 lead-stream-era mutation pass / Phase 13 audit. See Spec 24 §9 delta 11.
 
 **Owner:** TBD.
 
@@ -1116,7 +1116,29 @@ Migrate the market-size edit-write path to a mutation hook (a POST with a JSON *
 - A mutation-hook migration is its own coordinated FE (+ backend contract confirmation) change warranting a focused phase, not a drive-by during a structural extraction.
 
 **Pull-forward trigger:**
-- The lead-stream / Phase 7-era mutation-hook pass that migrates the `/ask` edit-write paths, or 24i's phase-close check (this `/ask` GET is one of the remaining raw fetches; see TD-FE-19, TD-FE-21).
+- The lead-stream / Phase 7-era mutation-hook pass that migrates the `/ask` edit-write paths, or 24i's phase-close check (this `/ask` GET is one of the remaining raw fetches; see TD-FE-19, TD-FE-21). — **UPDATE 2026-06-03:** Phase 5 closed (24i) with this gate RELAXED to advisory (CTO pre-launch posture); this item was NOT retired and is carried forward — Phase 7 lead-stream-era mutation pass / Phase 13 audit. See Spec 24 §9 delta 11.
 - Earlier if an edit-save URL-length failure is observed.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-32 — Feature phase-number disagreement: master Spec 14 §4 vs features/README naming map
+
+**Date logged:** 2026-06-03
+**Origin:** Phase 5 close (24i). Surfaced (not caused) by Phase 5 — recorded at the Phase 5 close per Spec 24 §9 delta 4.
+
+**Current state:**
+Master Spec 14 §4 numbers the feature phases signals=8, scout=9, settings=10; `frontend/src/features/README.md`'s naming map numbers them signals=6, scout=8, settings=11. This is pre-existing drift between the two sources, surfaced (not caused) by Phase 5. To stay unambiguous, handoff tables (e.g. Spec 24 §7) reference target features **by name**, never by phase number.
+
+**What it should be:**
+One source of truth for feature→phase numbering, with the master plan and the `features/README.md` naming map reconciled to agree.
+
+**Why we deferred:**
+- Reconciling is a cross-cutting edit affecting Phases 6–13 planning; it is out of scope for 5i (finalize-only).
+- Recorded at the Phase 5 close (Spec 24 §9 delta 4).
+
+**Pull-forward trigger:**
+- The next phase that plans against the numbering (Phase 6/7 pre-planning) reconciles it, or whichever phase first hits an ambiguity the by-name convention cannot resolve.
 
 **Owner:** TBD.
