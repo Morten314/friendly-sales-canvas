@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import EditHistoryPanel from "@/features/market-research/components/EditHistoryPanel";
 import { sanitizeIntelligenceProps } from "@/features/market-research/components/intelligence/sanitizeIntelligenceProps";
 import MarketIntelligenceSections from "@/features/market-research/components/MarketIntelligenceSections";
-import type { MarketIntelligenceTabProps } from "@/features/market-research/components/MarketIntelligenceTabProps";
+import type { MarketIntelligenceSectionsProps } from "@/features/market-research/components/MarketIntelligenceSections";
 import type { useMarketResearchData } from "@/features/market-research/hooks/useMarketResearchData";
 import type { DeploymentData } from "@/features/shell";
 import type { UntypedReportState } from "@/lib/types/escape-hatches";
@@ -617,8 +617,8 @@ const IntelligenceTab: React.FC<IntelligenceTabProps> = ({
     regulatoryIsPostSave: isRegulatoryPostSave,
     marketEntryCustomMessage,
     marketEntryIsPostSave: isMarketEntryPostSave,
-    // shape matches MarketIntelligenceTabProps; the inline object literal defeats structural inference, so cast at this one boundary (prop names are 1:1 with the former JSX spread).
-  } as unknown as MarketIntelligenceTabProps;
+    // shape matches MarketIntelligenceSectionsProps; the inline object literal defeats structural inference, so cast at this one boundary (prop names are 1:1 with the former JSX spread).
+  } as unknown as MarketIntelligenceSectionsProps;
 
   const safeProps = sanitizeIntelligenceProps(intelligenceProps);
 
