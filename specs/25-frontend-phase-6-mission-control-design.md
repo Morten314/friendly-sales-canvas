@@ -56,7 +56,7 @@ Implements master Spec 14 §4 "Phase 6 — Feature: mission-control" and its "Fi
 
 ### 2.2 Out of scope (deferred to TD-FE, allocated at the finalize stage)
 
-- **Write/mutation paths** — ICP CRUD, data-source CRUD, company-profile save, connector approve/deny remain raw `fetch`. Migrated in a later mutation pass (Phase 7-era / Phase 13), mirroring TD-FE-21/27/31.
+- **Write/mutation paths** — ICP CRUD, data-source CRUD, company-profile save, connector approve/deny remain raw `fetch`. Migrated in a later mutation pass — the TD-FE entry (allocated at finalize) records the candidate phase; Spec 14 §4 has no dedicated mutation phase (Phase 13 is LOC reduction), so the trigger is whichever of a Phase 7 ICP-write migration or Phase 13 reaches it first. Mirrors TD-FE-21/27/31.
 - **`localStorage company_profile_{uid}` failover** and the **`sessionStorage slackSourceToConnect`** OAuth bridge — retained as-is.
 - **`useCompanyProfile` promotion** to `src/shared/api` — deferred to Phase 10 (settings extraction) / Phase 11.
 - **DataSourcesManager upload helpers** shared extraction — deferred to Phase 11.
@@ -83,12 +83,14 @@ src/features/mission-control/
 │   ├── data-sources/                   # uploader, lead-stream table, generic source form (ex-DataSourcesManager)
 │   └── icp/                            # ICP list/filter, add-edit wizard, profiler-merge view (ex-ICPManager)
 ├── hooks/                              # feature read-path hooks (useICPs, useDataSources, useLeadStreamStatus)
-├── services/                          # API call layer (read endpoints)
+├── services/                          # API call layer (read endpoints; follows Phase 5 convention)
 ├── contracts.ts                       # zod schemas for the read envelopes
 ├── types.ts                           # feature-local types (DataSource, ICP, ConnectorApproval, …)
 ├── index.ts                           # public surface — Phase 7 consumes this
 └── README.md
 ```
+
+Tests live in co-located `__tests__/` dirs per the Phase 5 convention (e.g. `hooks/__tests__/`, `services/__tests__/`, `components/<area>/__tests__/`, plus a feature-root `__tests__/`).
 
 **Dependency rules (Spec 14 §3.3):** may import `@/features/mission-control/*` (self), `@/shared/*`, `@/components/ui/*`, npm; transitionally (Phases 4b–12) the legacy dirs (`@/hooks`, `@/lib`, `@/utils`, `@/components/settings/*`, …). Cross-feature consumers import only via `@/features/mission-control` (the index). The reuse of `useCompanyProfile` from `components/settings/` is a **legacy-dir** import (settings is not yet a feature), permitted by the transitional exception.
 
@@ -101,7 +103,8 @@ src/features/mission-control/
 | Read | Endpoint (confirm live before wiring) | Hook |
 |---|---|---|
 | ICP list | `GET /api/customer_profile?org_id=…` (and `?user_id=…` variant) | `useICPs` (feature-local) |
-| Data sources + lead-stream status | `GET /leads/stream/status` (+ source list) | `useDataSources` / `useLeadStreamStatus` (feature-local) |
+| Lead-stream file status | `GET /leads/stream/status` | `useLeadStreamStatus` (feature-local) |
+| Data-source list | _one of DataSourcesManager's fetches — name + confirm live at stage 3_ | `useDataSources` (feature-local) |
 | Company profile | `GET /api/profile/company?org_id=…` | **reuse `useCompanyProfile`** (see 4.3) |
 
 Endpoint paths above are written as they appear in the FE `fetch()` calls — the `/api` prefix is the Vite proxy surface (`vite.config.ts`), and `/leads/stream/status` may carry or omit it; confirm the exact prefix live (§12). Hooks are built **before** the components that consume them are decomposed (Spec 14 R3, hook-first). zod schemas land in `contracts.ts`; `.parse` at the fetch boundary. Per CLAUDE.md polyglot rule, confirm each response shape against a live backend call before writing FE types (no auto-generated client).
@@ -147,13 +150,13 @@ Profiler is **not** a feature yet; Phase 9 owns the scout/profiler split and the
 
 Each stage is a green checkpoint (preflight green, journeys + VR intact) and a commit-series within the one branch. A failed stage reverts to the last green stage (Spec 14 §5.7) without reverting the whole phase.
 
-1. **Enabling infra** — two separate commits/checkpoints (registry first, lint second) for a finer rollback boundary; the plan breaks these into tasks. **(1a) Route registry:** each feature exposes routes via `routes.tsx` (re-exported from `index.ts`); a thin `src/app/routes.tsx` composes them append-only so phases never edit a shared `<Routes>` table. Convert the existing market-research route as the worked example (which removes `App.tsx`'s deep page import, so the lint then passes cleanly); document the convention in `src/features/README.md`. **(1b) Lint:** finalize the `index.ts`-only lint (forbid-form `import-x/no-internal-modules`) and verify the **4a probe** — the lint-acceptance test from the Phase 4a spike (TD-FE-15): a deep `@/features/<x>/…` import from outside is flagged, the `@/features/<x>` index import is allowed, and the ~95 pre-existing legitimate relative/external deep imports are not. Resolve TD-FE-15; update Spec 14 §8 Q16.
+1. **Enabling infra** — two separate commits/checkpoints (registry first, lint second) for a finer rollback boundary; the plan breaks these into tasks. **(1a) Route registry:** each feature exposes routes via `routes.tsx` (re-exported from `index.ts`); a thin `src/app/routes.tsx` composes them append-only so phases never edit a shared `<Routes>` table. Convert the existing market-research route as the worked example; this also removes `App.tsx`'s deep page import — the reason the registry lands before the lint (1b). Document the convention in `src/features/README.md`. **(1b) Lint:** finalize the `index.ts`-only lint (forbid-form `import-x/no-internal-modules`) and verify the **4a probe** — the lint-acceptance test from the Phase 4a spike (TD-FE-15): a deep `@/features/<x>/…` import from outside is flagged, the `@/features/<x>` index import is allowed, and the ~95 pre-existing legitimate relative/external deep imports are not. Resolve TD-FE-15; update Spec 14 §8 Q16.
 
-2. **Scaffold + relocate (parity).** Scaffold `features/mission-control/` (`types.ts`/`index.ts` + a minimal placeholder `README.md`, finalized in stage 6); mechanically move the three files into `pages/` + `components/` (and register mission-control's route in the stage-1 `src/app/routes.tsx`); wrap the route in `<FeatureErrorBoundary featureName="Mission Control">`; **delete ICPManager's ~1,500–1,600 lines of commented-dead code**; promote the three shared profiler-ICP utils (`profilerAcceptedIcpDisplay.ts`, `profileIcpsExtract.ts`, `missionProfilerSessionCache.ts`) → `src/shared/` and repoint their importers (mission-control + `customers/SuggestedICPCards`); repoint all moved-file imports. No logic change; journeys `01`/`02`/`05` + VR green.
+2. **Scaffold + relocate (parity)** — two checkpoints for a finer revert boundary (the plan breaks these into tasks). **(2a) Relocate (intra-feature):** scaffold `features/mission-control/` (`types.ts`/`index.ts` + a minimal placeholder `README.md`, finalized in stage 6); mechanically move the three files into `pages/` + `components/` (and register mission-control's route in the stage-1 `src/app/routes.tsx`); wrap the route in `<FeatureErrorBoundary featureName="Mission Control">`; **delete ICPManager's ~1,500–1,600 lines of commented-dead code**; repoint all moved-file imports. **(2b) Promote cluster (touches `customers`):** promote the three shared profiler-ICP utils (`profilerAcceptedIcpDisplay.ts`, `profileIcpsExtract.ts`, `missionProfilerSessionCache.ts`) → `src/shared/` and repoint their importers (mission-control + the external `customers/SuggestedICPCards`). No logic change; journeys `01`/`02`/`05` + VR green after each checkpoint.
 
 3. **Read-path data layer.** `contracts.ts` (zod) + `services/` + read hooks `useICPs`, `useDataSources`/`useLeadStreamStatus`; wire the company-profile read to the reused `useCompanyProfile`. MSW handlers for each. Hook-first; components not yet decomposed.
 
-4. **MissionControl.tsx decomposition.** Extract the 3-tab router into `MissionControlPage.tsx`; lift the company-profile form and the connector-approval cluster into `components/company-profile/`; consume the stage-3 hooks. Tab→subtree mapping (verified in `MissionControl.tsx`): `profile` → `components/company-profile/`, `customer-profile` → `components/icp/` (ICPManager), `sources` → `components/data-sources/` (DataSourcesManager); the latter two render the subtrees decomposed in stages 6 and 5.
+4. **MissionControl.tsx decomposition.** Extract the 3-tab router into `MissionControlPage.tsx`; lift the company-profile form and the connector-approval cluster into `components/company-profile/`; consume the stage-3 hooks. Tab→subtree mapping (verified in `MissionControl.tsx`): `profile` → `components/company-profile/`, `customer-profile` → `components/icp/` (ICPManager), `sources` → `components/data-sources/` (DataSourcesManager). At stage-4 completion the `customer-profile`/`sources` tabs still render the **undecomposed** (relocated) ICPManager and DataSourcesManager; stages 5 and 6 then decompose those into the `data-sources/` and `icp/` sub-trees.
 
 5. **DataSourcesManager decomposition.** Split into `components/data-sources/`: uploader (drag-drop + file refs), lead-stream status table, generic source form. Write paths stay raw `fetch` (deferred).
 
@@ -164,7 +167,7 @@ Each stage is a green checkpoint (preflight green, journeys + VR intact) and a c
 ## §8 Error handling, testing & parity
 
 - **Error boundary:** new `<FeatureErrorBoundary featureName="Mission Control">` at the page level. **No per-section boundaries** — Phase 5's settled convention (the page/route-level boundary suffices; per-section would be redundant and inconsistent).
-- **Parity guards every stage:** behavioral journeys `01` (page + VR), `02` (DataSourcesManager), `05` (ICPManager + VR) stay green; the 2% VR threshold holds (decomposition is structural/byte-parity, so snapshots should not move).
+- **Parity guards every stage:** behavioral journeys `01` (page + VR), `02` (DataSourcesManager), `05` (ICPManager + VR) stay green; snapshots stay within the 2% VR threshold (decomposition is structural and visually neutral; minor bounding-box shifts from added wrapper elements are acceptable if visually identical).
 - **New unit tests:** Vitest + RTL for each decomposed component and each new hook; MSW handlers for the migrated reads. Hooks get direct tests (loading/error/success); components get render + interaction tests.
 - **Merge gate:** serial `npm run preflight` (typecheck + lint + format + Vitest + build + bundle + e2e/VR + `knip --strict`) at the single `--no-ff` merge. Run `npm run verify` (typecheck + lint + test — `package.json:18`) as the inner loop between stages.
 - **Concurrency note:** run Phase 6 to completion before starting Phase 8/10 (the "sequential" choice). The enabling infra (stage 1) is on the same branch and reaches `master` at the Phase-6 merge, so any later concurrent work consumes the route registry + lint from `master` after this phase lands.
@@ -174,7 +177,7 @@ Each stage is a green checkpoint (preflight green, journeys + VR intact) and a c
 ## §9 Dead code & deferred tech debt
 
 - **ICPManager dead code:** ~1,500–1,600 lines of commented legacy (≈1,569 comment lines of 3,320; old localStorage component shadow) — deleted in stage 2, confirmed gone at finalize. Do not carry forward.
-- **TD-FE entries to allocate at finalize** (next free numbers after TD-FE-32), each with current-state / should-be / trigger:
+- **TD-FE entries to allocate at finalize** (verify the actual highest TD-FE number at finalize — TD-FE-32 is the spec-writing-time ceiling), each with current-state / should-be / trigger:
   1. mission-control **write/mutation paths** remain raw `fetch` (ICP CRUD, data-source CRUD, company-profile save, connector approve/deny) — later mutation pass.
   2. `localStorage company_profile_{uid}` failover + `sessionStorage slackSourceToConnect` bridge retained.
   3. `useCompanyProfile` **shared-promotion candidate** (settings + mission-control consumers; market-research path duplicates) — Phase 10/11.
