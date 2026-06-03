@@ -24,6 +24,7 @@ import type {
 } from "../../types";
 
 import { getStatusBadge, getTypeIcon } from "./dataSourceBadges";
+import DataSourceUploader from "./DataSourceUploader";
 import { getLeadStreamRowStatus, isTerminalLeadStreamStatus } from "./leadStreamStatus";
 import LeadStreamTable from "./LeadStreamTable";
 
@@ -3664,81 +3665,21 @@ const DataSourcesManager: React.FC = () => {
             </div>
 
             {showLeadUpload && (
-              <Card className="mb-6">
-                <CardContent className="pt-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Add leads</h3>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setShowLeadUpload(false);
-                        setSelectedLeadFile(null);
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lead-csv-upload" className="text-base font-medium">
-                      Lead file (CSV, XLSX, or XLS) *
-                    </Label>
-                    <div
-                      onDragOver={handleLeadDragOver}
-                      onDragLeave={handleLeadDragLeave}
-                      onDrop={handleLeadDrop}
-                      className="flex items-center gap-2"
-                    >
-                      <input
-                        ref={leadFileInputRef}
-                        type="file"
-                        accept=".csv,.xlsx,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
-                        onChange={handleLeadFileInputChange}
-                        className="hidden"
-                        id="lead-csv-upload"
-                      />
-                      <label
-                        htmlFor="lead-csv-upload"
-                        className={`flex-1 inline-flex items-center gap-3 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors bg-muted/20 ${
-                          isDraggingLead ? "border-primary bg-primary/5" : ""
-                        }`}
-                      >
-                        <Upload className="h-5 w-5 text-muted-foreground shrink-0" />
-                        {selectedLeadFile ? (
-                          <span className="text-foreground font-medium truncate">
-                            {selectedLeadFile.name}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">
-                            Click to browse or drag and drop a CSV, XLSX, or XLS file here
-                          </span>
-                        )}
-                      </label>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Excel workbooks are parsed on the server. CSV files are checked in the browser
-                      before upload.
-                    </p>
-                  </div>
-                  <div className="flex justify-end gap-2 pt-2 border-t">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setShowLeadUpload(false);
-                        setSelectedLeadFile(null);
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleUploadLeadCsv}
-                      disabled={!selectedLeadFile || isUploadingLeads}
-                    >
-                      {isUploadingLeads ? "Uploading..." : "Add leads"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <DataSourceUploader
+                selectedLeadFile={selectedLeadFile}
+                isDraggingLead={isDraggingLead}
+                isUploadingLeads={isUploadingLeads}
+                leadFileInputRef={leadFileInputRef}
+                onClose={() => {
+                  setShowLeadUpload(false);
+                  setSelectedLeadFile(null);
+                }}
+                onDragOver={handleLeadDragOver}
+                onDragLeave={handleLeadDragLeave}
+                onDrop={handleLeadDrop}
+                onFileInputChange={handleLeadFileInputChange}
+                onUpload={handleUploadLeadCsv}
+              />
             )}
 
             <LeadStreamTable
