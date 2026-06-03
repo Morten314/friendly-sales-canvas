@@ -5,9 +5,6 @@ import {
   Database,
   Trash2,
   Edit,
-  Globe,
-  FileText,
-  Settings,
   X,
   Check,
   Building2,
@@ -25,6 +22,10 @@ import type {
   DataSourceStatus,
   LeadStreamFileApiRow,
 } from "../../types";
+
+import { getStatusBadge, getTypeIcon } from "./dataSourceBadges";
+import { getLeadStreamRowStatus, isTerminalLeadStreamStatus } from "./leadStreamStatus";
+import LeadStreamTable from "./LeadStreamTable";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -2602,48 +2603,6 @@ const DataSourcesManager: React.FC = () => {
       (f) => !deletedLeadStreamFileIdsRef.current.has(f.file_id) && !isLeadStreamRowDeletedInApi(f),
     );
 
-  const isTerminalLeadStreamStatus = (status?: string) => {
-    const s = (status || "").toLowerCase().trim();
-    return (
-      s === "completed" ||
-      s === "complete" ||
-      s === "failed" ||
-      s === "error" ||
-      s === "deleted" ||
-      s === "success" ||
-      s === "succeeded" ||
-      s === "done" ||
-      s === "finished" ||
-      s === "processed" ||
-      s === "ready"
-    );
-  };
-
-  const getLeadStreamRowStatus = (row: LeadStreamFileApiRow): string => {
-    const ts = (row.tracking_status || "").toLowerCase();
-    if (ts === "deleted") return "deleted";
-    return row.processing_status ?? row.status ?? "";
-  };
-
-  const mapProcessingStatusToSourceStatus = (status?: string): DataSourceStatus => {
-    const s = (status || "").toLowerCase();
-    if (s === "deleted") return "completed";
-    if (
-      s === "completed" ||
-      s === "complete" ||
-      s === "success" ||
-      s === "succeeded" ||
-      s === "done" ||
-      s === "finished" ||
-      s === "processed" ||
-      s === "ready"
-    ) {
-      return "completed";
-    }
-    if (s === "failed" || s === "error") return "failed";
-    return "processing";
-  };
-
   // Sync the useLeadStreamStatus read into component state. Prunes the
   // optimistic-delete ref to ids that are gone from the backend, then applies the
   // visibility filter (which still hides ids in deletedLeadStreamFileIdsRef +
@@ -3176,50 +3135,6 @@ const DataSourcesManager: React.FC = () => {
         title: "Source deleted",
         description: "The data source has been removed.",
       });
-    }
-  };
-
-  const getStatusBadge = (status: DataSourceStatus) => {
-    switch (status) {
-      case "active":
-      case "completed":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800"
-          >
-            🟢 {status === "completed" ? "Completed" : "Active"}
-          </Badge>
-        );
-      case "failed":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800"
-          >
-            🔴 Failed
-          </Badge>
-        );
-      case "processing":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-400 dark:border-yellow-800"
-          >
-            🟡 Processing
-          </Badge>
-        );
-    }
-  };
-
-  const getTypeIcon = (type: DataSourceType) => {
-    switch (type) {
-      case "url":
-        return <Globe className="h-4 w-4 text-muted-foreground" />;
-      case "file":
-        return <FileText className="h-4 w-4 text-muted-foreground" />;
-      case "system":
-        return <Settings className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
@@ -3826,85 +3741,13 @@ const DataSourcesManager: React.FC = () => {
               </Card>
             )}
 
-            {leadStreamFiles.length > 0 && (
-              <div className="border rounded-lg overflow-hidden relative">
-                {deletingLeadStreamFileId && (
-                  <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-10 flex items-center justify-center">
-                    <div className="flex gap-2">
-                      <div
-                        className="w-2 h-2 rounded-full bg-primary animate-bounce"
-                        style={{ animationDelay: "0ms", animationDuration: "1.4s" }}
-                      />
-                      <div
-                        className="w-2 h-2 rounded-full bg-primary animate-bounce"
-                        style={{ animationDelay: "200ms", animationDuration: "1.4s" }}
-                      />
-                      <div
-                        className="w-2 h-2 rounded-full bg-primary animate-bounce"
-                        style={{ animationDelay: "400ms", animationDuration: "1.4s" }}
-                      />
-                    </div>
-                  </div>
-                )}
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="w-[140px]">Type</TableHead>
-                      <TableHead className="min-w-[180px]">File</TableHead>
-                      <TableHead className="hidden md:table-cell min-w-[160px]">Import</TableHead>
-                      <TableHead className="w-[120px]">Status</TableHead>
-                      <TableHead className="w-[90px] text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {leadStreamFiles.map((row) => (
-                      <TableRow key={row.file_id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">Lead stream</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span
-                            className="text-sm font-medium truncate max-w-[min(100vw-12rem,28rem)] block"
-                            title={row.filename}
-                          >
-                            {row.filename}
-                          </span>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          <span className="text-xs text-muted-foreground">
-                            {typeof row.total_rows === "number"
-                              ? `${row.created_count ?? 0} / ${row.total_rows} rows`
-                              : `${row.created_count ?? 0} created`}
-                            {typeof row.error_count === "number" && row.error_count > 0
-                              ? ` · ${row.error_count} error${row.error_count === 1 ? "" : "s"}`
-                              : ""}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {getStatusBadge(
-                            mapProcessingStatusToSourceStatus(getLeadStreamRowStatus(row)),
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => handleDeleteLeadStream(row.file_id)}
-                            disabled={!!deletingLeadStreamFileId || showLeadUpload}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+            <LeadStreamTable
+              files={leadStreamFiles}
+              deletingFileId={deletingLeadStreamFileId}
+              showLeadUpload={showLeadUpload}
+              isStatusLoading={leadStreamStatusLoading}
+              onDeleteFile={handleDeleteLeadStream}
+            />
           </div>
         </>
       )}
