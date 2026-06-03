@@ -716,6 +716,8 @@ adds a feature that imports another feature.
 
 **Owner:** TBD.
 
+**Resolved:** Phase 6 (stage 1b) — `import-x/no-internal-modules` (forbid `@/features/*/!(index)`, `@/features/*/!(index)/**`) added to `frontend/eslint.config.js`; same-feature imports converted to relative; cross-feature import is index-only.
+
 ---
 
 ## TD-FE-16 — Sidebar export-name twins + `useAuth` name collision

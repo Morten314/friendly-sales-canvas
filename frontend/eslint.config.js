@@ -90,6 +90,21 @@ export default tseslint.config(
         },
       ],
       "import-x/no-cycle": "error",
+      // Index-only cross-feature imports (TD-FE-15). A feature's internals are
+      // private; cross-feature consumers import via "@/features/<X>" only.
+      // Same-feature imports are relative (see src/features/README.md), so they
+      // are not matched by these alias globs. ~95 pre-existing legitimate
+      // relative/external deep imports are unaffected (they are not "@/features/*").
+      //
+      // The !(index) extglob excludes the resolved terminal that the TypeScript
+      // resolver appends to bare directory imports (@/features/shell →
+      // @/features/shell/index) — so correct index-only imports are not flagged.
+      "import-x/no-internal-modules": [
+        "error",
+        {
+          forbid: ["@/features/*/!(index)", "@/features/*/!(index)/**"],
+        },
+      ],
     },
   },
   // Override zone: shadcn primitives — locked from Phase 4.
