@@ -5,5 +5,6 @@
  * `<feature>/routes.tsx`, instead of editing App.tsx's shared `<Routes>` table.
  */
 import { marketResearchRoutes } from "@/features/market-research";
+import { missionControlRoutes } from "@/features/mission-control";
 
-export const featureRoutes = [...marketResearchRoutes];
+export const featureRoutes = [...marketResearchRoutes, ...missionControlRoutes];

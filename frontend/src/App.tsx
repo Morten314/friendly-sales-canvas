@@ -2,7 +2,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
-import MissionControl from "./features/mission-control/pages/MissionControlPage";
 import Artifacts from "./pages/Artifacts";
 import Calendar from "./pages/Calendar";
 import Customers from "./pages/Customers";
@@ -48,14 +47,6 @@ const App = () => (
                 />
 
                 {/* Protected routes that require both authentication and tenant selection */}
-                <Route
-                  path="/mission-control"
-                  element={
-                    <ProtectedRoute requireTenant>
-                      <MissionControl />
-                    </ProtectedRoute>
-                  }
-                />
                 <Route
                   path="/signals"
                   element={

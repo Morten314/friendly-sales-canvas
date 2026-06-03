@@ -1,4 +1,3 @@
 // Public surface for the `mission-control` feature.
-// Re-export ONLY what other features may consume; internals stay unexported.
-// Cross-feature consumers import from "@/features/mission-control", never a deep path.
-export {};
+// Cross-feature consumers (customers, Phase 7) import from "@/features/mission-control", never a deep path.
+export { missionControlRoutes } from "./routes";
