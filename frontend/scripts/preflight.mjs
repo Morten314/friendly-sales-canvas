@@ -20,6 +20,10 @@
 //   PREFLIGHT_JOBS=<n>      max concurrent tasks. Default leaves headroom so a second
 //                           worktree's preflight can run on the same box without
 //                           oversubscribing (vitest already caps its own workers at 4).
+//   PREFLIGHT_MAX_HEAVY=<n> max concurrent HEAVY phases (build/test/e2e) in this
+//                           runner. Default 1 — on the memory-bound box, stacking
+//                           two heavy phases is what tips into swap + the flake.
+//                           Raise on a dedicated high-RAM box.
 //   PREFLIGHT_FAIL_FAST=0   run every task to completion (report all failures).
 
 import { spawn } from "node:child_process";
@@ -33,10 +37,10 @@ const ALL = {
   typecheck: { deps: [] },
   lint: { deps: [] },
   format: { deps: [], script: "format:check" },
-  test: { deps: [] },
-  build: { deps: [] },
+  test: { deps: [], heavy: true },
+  build: { deps: [], heavy: true },
   bundle: { deps: ["build"], script: "bundle:check" },
-  e2e: { deps: ["build"], script: "test:e2e" },
+  e2e: { deps: ["build"], script: "test:e2e", heavy: true },
   knip: { deps: [] },
 };
 
@@ -54,6 +58,11 @@ if (!selected) {
 const JOBS =
   Number(process.env.PREFLIGHT_JOBS) || Math.max(2, Math.min(4, Math.floor(os.cpus().length / 4)));
 const FAIL_FAST = process.env.PREFLIGHT_FAIL_FAST !== "0";
+// R5 (2026-06-03 test-infra speedup): cap concurrently-running HEAVY phases
+// (build/test/e2e) within this runner. On the memory-bound box, stacking two
+// heavy phases (each multi-hundred-MB + Chromium/jsdom workers) is what tips
+// into swap and the waitFor-timeout flake; light checks still fill JOBS freely.
+const MAX_HEAVY = Math.max(1, Number(process.env.PREFLIGHT_MAX_HEAVY) || 1);
 
 // Build the live task set (selected tasks + only their in-set deps).
 const tasks = new Map();
@@ -63,6 +72,7 @@ for (const name of selected) {
     name,
     script: def.script ?? name,
     deps: def.deps.filter((d) => selected.includes(d)),
+    heavy: def.heavy ?? false,
     status: "pending", // pending -> running -> done | skipped | cancelled
     code: null,
     ms: 0,
@@ -162,8 +172,12 @@ function schedule() {
     const queue = [...tasks.values()]
       .filter(ready)
       .sort((a, b) => priority(b.name) - priority(a.name));
+    const heavyRunning = () => [...running].filter((t) => t.heavy).length;
     for (const t of queue) {
       if (running.size >= JOBS) break;
+      // R5: defer a heavy phase if the heavy budget is full; keep scanning so
+      // light checks behind it still launch (don't `break`).
+      if (t.heavy && heavyRunning() >= MAX_HEAVY) continue;
       launch(t);
     }
   }
