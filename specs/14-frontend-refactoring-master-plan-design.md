@@ -273,7 +273,7 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 - **Do NOT run `npm run preflight:par` or standalone `npm run test:e2e` while another session is active** — the parallel/e2e path spikes CPU and flakes the visual-regression snapshots under concurrent load, and the e2e preview server binds a shared `:5173` (`reuseExistingServer` → wrong-build false results). See `docs/TECH_DEBT.md` TD-FE-29.
 - **Merge gate = serial `npm run preflight` (with e2e), one branch at a time, controller-run** — this is the existing merge ceremony (root `CLAUDE.md` §AI-native flow) and is what keeps the e2e contention from ever materializing.
 - **Integration via merge, not rebase** — refresh a branch with `git merge master`; land it with a `--no-ff` merge commit (the repo's existing `Merge phase-…` pattern). No history rewrite, no force-push.
-- **Per-feature route registry** — to avoid every phase editing `App.tsx`'s `<Routes>` table (a guaranteed parallel-merge conflict), each feature exposes its routes from its own `routes.tsx`/`index.ts` and a thin `src/app/routes.tsx` composes them (append-only). Land this as the **first enabling task of the Phase 6 plan** (after 5h/5i stabilize market-research's `index.ts`), not earlier; document the convention in `src/features/README.md`.
+- **Per-feature route registry** — to avoid every phase editing `App.tsx`'s `<Routes>` table (a guaranteed parallel-merge conflict), each feature exposes its routes from its own `routes.tsx`/`index.ts` and a thin `src/app/routes.tsx` composes them (append-only). Land this as the **first enabling task of the Phase 6 plan** (after 5h/5i stabilize market-research's `index.ts`), not earlier; document the convention in `src/features/README.md`. This same enabling task finalizes the deferred `index.ts`-only cross-feature lint (TD-FE-15) — the registry removes `App.tsx`'s deep page import so the lint can forbid `@/features/*/**` cleanly (detail in the Phase 6 block).
 
 ### Phase 0 — Inventory + full safety net
 
@@ -450,6 +450,11 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 **Destination:** `src/features/mission-control/`.
 
 **Likely sub-split:** 6a page decomposition; 6b DataSourcesManager extraction; 6c ICPManager extraction. Decided in Phase 6 spec.
+
+**First enabling task** (added 2026-06-03 at Phase 6 pre-planning; folds in TD-FE-15 + the §4 route-registry note — lands before the mission-control extraction, now that Phase 5 produced the first stable `index.ts`):
+- **Per-feature route registry** (per §4 "Parallel execution protocol"): each feature exposes its routes from `routes.tsx` (re-exported via `index.ts`); a thin `src/app/routes.tsx` composes them **append-only**, so feature phases never edit a shared `<Routes>` table in `App.tsx` (the Wave-1 merge-conflict hazard). Convert the already-extracted market-research route as the worked example; document the convention in `src/features/README.md`. Frozen route URLs (§2.3) do not change.
+- **Finalize the `index.ts`-only cross-feature lint** (TD-FE-15, deferred from Phase 4a): enable the `forbid`-form `import-x/no-internal-modules` (forbids deep-*feature* paths only, leaving relative/external subpaths alone — see TD-FE-15 for the mechanism and the 4a-spike no-regression set). The cross-zone rules + `import-x/no-cycle` are already live from 4a; this adds only the deep-path rule. Resolve TD-FE-15 and update §8 Q16.
+- **Order matters — registry first, then lint:** the registry removes `App.tsx`'s deep page import (`@/features/market-research/pages/...`), so the lint needs no shell exception. The Phase 6 spec settles (a) whether any shell route-wire exception remains (should be none), (b) what `index.ts` exposes for routes, (c) where the composed router lives (`src/app/` vs `shell/`).
 
 **Key risks / coupling points:**
 - ICPManager owns ICP CRUD that `customers/` features will consume — defines the public surface `mission-control/index.ts` exposes for Phase 7.
