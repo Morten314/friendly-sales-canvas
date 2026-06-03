@@ -182,6 +182,9 @@ export const handlers = [
       return HttpResponse.json({
         status: "success",
         data: {
+          // Echo the requested component_name like the generic branch, so the 5b
+          // service test's ResearchComponentResponse round-trip assertion holds.
+          component_name: name,
           executiveSummary: "Test executive summary for market size & opportunity.",
           tamValue: "$50B",
           samValue: "$12B",
