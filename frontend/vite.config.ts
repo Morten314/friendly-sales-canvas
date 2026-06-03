@@ -103,7 +103,15 @@ export default defineConfig(({ mode: _mode }) => ({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+        // R8 (2026-06-03 test-infra speedup): precache only the app shell
+        // (js/css/html). Images (ico/png/svg) are fetched on demand — at MVP
+        // there is no offline-first requirement, and globbing + hashing every
+        // image inflates the Workbox precache-manifest pass that runs on the
+        // build's critical path (build → e2e). `maximumFileSizeToCacheInBytes`
+        // also defuses the hard build-error newer plugin versions throw on an
+        // oversized precache entry as assets grow.
+        globPatterns: ["**/*.{js,css,html}"],
+        maximumFileSizeToCacheInBytes: 3_000_000,
         additionalManifestEntries: [{ url: "/logo.png", revision: null }],
         skipWaiting: true,
         clientsClaim: true,
@@ -114,6 +122,14 @@ export default defineConfig(({ mode: _mode }) => ({
       },
     }),
   ].filter(Boolean),
+  build: {
+    // R7 (2026-06-03 test-infra speedup): skip the end-of-build gzip pass over
+    // every emitted chunk. It runs on the main thread on the build's critical
+    // path (build → e2e) and only feeds a decorative stdout column — nothing in
+    // the preflight gate consumes it (`bundle:check` reads dist bytes directly).
+    // Output bytes are unchanged.
+    reportCompressedSize: false,
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
