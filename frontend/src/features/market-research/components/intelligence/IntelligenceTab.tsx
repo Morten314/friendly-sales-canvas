@@ -190,7 +190,6 @@ const IntelligenceTab: React.FC<IntelligenceTabProps> = ({
   regulatoryData,
   marketData,
   setMarketData,
-  marketIntelligenceData,
   setMarketIntelligenceData,
   currentUser,
   editHistory,
@@ -361,17 +360,9 @@ const IntelligenceTab: React.FC<IntelligenceTabProps> = ({
     hasEdits,
     deletedSections,
     editHistory,
-    executiveSummary: marketData?.executiveSummary || marketIntelligenceData.executiveSummary,
-    tamValue: marketData?.tamValue || marketIntelligenceData.tamValue,
-    samValue: marketData?.samValue || marketIntelligenceData.samValue,
-    GrowthRate: marketData?.GrowthRate || marketIntelligenceData.GrowthRate,
-    strategicRecommendations:
-      marketData?.strategicRecommendations || marketIntelligenceData.strategicRecommendations,
-    marketEntry: marketData?.marketEntry || marketIntelligenceData.marketEntry,
-    marketDrivers: marketData?.marketDrivers || marketIntelligenceData.marketDrivers,
-    marketSizeBySegment:
-      marketData?.marketSizeBySegment || marketIntelligenceData.marketSizeBySegment,
-    growthProjections: marketData?.growthProjections || marketIntelligenceData.growthProjections,
+    // Market-size read-path data fields removed — MarketSizeSection now sources its
+    // data via useMarketSize (Phase 5h). The marketData state + fetchMarketSizeData
+    // cascade producer in useMarketResearchData are retained — see TD-FE entry.
     // Market Size specific props
 
     marketSizeDeletedSections,
