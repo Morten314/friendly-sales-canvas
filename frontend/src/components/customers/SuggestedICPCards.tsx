@@ -48,17 +48,14 @@ import {
 import { ToastAction } from "@/components/ui/toast";
 import { useToast } from "@/hooks/use-toast";
 import { buildIcpUrl, buildApiUrl, apiFetchJson, apiFetch } from "@/lib/api";
+import type { UntypedProfilerIcpRecord } from "@/lib/types/escape-hatches";
+import { useAuth } from "@/shared/auth";
 import {
   ensureMissionProfilerScope,
   isProfilerCacheValid,
   getProfilerSnapshot,
   commitProfilerSnapshot,
-} from "@/lib/missionProfilerSessionCache";
-import type { UntypedProfilerIcpRecord } from "@/lib/types/escape-hatches";
-import { useAuth } from "@/shared/auth";
-import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
-import { fetchIcpsRowsForOrg } from "@/utils/profileIcpsExtract";
-import {
+  fetchIcpsRowsForOrg,
   mergeProfilerAcceptedIcpDisplay,
   saveProfilerAcceptedIcpDisplayMeta,
   copyProfilerDisplayMetaToProfileId,
@@ -71,7 +68,8 @@ import {
   type SuggestedIcpCardFields,
   PROFILER_ICP_DISPLAY_KEY,
   removeProfilerAcceptedIcpDisplayMeta,
-} from "@/utils/profilerAcceptedIcpDisplay";
+} from "@/shared/profiler";
+import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
 
 const PROFILER_PENDING_RECOMMENDED_REJECT_KEY = "profiler_pendingRecommendedRejects";
 const PROFILER_DISMISSED_RECOMMENDED_IDS_KEY = "profiler_dismissedRecommendedIcpIds";

@@ -36,15 +36,15 @@ import { apiFetch } from "@/lib/api";
 import type { UntypedProfilerIcpRecord } from "@/lib/types/escape-hatches";
 import { cn } from "@/lib/utils";
 import {
+  extractIcpsDataFromFlexibleApiResponse,
+  mergeProfilerAcceptedIcpDisplay,
+  removeProfilerAcceptedIcpDisplayMeta,
+} from "@/shared/profiler";
+import {
   setUserLocalStorage,
   getUserLocalStorage,
   removeUserLocalStorage,
 } from "@/utils/cacheUtils";
-import { extractIcpsDataFromFlexibleApiResponse } from "@/utils/profileIcpsExtract";
-import {
-  mergeProfilerAcceptedIcpDisplay,
-  removeProfilerAcceptedIcpDisplayMeta,
-} from "@/utils/profilerAcceptedIcpDisplay";
 
 // Types
 type FitConfidence = "high" | "medium" | "low";

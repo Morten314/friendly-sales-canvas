@@ -61,6 +61,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Layout } from "@/features/shell";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import type { UntypedBackendApiResponse } from "@/lib/types/escape-hatches";
 import {
   ensureMissionProfilerScope,
   isMissionControlCacheValid,
@@ -68,9 +69,8 @@ import {
   commitMissionControlCompanyProfile,
   invalidateMissionControlCache,
   invalidateProfilerCache,
-} from "@/lib/missionProfilerSessionCache";
-import type { UntypedBackendApiResponse } from "@/lib/types/escape-hatches";
-import { extractIcpsDataFromFlexibleApiResponse } from "@/utils/profileIcpsExtract";
+  extractIcpsDataFromFlexibleApiResponse,
+} from "@/shared/profiler";
 
 // Data Source Interface
 interface DataSource {
