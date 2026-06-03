@@ -1,6 +1,8 @@
 import { Plus, Trash2, Edit, X, Check, Target, Eye, ChevronsUpDown } from "lucide-react";
 import React, { useState, useRef, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+
+import { useICPs } from "../../hooks/useICPs";
+import type { ICP, FitConfidence } from "../../types";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,33 +38,10 @@ import { apiFetch } from "@/lib/api";
 import type { UntypedProfilerIcpRecord } from "@/lib/types/escape-hatches";
 import { cn } from "@/lib/utils";
 import {
-  extractIcpsDataFromFlexibleApiResponse,
   mergeProfilerAcceptedIcpDisplay,
   removeProfilerAcceptedIcpDisplayMeta,
 } from "@/shared/profiler";
-import {
-  setUserLocalStorage,
-  getUserLocalStorage,
-  removeUserLocalStorage,
-} from "@/utils/cacheUtils";
-
-// Types
-type FitConfidence = "high" | "medium" | "low";
-
-interface ICP {
-  id: string;
-  primaryRegion: string;
-  location: string[];
-  industry: string[];
-  companySize: string[];
-  buyerRole: string[];
-  accountsOnWatchlist: string[];
-  accountsToAvoid: string[];
-  fitConfidence: FitConfidence;
-  additionalContext: string;
-  status: "saved";
-  createdAt: Date;
-}
+import { setUserLocalStorage, removeUserLocalStorage } from "@/utils/cacheUtils";
 
 // Region options (single select)
 const REGIONS_OPTIONS = [
@@ -121,11 +100,20 @@ type InlineStep =
 const ICPManager: React.FC = () => {
   const { toast } = useToast();
   const { currentUser, orgId } = useAuth();
-  const location = useLocation();
   const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
   const [icps, setIcps] = useState<ICP[]>([]);
   const [_isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+
+  // ICP read: org's ICP rows via TanStack Query (raw rows; mapped below). The
+  // query cache replaces the legacy imperative localStorage-fallback-on-error
+  // and the cached-profile user_id-mismatch guard (see TD-FE-33). Writes (CRUD)
+  // stay raw `fetch` + optimistic this phase — deferred.
+  const {
+    data: icpRows,
+    isLoading,
+    isError,
+    isSuccess,
+  } = useICPs(currentUser?.uid ?? "", orgIdToUse);
 
   // Inline editing state
   const [isAddingInline, setIsAddingInline] = useState(false);
@@ -291,294 +279,81 @@ const ICPManager: React.FC = () => {
     }
   };
 
-  // Load customer profile (ICPs) from backend
-  const loadCustomerProfileFromBackend = async () => {
-    if (!currentUser?.uid) {
-      console.warn("ICPManager: Cannot load customer profile - user not authenticated");
-      window.dispatchEvent(new CustomEvent("icpManagerCustomerProfileLoadFinished"));
+  // Map the raw ICP rows from `useICPs` into the local `ICP[]` view-model
+  // whenever the query data changes. The mapping + dedup-by-id are preserved
+  // byte-for-byte from the legacy imperative loader; only the source of the rows
+  // changed (raw `fetch` → TanStack Query). Keeping `icps` in local state lets
+  // the optimistic write handlers (`setIcps`) keep working.
+  useEffect(() => {
+    if (!Array.isArray(icpRows)) return;
+    if (icpRows.length === 0) {
+      setIcps([]);
       return;
     }
 
-    console.log("ICPManager: Starting to load customer profile from backend");
-    console.log("User ID:", currentUser.uid);
-    setIsLoading(true);
-    try {
-      // Backend embeds ICPs on GET /profile/company (org_id + user_id) per Swagger; /customer_profile may omit them.
-      const companyUrl = `/api/profile/company?user_id=${encodeURIComponent(currentUser.uid)}&org_id=${encodeURIComponent(orgIdToUse)}`;
-      const legacyUrl = `/api/customer_profile?org_id=${encodeURIComponent(orgIdToUse)}`;
-      console.log("ICPManager: Fetching company profile (ICPs):", companyUrl);
+    const loadedICPs: ICP[] = icpRows.map((icp: UntypedProfilerIcpRecord) => {
+      const merged = mergeProfilerAcceptedIcpDisplay(icp);
+      return {
+        id: String(merged.icp_id || merged.id || `icp-${Date.now()}-${Math.random()}`),
+        primaryRegion: merged.primary_region || merged.primaryRegion || "",
+        location: Array.isArray(merged.location) ? merged.location : [],
+        industry: Array.isArray(merged.industry) ? merged.industry : [],
+        companySize: Array.isArray(merged.company_size)
+          ? merged.company_size
+          : Array.isArray(merged.companySize)
+            ? merged.companySize
+            : [],
+        buyerRole: Array.isArray(merged.buyer_role)
+          ? merged.buyer_role
+          : Array.isArray(merged.buyerRole)
+            ? merged.buyerRole
+            : [],
+        accountsOnWatchlist: Array.isArray(merged.accounts_on_watchlist)
+          ? merged.accounts_on_watchlist
+          : Array.isArray(merged.accountsOnWatchlist)
+            ? merged.accountsOnWatchlist
+            : [],
+        accountsToAvoid: Array.isArray(merged.accounts_to_avoid)
+          ? merged.accounts_to_avoid
+          : Array.isArray(merged.accountsToAvoid)
+            ? merged.accountsToAvoid
+            : [],
+        fitConfidence: (merged.fit_confidence || merged.fitConfidence || "medium") as FitConfidence,
+        additionalContext: merged.additional_context || merged.additionalContext || "",
+        status: merged.status || "saved",
+        createdAt: merged.created_at
+          ? new Date(merged.created_at)
+          : merged.createdAt
+            ? new Date(merged.createdAt)
+            : new Date(),
+      };
+    });
 
-      const companyRes = await fetch(companyUrl, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
+    const uniqueById = new Map<string, ICP>();
+    for (const icp of loadedICPs) {
+      if (!uniqueById.has(icp.id)) uniqueById.set(icp.id, icp);
+    }
+    const dedupedICPs = Array.from(uniqueById.values());
+    if (dedupedICPs.length !== loadedICPs.length) {
+      console.warn("ICPManager: Dropped duplicate ICP rows (same id) from API response.", {
+        before: loadedICPs.length,
+        after: dedupedICPs.length,
       });
+    }
 
-      let legacyRes: Response | null = null;
-      let responseData: Record<string, unknown> | null = null;
-      if (companyRes.ok) {
-        responseData = (await companyRes.json()) as Record<string, unknown>;
-      }
+    setIcps(dedupedICPs);
+  }, [icpRows]);
 
-      let icpsData = responseData ? extractIcpsDataFromFlexibleApiResponse(responseData) : [];
-
-      if (icpsData.length === 0) {
-        console.log(
-          "ICPManager: No ICPs on company profile (or request failed); trying GET customer_profile:",
-          legacyUrl,
-        );
-        legacyRes = await fetch(legacyUrl, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        if (legacyRes.ok) {
-          responseData = (await legacyRes.json()) as Record<string, unknown>;
-          icpsData = extractIcpsDataFromFlexibleApiResponse(responseData);
-        }
-      }
-
-      const anyOk = companyRes.ok || (legacyRes?.ok ?? false);
-      console.log(
-        "ICPManager: GET profile/company",
-        companyRes.status,
-        "GET customer_profile",
-        legacyRes ? legacyRes.status : "skipped",
-      );
-
-      if (!anyOk) {
-        console.log("No existing customer profile found in API, trying localStorage fallback");
-        // Try loading from localStorage as fallback
-        try {
-          const localData = getUserLocalStorage("customerProfile", currentUser.uid);
-          if (localData) {
-            const localICPs = JSON.parse(localData);
-            if (Array.isArray(localICPs) && localICPs.length > 0) {
-              console.log("Loading customer profile from localStorage fallback");
-              setIcps(localICPs);
-              window.dispatchEvent(new CustomEvent("customerProfileSaved"));
-            }
-          }
-        } catch (e) {
-          console.error("Error loading from localStorage:", e);
-        }
-        return;
-      }
-
-      // Avoid replaying a stale full-list POST from customerProfile_pending (can resurrect deleted ICPs).
-      try {
-        removeUserLocalStorage("customerProfile_pending", currentUser.uid);
-      } catch (e) {
-        console.warn("Failed to clear customerProfile_pending:", e);
-      }
-
-      if (!responseData) {
-        console.warn("ICPManager: No response body after successful GET");
-        return;
-      }
-
-      console.log("ICPManager: Full API response:", JSON.stringify(responseData, null, 2));
-      console.log("ICPManager: Response structure:", {
-        hasSuccess: "success" in responseData,
-        hasData: "data" in responseData,
-        responseDataKeys: Object.keys(responseData || {}),
-        dataKeys: responseData?.data ? Object.keys(responseData.data) : [],
-        "data.icps": (responseData?.data as Record<string, unknown>)?.icps,
-        "data.customer_profiles": (responseData?.data as Record<string, unknown>)
-          ?.customer_profiles,
-        "data.customer_profiles.icps": (
-          responseData?.data as Record<string, Record<string, unknown>>
-        )?.customer_profiles?.icps,
-        directIcps: responseData?.icps,
-      });
-
-      const data =
-        typeof responseData.data === "object" && responseData.data !== null
-          ? (responseData.data as Record<string, unknown>)
-          : responseData;
-
-      // Verify user_id matches (multi-tenancy safety)
-      const responseUserId = data.user_id ?? responseData.user_id;
-      if (responseUserId && responseUserId !== currentUser.uid) {
-        console.warn(
-          "ICPManager: API returned customer profile for different user! Ignoring data.",
-          {
-            apiUserId: responseUserId,
-            currentUserId: currentUser.uid,
-          },
-        );
-        // Try loading from localStorage as fallback
-        try {
-          const localData = getUserLocalStorage("customerProfile", currentUser.uid);
-          if (localData) {
-            const localICPs = JSON.parse(localData);
-            if (Array.isArray(localICPs) && localICPs.length > 0) {
-              console.log("ICPManager: Loading from localStorage fallback (user mismatch)");
-              setIcps(localICPs);
-              window.dispatchEvent(new CustomEvent("customerProfileSaved"));
-            }
-          }
-        } catch (e) {
-          console.error("Error loading from localStorage:", e);
-        }
-        return;
-      }
-
-      console.log("ICPManager: Extracted icpsData:", {
-        icpsData: icpsData,
-        isArray: Array.isArray(icpsData),
-        length: Array.isArray(icpsData) ? icpsData.length : 0,
-        firstItem: Array.isArray(icpsData) && icpsData.length > 0 ? icpsData[0] : null,
-        allItems: Array.isArray(icpsData)
-          ? icpsData.map((icp: UntypedProfilerIcpRecord) => ({
-              id: icp.id,
-              primary_region: icp.primary_region || icp.primaryRegion,
-              industry: icp.industry,
-            }))
-          : [],
-      });
-
-      if (Array.isArray(icpsData) && icpsData.length > 0) {
-        const loadedICPs: ICP[] = icpsData.map((icp: UntypedProfilerIcpRecord) => {
-          const merged = mergeProfilerAcceptedIcpDisplay(icp);
-          return {
-            id: String(merged.icp_id || merged.id || `icp-${Date.now()}-${Math.random()}`),
-            primaryRegion: merged.primary_region || merged.primaryRegion || "",
-            location: Array.isArray(merged.location) ? merged.location : [],
-            industry: Array.isArray(merged.industry) ? merged.industry : [],
-            companySize: Array.isArray(merged.company_size)
-              ? merged.company_size
-              : Array.isArray(merged.companySize)
-                ? merged.companySize
-                : [],
-            buyerRole: Array.isArray(merged.buyer_role)
-              ? merged.buyer_role
-              : Array.isArray(merged.buyerRole)
-                ? merged.buyerRole
-                : [],
-            accountsOnWatchlist: Array.isArray(merged.accounts_on_watchlist)
-              ? merged.accounts_on_watchlist
-              : Array.isArray(merged.accountsOnWatchlist)
-                ? merged.accountsOnWatchlist
-                : [],
-            accountsToAvoid: Array.isArray(merged.accounts_to_avoid)
-              ? merged.accounts_to_avoid
-              : Array.isArray(merged.accountsToAvoid)
-                ? merged.accountsToAvoid
-                : [],
-            fitConfidence: (merged.fit_confidence ||
-              merged.fitConfidence ||
-              "medium") as FitConfidence,
-            additionalContext: merged.additional_context || merged.additionalContext || "",
-            status: merged.status || "saved",
-            createdAt: merged.created_at
-              ? new Date(merged.created_at)
-              : merged.createdAt
-                ? new Date(merged.createdAt)
-                : new Date(),
-          };
-        });
-
-        const uniqueById = new Map<string, ICP>();
-        for (const icp of loadedICPs) {
-          if (!uniqueById.has(icp.id)) uniqueById.set(icp.id, icp);
-        }
-        const dedupedICPs = Array.from(uniqueById.values());
-        if (dedupedICPs.length !== loadedICPs.length) {
-          console.warn("ICPManager: Dropped duplicate ICP rows (same id) from API response.", {
-            before: loadedICPs.length,
-            after: dedupedICPs.length,
-          });
-        }
-
-        setIcps(dedupedICPs);
-        console.log("✅ Customer profile loaded from backend successfully");
-        console.log("Loaded ICPs count:", dedupedICPs.length);
-        console.log("Loaded ICPs data:", JSON.stringify(dedupedICPs, null, 2));
-
-        // Save to localStorage for offline access
-        try {
-          setUserLocalStorage("customerProfile", JSON.stringify(dedupedICPs), currentUser.uid);
-        } catch (e) {
-          console.warn("Failed to save to localStorage:", e);
-        }
-
-        // Dispatch event to notify MissionControl that customer profile is loaded
-        if (dedupedICPs.length > 0) {
-          window.dispatchEvent(new CustomEvent("customerProfileSaved"));
-        }
-      } else {
-        console.log("ICPManager: No icps found in API response, checking localStorage");
-        // Try loading from localStorage as fallback
-        try {
-          const localData = getUserLocalStorage("customerProfile", currentUser.uid);
-          if (localData) {
-            const localICPs = JSON.parse(localData);
-            // Verify localStorage data belongs to current user
-            if (Array.isArray(localICPs) && localICPs.length > 0) {
-              // Check if any ICP has a user_id that doesn't match
-              const hasMismatch = localICPs.some(
-                (icp: UntypedProfilerIcpRecord) => icp.user_id && icp.user_id !== currentUser.uid,
-              );
-
-              if (hasMismatch) {
-                console.warn(
-                  "⚠️ ICPManager: localStorage contains ICPs from different user! Clearing localStorage.",
-                );
-                // Clear localStorage for this user
-                try {
-                  const { removeUserLocalStorage } = await import("@/utils/cacheUtils");
-                  removeUserLocalStorage("customerProfile", currentUser.uid);
-                  console.log("✅ ICPManager: Cleared mismatched localStorage data");
-                } catch (e) {
-                  console.error("Error clearing localStorage:", e);
-                }
-                // Don't load mismatched data
-                setIcps([]);
-              } else {
-                console.log("Loading customer profile from localStorage fallback");
-                setIcps(localICPs);
-                window.dispatchEvent(new CustomEvent("customerProfileSaved"));
-              }
-            }
-          }
-        } catch (e) {
-          console.error("Error loading from localStorage:", e);
-        }
-      }
-    } catch (error) {
-      console.error("Error loading customer profile:", error);
-      // Try loading from localStorage as fallback on error
-      try {
-        const localData = getUserLocalStorage("customerProfile", currentUser.uid);
-        if (localData) {
-          const localICPs = JSON.parse(localData);
-          if (Array.isArray(localICPs) && localICPs.length > 0) {
-            console.log("Loading customer profile from localStorage fallback (error case)");
-            setIcps(localICPs);
-            window.dispatchEvent(new CustomEvent("customerProfileSaved"));
-          }
-        }
-      } catch (e) {
-        console.error("Error loading from localStorage:", e);
-      }
-    } finally {
-      setIsLoading(false);
+  // Signal MissionControl that the ICP read has settled so it can clear its
+  // "syncing customer profile" spinner. The legacy loader fired this in its
+  // `finally` (and on the no-user early return); the query's settled state is
+  // the replacement. Fires once the query resolves (success or error) or when
+  // it is disabled (no authenticated user / org).
+  useEffect(() => {
+    if (isSuccess || isError || !currentUser?.uid) {
       window.dispatchEvent(new CustomEvent("icpManagerCustomerProfileLoadFinished"));
     }
-  };
-
-  useEffect(() => {
-    if (!currentUser?.uid) return;
-    console.log("ICPManager: loading customer profile from backend for user:", currentUser.uid);
-    void loadCustomerProfileFromBackend();
-    // loadCustomerProfileFromBackend intentionally omitted: it is an inline
-    // closure that re-creates every render, but the load is keyed on the
-    // identity/org/path values listed.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser?.uid, orgIdToUse, location.pathname]);
+  }, [isSuccess, isError, currentUser?.uid]);
 
   // Focus management - combobox stays closed by default
 
