@@ -26,6 +26,8 @@
 - **`docs/TECH_DEBT.md` is outside the frontend prettier gate. Never prettier it.** Append entries surgically (the frontend `format:check` runs on `frontend/.` and won't touch root docs; a manual prettier run would corrupt its unfenced markdown).
 - **Polyglot rule (CLAUDE.md):** confirm each backend read's live JSON shape (devtools Network tab or `curl` via the Vite `/api` proxy) before relying on a field — there is no generated client. The zod schemas in this plan are deliberately loose (`.passthrough()` + `.nullish()`); confirm-live is a stage-3 task, not a blocker.
 - **Security posture:** MVP, 0 users. Do **not** add auth/authz/hardening, and do not act on the repo's Dependabot alerts.
+- **Abort, escalation & recovery.** Each stage ends at a known **gate commit** (its last task's commit). **Stop and report to the operator — do not keep retrying** — if any of these hit: a stage gate that won't go green after **two** fix attempts; a Task-9 live-shape divergence the loose `.passthrough()` schemas cannot absorb (a backend contract fundamentally incompatible with the read hooks); or the scaffold script missing/producing unexpected output (Task 5). To roll a broken stage back to its last green point: `git reset --hard <that stage's gate commit>`, else report-and-wait. Mid-task failures are owned by the executor skill's BLOCKED handling (subagent-driven-development) — surface them, don't silently retry the same approach.
+- **Line numbers are approximate anchors.** In the relocation/decomposition tasks (stages 2, 4–6) the cited line ranges are from the **pre-edit** files and drift as earlier tasks run. Locate code by the **quoted identifiers / JSX / import text** (stable), not the number — e.g. find the `<TabsContent value="profile">…</TabsContent>` block, or the `handle<Platform>Approve`/`handle<Platform>Deny` functions and `isConnectorDialogOpen` by name.
 
 ---
 
@@ -334,7 +336,7 @@ git commit -m "feat(fe): enforce index-only cross-feature imports (resolve TD-FE
 ```
 npm run scaffold:feature -- mission-control
 ```
-Expected: `scaffolded src/features/mission-control/ (types.ts, index.ts, README.md)`, no naming-map warning (mission-control is on the map). The stubs (`types.ts` comment-only, `index.ts` with `export {};`, README placeholder) are finalized in later stages.
+Expected: `scaffolded src/features/mission-control/ (types.ts, index.ts, README.md)`, no naming-map warning (mission-control is on the map). The stubs (`types.ts` comment-only, `index.ts` with `export {};`, README placeholder) are finalized in later stages. **Fallback:** if the script is absent (check `npm run | grep scaffold`), create the three files by hand — `src/features/mission-control/{types.ts,index.ts,README.md}` (`index.ts` = `export {};`, `types.ts` = a header comment, `README.md` = a `# mission-control feature` placeholder) — and continue.
 
 - [ ] **Step 2: Move the three files** (preserve history; use `git mv`). From `frontend/`:
 
@@ -504,8 +506,9 @@ git mv src/lib/missionProfilerSessionCache.ts src/shared/profiler/missionProfile
 - [ ] **Step 2: Move any co-located tests.** Check and move:
 
 ```
-grep -rln -e 'profileIcpsExtract' -e 'profilerAcceptedIcpDisplay' -e 'missionProfilerSessionCache' src/**/__tests__ src/utils src/lib 2>/dev/null
+grep -rln -e 'profileIcpsExtract' -e 'profilerAcceptedIcpDisplay' -e 'missionProfilerSessionCache' src/ 2>/dev/null
 ```
+(`-r` over all of `src/` catches a co-located util test wherever it is nested.)
 If any `*.test.ts` for these utils exist under `src/utils/__tests__` or `src/lib/__tests__`, `git mv` them to `src/shared/profiler/__tests__/` and update their import path to `../`.
 
 - [ ] **Step 3: Create the barrel `frontend/src/shared/profiler/index.ts`** (mirrors the per-subdir `@/shared/<x>` convention):
@@ -582,6 +585,8 @@ git commit -m "refactor(fe): promote profiler-ICP util cluster to src/shared/pro
 ## Task 9: Confirm live response shapes (polyglot rule)
 
 Context: CLAUDE.md requires confirming a backend read's live JSON shape before relying on fields. The Vite `/api` proxy targets the Render backend; the backend trusts query-param `user_id`/`org_id` (no JWT validation). The schemas below are loose, so this de-risks rather than blocks.
+
+**Prerequisite:** the backend must be reachable (Render proxy or local) **and** a test org must have ≥1 uploaded document, ≥1 lead-stream file, and ≥1 ICP (so the shapes come back non-empty). If that is unavailable, record it as a **non-halting blocker** and proceed to Task 10 with the loose schemas as-is — confirm-live can be revisited before the stage-3 commit. Do not block the phase on it (per the conventions: confirm-live is not a merge blocker).
 
 - [ ] **Step 1: Confirm the three reads.** With the app running (or via `curl` through the proxy/devtools Network tab), capture the JSON for:
   - `GET /api/customer_profile?org_id=<org>` (ICP rows) and `GET /api/profile/company?org_id=<org>` (the two reads inside `fetchIcpsRowsForOrg`).
@@ -1213,6 +1218,8 @@ git commit -m "refactor(fe): reduce MissionControlPage to a thin 3-tab shell"
 # Stage 5 — DataSourcesManager decomposition
 
 > Split `components/data-sources/DataSourcesManager.tsx` (~3,941 LOC) into single-purpose components, wiring the **reads** to stage-3 hooks (`useDataSources`, `useLeadStreamStatus`). Writes (uploads, source CRUD) stay raw `fetch` (deferred). R1: the uploader couples to lead-stream polling + file refs — if extraction over-runs, keep the upload helpers inline (their shared extraction is already deferred to Phase 11) and split only the surrounding structure. Parity: journey `02-csv-upload-leads` green.
+>
+> **Stages 5 and 6 are mutually independent** — both depend only on stage 4 (the shell), not on each other — so they could split across worktrees if this phase were ever parallelized. This plan runs them sequentially on one branch by design (the chosen single-agent mode).
 
 ## Task 18: Replace in-component `DataSource`/row types with the feature types; wire reads
 
