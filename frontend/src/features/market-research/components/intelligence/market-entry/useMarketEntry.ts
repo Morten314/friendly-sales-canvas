@@ -1,10 +1,11 @@
-import { parseMarketEntryResult, type MarketEntryResult } from "./types";
 
 import {
   useRegenerateResearch,
   useResearchComponent,
-} from "@/features/market-research/hooks/useMarketResearch";
-import { RESEARCH_COMPONENTS } from "@/features/market-research/services/marketResearch";
+} from "../../../hooks/useMarketResearch";
+import { RESEARCH_COMPONENTS } from "../../../services/marketResearch";
+
+import { parseMarketEntryResult, type MarketEntryResult } from "./types";
 
 export interface UseMarketEntry {
   data: MarketEntryResult | undefined;

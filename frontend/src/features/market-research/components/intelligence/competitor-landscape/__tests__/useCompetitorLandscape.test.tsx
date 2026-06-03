@@ -3,7 +3,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 
-import { useCompetitorLandscape } from "@/features/market-research/components/intelligence/competitor-landscape/useCompetitorLandscape";
+import { useCompetitorLandscape } from "../useCompetitorLandscape";
 
 function wrapper({ children }: { children: ReactNode }) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });

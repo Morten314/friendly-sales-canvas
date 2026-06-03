@@ -4,7 +4,7 @@ import {
   getIconByName,
   getBadgeColor,
   deriveKeyDataPoints,
-} from "@/features/market-research/components/intelligence/regulatory-compliance/regulatoryHelpers";
+} from "../regulatoryHelpers";
 
 describe("regulatoryHelpers", () => {
   it("maps a known icon name to a component and falls back for unknown", () => {

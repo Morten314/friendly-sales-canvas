@@ -3,7 +3,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 
-import { useRegulatoryCompliance } from "@/features/market-research/components/intelligence/regulatory-compliance/useRegulatoryCompliance";
+import { useRegulatoryCompliance } from "../useRegulatoryCompliance";
 
 function wrapper({ children }: { children: ReactNode }) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });

@@ -11,6 +11,12 @@ import {
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
+import IntelligenceTab from "../components/intelligence/IntelligenceTab";
+import { MarketDetailDrawer } from "../components/MarketDetailDrawer";
+import TrendsTab from "../components/trends/TrendsTab";
+import { useMarketResearchData } from "../hooks/useMarketResearchData";
+import type { ScoutResearchContext } from "../types";
+
 import LeadStreamTab from "@/components/market-research/lead-stream/LeadStreamTab";
 import { ScoutSettingsForm } from "@/components/market-research/ScoutSettingsForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -19,11 +25,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import IntelligenceTab from "@/features/market-research/components/intelligence/IntelligenceTab";
-import { MarketDetailDrawer } from "@/features/market-research/components/MarketDetailDrawer";
-import TrendsTab from "@/features/market-research/components/trends/TrendsTab";
-import { useMarketResearchData } from "@/features/market-research/hooks/useMarketResearchData";
-import type { ScoutResearchContext } from "@/features/market-research/types";
 import { Layout } from "@/features/shell";
 import type { DeploymentData } from "@/features/shell";
 import { usePageTitle } from "@/hooks/usePageTitle";

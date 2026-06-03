@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ZodError } from "zod";
 
-import { ResearchComponentSchema } from "@/features/market-research/contracts";
+import { ResearchComponentSchema } from "../contracts";
 
 const realComponentPayload = {
   status: "success",

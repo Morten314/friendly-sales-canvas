@@ -1,10 +1,11 @@
-import type { UntypedBackendApiResponse } from "./types";
 
 import {
   useRegenerateResearch,
   useResearchComponent,
-} from "@/features/market-research/hooks/useMarketResearch";
-import { RESEARCH_COMPONENTS } from "@/features/market-research/services/marketResearch";
+} from "../../../hooks/useMarketResearch";
+import { RESEARCH_COMPONENTS } from "../../../services/marketResearch";
+
+import type { UntypedBackendApiResponse } from "./types";
 
 export interface UseRegulatoryComplianceResult {
   regulatoryData: UntypedBackendApiResponse | undefined;

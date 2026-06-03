@@ -2,12 +2,12 @@ import React from "react";
 
 import CompetitorLandscapeSection from "./intelligence/competitor-landscape/CompetitorLandscapeSection";
 import IndustryTrendsSection from "./intelligence/industry-trends/IndustryTrendsSection";
+import MarketEntrySection from "./intelligence/market-entry/MarketEntrySection";
 import MarketSizeSection from "./intelligence/market-size/MarketSizeSection";
 import RegulatoryComplianceSection from "./intelligence/regulatory-compliance/RegulatoryComplianceSection";
 
 import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
 import type { EditRecord, TrendSnapshot } from "@/components/market-research/types";
-import MarketEntrySection from "@/features/market-research/components/intelligence/market-entry/MarketEntrySection";
 import type { UntypedBackendProfile, UntypedReportState } from "@/lib/types/escape-hatches";
 
 export interface MarketIntelligenceSectionsProps {

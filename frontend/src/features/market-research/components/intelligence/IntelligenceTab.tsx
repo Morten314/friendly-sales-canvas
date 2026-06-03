@@ -1,13 +1,15 @@
 import { RefreshCw } from "lucide-react";
 import React from "react";
 
+import type { useMarketResearchData } from "../../hooks/useMarketResearchData";
+import EditHistoryPanel from "../EditHistoryPanel";
+import MarketIntelligenceSections from "../MarketIntelligenceSections";
+import type { MarketIntelligenceSectionsProps } from "../MarketIntelligenceSections";
+
+import { sanitizeIntelligenceProps } from "./sanitizeIntelligenceProps";
+
 import { ScoutDeploymentDetails } from "@/components/market-research/ScoutDeploymentDetails";
 import { Button } from "@/components/ui/button";
-import EditHistoryPanel from "@/features/market-research/components/EditHistoryPanel";
-import { sanitizeIntelligenceProps } from "@/features/market-research/components/intelligence/sanitizeIntelligenceProps";
-import MarketIntelligenceSections from "@/features/market-research/components/MarketIntelligenceSections";
-import type { MarketIntelligenceSectionsProps } from "@/features/market-research/components/MarketIntelligenceSections";
-import type { useMarketResearchData } from "@/features/market-research/hooks/useMarketResearchData";
 import type { DeploymentData } from "@/features/shell";
 import type { UntypedReportState } from "@/lib/types/escape-hatches";
 import { FeatureErrorBoundary } from "@/shared/components";
