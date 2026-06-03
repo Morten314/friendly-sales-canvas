@@ -17,9 +17,11 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
+import CompanyProfileForm from "../components/company-profile/CompanyProfileForm";
 import DataSourcesManager from "../components/data-sources/DataSourcesManager";
 import ICPManager from "../components/icp/ICPManager";
 
+import { useCompanyProfile } from "@/components/settings/useCompanyProfile";
 import {
   Accordion,
   AccordionContent,
@@ -37,7 +39,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -57,7 +59,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { Layout } from "@/features/shell";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -126,8 +127,6 @@ const MissionControlPage = () => {
   const [isCompanyProfileSaved, setIsCompanyProfileSaved] = useState(false);
   const [isCustomerProfileSaved, setIsCustomerProfileSaved] = useState(false);
   const [hasDataSources, setHasDataSources] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
 
   // Tab locking logic - check if data exists in backend, not just session state
   // Customer profile is unlocked if company profile exists in backend
@@ -248,304 +247,29 @@ const MissionControlPage = () => {
   /** Profiler accept/delete set missionControlIcpsNeedRefetch — show loading until ICPManager GET finishes. */
   const [syncingProfilerCustomerProfile, setSyncingProfilerCustomerProfile] = useState(false);
 
-  // Form state for company profile
-  const [companyProfile, setCompanyProfile] = useState({
-    companyName: "",
-    headquarters: "",
-    employeeSize: "",
-    industry: "",
-    revenue: "",
-    gtmModel: "",
-    regionFocus: "",
-    dealSize: "",
-    companyUrl: "",
-    keyBuyerPersona: "",
-    goals: "",
-    painPoints: "",
-    targetSegments: "",
-    excludeSegments: "",
-    compliance: "",
-    constraints: "",
-  });
+  // Company-profile READ — the page shares ONE TanStack cache entry with
+  // CompanyProfileForm's own useCompanyProfile(orgIdToUse) call (a single GET
+  // /api/profile/company). The form owns the editable form state + writes; the
+  // page derives its read-driven side effects (data-sources, customer-profile
+  // completeness, profiler-cache commit, localStorage backup) from this data,
+  // and drives the loading Dialog from isLoadingProfile.
+  const { data: companyProfileData, isLoading: isLoadingProfile } = useCompanyProfile(
+    orgIdToUse,
+    !!currentUser?.uid,
+  );
 
-  const handleSave = async () => {
-    if (!currentUser?.uid) {
-      toast({
-        title: "Authentication required",
-        description: "Please log in to save your profile.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate required fields before saving
-    const trimmedCompanyName = companyProfile.companyName.trim();
-    if (!trimmedCompanyName) {
-      toast({
-        title: "Validation failed",
-        description: "Please complete all required fields to proceed.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
-      // Prepare payload with profile_type as required by the API
-      const payload = {
-        org_id: orgIdToUse,
-        profile_type: "company",
-        company_name: trimmedCompanyName,
-        headquarters: (companyProfile.headquarters || "").trim(),
-        employee_size: (companyProfile.employeeSize || "").trim(),
-        industry: (companyProfile.industry || "").trim(),
-        revenue_band: (companyProfile.revenue || "").trim(),
-        gtm_model: (companyProfile.gtmModel || "").trim(),
-        region_focus: (companyProfile.regionFocus || "").trim(),
-        typical_deal_size: (companyProfile.dealSize || "").trim(),
-        company_url: (companyProfile.companyUrl || "").trim(),
-        key_buyer_persona: (companyProfile.keyBuyerPersona || "").trim(),
-        goals: (companyProfile.goals || "").trim(),
-        pain_points: (companyProfile.painPoints || "").trim(),
-        target_segments: (companyProfile.targetSegments || "").trim(),
-        exclude_segments: (companyProfile.excludeSegments || "").trim(),
-        compliance: (companyProfile.compliance || "").trim(),
-        constraints: (companyProfile.constraints || "").trim(),
-      };
-
-      console.log("=== MISSION CONTROL: Saving company profile ===");
-      console.log("Payload:", payload);
-
-      const apiUrl = `/api/profile/company?org_id=${orgIdToUse}`;
-      console.log("MissionControl: POST request URL:", apiUrl);
-      console.log("MissionControl: POST request payload:", payload);
-
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      console.log("MissionControl: POST response status:", response.status);
-      console.log(
-        "MissionControl: POST response headers:",
-        Object.fromEntries(response.headers.entries()),
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("MissionControl: API Error:", response.status, errorText);
-        console.error(
-          "MissionControl: This could indicate database connection issues or backend problems",
-        );
-        throw new Error(`Failed to save profile: ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
-      console.log("MissionControl: Company profile saved successfully:", data);
-      console.log("MissionControl: Saved data verification:", {
-        saved_user_id: data?.user_id,
-        expected_user_id: currentUser.uid,
-        user_id_match: data?.user_id === currentUser.uid,
-        saved_company_name: data?.company_name,
-        payload_company_name: payload.company_name,
-        has_data: data && Object.keys(data).length > 0,
-      });
-
-      // Use the payload company_name since we already validated it before sending
-      // The API may not return the saved data in the response, so we trust what we sent
-      const savedCompanyName = (
-        data?.company_name ||
-        data?.companyName ||
-        payload.company_name ||
-        ""
-      ).trim();
-
-      // Double-check: if somehow both response and payload are empty (shouldn't happen due to validation)
-      if (!savedCompanyName) {
-        console.error(
-          "MissionControl: Unexpected - company_name is empty in both response and payload!",
-        );
-        toast({
-          title: "Save failed",
-          description: "An unexpected error occurred. Please try again.",
-          variant: "destructive",
-        });
-        setIsSaving(false);
-        return;
-      }
-
-      // Save to localStorage for offline access and refresh persistence
-      try {
-        const { setUserLocalStorage } = await import("@/utils/cacheUtils");
-        const dataToSave = {
-          ...data,
-          user_id: currentUser.uid,
-          company_name: payload.company_name,
-          headquarters: payload.headquarters,
-          employee_size: payload.employee_size,
-          industry: payload.industry,
-          revenue_band: payload.revenue_band,
-          gtm_model: payload.gtm_model,
-          region_focus: payload.region_focus,
-          typical_deal_size: payload.typical_deal_size,
-          company_url: payload.company_url,
-          key_buyer_persona: payload.key_buyer_persona,
-          goals: payload.goals,
-          pain_points: payload.pain_points,
-          target_segments: payload.target_segments,
-          exclude_segments: payload.exclude_segments,
-          compliance: payload.compliance,
-          constraints: payload.constraints,
-        };
-        setUserLocalStorage("companyProfile", JSON.stringify(dataToSave), currentUser.uid);
-        console.log("MissionControl: Saved company profile to localStorage");
-      } catch (e) {
-        console.warn("MissionControl: Failed to save to localStorage:", e);
-      }
-
-      toast({
-        title: "Profile saved",
-        // description: "profile saved",
-      });
-
-      invalidateProfilerCache(currentUser.uid, orgIdToUse);
-
-      // Only mark company profile as saved if we have a valid company name
-      if (savedCompanyName) {
-        setIsCompanyProfileSaved(true);
-        console.log("MissionControl: Company profile saved and customer profile unlocked");
-      } else {
-        console.warn(
-          "MissionControl: Company profile saved but company name is empty - not unlocking customer profile",
-        );
-      }
-
-      // Verify data was actually saved by immediately fetching it back
-      console.log("MissionControl: Verifying data persistence by fetching saved profile...");
-      setTimeout(() => {
-        void (async () => {
-          try {
-            const verifyResponse = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
-              method: "GET",
-              headers: { "Content-Type": "application/json" },
-            });
-            if (verifyResponse.ok) {
-              const verifyData = await verifyResponse.json();
-              const savedCompanyName = verifyData?.company_name || verifyData?.companyName || "";
-              if (savedCompanyName.trim() === payload.company_name.trim()) {
-                console.log("✅ MissionControl: Data persistence verified - company name matches");
-              } else {
-                console.error(
-                  "❌ MissionControl: Data persistence FAILED - company name mismatch!",
-                );
-                console.error("   Expected:", payload.company_name);
-                console.error("   Got:", savedCompanyName);
-                console.error("   This indicates a database write/read issue!");
-              }
-            } else {
-              console.warn(
-                "⚠️ MissionControl: Could not verify data persistence - GET request failed",
-              );
-            }
-          } catch (verifyError) {
-            console.error("MissionControl: Error verifying data persistence:", verifyError);
-          }
-        })();
-      }, 2000); // Wait 2 seconds for database to commit
-    } catch (error) {
-      console.error("Error saving company profile:", error);
-      toast({
-        title: "Save failed",
-        description:
-          error instanceof Error ? error.message : "Failed to save profile. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // Helper function to load profile from localStorage — returns raw payload when successful
-  const loadProfileFromLocalStorage = async (
-    userId: string,
-  ): Promise<Record<string, unknown> | null> => {
-    try {
-      const { getUserLocalStorage } = await import("@/utils/cacheUtils");
-      const localData = getUserLocalStorage("companyProfile", userId);
-      if (localData) {
-        const localProfile = JSON.parse(localData) as Record<string, unknown>;
-        if (localProfile.user_id === userId) {
-          console.log("MissionControl: Loading from localStorage fallback");
-          const profileData = {
-            companyName: (localProfile.company_name || localProfile.companyName || "") as string,
-            headquarters: (localProfile.headquarters || "") as string,
-            employeeSize: (localProfile.employee_size || localProfile.employeeSize || "") as string,
-            industry: (localProfile.industry || "") as string,
-            revenue: (localProfile.revenue_band || localProfile.revenue || "") as string,
-            gtmModel: (localProfile.gtm_model || localProfile.gtmModel || "") as string,
-            regionFocus: (localProfile.region_focus || localProfile.regionFocus || "") as string,
-            dealSize: (localProfile.typical_deal_size || localProfile.dealSize || "") as string,
-            companyUrl: (localProfile.company_url || localProfile.companyUrl || "") as string,
-            keyBuyerPersona: (localProfile.key_buyer_persona ||
-              localProfile.keyBuyerPersona ||
-              "") as string,
-            goals: (localProfile.goals || "") as string,
-            painPoints: (localProfile.pain_points || localProfile.painPoints || "") as string,
-            targetSegments: (localProfile.target_segments ||
-              localProfile.targetSegments ||
-              "") as string,
-            excludeSegments: (localProfile.exclude_segments ||
-              localProfile.excludeSegments ||
-              "") as string,
-            compliance: (localProfile.compliance || "") as string,
-            constraints: (localProfile.constraints || "") as string,
-          };
-          setCompanyProfile(profileData);
-          if (localProfile.company_name || localProfile.companyName) {
-            setIsCompanyProfileSaved(true);
-          }
-          return localProfile;
-        }
-      }
-    } catch (e) {
-      console.error("MissionControl: Error loading from localStorage:", e);
-    }
-    return null;
-  };
-
-  // Helper function to map API data to form state
-  const mapApiDataToFormState = (data: UntypedBackendApiResponse, userId: string) => {
-    console.log("MissionControl: mapApiDataToFormState called with:", {
-      data,
-      dataType: typeof data,
-      isNull: data === null,
-      isUndefined: data === undefined,
-      keys: data ? Object.keys(data) : [],
-      userId,
-    });
-
-    // Check if data is empty or null
+  // Helper: map an API payload to the form-shaped fields used to build the
+  // localStorage backup + evaluate the "meaningful data" gate. Kept page-side for
+  // the read-driven backup write (the editable form state itself lives in
+  // CompanyProfileForm). Mirrors the old mapApiDataToFormState transform.
+  const mapApiDataForBackup = (data: UntypedBackendApiResponse, userId: string) => {
     if (!data || (typeof data === "object" && Object.keys(data).length === 0)) {
-      console.log("MissionControl: API returned empty data");
       return null;
     }
-
-    // Verify user_id matches (multi-tenancy safety)
     if (data.user_id && data.user_id !== userId) {
-      console.warn("MissionControl: API returned profile for different user! Ignoring data.", {
-        apiUserId: data.user_id,
-        currentUserId: userId,
-      });
       return null;
     }
-
-    // Map API response to form state (handle both snake_case and camelCase)
-    // Trim whitespace and handle empty strings properly
-    const profileData = {
+    return {
       companyName: (data.company_name || data.companyName || "").trim(),
       headquarters: (data.headquarters || "").trim(),
       employeeSize: (data.employee_size || data.employeeSize || "").trim(),
@@ -563,52 +287,13 @@ const MissionControlPage = () => {
       compliance: (data.compliance || "").trim(),
       constraints: (data.constraints || "").trim(),
     };
-
-    console.log("MissionControl: Mapped profile data result:", profileData);
-    console.log("MissionControl: Profile data values (showing empty strings):", {
-      companyName: `"${profileData.companyName}"`,
-      headquarters: `"${profileData.headquarters}"`,
-      employeeSize: `"${profileData.employeeSize}"`,
-      industry: `"${profileData.industry}"`,
-      revenue: `"${profileData.revenue}"`,
-      gtmModel: `"${profileData.gtmModel}"`,
-      regionFocus: `"${profileData.regionFocus}"`,
-      dealSize: `"${profileData.dealSize}"`,
-      companyUrl: `"${profileData.companyUrl}"`,
-      keyBuyerPersona: `"${profileData.keyBuyerPersona}"`,
-      goals: `"${profileData.goals}"`,
-      painPoints: `"${profileData.painPoints}"`,
-      targetSegments: `"${profileData.targetSegments}"`,
-      excludeSegments: `"${profileData.excludeSegments}"`,
-      compliance: `"${profileData.compliance}"`,
-      constraints: `"${profileData.constraints}"`,
-    });
-    return profileData;
   };
 
-  const applyCompanyProfileJsonToMissionControlUi = (
-    data: UntypedBackendApiResponse,
-    userId: string,
-  ) => {
-    if (!data || (typeof data === "object" && Object.keys(data).length === 0)) {
-      return;
-    }
-    const profileData = mapApiDataToFormState(data, userId);
-    if (profileData) {
-      setCompanyProfile(profileData);
-      const companyName = (
-        data.company_name ||
-        data.companyName ||
-        profileData.companyName ||
-        ""
-      ).trim();
-      const hasCompanyName = companyName.length > 0;
-      if (hasCompanyName) {
-        setIsCompanyProfileSaved(true);
-      } else {
-        setIsCompanyProfileSaved(false);
-      }
-    }
+  // Apply the data_sources branch of a company-profile payload to the page's
+  // data-source state. This is a DIFFERENT tab's concern than the company form
+  // (the company FIELDS are owned by CompanyProfileForm), so it stays in the
+  // page. Extracted unchanged from the old applyCompanyProfileJsonToMissionControlUi.
+  const applyDataSourcesFromPayload = (data: UntypedBackendApiResponse) => {
     if (
       data.data_sources &&
       data.data_sources.sources &&
@@ -698,313 +383,75 @@ const MissionControlPage = () => {
     }
   }, [isCustomerProfileLocked, isDataSourcesLocked]); // Run after locks are determined
 
-  // Load existing profile data on mount
+  // Mount: ensure the profiler scope exists, and seed the page's read-driven
+  // state from the profiler cache when valid (the data-sources branch +
+  // customer-profile completeness). The company FORM fields are hydrated by
+  // CompanyProfileForm off the same shared query/cache. Mirrors the old
+  // loadProfileData cache pre-check branch (page-side concerns only).
   useEffect(() => {
-    const loadProfileData = async () => {
-      if (!currentUser?.uid) {
-        console.log("MissionControl: No user ID, skipping profile load");
-        return;
+    if (!currentUser?.uid) return;
+    const userId = currentUser.uid;
+    ensureMissionProfilerScope(userId, orgIdToUse);
+    if (isMissionControlCacheValid(userId, orgIdToUse)) {
+      const cached = getMissionControlCompanyProfileJson(userId, orgIdToUse);
+      if (cached) {
+        applyDataSourcesFromPayload(cached);
+        applyCustomerProfileCompletenessFromPayload(cached);
       }
+    }
+  }, [currentUser?.uid, orgIdToUse]);
 
-      const userId = currentUser.uid;
-      ensureMissionProfilerScope(userId, orgIdToUse);
-      if (isMissionControlCacheValid(userId, orgIdToUse)) {
-        const cached = getMissionControlCompanyProfileJson(userId, orgIdToUse);
-        if (cached) {
-          applyCompanyProfileJsonToMissionControlUi(cached, userId);
-          applyCustomerProfileCompletenessFromPayload(cached);
+  // Read-driven page side effects: when the shared useCompanyProfile query
+  // resolves with a payload, run the page's concerns off it — data-sources,
+  // customer-profile completeness (backend), profiler-cache commit, and the
+  // gated localStorage backup write. The hook resolves to null on any non-2xx /
+  // network failure (the old 404/error path), in which case there is no page
+  // side effect to run (CompanyProfileForm owns the localStorage failover).
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+    const data = companyProfileData;
+    if (!data) return;
+    const userId = currentUser.uid;
+    const profileData = mapApiDataForBackup(data as UntypedBackendApiResponse, userId);
+    if (!profileData) return;
+
+    applyDataSourcesFromPayload(data as UntypedBackendApiResponse);
+    void applyCustomerProfileCompletenessFromBackend(
+      userId,
+      orgIdToUse,
+      data as Record<string, unknown>,
+    );
+
+    const companyName = (
+      (data as UntypedBackendApiResponse).company_name ||
+      (data as UntypedBackendApiResponse).companyName ||
+      profileData.companyName ||
+      ""
+    ).trim();
+    const hasCompanyName = companyName.length > 0;
+
+    if (hasCompanyName || profileData.headquarters || profileData.industry || profileData.revenue) {
+      void (async () => {
+        try {
+          const { setUserLocalStorage } = await import("@/utils/cacheUtils");
+          const dataToSave = {
+            ...(data as Record<string, unknown>),
+            ...profileData,
+            user_id: userId,
+            company_name:
+              profileData.companyName || (data as UntypedBackendApiResponse).company_name || "",
+            companyName:
+              profileData.companyName || (data as UntypedBackendApiResponse).companyName || "",
+          };
+          setUserLocalStorage("companyProfile", JSON.stringify(dataToSave), userId);
+        } catch (e) {
+          console.warn("MissionControl: Failed to save to localStorage:", e);
         }
-        setIsLoadingProfile(false);
-        return;
-      }
-
-      setIsLoadingProfile(true);
-      try {
-        let retryCount = 0;
-        const maxRetries = 2;
-        const retryDelay = 1000; // 1 second
-
-        while (retryCount <= maxRetries) {
-          try {
-            console.log(
-              `MissionControl: Loading company profile for user: ${userId} (attempt ${retryCount + 1})`,
-            );
-
-            const response = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-              },
-            });
-
-            if (response.ok) {
-              const data = await response.json();
-              console.log("MissionControl: Loaded company profile data:", data);
-              console.log("MissionControl: Data keys:", Object.keys(data || {}));
-              console.log("MissionControl: company_name:", data?.company_name);
-              console.log("MissionControl: companyName:", data?.companyName);
-              console.log("MissionControl: Full data structure:", JSON.stringify(data, null, 2));
-
-              // Database health check - verify if COMPANY PROFILE fields exist but are empty
-              // Check specifically for company profile fields, not customer_profiles or other nested data
-              const companyProfileFields = [
-                "company_name",
-                "companyName",
-                "headquarters",
-                "employee_size",
-                "employeeSize",
-                "industry",
-                "revenue_band",
-                "revenue",
-                "gtm_model",
-                "gtmModel",
-                "region_focus",
-                "regionFocus",
-                "typical_deal_size",
-                "dealSize",
-                "company_url",
-                "companyUrl",
-                "key_buyer_persona",
-                "keyBuyerPersona",
-              ];
-
-              const hasAnyData = data && Object.keys(data).length > 0;
-              const hasCompanyProfileData =
-                data &&
-                companyProfileFields.some((field) => {
-                  const value = data[field];
-                  return (
-                    value !== null &&
-                    value !== undefined &&
-                    value !== "" &&
-                    (typeof value !== "object" || (Array.isArray(value) && value.length > 0))
-                  );
-                });
-
-              console.log("MissionControl: Database health check:", {
-                hasAnyData: hasAnyData,
-                hasCompanyProfileData: hasCompanyProfileData,
-                company_name: `"${data?.company_name || ""}"`,
-                companyName: `"${data?.companyName || ""}"`,
-                dataKeysCount: data ? Object.keys(data).length : 0,
-                user_id_in_response: data?.user_id,
-                expected_user_id: userId,
-                user_id_match: data?.user_id === userId,
-                response_status: response.status,
-              });
-
-              // Check if company profile fields are empty (even if customer_profiles exists)
-              if (hasAnyData && !hasCompanyProfileData) {
-                console.warn(
-                  "⚠️ MissionControl: API returned profile structure but COMPANY PROFILE fields are empty!",
-                );
-                console.warn("⚠️ This could indicate:");
-                console.warn("   1. Database was reset/cleared");
-                console.warn("   2. Data was deleted");
-                console.warn("   3. Backend service restarted and lost data");
-                console.warn("   4. Database connection issue");
-                console.warn("   5. Transaction rollback occurred");
-
-                // Try to load from localStorage as backup BEFORE processing empty API data
-                console.log("MissionControl: Attempting to load from localStorage as backup...");
-                const localRaw = await loadProfileFromLocalStorage(userId);
-                if (localRaw) {
-                  console.log("✅ MissionControl: Successfully loaded from localStorage backup");
-                  setIsLoadingProfile(false);
-                  return; // Exit retry loop - don't process empty API data
-                } else {
-                  console.warn(
-                    "⚠️ MissionControl: No localStorage backup available, will proceed with empty data",
-                  );
-                }
-              }
-
-              const profileData = mapApiDataToFormState(data, userId);
-              console.log("MissionControl: Mapped profile data:", profileData);
-
-              if (profileData) {
-                applyCompanyProfileJsonToMissionControlUi(data, userId);
-                void applyCustomerProfileCompletenessFromBackend(
-                  userId,
-                  orgIdToUse,
-                  data as Record<string, unknown>,
-                );
-
-                const companyName = (
-                  data.company_name ||
-                  data.companyName ||
-                  profileData.companyName ||
-                  ""
-                ).trim();
-                const hasCompanyName = companyName.length > 0;
-
-                if (
-                  hasCompanyName ||
-                  profileData.headquarters ||
-                  profileData.industry ||
-                  profileData.revenue
-                ) {
-                  try {
-                    const { setUserLocalStorage } = await import("@/utils/cacheUtils");
-                    const dataToSave = {
-                      ...data,
-                      ...profileData,
-                      user_id: userId,
-                      company_name: profileData.companyName || data.company_name || "",
-                      companyName: profileData.companyName || data.companyName || "",
-                    };
-                    setUserLocalStorage("companyProfile", JSON.stringify(dataToSave), userId);
-                    console.log("MissionControl: Saved company profile to localStorage");
-                  } catch (e) {
-                    console.warn("MissionControl: Failed to save to localStorage:", e);
-                  }
-                } else {
-                  console.log(
-                    "MissionControl: Skipping localStorage save - no meaningful company profile data",
-                  );
-                }
-
-                commitMissionControlCompanyProfile(
-                  userId,
-                  orgIdToUse,
-                  data as Record<string, unknown>,
-                );
-                setIsLoadingProfile(false);
-                return; // Success, exit retry loop
-              } else {
-                // Data validation failed, try localStorage
-                console.log("MissionControl: Data validation failed, trying localStorage fallback");
-                const localRaw = await loadProfileFromLocalStorage(userId);
-                if (localRaw) {
-                  setIsLoadingProfile(false);
-                  return;
-                }
-              }
-            } else {
-              // Try to get error message from response
-              let errorMessage = `HTTP ${response.status}`;
-              try {
-                const errorData = await response.text();
-                if (errorData) {
-                  try {
-                    const parsedError = JSON.parse(errorData);
-                    errorMessage = parsedError.message || parsedError.error || errorMessage;
-                  } catch {
-                    errorMessage = errorData.substring(0, 200); // First 200 chars if not JSON
-                  }
-                }
-              } catch (_e) {
-                // Ignore errors reading response body
-              }
-
-              console.error(
-                `MissionControl: Profile load response not OK: ${response.status} - ${errorMessage}`,
-              );
-
-              if (response.status === 404) {
-                console.log(
-                  "MissionControl: No company profile found (404) - trying localStorage fallback",
-                );
-                const localRaw = await loadProfileFromLocalStorage(userId);
-                if (localRaw) {
-                  setIsLoadingProfile(false);
-                  return;
-                }
-                // 404 is expected for new users - no profile exists yet
-                // Don't retry, just stop loading and let user create a new profile
-                console.log(
-                  "MissionControl: No company profile found (new user) - stopping load, user can create profile",
-                );
-                setIsLoadingProfile(false);
-                setIsCompanyProfileSaved(false); // Ensure customer profile tab is locked
-                return; // Exit retry loop - 404 is not an error, it's expected for new users
-              } else if (response.status >= 500 && retryCount < maxRetries) {
-                // Server error, retry
-                console.log(`MissionControl: Server error ${response.status}, will retry...`);
-                retryCount++;
-                await new Promise((resolve) => setTimeout(resolve, retryDelay * retryCount));
-                continue;
-              } else {
-                // Other error status, try localStorage
-                console.log(
-                  `MissionControl: API error (${response.status}), trying localStorage fallback`,
-                );
-                const localRaw = await loadProfileFromLocalStorage(userId);
-                if (localRaw) {
-                  setIsLoadingProfile(false);
-                  return;
-                }
-              }
-            }
-          } catch (error: unknown) {
-            const err = error as {
-              name?: string;
-              message?: string;
-              stack?: string;
-              constructor?: { name?: string };
-            } | null;
-            const errorDetails = {
-              name: err?.name,
-              message: err?.message,
-              stack: err?.stack?.substring(0, 500), // First 500 chars of stack
-              type: err?.constructor?.name,
-            };
-            console.error("MissionControl: Error loading company profile:", errorDetails);
-            console.error("MissionControl: Full error object:", error);
-
-            // Network error or other error, try localStorage if we haven't already
-            if (retryCount === 0) {
-              console.log("MissionControl: Network/connection error, trying localStorage fallback");
-              const localRaw = await loadProfileFromLocalStorage(userId);
-              if (localRaw) {
-                console.log("MissionControl: Successfully loaded from localStorage fallback");
-                setIsLoadingProfile(false);
-                return;
-              }
-            }
-
-            // If we've exhausted retries, try localStorage one more time
-            if (retryCount >= maxRetries) {
-              console.log(
-                "MissionControl: All retries exhausted, trying localStorage as last resort",
-              );
-              const localRaw = await loadProfileFromLocalStorage(userId);
-              if (localRaw) {
-                console.log("MissionControl: Successfully loaded from localStorage as last resort");
-              } else {
-                console.warn("MissionControl: Failed to load from both API and localStorage");
-              }
-              setIsLoadingProfile(false);
-              return;
-            }
-
-            retryCount++;
-            if (retryCount <= maxRetries) {
-              console.log(`MissionControl: Retrying... (attempt ${retryCount + 1})`);
-              await new Promise((resolve) => setTimeout(resolve, retryDelay * retryCount));
-            }
-          }
-        }
-      } finally {
-        setIsLoadingProfile(false);
-      }
-
-      // If we get here, all attempts failed
-      console.warn("MissionControl: Failed to load company profile after all retries");
-    };
-
-    if (!currentUser?.uid) {
-      return;
+      })();
     }
 
-    // Add a small delay to ensure user is fully initialized
-    const timeoutId = setTimeout(() => {
-      void loadProfileData();
-    }, 100);
-
-    return () => clearTimeout(timeoutId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- applyCompanyProfileJsonToMissionControlUi is a stable helper closure; intentionally omitted to keep effect scoped to user/org identity changes
-  }, [currentUser?.uid, orgIdToUse]);
+    commitMissionControlCompanyProfile(userId, orgIdToUse, data as Record<string, unknown>);
+  }, [companyProfileData, currentUser?.uid, orgIdToUse]);
 
   const handleSaveConfiguration = () => {
     if (!sourceToConfigure) return;
@@ -1982,252 +1429,7 @@ const MissionControlPage = () => {
 
           {/* Company Profile Tab */}
           <TabsContent value="profile">
-            <Card>
-              <CardHeader>
-                <CardTitle>Company Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="company-name">Company Name *</Label>
-                    <Input
-                      id="company-name"
-                      placeholder="Enter company name"
-                      value={companyProfile.companyName}
-                      onChange={(e) =>
-                        setCompanyProfile((prev) => ({ ...prev, companyName: e.target.value }))
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="company-url">Company URL</Label>
-                    <Input
-                      id="company-url"
-                      type="url"
-                      placeholder="https://example.com"
-                      value={companyProfile.companyUrl}
-                      onChange={(e) =>
-                        setCompanyProfile((prev) => ({ ...prev, companyUrl: e.target.value }))
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="headquarters">Headquarters</Label>
-                    <Input
-                      id="headquarters"
-                      placeholder="City, Country"
-                      value={companyProfile.headquarters}
-                      onChange={(e) =>
-                        setCompanyProfile((prev) => ({ ...prev, headquarters: e.target.value }))
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="employee-size">Employee Size</Label>
-                    <Select
-                      value={companyProfile.employeeSize}
-                      onValueChange={(value) =>
-                        setCompanyProfile((prev) => ({ ...prev, employeeSize: value }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select size" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1-10">1-10</SelectItem>
-                        <SelectItem value="11-50">11-50</SelectItem>
-                        <SelectItem value="51-200">51-200</SelectItem>
-                        <SelectItem value="201-500">201-500</SelectItem>
-                        <SelectItem value="501-1000">501-1000</SelectItem>
-                        <SelectItem value="1000+">1000+</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="industry">Industry</Label>
-                    <Select
-                      value={companyProfile.industry}
-                      onValueChange={(value) =>
-                        setCompanyProfile((prev) => ({ ...prev, industry: value }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select industry" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="saas">SaaS</SelectItem>
-                        <SelectItem value="fintech">FinTech</SelectItem>
-                        <SelectItem value="healthcare">Healthcare</SelectItem>
-                        <SelectItem value="ecommerce">E-commerce</SelectItem>
-                        <SelectItem value="enterprise">Enterprise Software</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="revenue">Revenue Band</Label>
-                    <Select
-                      value={companyProfile.revenue}
-                      onValueChange={(value) =>
-                        setCompanyProfile((prev) => ({ ...prev, revenue: value }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select revenue range" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="0-1m">$0 - $1M</SelectItem>
-                        <SelectItem value="1-5m">$1M - $5M</SelectItem>
-                        <SelectItem value="5-10m">$5M - $10M</SelectItem>
-                        <SelectItem value="10-50m">$10M - $50M</SelectItem>
-                        <SelectItem value="50m+">$50M+</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="gtm-model">GTM Model</Label>
-                    <Select
-                      value={companyProfile.gtmModel}
-                      onValueChange={(value) =>
-                        setCompanyProfile((prev) => ({ ...prev, gtmModel: value }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select GTM model" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="product-led">Product-Led Growth</SelectItem>
-                        <SelectItem value="sales-led">Sales-Led Growth</SelectItem>
-                        <SelectItem value="marketing-led">Marketing-Led Growth</SelectItem>
-                        <SelectItem value="hybrid">Hybrid Model</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <Accordion type="multiple" className="space-y-4 mt-6">
-                  <AccordionItem value="priorities">
-                    <AccordionTrigger className="text-lg font-medium">Goals</AccordionTrigger>
-                    <AccordionContent>
-                      <Card>
-                        <CardContent className="p-4 space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="business-goals">Primary Business Goals</Label>
-                            <Textarea
-                              id="business-goals"
-                              placeholder="Be as specific as possible - clearer goals help Brewra generate more accurate insights."
-                              value={companyProfile.goals}
-                              onChange={(e) =>
-                                setCompanyProfile((prev) => ({ ...prev, goals: e.target.value }))
-                              }
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="pain-points">Key Pain Points We Solve</Label>
-                            <Textarea
-                              id="pain-points"
-                              placeholder="Describe the key problems you're trying to solve. More detail leads to more relevant insights."
-                              value={companyProfile.painPoints}
-                              onChange={(e) =>
-                                setCompanyProfile((prev) => ({
-                                  ...prev,
-                                  painPoints: e.target.value,
-                                }))
-                              }
-                            />
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="positioning">
-                    <AccordionTrigger className="text-lg font-medium">
-                      Market Positioning
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <Card>
-                        <CardContent className="p-4 space-y-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="target-segments">Target Segments (Include)</Label>
-                              <Textarea
-                                id="target-segments"
-                                placeholder="e.g., Mid-market SaaS companies, Financial services..."
-                                value={companyProfile.targetSegments}
-                                onChange={(e) =>
-                                  setCompanyProfile((prev) => ({
-                                    ...prev,
-                                    targetSegments: e.target.value,
-                                  }))
-                                }
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="exclude-segments">Exclude Segments</Label>
-                              <Textarea
-                                id="exclude-segments"
-                                placeholder="e.g., Startups under 50 employees, Government..."
-                                value={companyProfile.excludeSegments}
-                                onChange={(e) =>
-                                  setCompanyProfile((prev) => ({
-                                    ...prev,
-                                    excludeSegments: e.target.value,
-                                  }))
-                                }
-                              />
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="compliance">
-                    <AccordionTrigger className="text-lg font-medium">
-                      Compliance & Constraints
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <Card>
-                        <CardContent className="p-4 space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="compliance-reqs">Compliance Requirements</Label>
-                            <Textarea
-                              id="compliance-reqs"
-                              placeholder="e.g., GDPR, HIPAA, SOC2..."
-                              value={companyProfile.compliance}
-                              onChange={(e) =>
-                                setCompanyProfile((prev) => ({
-                                  ...prev,
-                                  compliance: e.target.value,
-                                }))
-                              }
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="messaging-constraints">General Instruction</Label>
-                            <Textarea
-                              id="messaging-constraints"
-                              placeholder="e.g., Avoid certain terms, required disclaimers..."
-                              value={companyProfile.constraints}
-                              onChange={(e) =>
-                                setCompanyProfile((prev) => ({
-                                  ...prev,
-                                  constraints: e.target.value,
-                                }))
-                              }
-                            />
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-
-                <Button onClick={handleSave} className="w-full md:w-auto" disabled={isSaving}>
-                  {isSaving ? "Saving..." : "Save Changes"}
-                </Button>
-              </CardContent>
-            </Card>
+            <CompanyProfileForm onSavedChange={setIsCompanyProfileSaved} />
           </TabsContent>
 
           {/* Customer Profile Tab — ICPManager mounts when this tab is selected; avoids showing ICP UI while other tabs are active */}
