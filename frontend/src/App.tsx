@@ -8,7 +8,6 @@ import Customers from "./pages/Customers";
 import Deals from "./pages/Deals";
 import Insights from "./pages/Insights";
 import Login from "./pages/Login";
-import MissionControl from "./pages/MissionControl";
 import NotFound from "./pages/NotFound";
 import Reports from "./pages/Reports";
 import ScoutDeploymentPage from "./pages/ScoutDeployment";
@@ -16,14 +15,13 @@ import Settings from "./pages/Settings";
 import Signals from "./pages/Signals";
 import TenantSelection from "./pages/TenantSelection";
 
+import { featureRoutes } from "@/app/routes";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import MarketResearchPage from "@/features/market-research/pages/MarketResearchPage";
 import { ProtectedRoute, SidebarProvider } from "@/features/shell";
 import { queryClient } from "@/shared/api/queryClient";
 import { AuthProvider } from "@/shared/auth";
-import { FeatureErrorBoundary } from "@/shared/components";
 import { TenantProvider } from "@/shared/tenant";
 
 const App = () => (
@@ -49,14 +47,6 @@ const App = () => (
                 />
 
                 {/* Protected routes that require both authentication and tenant selection */}
-                <Route
-                  path="/mission-control"
-                  element={
-                    <ProtectedRoute requireTenant>
-                      <MissionControl />
-                    </ProtectedRoute>
-                  }
-                />
                 <Route
                   path="/signals"
                   element={
@@ -122,24 +112,6 @@ const App = () => (
                   }
                 />
                 <Route
-                  path="/market-research"
-                  element={<Navigate to="/your-ai-team/scout/marketintelligence" replace />}
-                />
-                <Route
-                  path="/your-ai-team/scout/:tab"
-                  element={
-                    <ProtectedRoute requireTenant>
-                      <FeatureErrorBoundary featureName="Market Research">
-                        <MarketResearchPage />
-                      </FeatureErrorBoundary>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/your-ai-team/scout"
-                  element={<Navigate to="/your-ai-team/scout/marketintelligence" replace />}
-                />
-                <Route
                   path="/insights"
                   element={
                     <ProtectedRoute requireTenant>
@@ -163,6 +135,7 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
+                {featureRoutes}
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

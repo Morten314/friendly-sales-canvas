@@ -1,10 +1,7 @@
-import { parseMarketSizeResult, type MarketSizeResult } from "./types";
+import { useRegenerateResearch, useResearchComponent } from "../../../hooks/useMarketResearch";
+import { RESEARCH_COMPONENTS } from "../../../services/marketResearch";
 
-import {
-  useRegenerateResearch,
-  useResearchComponent,
-} from "@/features/market-research/hooks/useMarketResearch";
-import { RESEARCH_COMPONENTS } from "@/features/market-research/services/marketResearch";
+import { parseMarketSizeResult, type MarketSizeResult } from "./types";
 
 export interface UseMarketSize {
   data: MarketSizeResult | undefined;

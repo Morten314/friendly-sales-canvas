@@ -1,10 +1,11 @@
 import { z } from "zod";
 
+import type { ResearchComponentResponse } from "../../../contracts";
+
 import type {
   TrendSnapshot,
   IndustryTrendsRecommendations,
 } from "@/components/market-research/types";
-import type { ResearchComponentResponse } from "@/features/market-research/contracts";
 
 // Re-export the shared trio from the legacy types directory.
 // These are consumed by MarketIntelligenceSectionsProps and its sections; do not fork them.

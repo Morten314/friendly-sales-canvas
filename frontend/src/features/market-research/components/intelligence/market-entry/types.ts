@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { ResearchComponentResponse } from "@/features/market-research/contracts";
+import type { ResearchComponentResponse } from "../../../contracts";
 
 /** Market-entry per-component `data` view-model. Fields confirmed against the
  *  backend "market entry & growth strategy" prompt schema (research_market_5)

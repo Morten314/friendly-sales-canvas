@@ -5,11 +5,6 @@ import {
   Database,
   Trash2,
   Edit,
-  Globe,
-  FileText,
-  Settings,
-  X,
-  Check,
   Building2,
   Users,
   ChevronDown,
@@ -17,9 +12,23 @@ import {
 } from "lucide-react";
 import React, { useState, useRef, useEffect, useCallback } from "react";
 
+import { useDataSources } from "../../hooks/useDataSources";
+import { useLeadStreamStatus } from "../../hooks/useLeadStreamStatus";
+import type {
+  DataSource,
+  DataSourceType,
+  DataSourceStatus,
+  LeadStreamFileApiRow,
+} from "../../types";
+
+import { getStatusBadge, getTypeIcon } from "./dataSourceBadges";
+import DataSourceUploader from "./DataSourceUploader";
+import { getLeadStreamRowStatus, isTerminalLeadStreamStatus } from "./leadStreamStatus";
+import LeadStreamTable from "./LeadStreamTable";
+import SourceForm from "./SourceForm";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,15 +40,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -48,66 +48,31 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { buildApiUrl } from "@/lib/api";
 import jwtManager from "@/lib/jwt";
 import type { UntypedBackendDocument } from "@/lib/types/escape-hatches";
 
-// Types
-type SourceType = "url" | "file" | "system";
-type SourceStatus = "active" | "failed" | "processing" | "completed";
-
-interface DataSource {
-  id: string;
-  fileId?: string; // The actual file_id that backend expects for deletion (from doc.file_id or doc._id)
-  type: SourceType;
-  name: string;
-  url?: string;
-  fileName?: string;
-  description?: string;
-  tags: string[];
-  status: SourceStatus;
-  createdAt: Date;
-}
-
-/** Row from GET /leads/stream/status */
-interface LeadStreamFileApiRow {
-  file_id: string;
-  filename: string;
-  uploaded_at?: string;
-  last_processed_at?: string;
-  total_rows?: number;
-  created_count?: number;
-  error_count?: number;
-  processing_status?: string;
-  /** Some APIs use `status` instead of `processing_status`. */
-  status?: string;
-  /** Some backends mark Lead_Stream_Files as deleted separately from processing_status */
-  tracking_status?: string;
-}
-
 interface CompanyProfile {
   companyName?: string;
   companyUrl?: string;
 }
 
-// Suggested tags
-const SUGGESTED_TAGS = [
-  "Competitor",
-  "Product",
-  "Pricing",
-  "Messaging",
-  "Customer Proof",
-  "Sales Enablement",
-  "Market Research",
-];
-
 const DataSourcesManager: React.FC = () => {
   const { toast } = useToast();
   const { currentUser, orgId } = useAuth();
   const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
+
+  // Read hooks (TanStack Query). The two GET reads are served by these hooks; the
+  // mapping/merge into component state stays here (sync-effects below). Writes
+  // still use raw fetch + getAuthHeader (deferred).
+  const dataSourcesQuery = useDataSources(orgIdToUse);
+  const leadStreamQuery = useLeadStreamStatus(currentUser?.uid ?? "", orgIdToUse);
+  // React Query refetch fns are stable across renders — destructure so the thin
+  // refresh wrappers can depend on them without re-creating on every render.
+  const { refetch: refetchLeadStream } = leadStreamQuery;
+
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [_isSaving, setIsSaving] = useState(false);
@@ -361,7 +326,7 @@ const DataSourcesManager: React.FC = () => {
   // Check processing status for a specific file
   const checkDocumentStatus = async (
     fileKey: string,
-  ): Promise<{ status: SourceStatus; chunks_count?: number; timestamps?: unknown }> => {
+  ): Promise<{ status: DataSourceStatus; chunks_count?: number; timestamps?: unknown }> => {
     if (!currentUser?.uid) {
       throw new Error("User not authenticated");
     }
@@ -384,7 +349,7 @@ const DataSourcesManager: React.FC = () => {
 
     const payload = await response.json();
     return {
-      status: (payload.status || "processing") as SourceStatus,
+      status: (payload.status || "processing") as DataSourceStatus,
       chunks_count: payload.chunks_count,
       timestamps: payload.timestamps,
     };
@@ -415,35 +380,13 @@ const DataSourcesManager: React.FC = () => {
     });
   };
 
-  // Load documents from backend (separate storage, not company profile)
-  const loadDataSourcesFromBackend = async () => {
-    if (!currentUser?.uid) {
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const authHeader = await getAuthHeader();
-      const url = buildApiUrl(`user-documents?org_id=${orgIdToUse}`);
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          ...(authHeader && { Authorization: authHeader }),
-        },
-      });
-
-      if (!response.ok) {
-        console.log("DataSourcesManager: No existing documents found in backend");
-        return;
-      }
-
-      const data = await response.json();
-      const documents = Array.isArray(data)
-        ? data
-        : data.documents || data.files || data.data || [];
-
-      if (Array.isArray(documents)) {
+  // Map the backend documents (from the useDataSources read) into the merged
+  // DataSource[] state. The hook already unwrapped the {documents|files|data}
+  // envelope to a raw array; this reproduces the original loadDataSourcesFromBackend
+  // mapping/merge verbatim, just sourced from the query instead of a raw fetch.
+  const applyBackendDocuments = useCallback((documents: unknown[]) => {
+    if (Array.isArray(documents)) {
+      {
         console.log(
           "📋 DataSourcesManager - Loading documents from backend:",
           documents.length,
@@ -575,7 +518,7 @@ const DataSourcesManager: React.FC = () => {
               url: urlValue,
               description: doc.description || undefined,
               tags: parsedTags,
-              status: (doc.status || "active") as SourceStatus,
+              status: (doc.status || "active") as DataSourceStatus,
               createdAt: doc.uploaded_at
                 ? new Date(doc.uploaded_at)
                 : doc.created_at
@@ -598,7 +541,7 @@ const DataSourcesManager: React.FC = () => {
               url: doc.file_url,
               description: doc.description || undefined,
               tags: parsedTags,
-              status: (doc.status || "processing") as SourceStatus,
+              status: (doc.status || "processing") as DataSourceStatus,
               createdAt: doc.uploaded_at
                 ? new Date(doc.uploaded_at)
                 : doc.created_at
@@ -823,24 +766,48 @@ const DataSourcesManager: React.FC = () => {
         });
         console.log("Data sources loaded from dedicated backend:", loadedSources);
       }
-    } catch (error) {
-      console.error("Error loading data sources:", error);
-    } finally {
-      setIsLoading(false);
+    }
+  }, []);
+
+  // Sync the useDataSources read into component state. Re-runs whenever the query
+  // returns fresh documents (initial fetch + every refetch after a mutation),
+  // preserving the merge-with-existing behavior of the original load function.
+  useEffect(() => {
+    if (dataSourcesQuery.data) {
+      applyBackendDocuments(dataSourcesQuery.data);
+    }
+  }, [dataSourcesQuery.data, applyBackendDocuments]);
+
+  // Keep the data-sources loading flag in sync with the query's fetch state so the
+  // existing isLoading UI still reflects in-flight reads.
+  useEffect(() => {
+    setIsLoading(dataSourcesQuery.isFetching);
+  }, [dataSourcesQuery.isFetching]);
+
+  // Load documents from backend (separate storage, not company profile).
+  // Thin wrapper over the query refetch. The sync-effect above also re-maps query
+  // data into state, but it only fires on a LATER render after the cache updates —
+  // so callers that `await loadDataSourcesFromBackend()` and then immediately
+  // `setDataSources((prev) => …applyMetadata…)` (the add-with-metadata flows) would
+  // see a `prev` WITHOUT the just-refetched doc. To preserve the original inline-
+  // setState timing, apply the refetched documents into state synchronously here
+  // (inside the awaited fn) so the merge updater is enqueued BEFORE the caller's
+  // metadata-apply updater — React then chains the functional updaters in order,
+  // exactly as the pre-refactor load did. applyBackendDocuments is idempotent, so
+  // the duplicate apply from the sync-effect is a harmless no-op.
+  const loadDataSourcesFromBackend = async () => {
+    if (!currentUser?.uid) {
+      return;
+    }
+    const { data } = await dataSourcesQuery.refetch();
+    if (data) {
+      applyBackendDocuments(data);
     }
   };
 
-  // Load data sources on mount
-  useEffect(() => {
-    if (currentUser?.uid) {
-      void loadDataSourcesFromBackend();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadDataSourcesFromBackend is stable within scope; intentionally watches only user identity edge
-  }, [currentUser?.uid]);
-
   // Form state
   const [isAddingInline, setIsAddingInline] = useState(false);
-  const [selectedType, setSelectedType] = useState<SourceType | "">("");
+  const [selectedType, setSelectedType] = useState<DataSourceType | "">("");
   const [sourceName, setSourceName] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -893,7 +860,7 @@ const DataSourcesManager: React.FC = () => {
     resetInlineForm();
   };
 
-  const handleTypeSelect = (type: SourceType) => {
+  const handleTypeSelect = (type: DataSourceType) => {
     setSelectedType(type);
     // Clear URL/file when switching types
     if (type === "url") {
@@ -1796,7 +1763,7 @@ const DataSourcesManager: React.FC = () => {
         // Other types (system) - stored locally only
         const newSource: DataSource = {
           id: editingId || `source-${Date.now()}`,
-          type: selectedType as SourceType,
+          type: selectedType as DataSourceType,
           name: sourceName.trim(),
           url: undefined,
           description: sourceDescription.trim() || undefined,
@@ -2614,49 +2581,25 @@ const DataSourcesManager: React.FC = () => {
       (f) => !deletedLeadStreamFileIdsRef.current.has(f.file_id) && !isLeadStreamRowDeletedInApi(f),
     );
 
-  const isTerminalLeadStreamStatus = (status?: string) => {
-    const s = (status || "").toLowerCase().trim();
-    return (
-      s === "completed" ||
-      s === "complete" ||
-      s === "failed" ||
-      s === "error" ||
-      s === "deleted" ||
-      s === "success" ||
-      s === "succeeded" ||
-      s === "done" ||
-      s === "finished" ||
-      s === "processed" ||
-      s === "ready"
-    );
-  };
-
-  const getLeadStreamRowStatus = (row: LeadStreamFileApiRow): string => {
-    const ts = (row.tracking_status || "").toLowerCase();
-    if (ts === "deleted") return "deleted";
-    return row.processing_status ?? row.status ?? "";
-  };
-
-  const mapProcessingStatusToSourceStatus = (status?: string): SourceStatus => {
-    const s = (status || "").toLowerCase();
-    if (s === "deleted") return "completed";
-    if (
-      s === "completed" ||
-      s === "complete" ||
-      s === "success" ||
-      s === "succeeded" ||
-      s === "done" ||
-      s === "finished" ||
-      s === "processed" ||
-      s === "ready"
-    ) {
-      return "completed";
+  // Sync the useLeadStreamStatus read into component state. Prunes the
+  // optimistic-delete ref to ids that are gone from the backend, then applies the
+  // visibility filter (which still hides ids in deletedLeadStreamFileIdsRef +
+  // rows the API marks deleted). Re-runs on every query result (initial + refetch).
+  useEffect(() => {
+    const files = leadStreamQuery.data;
+    if (!files) return;
+    const idsInResponse = new Set(files.map((f) => f.file_id));
+    for (const id of [...deletedLeadStreamFileIdsRef.current]) {
+      if (!idsInResponse.has(id)) deletedLeadStreamFileIdsRef.current.delete(id);
     }
-    if (s === "failed" || s === "error") return "failed";
-    return "processing";
-  };
+    setLeadStreamFiles(filterVisibleLeadStreamFiles(files));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- filterVisibleLeadStreamFiles is a non-memoized helper reading only refs; re-runs are driven by the query data, not the helper identity
+  }, [leadStreamQuery.data]);
 
-  /** GET /leads/stream/status — list uploads + processing stats for user/org */
+  /** GET /leads/stream/status — thin refetch over useLeadStreamStatus. The
+   *  sync-effect above re-maps the result into state. `silent` drives only the
+   *  loading flag: a non-silent refresh shows the loading state, the poll does not.
+   *  Kept (name + `{ silent }` signature + call sites) so refreshes still work. */
   const refreshLeadStreamStatus = useCallback(
     async (opts?: { silent?: boolean }) => {
       const silent = opts?.silent === true;
@@ -2670,47 +2613,15 @@ const DataSourcesManager: React.FC = () => {
         setLeadStreamStatusLoading(true);
       }
       try {
-        const authHeader = await getAuthHeader();
-        const qs = new URLSearchParams({
-          user_id: userId,
-          org_id: orgIdToUse,
-        });
-        const url = buildApiUrl(`leads/stream/status?${qs.toString()}`);
-        const response = await fetch(url, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            ...(authHeader && { Authorization: authHeader }),
-          },
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Failed to fetch lead stream status: ${response.status} - ${errorText}`);
-        }
-
-        const data = await response.json();
-        let files: LeadStreamFileApiRow[] = [];
-        if (data && typeof data === "object" && Array.isArray(data.files)) {
-          files = data.files;
-        } else if (Array.isArray(data)) {
-          files = data;
-        }
-        const idsInResponse = new Set(files.map((f) => f.file_id));
-        for (const id of [...deletedLeadStreamFileIdsRef.current]) {
-          if (!idsInResponse.has(id)) deletedLeadStreamFileIdsRef.current.delete(id);
-        }
-        setLeadStreamFiles(filterVisibleLeadStreamFiles(files));
-      } catch (e) {
-        console.error("DataSourcesManager refreshLeadStreamStatus:", e);
+        await refetchLeadStream();
       } finally {
         if (!silent) {
           setLeadStreamStatusLoading(false);
         }
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- filterVisibleLeadStreamFiles is a non-memoized helper reading only refs; including it would defeat useCallback memoization without behavior change
-    [currentUser?.uid, orgIdToUse],
+    // refetchLeadStream is React Query's stable refetch fn (does not change identity)
+    [currentUser?.uid, refetchLeadStream],
   );
 
   /** DELETE /leads/by-file/{file_id} — removes all leads for file (user/org scoped) and updates stream tracking */
@@ -3205,51 +3116,7 @@ const DataSourcesManager: React.FC = () => {
     }
   };
 
-  const getStatusBadge = (status: SourceStatus) => {
-    switch (status) {
-      case "active":
-      case "completed":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800"
-          >
-            🟢 {status === "completed" ? "Completed" : "Active"}
-          </Badge>
-        );
-      case "failed":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800"
-          >
-            🔴 Failed
-          </Badge>
-        );
-      case "processing":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-400 dark:border-yellow-800"
-          >
-            🟡 Processing
-          </Badge>
-        );
-    }
-  };
-
-  const getTypeIcon = (type: SourceType) => {
-    switch (type) {
-      case "url":
-        return <Globe className="h-4 w-4 text-muted-foreground" />;
-      case "file":
-        return <FileText className="h-4 w-4 text-muted-foreground" />;
-      case "system":
-        return <Settings className="h-4 w-4 text-muted-foreground" />;
-    }
-  };
-
-  const getTypeLabel = (type: SourceType) => {
+  const getTypeLabel = (type: DataSourceType) => {
     switch (type) {
       case "url":
         return "URL";
@@ -3272,210 +3139,6 @@ const DataSourcesManager: React.FC = () => {
         : editingId
           ? true // When editing, file is optional - can update metadata without new file
           : selectedFile); // When adding new, file is required
-
-  // Render the add/edit form
-  const renderAddForm = () => {
-    if (!isAddingInline) return null;
-
-    return (
-      <div ref={formCardRef}>
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>{editingId ? "Edit Data Source" : "Add Data Source"}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-6">
-              {/* Row 1: Source Type and Name side by side */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Type Selection - smaller, takes 1/3 width */}
-                <div className="space-y-2">
-                  <Label htmlFor="source-type">Source Type *</Label>
-                  <Select
-                    value={selectedType}
-                    onValueChange={(value) => handleTypeSelect(value as SourceType)}
-                  >
-                    <SelectTrigger id="source-type">
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="url">
-                        <div className="flex items-center gap-2">
-                          <LinkIcon className="h-4 w-4" />
-                          <span>Add URL</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="file">
-                        <div className="flex items-center gap-2">
-                          <Upload className="h-4 w-4" />
-                          <span>Upload File</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="system" disabled>
-                        <div className="flex items-center gap-2 opacity-50">
-                          <Database className="h-4 w-4" />
-                          <span>Connect System (Use dropdown)</span>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Name - takes 2/3 width */}
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="source-name">Name *</Label>
-                  <Input
-                    id="source-name"
-                    placeholder="e.g., Competitor Pricing Page"
-                    value={sourceName}
-                    onChange={(e) => setSourceName(e.target.value)}
-                    disabled={!!editingId && selectedType === "url"}
-                    className={
-                      editingId && selectedType === "url"
-                        ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                        : ""
-                    }
-                  />
-                </div>
-              </div>
-
-              {/* Row 2: URL or File - full width, more prominent */}
-              {selectedType === "url" && (
-                <div className="space-y-2">
-                  <Label htmlFor="source-url" className="text-base font-medium">
-                    Website URL *
-                  </Label>
-                  <Input
-                    id="source-url"
-                    type="url"
-                    placeholder="https://example.com"
-                    value={sourceUrl}
-                    onChange={(e) => setSourceUrl(e.target.value)}
-                    className={`text-base ${editingId ? "bg-gray-100 text-gray-500 cursor-not-allowed" : ""}`}
-                    disabled={!!editingId}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Enter the full URL of the website you want to add as a data source
-                  </p>
-                </div>
-              )}
-
-              {selectedType === "file" && (
-                <div className="space-y-2">
-                  <Label htmlFor="source-file" className="text-base font-medium">
-                    Upload File *
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      onChange={handleFileChange}
-                      className="hidden"
-                      id="source-file"
-                      accept=".pdf,.docx,.pptx,.csv,.xlsx"
-                    />
-                    <label
-                      htmlFor="source-file"
-                      className="flex-1 inline-flex items-center gap-3 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors bg-muted/20"
-                    >
-                      <Upload className="h-5 w-5 text-muted-foreground" />
-                      {selectedFile ? (
-                        <span className="text-foreground font-medium">{selectedFile.name}</span>
-                      ) : existingFileName ? (
-                        <span className="text-foreground font-medium">{existingFileName}</span>
-                      ) : (
-                        <span className="text-muted-foreground">
-                          Click to browse or drag and drop files here
-                        </span>
-                      )}
-                    </label>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Supported formats: PDF, DOCX, PPTX, CSV, XLSX
-                  </p>
-                </div>
-              )}
-
-              {/* Description */}
-              <div className="space-y-2">
-                <Label htmlFor="source-description">Description</Label>
-                <Textarea
-                  id="source-description"
-                  placeholder="Brief description of this data source..."
-                  value={sourceDescription}
-                  onChange={(e) => setSourceDescription(e.target.value)}
-                  rows={3}
-                />
-              </div>
-
-              {/* Tags */}
-              <div className="space-y-2">
-                <Label>Tags</Label>
-                <div className="space-y-3">
-                  <div className="flex flex-wrap gap-2">
-                    {SUGGESTED_TAGS.map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant={selectedTags.includes(tag) ? "default" : "outline"}
-                        className="cursor-pointer"
-                        onClick={() => handleTagToggle(tag)}
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      placeholder="Add custom tag..."
-                      value={customTag}
-                      onChange={(e) => setCustomTag(e.target.value)}
-                      onKeyDown={handleCustomTagKeyDown}
-                      className="max-w-xs"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleAddCustomTag}
-                      disabled={!customTag.trim()}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add
-                    </Button>
-                  </div>
-                  {selectedTags.filter((t) => !SUGGESTED_TAGS.includes(t)).length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedTags
-                        .filter((tag) => !SUGGESTED_TAGS.includes(tag))
-                        .map((tag) => (
-                          <Badge key={tag} variant="secondary" className="gap-1">
-                            {tag}
-                            <X
-                              className="h-3 w-3 cursor-pointer"
-                              onClick={() => handleTagToggle(tag)}
-                            />
-                          </Badge>
-                        ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button variant="outline" onClick={handleCancelInline}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveSource} disabled={!canSave}>
-                <Check className="h-4 w-4 mr-2" />
-                {editingId ? "Update" : "Add"} Data Source
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  };
 
   const showTable = dataSources.length > 0;
   const showDataSourcesEmptyState =
@@ -3595,7 +3258,33 @@ const DataSourcesManager: React.FC = () => {
       </div>
 
       {/* Add/Edit Form */}
-      {renderAddForm()}
+      {isAddingInline && (
+        <SourceForm
+          editingId={editingId}
+          selectedType={selectedType}
+          sourceName={sourceName}
+          sourceUrl={sourceUrl}
+          selectedFile={selectedFile}
+          existingFileName={existingFileName}
+          selectedTags={selectedTags}
+          customTag={customTag}
+          sourceDescription={sourceDescription}
+          canSave={!!canSave}
+          fileInputRef={fileInputRef}
+          formCardRef={formCardRef}
+          onTypeSelect={handleTypeSelect}
+          onNameChange={setSourceName}
+          onUrlChange={setSourceUrl}
+          onFileChange={handleFileChange}
+          onTagToggle={handleTagToggle}
+          onCustomTagChange={setCustomTag}
+          onAddCustomTag={handleAddCustomTag}
+          onCustomTagKeyDown={handleCustomTagKeyDown}
+          onDescriptionChange={setSourceDescription}
+          onSave={handleSaveSource}
+          onCancel={handleCancelInline}
+        />
+      )}
 
       {/* Empty State — only when there are no data sources and no lead stream file */}
       {showDataSourcesEmptyState && (
@@ -3775,162 +3464,29 @@ const DataSourcesManager: React.FC = () => {
             </div>
 
             {showLeadUpload && (
-              <Card className="mb-6">
-                <CardContent className="pt-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Add leads</h3>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setShowLeadUpload(false);
-                        setSelectedLeadFile(null);
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lead-csv-upload" className="text-base font-medium">
-                      Lead file (CSV, XLSX, or XLS) *
-                    </Label>
-                    <div
-                      onDragOver={handleLeadDragOver}
-                      onDragLeave={handleLeadDragLeave}
-                      onDrop={handleLeadDrop}
-                      className="flex items-center gap-2"
-                    >
-                      <input
-                        ref={leadFileInputRef}
-                        type="file"
-                        accept=".csv,.xlsx,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
-                        onChange={handleLeadFileInputChange}
-                        className="hidden"
-                        id="lead-csv-upload"
-                      />
-                      <label
-                        htmlFor="lead-csv-upload"
-                        className={`flex-1 inline-flex items-center gap-3 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors bg-muted/20 ${
-                          isDraggingLead ? "border-primary bg-primary/5" : ""
-                        }`}
-                      >
-                        <Upload className="h-5 w-5 text-muted-foreground shrink-0" />
-                        {selectedLeadFile ? (
-                          <span className="text-foreground font-medium truncate">
-                            {selectedLeadFile.name}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">
-                            Click to browse or drag and drop a CSV, XLSX, or XLS file here
-                          </span>
-                        )}
-                      </label>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Excel workbooks are parsed on the server. CSV files are checked in the browser
-                      before upload.
-                    </p>
-                  </div>
-                  <div className="flex justify-end gap-2 pt-2 border-t">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setShowLeadUpload(false);
-                        setSelectedLeadFile(null);
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleUploadLeadCsv}
-                      disabled={!selectedLeadFile || isUploadingLeads}
-                    >
-                      {isUploadingLeads ? "Uploading..." : "Add leads"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <DataSourceUploader
+                selectedLeadFile={selectedLeadFile}
+                isDraggingLead={isDraggingLead}
+                isUploadingLeads={isUploadingLeads}
+                leadFileInputRef={leadFileInputRef}
+                onClose={() => {
+                  setShowLeadUpload(false);
+                  setSelectedLeadFile(null);
+                }}
+                onDragOver={handleLeadDragOver}
+                onDragLeave={handleLeadDragLeave}
+                onDrop={handleLeadDrop}
+                onFileInputChange={handleLeadFileInputChange}
+                onUpload={handleUploadLeadCsv}
+              />
             )}
 
-            {leadStreamFiles.length > 0 && (
-              <div className="border rounded-lg overflow-hidden relative">
-                {deletingLeadStreamFileId && (
-                  <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-10 flex items-center justify-center">
-                    <div className="flex gap-2">
-                      <div
-                        className="w-2 h-2 rounded-full bg-primary animate-bounce"
-                        style={{ animationDelay: "0ms", animationDuration: "1.4s" }}
-                      />
-                      <div
-                        className="w-2 h-2 rounded-full bg-primary animate-bounce"
-                        style={{ animationDelay: "200ms", animationDuration: "1.4s" }}
-                      />
-                      <div
-                        className="w-2 h-2 rounded-full bg-primary animate-bounce"
-                        style={{ animationDelay: "400ms", animationDuration: "1.4s" }}
-                      />
-                    </div>
-                  </div>
-                )}
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="w-[140px]">Type</TableHead>
-                      <TableHead className="min-w-[180px]">File</TableHead>
-                      <TableHead className="hidden md:table-cell min-w-[160px]">Import</TableHead>
-                      <TableHead className="w-[120px]">Status</TableHead>
-                      <TableHead className="w-[90px] text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {leadStreamFiles.map((row) => (
-                      <TableRow key={row.file_id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">Lead stream</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span
-                            className="text-sm font-medium truncate max-w-[min(100vw-12rem,28rem)] block"
-                            title={row.filename}
-                          >
-                            {row.filename}
-                          </span>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          <span className="text-xs text-muted-foreground">
-                            {typeof row.total_rows === "number"
-                              ? `${row.created_count ?? 0} / ${row.total_rows} rows`
-                              : `${row.created_count ?? 0} created`}
-                            {typeof row.error_count === "number" && row.error_count > 0
-                              ? ` · ${row.error_count} error${row.error_count === 1 ? "" : "s"}`
-                              : ""}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {getStatusBadge(
-                            mapProcessingStatusToSourceStatus(getLeadStreamRowStatus(row)),
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => handleDeleteLeadStream(row.file_id)}
-                            disabled={!!deletingLeadStreamFileId || showLeadUpload}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+            <LeadStreamTable
+              files={leadStreamFiles}
+              deletingFileId={deletingLeadStreamFileId}
+              showLeadUpload={showLeadUpload}
+              onDeleteFile={handleDeleteLeadStream}
+            />
           </div>
         </>
       )}

@@ -716,6 +716,8 @@ adds a feature that imports another feature.
 
 **Owner:** TBD.
 
+**Resolved:** Phase 6 (stage 1b) — `import-x/no-internal-modules` (forbid `@/features/*/!(index)`, `@/features/*/!(index)/**`) added to `frontend/eslint.config.js`; same-feature imports converted to relative; cross-feature import is index-only.
+
 ---
 
 ## TD-FE-16 — Sidebar export-name twins + `useAuth` name collision
@@ -1146,5 +1148,212 @@ One source of truth for feature→phase numbering, with the master plan and the 
 
 **Pull-forward trigger:**
 - The next phase that plans against the numbering (Phase 6/7 pre-planning) reconciles it, or whichever phase first hits an ambiguity the by-name convention cannot resolve.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-33 — ICPManager read migrated to `useICPs`; legacy localStorage-fallback + user_id-mismatch guard dropped
+
+**Date logged:** 2026-06-03
+**Origin:** Phase 6 Task 20. The task wired `ICPManager.tsx`'s ICP *read* onto the `useICPs` TanStack Query hook (and swapped its in-file `ICP`/`FitConfidence` types for the canonical `features/mission-control/types` ones). The row→`ICP` mapping + dedup-by-`id` were preserved byte-for-byte; only the source of the rows changed (two raw `fetch` GETs → the query). Writes (CRUD) stay raw `fetch` + optimistic this phase — deferred (mirror TD-FE-19/21/27/31).
+
+**Current state:**
+The old imperative loader (`loadCustomerProfileFromBackend`) carried two resilience behaviors that were **consciously dropped** in the migration; the TanStack Query cache is their replacement:
+- **Imperative localStorage-fallback-on-backend-error.** On any non-2xx / network failure (and on the "no ICPs in the API response" branch), the loader fell back to reading `customerProfile` from user-scoped localStorage and seeding `icps` from it. It also wrote loaded ICPs back to localStorage for offline access. `useICPs` (via `fetchIcpsRowsForOrg`) returns `[]` on failure with no localStorage fallback, so a backend error now yields the empty state rather than a stale-local-cache view.
+- **Cached-profile `user_id`-mismatch guard.** The loader cross-checked the API/localStorage `user_id` against `currentUser.uid` and refused to display another tenant's cached profile. That guard only gated the now-removed localStorage fallback, so it was removed with it.
+
+The cross-component `icpManagerCustomerProfileLoadFinished` dispatch (consumed by `MissionControlPage` to clear its "syncing customer profile" spinner) is **preserved** — re-fired from an effect when the query settles (success or error) or when it is disabled (no authenticated user/org). The load-side `customerProfileSaved` dispatch was **dropped**: no external listener depends on it (the page derives customer-profile completeness from its own backend read, and the `customers` `SuggestedICPCards` sibling does its own `fetchIcpsRowsForOrg` with the localStorage read only as a network-failure fallback). The write-path `customerProfileSaved` dispatches (in `handleSaveICP` / `handleDeleteICP`) are untouched.
+
+**What it should be:**
+ICP read sourced purely from the query cache (done). Offline resilience, if reintroduced, belongs in the query layer (e.g. a persisted query client / `placeholderData`) shared by all ICP consumers, not re-implemented imperatively per component. Multi-tenant cache isolation, if it matters pre-scale, belongs in the query-key scoping (already org-scoped via `qk.icps(orgId)`) rather than an ad-hoc `user_id` cross-check.
+
+**Why we deferred:**
+- MVP, 0 live users (CLAUDE.md business state) — backend-failure offline resilience and cross-tenant cache-poisoning are low-value pre-launch.
+- The parity gate for this task (journey `05-icp-create` + VR `01-mission-control-empty-icp`) exercises the happy read + empty state, not the failure/offline path, so the dropped behaviors are not under test.
+
+**What we lose by staying as-is:**
+- A backend outage now shows the empty ICP state instead of the last locally-cached ICPs.
+- No per-component `user_id` cross-check on cached ICP data (relies on the org-scoped query key for tenant isolation).
+
+**Pull-forward trigger:**
+- When offline resilience becomes a real requirement (a persisted/optimistic query layer for ICPs), or when multi-tenant cache-poisoning becomes a genuine concern (real users sharing a device/browser profile). Also revisit when the ICP *write* path is migrated to a mutation hook (the matching deferral).
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-34 — mission-control write/mutation paths remain raw `fetch`
+
+**Date logged:** 2026-06-04
+**Origin:** Phase 6 (Tasks 15, 16, 18, 20, 21). All mission-control WRITES stayed raw `fetch` + optimistic state while only READS migrated to TanStack Query hooks.
+
+**Current state:**
+ICP CRUD (`handleSaveICP`/`handleDeleteICP` in `ICPManager`/`IcpWizard` save path), data-source CRUD (`handleSaveSource`/`handleDeleteSource`/`handleUploadLeadCsv` in `DataSourcesManager`), company-profile save (`CompanyProfileForm.handleSave`), and connector approve/deny — all imperative `fetch` with manual `setX` optimism, no mutation hook / cache invalidation discipline. Phase 6 was scoped read-path-only; writes were explicitly deferred to mirror TD-FE-19/21/27/31.
+
+**What it should be:**
+`useMutation` (or equivalent) with query-cache invalidation for all write paths, mirroring the read hooks shipped in Phase 6.
+
+**Why we deferred:**
+- Phase 6 was explicitly scoped to read-path migration only.
+- MVP, 0 live users — stale-cache windows from missing invalidation carry no real cost.
+
+**What we lose by staying as-is:**
+- After a write, query cache is not invalidated, so a refetch or navigation may briefly show stale data.
+- No centralized error/loading state for mutations; each call site rolls its own.
+
+**Pull-forward trigger:**
+Phase 7 ICP-write migration, or Phase 13 (mutation pass), whichever reaches it first.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-35 — mission-control client-storage bridges retained as-is
+
+**Date logged:** 2026-06-04
+**Origin:** Phase 6 (Tasks 15, 16). The `localStorage` company-profile failover and the `sessionStorage` Slack-OAuth-return bridge were relocated unchanged — they are ad-hoc client-storage coupling, not part of the query layer.
+
+**Current state:**
+- `localStorage company_profile_{uid}` failover in `CompanyProfileForm`: read/write cache used when the backend call fails; the same pattern Phase 6 dropped from `ICPManager` (TD-FE-33), retained here because the company-profile write path was not migrated this phase.
+- `sessionStorage slackSourceToConnect` bridge in `ConnectorApprovals`: the Slack-OAuth-return handoff — the OAuth callback sets this key before redirecting back, and the mount effect reads and clears it.
+
+**What it should be:**
+The company-profile failover folded into a persisted query layer (consistent with TD-FE-34's mutation pass); the Slack bridge replaced by proper OAuth-callback routing/state when connectors are wired.
+
+**Why we deferred:**
+Parity relocation — works as-is; changing the client-storage coupling belongs with the mutation pass (TD-FE-34) and the connector wiring (TD-FE-39).
+
+**What we lose by staying as-is:**
+Continued ad-hoc client-storage coupling; inconsistent resilience model across company-profile vs ICP reads.
+
+**Pull-forward trigger:**
+When the company-profile/connector writes migrate to mutations (TD-FE-34) or when offline resilience is reconsidered.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-36 — `useCompanyProfile` shared-promotion candidate
+
+**Date logged:** 2026-06-04
+**Origin:** Phase 6 Task 15 (reused the existing `useCompanyProfile` for the company-profile read in mission-control). A market-research path duplicates equivalent company-profile fetching and lives in a non-shared location.
+
+**Current state:**
+`useCompanyProfile` is consumed by both settings and mission-control. A market-research path fetches equivalent company-profile data independently rather than reusing the hook. The hook is not yet in `@/shared/`.
+
+**What it should be:**
+`useCompanyProfile` promoted to `@/shared/` once a second+third consumer is confirmed, with the market-research duplicate removed.
+
+**Why we deferred:**
+Cross-feature promotion belongs to a later consolidation phase; the two consumers discovered so far don't justify the move yet.
+
+**What we lose by staying as-is:**
+The market-research company-profile fetch remains a separate code path, potentially diverging from the canonical hook's caching/error behavior.
+
+**Pull-forward trigger:**
+Phase 10/11 (settings/market-research consolidation), or whenever a third consumer confirms the promotion is warranted.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-37 — `DataSourcesManager` upload helpers shared-extraction deferred
+
+**Date logged:** 2026-06-04
+**Origin:** Phase 6 Task 19 (R1 decision: kept the upload pipeline inline in the container rather than extracting it to a shared utility).
+
+**Current state:**
+The CSV/lead upload helpers (`uploadCsvBatch`, `validateCsvFormat`, `getLeadImportKind`, `sniffExcelBinarySignature`, drag handlers) live inline in `DataSourcesManager` — tightly coupled to auth/refresh/polling logic. No other consumer exists today.
+
+**What it should be:**
+Extracted to a shared upload utility/hook when a second consumer needs CSV ingest.
+
+**Why we deferred:**
+No second consumer yet; extraction now would be speculative (R1 from Phase 6 Task 19 design review).
+
+**What we lose by staying as-is:**
+If a second upload consumer is added, it will either duplicate the logic or reach into `DataSourcesManager` internals.
+
+**Pull-forward trigger:**
+Phase 11, or when a second upload consumer appears.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-38 — mission-control escape-hatch typings retained
+
+**Date logged:** 2026-06-04
+**Origin:** Phase 6 (Tasks 10, 11, 18, 20). The read layer uses loose escape-hatch types because backend response shapes are flexible/unstable and the Render backend was suspended during Phase 6 (confirmed 2026-06-03), preventing live shape verification.
+
+**Current state:**
+Loose escape-hatch types in use: `UntypedBackendApiResponse`, `UntypedProfilerIcpRecord`, `UntypedBackendDocument`, plus an `as LeadStreamFileApiRow[]` cast in `services/missionControl.ts` where `.nullish()` zod inference (`string|null|undefined`) doesn't match the interface's `string|undefined`. Carries the TD-FE-9/10 posture.
+
+**What it should be:**
+Precise types once backend response shapes are confirmed-live and stabilized.
+
+**Why we deferred:**
+Honest given the flexible backend contracts and the suspended service — tightening types against unconfirmed shapes would produce false confidence.
+
+**What we lose by staying as-is:**
+TypeScript's guarantees are weakened at the API boundary; runtime shape mismatches surface at render time rather than compile time.
+
+**Pull-forward trigger:**
+Phase 13 escape-hatch retyping pass, or when the backend response contracts are frozen and the service is confirmed live.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-39 — relocated connector cluster is dead code; two `DataSource` shapes not unified
+
+**Date logged:** 2026-06-04
+**Origin:** Phase 6 Task 16 (extracted `components/company-profile/ConnectorApprovals.tsx` + `connectorTypes.ts`).
+
+**Current state:**
+`ConnectorApprovals.tsx` is 3,060 lines. The file's own JSDoc (line 66) documents: "KNOWN DEAD CODE (TD): the catalog/auth/config/delete dialogs have NO live [entry points] in an earlier refactor. They are preserved here AS-IS (closed -> render ... scope, deferred). The Slack OAuth callback effect DOES still run on mount." The only live path is the Slack-OAuth-return mount effect; all other catalog/add/delete/config/auth-modal handlers are unreachable from any UI trigger and have no test. The feature also defines two un-unified `DataSource` shapes: the read-list shape in `types.ts` (`DataSourceType`/`DataSourceStatus`) vs the connector-catalog shape in `connectorTypes.ts` — deliberately not consolidated because connector writes were deferred.
+
+**What it should be:**
+Decide delete-vs-wire for the dead cluster; if kept, unify the `DataSource` shapes and add a Slack-OAuth mount-effect test. The connector WRITE paths, when wired, are part of the TD-FE-34 mutation pass.
+
+**Why we deferred:**
+Phase 6 was a parity relocation — deleting or wiring connector functionality is a product decision out of scope. The dead code is at least self-documenting (the JSDoc TD comment).
+
+**What we lose by staying as-is:**
+~3,000 lines of dead code in the tree; two `DataSource` shapes that will need reconciling when connectors are wired; no test coverage for the live Slack-OAuth effect.
+
+**Pull-forward trigger:**
+When connectors become a real feature (wire + unify + test) or a dead-code sweep (delete).
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-40 — Phase 6 relocated-legacy cleanup nits in mission-control
+
+**Date logged:** 2026-06-04
+**Origin:** Phase 6 decompositions (Tasks 19, 20, 21). Known-dead/cosmetic bits that rode along in the parity extraction.
+
+**Current state:**
+- `ICPManager._isSaving` — **RESOLVED 2026-06-04** (phase-6 impl-review-1): the unread `useState` + its two `setIsSaving` calls + the now-purposeless `try/finally` wrapper (the `finally` only reset the dead flag) were removed.
+- `ICPManager` write handlers carry 21 `console.*` calls — relocated-legacy noise, identical to pre-Phase-6.
+- `IcpList.getFitConfidenceBadge` has no `default` branch (returns `undefined` for out-of-union values) — relocated legacy, safe under the `FitConfidence` param type.
+- `MissionControlPage.syncingProfilerCustomerProfile` — initialized `false`, only ever set `false` (line 161: `setSyncingProfilerCustomerProfile(false)`; no `true` call anywhere). The Dialog at line 333 is `open={isLoadingProfile || syncingProfilerCustomerProfile}`: the `isLoadingProfile` branch is live; the `syncingProfilerCustomerProfile` branch is a dead overlay — the "Syncing customer profile" text (lines 336–367) can never render.
+
+**What it should be:**
+- `_isSaving` state removed — **done** (2026-06-04).
+- Console noise cleaned up.
+- `getFitConfidenceBadge` given a `default` branch returning `null`.
+- `syncingProfilerCustomerProfile` state + all its Dialog branches removed; the Dialog simplified to `open={isLoadingProfile}`.
+
+**Why we deferred:**
+Parity refactor doesn't delete relocated legacy; these are below the bar for individual entries.
+
+**What we lose by staying as-is:**
+Minor dead state/console noise; the dead Dialog branch is harmless but misleading.
+
+**Pull-forward trigger:**
+A mission-control dead-code/console-noise sweep.
 
 **Owner:** TBD.

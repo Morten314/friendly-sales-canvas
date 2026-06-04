@@ -44,3 +44,11 @@ Add a feature's name here **before** scaffolding it. Backend uses snake_case; th
 ## Public-surface convention
 
 Cross-feature consumption goes through `index.ts`. A feature's internals (everything not re-exported from `index.ts`) are private.
+
+## Route registry
+
+Each feature that owns routes exposes them from `<feature>/routes.tsx` as an array of keyed `<Route>` elements, re-exported from `index.ts` (`export { <feature>Routes } from "./routes";`). `src/app/routes.tsx` composes them append-only — a feature phase adds one `...<feature>Routes` line there and never edits App.tsx's `<Routes>` table. App.tsx renders `{featureRoutes}` inside `<Routes>`. Route wrapping (`ProtectedRoute`, `FeatureErrorBoundary`) lives in the feature's own `routes.tsx`.
+
+## Intra-feature imports are relative
+
+Within a feature, import your own modules with **relative paths** (`./`, `../`). Reserve the `@/features/<X>/…` alias for **cross-feature** imports — which must target the index only (`@/features/<X>`), enforced by `import-x/no-internal-modules` (see Dependency rules). This keeps "self imports" out of the cross-feature lint's scope.

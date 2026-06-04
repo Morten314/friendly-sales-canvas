@@ -4,9 +4,9 @@ import { http, HttpResponse } from "msw";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 
+import { RESEARCH_COMPONENTS } from "../../services/marketResearch";
 import { useRegenerateResearch, useResearchComponent } from "../useMarketResearch";
 
-import { RESEARCH_COMPONENTS } from "@/features/market-research/services/marketResearch";
 import { qk } from "@/shared/api/queryKeys";
 import { server } from "@/test/msw/server";
 

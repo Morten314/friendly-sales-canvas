@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { ResearchComponentResponse } from "@/features/market-research/contracts";
+import type { ResearchComponentResponse } from "../../../contracts";
 
 /** Market-size per-component `data` view-model. The 9 display fields are
  *  confirmed against IntelligenceTab.tsx where it builds the drilled props.
