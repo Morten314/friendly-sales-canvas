@@ -212,7 +212,9 @@ describe("MissionControlPage — tab routing", () => {
   it("clicking a locked tab while locked does NOT change the active tab away from profile", () => {
     renderPage();
     // Profile tab should be active (default).
-    expect(getActivePanel()?.querySelector('[data-testid="stub-company-profile-form"]')).not.toBeNull();
+    expect(
+      getActivePanel()?.querySelector('[data-testid="stub-company-profile-form"]'),
+    ).not.toBeNull();
 
     // Try clicking the locked customer-profile tab (pointer-events disabled by CSS,
     // and onValueChange guard returns early even if event fires).
@@ -220,7 +222,9 @@ describe("MissionControlPage — tab routing", () => {
     clickTab(customerTab);
 
     // Profile tab must still be active.
-    expect(getActivePanel()?.querySelector('[data-testid="stub-company-profile-form"]')).not.toBeNull();
+    expect(
+      getActivePanel()?.querySelector('[data-testid="stub-company-profile-form"]'),
+    ).not.toBeNull();
   });
 
   it("switching tabs to customer-profile then back to profile makes profile panel active again", () => {

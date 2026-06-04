@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  getIconByName,
-  getBadgeColor,
-  deriveKeyDataPoints,
-} from "../regulatoryHelpers";
+import { getIconByName, getBadgeColor, deriveKeyDataPoints } from "../regulatoryHelpers";
 
 describe("regulatoryHelpers", () => {
   it("maps a known icon name to a component and falls back for unknown", () => {

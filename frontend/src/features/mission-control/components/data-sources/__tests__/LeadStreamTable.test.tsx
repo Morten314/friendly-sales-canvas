@@ -29,7 +29,6 @@ describe("LeadStreamTable", () => {
         files={[]}
         deletingFileId={null}
         showLeadUpload={false}
-
         onDeleteFile={vi.fn()}
       />,
     );
@@ -42,7 +41,6 @@ describe("LeadStreamTable", () => {
         files={rows}
         deletingFileId={null}
         showLeadUpload={false}
-
         onDeleteFile={vi.fn()}
       />,
     );
@@ -58,7 +56,6 @@ describe("LeadStreamTable", () => {
         files={rows}
         deletingFileId={null}
         showLeadUpload={false}
-
         onDeleteFile={onDeleteFile}
       />,
     );
@@ -78,7 +75,6 @@ describe("LeadStreamTable", () => {
         files={rows}
         deletingFileId="file-1"
         showLeadUpload={false}
-
         onDeleteFile={vi.fn()}
       />,
     );

@@ -1,8 +1,4 @@
-
-import {
-  useRegenerateResearch,
-  useResearchComponent,
-} from "../../../hooks/useMarketResearch";
+import { useRegenerateResearch, useResearchComponent } from "../../../hooks/useMarketResearch";
 import { RESEARCH_COMPONENTS } from "../../../services/marketResearch";
 
 import { parseMarketEntryResult, type MarketEntryResult } from "./types";

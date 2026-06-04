@@ -68,9 +68,7 @@ describe("CompanyProfileForm", () => {
     // null → the read effect runs the localStorage failover. This is the #1 parity
     // edge case: offline-with-cache must still hydrate the form AND unlock the other
     // tabs (onSavedChange(true)).
-    server.use(
-      http.get("/api/profile/company", () => new HttpResponse(null, { status: 500 })),
-    );
+    server.use(http.get("/api/profile/company", () => new HttpResponse(null, { status: 500 })));
 
     // Seed the saved profile under the user-scoped key getUserLocalStorage reads:
     // `${baseKey}_${userId}` = "companyProfile_u1". Mocked auth uid is "u1".
@@ -87,9 +85,7 @@ describe("CompanyProfileForm", () => {
     renderForm(onSavedChange);
 
     // (a) Fields hydrate from the localStorage profile.
-    await waitFor(() =>
-      expect(screen.getByLabelText(/Company Name/i)).toHaveValue("Cached Co"),
-    );
+    await waitFor(() => expect(screen.getByLabelText(/Company Name/i)).toHaveValue("Cached Co"));
     expect(screen.getByLabelText(/Headquarters/i)).toHaveValue("Berlin, Germany");
 
     // (b) onSavedChange(true) — unlocks the other tabs while offline-with-cache.
