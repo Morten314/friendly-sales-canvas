@@ -20,6 +20,9 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 
+import { useCustomerProfile } from "../../hooks/useCustomerProfile";
+import { useSuggestedIcps } from "../../hooks/useSuggestedIcps";
+import { fetchCustomerProfileIcps, fetchSuggestedIcps } from "../../services/customers";
 import type { ExistingICP, SuggestedICP, ICPCardStatus, SuggestedICPCardsProps } from "../../types";
 import { getLeadCountForICP } from "../lead-stream/LeadStream";
 
@@ -67,7 +70,7 @@ import {
 } from "@/components/ui/table";
 import { ToastAction } from "@/components/ui/toast";
 import { useToast } from "@/hooks/use-toast";
-import { buildIcpUrl, buildApiUrl, apiFetchJson, apiFetch } from "@/lib/api";
+import { buildApiUrl, apiFetchJson, apiFetch } from "@/lib/api";
 import type { UntypedProfilerIcpRecord } from "@/lib/types/escape-hatches";
 import { useAuth } from "@/shared/auth";
 import {
@@ -75,7 +78,6 @@ import {
   isProfilerCacheValid,
   getProfilerSnapshot,
   commitProfilerSnapshot,
-  fetchIcpsRowsForOrg,
   saveProfilerAcceptedIcpDisplayMeta,
   copyProfilerDisplayMetaToProfileId,
   extractPersistedIcpIdFromSuggestedProfileResponse,
@@ -173,7 +175,7 @@ async function loadProfilerPagePayload(options: {
   let icps: ExistingICP[] = [];
   try {
     if (uid) {
-      const rows = await fetchIcpsRowsForOrg(uid, orgIdToUse);
+      const rows = await fetchCustomerProfileIcps(uid, orgIdToUse);
       if (rows.length > 0) {
         icps = rows.map((icp: UntypedProfilerIcpRecord, i: number) =>
           mapCustomerProfileICPToExisting(icp, i),
@@ -253,73 +255,47 @@ async function loadProfilerPagePayload(options: {
       sessionStorage.setItem(refreshStorageKey, String(refreshTrigger));
     }
     try {
-      const icpParams = new URLSearchParams({ user_id: uid });
-      if (refreshJustIncremented) {
-        icpParams.set("refresh", "true");
-      }
-      const icpUrl = buildIcpUrl(icpParams.toString());
       profilerIcpDebug("GET /icp (backend) — request", {
-        url: icpUrl,
         user_id: uid,
         refresh: refreshJustIncremented,
       });
-      const icpRes = await fetch(icpUrl, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
+      const icpData = await fetchSuggestedIcps(uid, { refresh: refreshJustIncremented });
+      profilerIcpDebug("GET /icp — raw JSON (summary)", {
+        topLevelKeys:
+          icpData && typeof icpData === "object" && !Array.isArray(icpData)
+            ? Object.keys(icpData as object)
+            : Array.isArray(icpData)
+              ? [`<array length ${icpData.length}>`]
+              : typeof icpData,
       });
-      profilerIcpDebug("GET /icp — response", { status: icpRes.status, ok: icpRes.ok });
-      if (icpRes.ok) {
-        const icpData = await icpRes.json();
-        profilerIcpDebug("GET /icp — raw JSON (summary)", {
-          topLevelKeys:
-            icpData && typeof icpData === "object" && !Array.isArray(icpData)
-              ? Object.keys(icpData as object)
-              : Array.isArray(icpData)
-                ? [`<array length ${icpData.length}>`]
-                : typeof icpData,
-        });
-        const icpArray = normalizeIcpGetResponse(icpData);
-        profilerIcpDebug("GET /icp — normalized array length", icpArray.length);
-        if (icpArray.length > 0) {
-          const mapped = icpArray.map((item: UntypedProfilerIcpRecord, i: number) =>
-            mapApiICPToSuggested(item, i, "new"),
-          );
-          const filteredGet = filterDismissedFromSuggested(uid, [], mapped);
-          newSuggestions = filteredGet.newSuggestions;
-          refined = filteredGet.refined;
-          profilerIcpDebug(
-            "GET /icp — mapped recommended ICPs (source: backend)",
-            mapped.map((icp) => ({
-              id: icp.id,
-              name: icp.name,
-              industry: icp.industry,
-              segment: icp.segment,
-              hasFullReport: Boolean(icp.fullReport && Object.keys(icp.fullReport).length > 0),
-              fullReportKeys: icp.fullReport ? Object.keys(icp.fullReport) : [],
-            })),
-          );
-          if (refreshJustIncremented) {
-            toast?.({
-              title: "ICPs refreshed",
-              description: `${newSuggestions.length} recommended ICPs generated.`,
-            });
-          }
-        } else {
-          profilerIcpDebug("GET /icp — empty normalized array; UI will fall back to cache or mock");
-        }
-      } else {
-        console.warn("ICP API returned", icpRes.status, icpRes.statusText);
-        profilerIcpDebug("GET /icp — non-OK response", {
-          status: icpRes.status,
-          statusText: icpRes.statusText,
-        });
+      const icpArray = normalizeIcpGetResponse(icpData);
+      profilerIcpDebug("GET /icp — normalized array length", icpArray.length);
+      if (icpArray.length > 0) {
+        const mapped = icpArray.map((item: UntypedProfilerIcpRecord, i: number) =>
+          mapApiICPToSuggested(item, i, "new"),
+        );
+        const filteredGet = filterDismissedFromSuggested(uid, [], mapped);
+        newSuggestions = filteredGet.newSuggestions;
+        refined = filteredGet.refined;
+        profilerIcpDebug(
+          "GET /icp — mapped recommended ICPs (source: backend)",
+          mapped.map((icp) => ({
+            id: icp.id,
+            name: icp.name,
+            industry: icp.industry,
+            segment: icp.segment,
+            hasFullReport: Boolean(icp.fullReport && Object.keys(icp.fullReport).length > 0),
+            fullReportKeys: icp.fullReport ? Object.keys(icp.fullReport) : [],
+          })),
+        );
         if (refreshJustIncremented) {
           toast?.({
-            title: "Refresh failed",
-            description: `API returned ${icpRes.status}. Using cached data.`,
-            variant: "destructive",
+            title: "ICPs refreshed",
+            description: `${newSuggestions.length} recommended ICPs generated.`,
           });
         }
+      } else {
+        profilerIcpDebug("GET /icp — empty normalized array; UI will fall back to cache or mock");
       }
     } catch (e) {
       console.warn("Could not fetch recommended ICPs from API:", e);
@@ -504,6 +480,13 @@ export const SuggestedICPCards = ({
   const { toast } = useToast();
   const { currentUser, orgId } = useAuth();
 
+  // Registered for cache-key ownership + the canonical queryFn; fetching is still
+  // driven by the imperative loader below until TD-FE-43 collapses it cache-native.
+  const profileQuery = useCustomerProfile(currentUser?.uid ?? "", orgId || "brewra", false);
+  const suggestedQuery = useSuggestedIcps(currentUser?.uid ?? "", { enabled: false });
+  void profileQuery;
+  void suggestedQuery;
+
   /** Always filled from GET /profile/company (or legacy); avoid hydrating stale localStorage before fetch. */
   const [existingICPs, setExistingICPs] = useState<ExistingICP[]>([]);
   const [refinedICPs, setRefinedICPs] = useState<SuggestedICP[]>([]);
@@ -541,7 +524,7 @@ export const SuggestedICPCards = ({
     const uid = currentUser?.uid;
     if (!uid) return [];
     try {
-      const rows = await fetchIcpsRowsForOrg(uid, orgIdToUse);
+      const rows = await fetchCustomerProfileIcps(uid, orgIdToUse);
       if (rows.length === 0) {
         setExistingICPs([]);
         return [];
