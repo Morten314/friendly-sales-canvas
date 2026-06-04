@@ -156,6 +156,19 @@ Per Spec 14 §4 Phase 6, this section is the authoritative handoff record. Phase
 
 Profiler is **not** a feature yet; Phase 9 owns the scout/profiler split and the `ProfilerChatWithHistory`/`ScoutChatWithHistory` dedup. All three profiler-ICP utils are shared by mission-control + `customers` (verified: `customers/SuggestedICPCards.tsx` imports from all three), so Phase 6 promotes the **whole cluster** to `src/shared/` and repoints the `customers` importer; Phase 9 resolves the remaining profiler-feature placement.
 
+### Phase-7 resolution (frozen-record amendment — 2026-06-04)
+
+Phase 7 resolved the customers side of the table above. Rows amended:
+
+| Item | Phase-7 outcome |
+|---|---|
+| `@/shared/profiler` cluster (`profilerAcceptedIcpDisplay`, `profileIcpsExtract`, `missionProfilerSessionCache`) | **Stays shared** — unchanged by Phase 7. Both mission-control and customers continue to import from `@/shared/profiler`. |
+| Customers ICP read | Customers keeps its **own** read via `useCustomerProfile`/`useSuggestedIcps` hooks — it does **not** consume mission-control's `useICPs`. Divergence tracked as TD-FE-42. |
+| `ProfilerChatWithHistory` | **Relocated** to `features/customers/components/chat/` in Phase 7. |
+| `SignalsContextChat` substrate | **Stays legacy** in `src/components/signals/` — Phase 8 resolves. |
+| ICP profiler-merge display logic (`mergeProfilerAcceptedIcpDisplay` in `ICPManager`) | **Unchanged** — Phase 9 remains the resolution phase. |
+| `UntypedProfilerIcpRecord` escape-hatch | **Unchanged** — Phase 13 remains the resolution phase. |
+
 ---
 
 ## §7 Execution stages (the single plan, in order)
