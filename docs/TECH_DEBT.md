@@ -1357,3 +1357,147 @@ Minor dead state/console noise; the dead Dialog branch is harmless but misleadin
 A mission-control dead-code/console-noise sweep.
 
 **Owner:** TBD.
+
+---
+
+## TD-FE-41 — `SuggestedICPCards` accept/reject/dismiss optimism stays in `localStorage`, not modeled in the TanStack cache
+
+**Date logged:** 2026-06-04
+**Origin:** Phase 7 (Task 16). Optimistic UI for accept/reject/dismiss was implemented against `localStorage` (via `suggestedIcpStorage`) rather than as cache-native optimistic updates, because the customers feature introduced TanStack Query usage but the broader cache-native mutation pass is deferred.
+
+**Current state:**
+Optimistic accept/reject/dismiss mutations update `localStorage` state directly and rely on a re-read of that state; TanStack Query's `onMutate`/`onError`/`onSettled` optimistic pattern is not used. The cache is invalidated post-mutation rather than speculatively updated.
+
+**What it should be:**
+Optimistic updates modeled as cache-native mutations: `onMutate` writes the speculative state into the query cache, `onError` rolls back, `onSettled` invalidates. `localStorage` becomes a persistence layer only, not the source of optimistic truth.
+
+**Why we deferred:**
+Parity-first posture for Phase 7; the cache-native optimism pass is a cross-feature concern that belongs in a dedicated phase, not scattered across individual feature extractions.
+
+**What we lose by staying as-is:**
+Optimistic UI relies on a `localStorage` read-back rather than a cache write, making the update path harder to trace and test. Rollback on mutation failure is not automatic.
+
+**Pull-forward trigger:**
+The cache-native optimism pass / Phase 13.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-42 — Customers `/icp` + `customer_profile` read overlaps mission-control `useICPs`; two independent read paths with nothing to catch a divergent `/api/icp` shape change
+
+**Date logged:** 2026-06-04
+**Origin:** Phase 7 (Tasks 5–7). The customers feature introduced its own `/icp` and `customer_profile` read service + hooks alongside the mission-control `useICPs` hook, which also reads `/api/icp`. No shared contract layer exists to catch a divergent backend shape change.
+
+**Current state:**
+`services/customers.ts` + `useCustomerProfile` + `useSuggestedIcps` form one read path for `/icp` and `customer_profile`. `useICPs` in mission-control is a second independent read path for `/api/icp`. Both use the same endpoint but define their own zod schemas independently; a shape change in the backend breaks one without necessarily surfacing in the other's types.
+
+**What it should be:**
+A single canonical zod schema + service function for `/api/icp` shared by both consumers, so a shape change is caught at one definition site and propagates to all callers.
+
+**Why we deferred:**
+Consolidation would require touching mission-control during a customers-scoped extraction phase — out of scope for Phase 7. Pre-launch velocity posture.
+
+**What we lose by staying as-is:**
+Silent divergence risk: a `/api/icp` response shape change may break one consumer but not the other's TypeScript, delaying detection until runtime.
+
+**Pull-forward trigger:**
+Phase 9 consolidation / Phase 13.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-43 — Customers read orchestration retains imperative loader with `localStorage` fetch-cache + `sessionStorage` session-cache + multi-tier fallbacks rather than going cache-native
+
+**Date logged:** 2026-06-04
+**Origin:** Phase 7 (Task 11). The `profiler_recommendedICPs` `localStorage` fetch-cache and `missionProfilerSessionCache` session-cache with multi-tier fallback logic were preserved around the service/hook layer in the imperative loader rather than replaced with TanStack Query's native caching.
+
+**Current state:**
+The customers read orchestration (wired in Task 11) retains the pre-existing multi-tier cache strategy: `localStorage` as a fetch-cache layer, `sessionStorage` as a session-cache layer, and imperative fallback logic in the loader. TanStack Query is used for surface-level hook wrapping but the underlying fetch-cache strategy is not cache-native.
+
+**What it should be:**
+TanStack Query's `staleTime`/`gcTime` configuration replaces the manual `localStorage` + `sessionStorage` cache tiers. The loader becomes a thin hook invocation with no imperative cache management.
+
+**Why we deferred:**
+Replacing the multi-tier cache in Phase 7 would be a scope expansion beyond the parity extraction goal. The existing cache strategy is functionally correct even if architecturally layered.
+
+**What we lose by staying as-is:**
+Cache invalidation is split across TanStack Query and manual `localStorage`/`sessionStorage` writes, making the read path harder to reason about and test. Cache consistency bugs are harder to diagnose.
+
+**Pull-forward trigger:**
+The cache-native read pass / Phase 9.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-44 — Window-event header→page bridge (`profilerRefresh`/`profilerCreateICP`/`profilerExportData`/`navigateToLeadStream`/`icpAccepted`) is untyped global coupling
+
+**Date logged:** 2026-06-04
+**Origin:** Phase 7 (Tasks 2, preserved for parity). The window-event bridge between the header and the customers/mission-control pages was extracted as-is from the legacy code to maintain parity; the events are untyped `CustomEvent` dispatches with no central registry or type-safe listener contract.
+
+**Current state:**
+Header actions dispatch `new CustomEvent('profilerRefresh')`, `new CustomEvent('profilerCreateICP')`, `new CustomEvent('profilerExportData')`, `new CustomEvent('navigateToLeadStream')`, and `new CustomEvent('icpAccepted')` on `window`. Pages listen with `window.addEventListener`. Event payload shapes (if any) are not typed; no central registry documents which events exist or which components listen.
+
+**What it should be:**
+A typed event-bus or a direct prop/context channel between header actions and page handlers, replacing the untyped `window.CustomEvent` bridge. Event names, payload shapes, and consumer contracts should be statically checkable.
+
+**Why we deferred:**
+Parity-first extraction; redesigning the header↔page communication model is a cross-feature architectural change out of scope for Phase 7.
+
+**What we lose by staying as-is:**
+Adding, renaming, or removing an event is invisible to TypeScript. A typo in an event name produces a silent no-op. Payload shape mismatches surface only at runtime.
+
+**Pull-forward trigger:**
+A typed event-bus / header-action redesign.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-45 — `ProfilerChatWithHistory` imports the `SignalsContextChat` substrate via the legacy path; Phase 8 relocates the substrate, Phase 9 dedups ProfilerChat↔ScoutChat
+
+**Date logged:** 2026-06-04
+**Origin:** Phase 7 (Task 2). `ProfilerChatWithHistory` was relocated into the customers feature but continues to import the `SignalsContextChat` substrate from its pre-Phase-8 location. Phase 8 will move the substrate; Phase 9 will deduplicate `ProfilerChatWithHistory` and `ScoutChatWithHistory`, which are ~90% identical.
+
+**Current state:**
+`ProfilerChatWithHistory` imports `SignalsContextChat` from the legacy substrate path. The component is a near-duplicate of `ScoutChatWithHistory` (shared in `docs/TECH_DEBT.md` as a known duplication since pre-Phase-6). No deduplication has been attempted because the substrate relocation and the chat-dedup are sequenced to Phases 8–9.
+
+**What it should be:**
+After Phase 8 relocates the `SignalsContextChat` substrate, `ProfilerChatWithHistory` should update its import path. After Phase 9, `ProfilerChatWithHistory` and `ScoutChatWithHistory` should be unified into a single parameterised chat component, eliminating the ~90% duplication.
+
+**Why we deferred:**
+Performing the substrate relocation or the chat dedup inside Phase 7 would violate the parity-extraction scope boundary. Both operations are sequenced as dedicated phase work.
+
+**What we lose by staying as-is:**
+Divergence risk between the two chat components grows with every fix or feature added to one but not the other. The stale import path will break when Phase 8 moves the substrate if the update is not tracked.
+
+**Pull-forward trigger:**
+Phase 8 (import path update) / Phase 9 (deduplication).
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-46 — Phase 7 stage-4 behavioral test covers only accept + reject happy paths; optimistic edge-case matrix and fake-timer deadlock unresolved
+
+**Date logged:** 2026-06-04
+**Origin:** Phase 7 (Task 16). The `SuggestedICPCards.write.test.tsx` behavioral test was written under a time constraint that required scoping to the two highest-value happy paths; the remaining optimistic edge cases and a fake-timer incompatibility with `apiFetch`'s dynamic JWT import were deferred.
+
+**Current state:**
+`SuggestedICPCards.write.test.tsx` covers the accept happy path and the reject happy path only. The following are NOT covered: (1) undo-within-the-5s-window (the dismiss grace-period rollback); (2) the `isRecommendedDeleteNotFound` 404-as-success branch (a 404 on the recommended-ICP delete is treated as success); (3) delete-current optimism (the accept flow that removes the current customer profile); (4) the `customerProfileSaved` window-event listener. Additionally, the reject test uses real timers with a ~6 s wall-clock wait because fake-timers deadlock with `apiFetch`'s dynamic `import("./jwt")` + MSW microtask interplay — adding ~11 s to the suite on every run. This mirrors the trimmed-coverage posture of TD-FE-20.
+
+**What it should be:**
+Full optimistic edge-case matrix covered: undo-within-window, 404-as-success branch, delete-current optimism, and the `customerProfileSaved` event listener. The reject test should use fake timers to eliminate the ~11 s wall-clock penalty; this requires resolving the `apiFetch` dynamic-import + MSW microtask deadlock (either by converting the JWT import to static, by hoisting the import outside the fake-timer scope, or by an MSW + fake-timer compatibility shim).
+
+**Why we deferred:**
+Pre-launch velocity posture; the two happy paths catch the highest-value regressions. The fake-timer deadlock is a test-infrastructure problem that requires a dedicated investigation, not a quick fix.
+
+**What we lose by staying as-is:**
+The undo grace-period, the 404-as-success branch, and the delete-current path are untested — regressions in those flows will not be caught by the suite. The ~11 s real-timer penalty accumulates as the suite grows.
+
+**Pull-forward trigger:**
+A behavioral-coverage hardening pass / when the fake-timer + MSW interplay is solved.
+
+**Owner:** TBD.
