@@ -207,7 +207,7 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 | 4b — Shell extraction | done | 2026-05-29 |
 | 5 — Feature: market-research | done | 2026-06-03 |
 | 6 — Feature: mission-control | done | 2026-06-04 |
-| 7 — Feature: customers | pending | — |
+| 7 — Feature: customers | done | 2026-06-04 |
 | 8 — Feature: signals + strategist | pending | — |
 | 9 — Feature: scout + profiler | pending | — |
 | 10 — Feature: settings + tenant + auth | pending | — |
@@ -477,6 +477,8 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 - `LeadStream` (432 LOC here) duplicates name with market-research's `LeadStream` (1,623 LOC) — Phase 1's LOC pass may have surfaced these as candidates for shared extraction; Phase 7 spec confirms whether they're truly duplicates or independent components with shared name.
 
 **Per-phase deliverables:** see Phase 5's deliverables block.
+
+> **Post-merge amendment (2026-06-04, frozen-record convention — does not rewrite the intent above).** The §1.2/§5.5 source list above is **stale**: `ICPSummaryOpportunity` (6,925) and `SuggestedICPsGallery` (1,037) were **dead-deleted in Phase 1** and did not exist at Phase 7. The set that actually moved (Spec 26 / plan 26, the authority): `pages/Customers.tsx`, `components/customers/{SuggestedICPCards, ICPIntelligence, LeadStream}`, and the relocated `components/signals/ProfilerChatWithHistory` → `src/features/customers/`. The `LeadStream`-name-clash question (bullet above) resolved: the two are independent components with a shared name (the customers one is a pure mock panel) — not deduped. Profiler disposition resolutions recorded in Spec 25 §6 + `mission-control/README.md`; deferrals logged TD-FE-41…46.
 
 ### Phase 8 — Feature: signals + strategist
 
