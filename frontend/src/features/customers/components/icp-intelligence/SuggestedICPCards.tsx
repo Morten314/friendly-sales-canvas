@@ -20,6 +20,15 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 
+import type {
+  ExistingICP,
+  SuggestedICP,
+  ICPCardStatus,
+  ICPAnalysis,
+  SuggestedICPCardsProps,
+  PendingRecommendedRejectItem,
+  DismissedRecommendedStore,
+} from "../../types";
 import { getLeadCountForICP } from "../lead-stream/LeadStream";
 
 import { EditDropdownMenu } from "@/components/market-research/EditDropdownMenu";
@@ -75,13 +84,6 @@ import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
 const PROFILER_PENDING_RECOMMENDED_REJECT_KEY = "profiler_pendingRecommendedRejects";
 const PROFILER_DISMISSED_RECOMMENDED_IDS_KEY = "profiler_dismissedRecommendedIcpIds";
 
-type PendingRecommendedRejectItem = {
-  icp_id: string;
-  user_id: string;
-  expiresAt: number;
-  icpSnapshot?: unknown;
-};
-
 function readPendingRecommendedRejects(): PendingRecommendedRejectItem[] {
   try {
     const raw = localStorage.getItem(PROFILER_PENDING_RECOMMENDED_REJECT_KEY);
@@ -117,8 +119,6 @@ function removePendingRecommendedReject(icp_id: string) {
   const next = readPendingRecommendedRejects().filter((x) => x.icp_id !== icp_id);
   writePendingRecommendedRejects(next);
 }
-
-type DismissedRecommendedStore = Record<string, string[]>;
 
 function readDismissedRecommendedStore(): DismissedRecommendedStore {
   try {
@@ -223,67 +223,6 @@ async function persistAcceptedSuggestedIcpToBackend(options: {
   } catch {
     return false;
   }
-}
-
-// --- Types ---
-interface ExistingICP {
-  id: string;
-  name: string;
-  geography?: string;
-  industry?: string;
-  companySize?: string;
-  buyerRole?: string;
-  fitConfidence?: string;
-  status?: "active" | "inactive";
-}
-
-interface SuggestedICP {
-  id: string;
-  name: string;
-  type: "refined" | "new";
-  sourceICPId?: string;
-  sourceICPName?: string;
-  industry: string;
-  segment: string;
-  companySize: string;
-  decisionMakers: string[];
-  regions: string[];
-  keyAttributes: string[];
-  growthIndicator?: string;
-  whySuggested: string[];
-  whatChanged?: string[];
-  opportunityUnlocked?: string;
-  confidenceScore: "High" | "Medium" | "Low";
-  tag?: string;
-  marketSize?: string;
-  growth?: string;
-  topPainPoint?: string;
-  buyingTriggers?: string[];
-  competitors?: string[];
-  /** Full report payload from GET /icp (per card). Shown only after "View Full Report". */
-  fullReport?: Record<string, unknown>;
-}
-
-interface ICPCardStatus {
-  status: "suggested" | "accepted" | "rejected";
-  acceptedAt?: Date;
-  rejectedAt?: Date;
-}
-
-interface SuggestedICPCardsProps {
-  onICPAccepted?: (icp: SuggestedICP) => void;
-  onICPRejected?: (icp: SuggestedICP) => void;
-  refreshTrigger?: number;
-}
-
-// --- ICP Chip Modal Content (Profiler's interpretation) ---
-interface ICPAnalysis {
-  interpretation: string;
-  strengths: string[];
-  weaknesses: string[];
-  missing: string[];
-  broadNarrow: string;
-  confidence: "High" | "Medium" | "Low";
 }
 
 const analyzeICP = (icp: ExistingICP): ICPAnalysis => {
