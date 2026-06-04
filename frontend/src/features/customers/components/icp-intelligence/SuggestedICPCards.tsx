@@ -1,7 +1,10 @@
 import { X, Sparkles } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 
+import { useAcceptSuggestedIcp } from "../../hooks/useAcceptSuggestedIcp";
 import { useCustomerProfile } from "../../hooks/useCustomerProfile";
+import { useRejectSuggestedIcp, useDeleteCurrentIcp } from "../../hooks/useRejectSuggestedIcp";
+import { useSaveCustomerProfile } from "../../hooks/useSaveCustomerProfile";
 import { useSuggestedIcps } from "../../hooks/useSuggestedIcps";
 import { fetchCustomerProfileIcps, fetchSuggestedIcps } from "../../services/customers";
 import type { ExistingICP, SuggestedICP, ICPCardStatus, SuggestedICPCardsProps } from "../../types";
@@ -40,7 +43,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ToastAction } from "@/components/ui/toast";
 import { useToast } from "@/hooks/use-toast";
-import { buildApiUrl, apiFetchJson, apiFetch } from "@/lib/api";
+import { buildApiUrl } from "@/lib/api";
 import type { UntypedProfilerIcpRecord } from "@/lib/types/escape-hatches";
 import { useAuth } from "@/shared/auth";
 import {
@@ -52,11 +55,8 @@ import {
   copyProfilerDisplayMetaToProfileId,
   extractPersistedIcpIdFromSuggestedProfileResponse,
   extractIcpsArrayFromCustomerProfileResponse,
-  mergeSuggestedIntoCustomerProfileApiRow,
-  buildCustomerProfileSavePayload,
   mapCustomerProfileApiRowsToStoredIcps,
   resolveAcceptedPersistedIcpId,
-  type SuggestedIcpCardFields,
   removeProfilerAcceptedIcpDisplayMeta,
 } from "@/shared/profiler";
 import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
@@ -65,48 +65,6 @@ import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
 function profilerIcpDebug(...args: unknown[]) {
   if (import.meta.env.DEV) {
     console.log("[Profiler ICP]", ...args);
-  }
-}
-
-/**
- * After POST /from_suggested_icp, persist firmographics the same way as Mission Control manual save:
- * GET full profile → merge suggested fields into the new row → POST /customer_profile (full icps[]).
- */
-async function persistAcceptedSuggestedIcpToBackend(options: {
-  orgId: string;
-  suggested: SuggestedIcpCardFields;
-  targetIcpId: string;
-}): Promise<boolean> {
-  const { orgId, suggested, targetIcpId } = options;
-  const profileUrl = buildApiUrl(`customer_profile?org_id=${encodeURIComponent(orgId)}`);
-  try {
-    const profileRes = await fetch(profileUrl, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-    });
-    if (!profileRes.ok) return false;
-    const profileData = await profileRes.json();
-    const icpsData = extractIcpsArrayFromCustomerProfileResponse(profileData);
-    if (!icpsData.length) return false;
-
-    const idx = icpsData.findIndex(
-      (row: UntypedProfilerIcpRecord) => String(row.id) === String(targetIcpId),
-    );
-    if (idx < 0) return false;
-
-    const merged = mergeSuggestedIntoCustomerProfileApiRow(icpsData[idx], suggested);
-    const nextIcps = [...icpsData];
-    nextIcps[idx] = merged;
-
-    const payload = buildCustomerProfileSavePayload(nextIcps, orgId);
-    const saveRes = await fetch(profileUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    return saveRes.ok;
-  } catch {
-    return false;
   }
 }
 
@@ -457,6 +415,15 @@ export const SuggestedICPCards = ({
   void profileQuery;
   void suggestedQuery;
 
+  // Stage-4 write transports. Each mutationFn calls the matching service fn and
+  // invalidates a customers query on success; the optimism (timers, localStorage
+  // markers, display-meta, the customerProfileSaved event, toasts) stays in the
+  // container below, byte-for-behavior with the pre-hook inline writes.
+  const acceptIcpMutation = useAcceptSuggestedIcp(currentUser?.uid ?? "", orgId || "brewra");
+  const saveProfileMutation = useSaveCustomerProfile(currentUser?.uid ?? "", orgId || "brewra");
+  const rejectIcpMutation = useRejectSuggestedIcp(currentUser?.uid ?? "");
+  const deleteCurrentIcpMutation = useDeleteCurrentIcp(currentUser?.uid ?? "", orgId || "brewra");
+
   /** Always filled from GET /profile/company (or legacy); avoid hydrating stale localStorage before fetch. */
   const [existingICPs, setExistingICPs] = useState<ExistingICP[]>([]);
   const [refinedICPs, setRefinedICPs] = useState<SuggestedICP[]>([]);
@@ -534,10 +501,7 @@ export const SuggestedICPCards = ({
       setExpandedCurrentICPId((cur) => (cur === icpId ? null : cur));
       removeProfilerAcceptedIcpDisplayMeta(icpId);
       try {
-        const deleteRes = await apiFetch(
-          `customer_profile/icp/${encodeURIComponent(icpId)}?org_id=${encodeURIComponent(orgIdToUse)}`,
-          { method: "DELETE" },
-        );
+        const deleteRes = await deleteCurrentIcpMutation.mutateAsync(icpId);
         const deleteBody = await deleteRes.json();
         console.log(
           "[Profiler Current ICPs] DELETE customer_profile/icp: response body",
@@ -566,7 +530,7 @@ export const SuggestedICPCards = ({
         });
       }
     },
-    [orgId, toast, refetchCustomerProfileIcps],
+    [orgId, toast, refetchCustomerProfileIcps, deleteCurrentIcpMutation],
   );
 
   // Persist state changes
@@ -677,14 +641,7 @@ export const SuggestedICPCards = ({
     try {
       const idsBeforeAccept = new Set(existingICPs.map((e) => e.id));
 
-      const acceptResult = await apiFetchJson("customer_profile/from_suggested_icp", {
-        method: "POST",
-        body: {
-          user_id: uid,
-          org_id: orgIdToUse,
-          icp_id: icp.id,
-        },
-      });
+      const acceptResult = await acceptIcpMutation.mutateAsync(icp.id);
 
       const displayMeta = {
         regions: Array.isArray(icp.regions) ? icp.regions : [],
@@ -713,8 +670,7 @@ export const SuggestedICPCards = ({
         icp.id,
       );
       if (targetIcpId) {
-        const synced = await persistAcceptedSuggestedIcpToBackend({
-          orgId: orgIdToUse,
+        const synced = await saveProfileMutation.mutateAsync({
           suggested: icp,
           targetIcpId,
         });
@@ -837,10 +793,7 @@ export const SuggestedICPCards = ({
       };
 
       try {
-        await apiFetch(
-          `icp/recommended/${encodeURIComponent(icpId)}?user_id=${encodeURIComponent(userId)}`,
-          { method: "DELETE" },
-        );
+        await rejectIcpMutation.mutateAsync(icpId);
         applyDeleteSuccess();
       } catch (e) {
         if (isRecommendedDeleteNotFound(e)) {
@@ -858,7 +811,7 @@ export const SuggestedICPCards = ({
         }));
       }
     },
-    [refinedICPs, newICPs, toast, onICPRejected],
+    [refinedICPs, newICPs, toast, onICPRejected, rejectIcpMutation],
   );
 
   const finalizeRecommendedRejectRef = useRef(finalizeRecommendedReject);
