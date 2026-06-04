@@ -269,7 +269,7 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 
 **Operating rules for concurrent sessions:**
 
-- **Inner loop = `npm run verify`** (typecheck + lint + test; bounded — vitest capped at 4 workers, incremental tsc, cached lint). Run this freely in every session.
+- **Inner loop = `npm run verify`** (typecheck + lint + change-scoped tests — `vitest run --changed` runs only the tests affected by uncommitted changes; incremental tsc, cached lint). Run this freely in every session. The **full** Vitest suite runs **only** in the `preflight` merge gate. *(Updated 2026-06-04 per this section's re-evaluate caveat: when written, Vitest was ~33s and `verify` ran the whole suite; the suite has since grown to ~10 min / 89 files, so `verify`'s test step was scoped to changed files — full suite stays in `preflight`.)*
 - **Do NOT run `npm run preflight:par` or standalone `npm run test:e2e` while another session is active** — the parallel/e2e path spikes CPU and flakes the visual-regression snapshots under concurrent load, and the e2e preview server binds a shared `:5173` (`reuseExistingServer` → wrong-build false results). See `docs/TECH_DEBT.md` TD-FE-29.
 - **Merge gate = serial `npm run preflight` (with e2e), one branch at a time, controller-run** — this is the existing merge ceremony (root `CLAUDE.md` §AI-native flow) and is what keeps the e2e contention from ever materializing.
 - **Integration via merge, not rebase** — refresh a branch with `git merge master`; land it with a `--no-ff` merge commit (the repo's existing `Merge phase-…` pattern). No history rewrite, no force-push.

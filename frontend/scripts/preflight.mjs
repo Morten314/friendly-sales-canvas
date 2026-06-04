@@ -14,7 +14,7 @@
 //
 // Usage:
 //   node scripts/preflight.mjs            # full merge gate (all 8 checks)
-//   node scripts/preflight.mjs verify     # fast inner-loop subset (typecheck+lint+test)
+//   node scripts/preflight.mjs verify     # fast inner-loop subset (typecheck+lint+change-scoped tests)
 //
 // Env:
 //   PREFLIGHT_JOBS=<n>      max concurrent tasks. Default leaves headroom so a second
@@ -38,6 +38,7 @@ const ALL = {
   lint: { deps: [] },
   format: { deps: [], script: "format:check" },
   test: { deps: [], heavy: true },
+  testChanged: { deps: [], script: "test:changed" },
   build: { deps: [], heavy: true },
   bundle: { deps: ["build"], script: "bundle:check" },
   e2e: { deps: ["build"], script: "test:e2e", heavy: true },
@@ -46,7 +47,7 @@ const ALL = {
 
 const PROFILES = {
   full: ["typecheck", "lint", "format", "test", "build", "bundle", "e2e", "knip"],
-  verify: ["typecheck", "lint", "test"],
+  verify: ["typecheck", "lint", "testChanged"],
 };
 
 const selected = PROFILES[profile];
