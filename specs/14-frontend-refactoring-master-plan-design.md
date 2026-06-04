@@ -206,7 +206,7 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 | 4a — Scaffolding + conventions | done | 2026-05-29 |
 | 4b — Shell extraction | done | 2026-05-29 |
 | 5 — Feature: market-research | done | 2026-06-03 |
-| 6 — Feature: mission-control | pending | — |
+| 6 — Feature: mission-control | done | 2026-06-04 |
 | 7 — Feature: customers | pending | — |
 | 8 — Feature: signals + strategist | pending | — |
 | 9 — Feature: scout + profiler | pending | — |
