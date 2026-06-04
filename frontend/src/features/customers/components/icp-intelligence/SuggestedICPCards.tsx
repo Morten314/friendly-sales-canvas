@@ -20,7 +20,8 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 
-import { getLeadCountForICP } from "@/components/customers/LeadStream";
+import { getLeadCountForICP } from "../lead-stream/LeadStream";
+
 import { EditDropdownMenu } from "@/components/market-research/EditDropdownMenu";
 import {
   AlertDialog,

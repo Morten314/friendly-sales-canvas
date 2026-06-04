@@ -4,7 +4,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import Artifacts from "./pages/Artifacts";
 import Calendar from "./pages/Calendar";
-import Customers from "./pages/Customers";
 import Deals from "./pages/Deals";
 import Insights from "./pages/Insights";
 import Login from "./pages/Login";
@@ -60,14 +59,6 @@ const App = () => (
                   element={
                     <ProtectedRoute requireTenant>
                       <Signals />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/customers"
-                  element={
-                    <ProtectedRoute requireTenant>
-                      <Customers />
                     </ProtectedRoute>
                   }
                 />

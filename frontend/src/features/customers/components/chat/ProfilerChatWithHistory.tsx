@@ -1,9 +1,8 @@
 import { MessageSquarePlus, PanelLeftClose, PanelLeft, MessageCircle, Trash2 } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 
-import type { SignalsChatContext, ChatMessage } from "./SignalsContextChat";
-import { SignalsContextChat } from "./SignalsContextChat";
-
+import type { SignalsChatContext, ChatMessage } from "@/components/signals/SignalsContextChat";
+import { SignalsContextChat } from "@/components/signals/SignalsContextChat";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/shared/auth";
 
