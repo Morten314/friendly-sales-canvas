@@ -14,6 +14,8 @@
 // as unit tests need them. Spec §3.2 last paragraph.
 import { http, HttpResponse } from "msw";
 
+import { BACKEND_BASE_URL } from "@/lib/api";
+
 export const handlers = [
   // 1. Proof-of-pipeline
   http.get("/api/_health", () => HttpResponse.json({ ok: true })),
@@ -208,4 +210,18 @@ export const handlers = [
       },
     });
   }),
+
+  // ── customers (Phase 7) ──────────────────────────────────────────────────────
+  // Profiler reads/writes. /icp is on the direct backend host (not /api).
+  http.get(`${BACKEND_BASE_URL}/icp`, () => HttpResponse.json({ icps: [] })),
+  http.get("/api/customer_profile", () => HttpResponse.json({ icps: [] })),
+  http.get("/api/profile/company", () => HttpResponse.json({})),
+  http.post("/api/customer_profile", () => HttpResponse.json({ success: true })),
+  http.post("/api/customer_profile/from_suggested_icp", () =>
+    HttpResponse.json({ success: true, data: { id: "persisted-1" } }),
+  ),
+  http.delete("/api/customer_profile/icp/:icpId", () =>
+    HttpResponse.json({ success: true, data: { deleted_icp_id: "x", remaining_count: 0 } }),
+  ),
+  http.delete("/api/icp/recommended/:icpId", () => HttpResponse.json({ success: true })),
 ];

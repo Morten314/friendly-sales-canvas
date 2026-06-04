@@ -9,4 +9,7 @@ export const qk = {
   dataSources: (orgId: string) => ["mission-control", "data-sources", orgId] as const,
   leadStreamStatus: (userId: string, orgId: string) =>
     ["mission-control", "lead-stream-status", userId, orgId] as const,
+  customersProfile: (userId: string, orgId: string) =>
+    ["customers", "profile", userId, orgId] as const,
+  customersSuggestedIcps: (userId: string) => ["customers", "suggested-icps", userId] as const,
 };

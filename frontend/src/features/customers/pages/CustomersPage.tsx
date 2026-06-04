@@ -2,16 +2,17 @@ import { Users, MessageSquare, Zap } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
+import { ProfilerChatWithHistory } from "../components/chat/ProfilerChatWithHistory";
+import { ICPIntelligence } from "../components/icp-intelligence/ICPIntelligence";
+import { LeadStreamPanel } from "../components/lead-stream/LeadStream";
+
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
-import { ICPIntelligence } from "@/components/customers/ICPIntelligence";
-import { LeadStreamPanel } from "@/components/customers/LeadStream";
-import { ProfilerChatWithHistory } from "@/components/signals/ProfilerChatWithHistory";
 import type { SignalsChatContext } from "@/components/signals/SignalsContextChat";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Layout } from "@/features/shell";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
-const Customers = () => {
+const CustomersPage = () => {
   usePageTitle("👤 Profiler - Brewra");
   const location = useLocation();
   const [activeTab, setActiveTab] = useState("icp-intelligence");
@@ -140,4 +141,4 @@ const Customers = () => {
   );
 };
 
-export default Customers;
+export default CustomersPage;
