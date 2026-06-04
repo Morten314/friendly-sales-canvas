@@ -5,7 +5,7 @@ import type { ScoutResearchContext } from "../../types";
 import { ChatWithScout } from "@/components/market-research/ChatWithScout";
 import type { EditRecord } from "@/components/market-research/types";
 import { ScoutChatWithHistory } from "@/components/signals/ScoutChatWithHistory";
-import type { SignalsChatContext } from "@/components/signals/SignalsContextChat";
+import type { SignalsChatContext } from "@/shared/chat";
 
 // trends = Scout chat (Spec 24 §9 delta 6), NOT an emerging-trends view. Feature-owned thin
 // router over the LEAVING Scout-chat components (scout / signals). The components it renders are legacy.
