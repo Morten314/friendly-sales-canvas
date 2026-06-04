@@ -1336,13 +1336,13 @@ When connectors become a real feature (wire + unify + test) or a dead-code sweep
 **Origin:** Phase 6 decompositions (Tasks 19, 20, 21). Known-dead/cosmetic bits that rode along in the parity extraction.
 
 **Current state:**
-- `ICPManager._isSaving` — `const [_isSaving, setIsSaving] = useState(false)` (line 26); the `_` prefix confirms the value is unread. The setter is called on lines 57 and 168 (write-path handlers) but nothing renders a saving spinner from the value — relocated legacy.
+- `ICPManager._isSaving` — **RESOLVED 2026-06-04** (phase-6 impl-review-1): the unread `useState` + its two `setIsSaving` calls + the now-purposeless `try/finally` wrapper (the `finally` only reset the dead flag) were removed.
 - `ICPManager` write handlers carry 21 `console.*` calls — relocated-legacy noise, identical to pre-Phase-6.
 - `IcpList.getFitConfidenceBadge` has no `default` branch (returns `undefined` for out-of-union values) — relocated legacy, safe under the `FitConfidence` param type.
 - `MissionControlPage.syncingProfilerCustomerProfile` — initialized `false`, only ever set `false` (line 161: `setSyncingProfilerCustomerProfile(false)`; no `true` call anywhere). The Dialog at line 333 is `open={isLoadingProfile || syncingProfilerCustomerProfile}`: the `isLoadingProfile` branch is live; the `syncingProfilerCustomerProfile` branch is a dead overlay — the "Syncing customer profile" text (lines 336–367) can never render.
 
 **What it should be:**
-- `_isSaving` state removed (or wired to a real spinner when the write path gets mutation hooks — TD-FE-34).
+- `_isSaving` state removed — **done** (2026-06-04).
 - Console noise cleaned up.
 - `getFitConfidenceBadge` given a `default` branch returning `null`.
 - `syncingProfilerCustomerProfile` state + all its Dialog branches removed; the Dialog simplified to `open={isLoadingProfile}`.

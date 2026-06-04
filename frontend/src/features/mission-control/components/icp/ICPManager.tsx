@@ -23,7 +23,6 @@ const ICPManager: React.FC = () => {
   const { currentUser, orgId } = useAuth();
   const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
   const [icps, setIcps] = useState<ICP[]>([]);
-  const [_isSaving, setIsSaving] = useState(false);
 
   // ICP read: org's ICP rows via TanStack Query (raw rows; mapped below). The
   // query cache replaces the legacy imperative localStorage-fallback-on-error
@@ -54,7 +53,6 @@ const ICPManager: React.FC = () => {
       return;
     }
 
-    setIsSaving(true);
     try {
       // Prepare payload with customer profile data
       const payload = {
@@ -164,8 +162,6 @@ const ICPManager: React.FC = () => {
           variant: "destructive",
         });
       }
-    } finally {
-      setIsSaving(false);
     }
   };
 
