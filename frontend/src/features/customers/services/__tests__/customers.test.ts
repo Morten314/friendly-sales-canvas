@@ -1,7 +1,13 @@
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 
-import { fetchCustomerProfileIcps, fetchSuggestedIcps } from "../customers";
+import {
+  acceptSuggestedIcp,
+  deleteCurrentIcp,
+  fetchCustomerProfileIcps,
+  fetchSuggestedIcps,
+  rejectRecommendedIcp,
+} from "../customers";
 
 import { BACKEND_BASE_URL } from "@/lib/api";
 import { server } from "@/test/msw/server";
@@ -52,5 +58,45 @@ describe("fetchCustomerProfileIcps", () => {
     );
     const rows = await fetchCustomerProfileIcps("u1", "org1");
     expect(Array.isArray(rows)).toBe(true);
+  });
+});
+
+describe("write services", () => {
+  it("accepts a suggested ICP (POST from_suggested_icp)", async () => {
+    let body: unknown;
+    server.use(
+      http.post("/api/customer_profile/from_suggested_icp", async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json({ success: true, data: { id: "p1" } });
+      }),
+    );
+    await acceptSuggestedIcp("u1", "org1", "icp1");
+    expect(body).toMatchObject({ user_id: "u1", org_id: "org1", icp_id: "icp1" });
+  });
+
+  it("rejects a recommended ICP (DELETE icp/recommended/:id)", async () => {
+    let url = "";
+    server.use(
+      http.delete("/api/icp/recommended/:icpId", ({ request }) => {
+        url = request.url;
+        return HttpResponse.json({ success: true });
+      }),
+    );
+    await rejectRecommendedIcp("u1", "icp1");
+    expect(url).toContain("/icp/recommended/icp1");
+    expect(url).toContain("user_id=u1");
+  });
+
+  it("deletes a current ICP (DELETE customer_profile/icp/:id)", async () => {
+    let url = "";
+    server.use(
+      http.delete("/api/customer_profile/icp/:icpId", ({ request }) => {
+        url = request.url;
+        return HttpResponse.json({ success: true, data: { remaining_count: 0 } });
+      }),
+    );
+    await deleteCurrentIcp("org1", "icp1");
+    expect(url).toContain("/customer_profile/icp/icp1");
+    expect(url).toContain("org_id=org1");
   });
 });

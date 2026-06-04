@@ -1,7 +1,17 @@
-import { SuggestedIcpsResponseSchema, type SuggestedIcpsResponse } from "../contracts";
+import {
+  CustomerProfileResponseSchema,
+  SuggestedIcpsResponseSchema,
+  type SuggestedIcpsResponse,
+} from "../contracts";
 
-import { buildIcpUrl } from "@/lib/api";
-import { fetchIcpsRowsForOrg } from "@/shared/profiler";
+import { apiFetch, apiFetchJson, buildApiUrl, buildIcpUrl } from "@/lib/api";
+import {
+  buildCustomerProfileSavePayload,
+  extractIcpsArrayFromCustomerProfileResponse,
+  fetchIcpsRowsForOrg,
+  mergeSuggestedIntoCustomerProfileApiRow,
+  type SuggestedIcpCardFields,
+} from "@/shared/profiler";
 
 /**
  * Current ICPs read — GET /api/customer_profile via the shared extractor (same
@@ -34,4 +44,67 @@ export async function fetchSuggestedIcps(
   }
   const json = await res.json();
   return SuggestedIcpsResponseSchema.parse(json);
+}
+
+/** POST /api/customer_profile/from_suggested_icp — persist an accepted ICP. */
+export function acceptSuggestedIcp(userId: string, orgId: string, icpId: string): Promise<unknown> {
+  return apiFetchJson("customer_profile/from_suggested_icp", {
+    method: "POST",
+    body: { user_id: userId, org_id: orgId, icp_id: icpId },
+  });
+}
+
+/**
+ * Firmographics save after accept (parity port of
+ * `persistAcceptedSuggestedIcpToBackend`): GET full profile → merge suggested
+ * fields into the target row → POST the full icps[]. Returns ok/!ok; never throws.
+ */
+export async function saveAcceptedIcpFirmographics(options: {
+  orgId: string;
+  suggested: SuggestedIcpCardFields;
+  targetIcpId: string;
+}): Promise<boolean> {
+  const { orgId, suggested, targetIcpId } = options;
+  const profileUrl = buildApiUrl(`customer_profile?org_id=${encodeURIComponent(orgId)}`);
+  try {
+    const profileRes = await fetch(profileUrl, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!profileRes.ok) return false;
+    // Parse at the boundary with the permissive customer_profile contract
+    // (Spec 26 §4). This is also the consumer that keeps
+    // `CustomerProfileResponseSchema` from being a dead export under knip.
+    const profileData = CustomerProfileResponseSchema.parse(await profileRes.json());
+    const icpsData = extractIcpsArrayFromCustomerProfileResponse(profileData);
+    if (!icpsData.length) return false;
+    const idx = icpsData.findIndex((row) => String(row.id) === String(targetIcpId));
+    if (idx < 0) return false;
+    const nextIcps = [...icpsData];
+    nextIcps[idx] = mergeSuggestedIntoCustomerProfileApiRow(icpsData[idx], suggested);
+    const saveRes = await fetch(profileUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(buildCustomerProfileSavePayload(nextIcps, orgId)),
+    });
+    return saveRes.ok;
+  } catch {
+    return false;
+  }
+}
+
+/** DELETE /api/icp/recommended/{id} — reject/dismiss a recommended ICP. */
+export function rejectRecommendedIcp(userId: string, icpId: string): Promise<Response> {
+  return apiFetch(
+    `icp/recommended/${encodeURIComponent(icpId)}?user_id=${encodeURIComponent(userId)}`,
+    { method: "DELETE" },
+  );
+}
+
+/** DELETE /api/customer_profile/icp/{id} — delete an accepted/current ICP. */
+export function deleteCurrentIcp(orgId: string, icpId: string): Promise<Response> {
+  return apiFetch(
+    `customer_profile/icp/${encodeURIComponent(icpId)}?org_id=${encodeURIComponent(orgId)}`,
+    { method: "DELETE" },
+  );
 }
