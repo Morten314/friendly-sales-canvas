@@ -254,10 +254,7 @@ const ICPManager: React.FC = () => {
   // Stable `initial` reference for the wizard: only changes identity when the
   // selected ICP (or the underlying row set) changes, so the wizard's
   // `useEffect([initial])` does not re-seed on every container render.
-  const editingIcp = useMemo(
-    () => icps.find((i) => i.id === editingId) ?? null,
-    [editingId, icps],
-  );
+  const editingIcp = useMemo(() => icps.find((i) => i.id === editingId) ?? null, [editingId, icps]);
 
   const handleStartAdd = () => {
     setEditingId(null);

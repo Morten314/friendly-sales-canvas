@@ -61,7 +61,13 @@ export interface IcpListProps {
  * wizard is closed) and the saved-ICP table when there are. Row actions call
  * back to the container's edit/delete handlers.
  */
-const IcpList: React.FC<IcpListProps> = ({ icps, onEdit, onDelete, isAddingInline, onStartAdd }) => {
+const IcpList: React.FC<IcpListProps> = ({
+  icps,
+  onEdit,
+  onDelete,
+  isAddingInline,
+  onStartAdd,
+}) => {
   return (
     <>
       {/* Empty State */}

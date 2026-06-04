@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 // Region options (single select)
@@ -88,6 +89,7 @@ export interface IcpWizardProps {
  * the legacy `handleSaveICP` in ICPManager so the create/edit journey is parity.
  */
 const IcpWizard: React.FC<IcpWizardProps> = ({ initial, onSaved, onCancel }) => {
+  const { toast } = useToast();
   const isEdit = !!initial;
 
   // Form state (moved from the container).
@@ -343,6 +345,11 @@ const IcpWizard: React.FC<IcpWizardProps> = ({ initial, onSaved, onCancel }) => 
 
     if (hasErrors) {
       setValidationErrors(errors);
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
       return;
     }
 

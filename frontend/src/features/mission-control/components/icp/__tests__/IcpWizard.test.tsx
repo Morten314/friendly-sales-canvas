@@ -4,6 +4,13 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { ICP } from "../../../types";
 import IcpWizard from "../IcpWizard";
 
+// Capture toast calls so the validation-failure toast (parity with the legacy
+// handleSaveICP) can be asserted.
+const toastMock = vi.fn();
+vi.mock("@/hooks/use-toast", () => ({
+  useToast: () => ({ toast: toastMock }),
+}));
+
 // The Industry/Job-Title comboboxes render a `cmdk` popover when the input is
 // typed into; `cmdk` uses ResizeObserver and Element.scrollIntoView, neither of
 // which jsdom provides. Polyfill them locally (scoped to this file — not shared
@@ -70,11 +77,16 @@ describe("IcpWizard", () => {
     expect(props.onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it("does not call onSaved and shows an error when required fields are missing", () => {
+  it("does not call onSaved and shows an error + validation toast when required fields are missing", () => {
+    toastMock.mockClear();
     const { props } = renderWizard();
     fireEvent.click(screen.getByRole("button", { name: /Save/i }));
     expect(props.onSaved).not.toHaveBeenCalled();
     expect(screen.getByText("Please select a region")).toBeInTheDocument();
+    // Parity with legacy handleSaveICP: a destructive validation toast fires.
+    expect(toastMock).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Validation Error", variant: "destructive" }),
+    );
   });
 
   it("calls onSaved with the assembled ICP (isEdit=true) when an edit-seeded form is saved", () => {
