@@ -1,6 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
+import { mapApiDataToCompanyProfileFields } from "./companyProfileMapping";
+
 import { useCompanyProfile } from "@/components/settings/useCompanyProfile";
 import {
   Accordion,
@@ -42,42 +44,6 @@ interface CompanyProfileFormProps {
    */
   onSavedChange?: (saved: boolean) => void;
 }
-
-// Map API data → form state (snake_case + camelCase tolerated, trimmed). Pure
-// transform extracted from the page's mapApiDataToFormState; the page's
-// data_sources branch is NOT here — that stays in the page (a different tab's
-// concern).
-const mapApiDataToFormState = (data: UntypedBackendApiResponse, userId: string) => {
-  // Check if data is empty or null
-  if (!data || (typeof data === "object" && Object.keys(data).length === 0)) {
-    return null;
-  }
-
-  // Verify user_id matches (multi-tenancy safety)
-  if (data.user_id && data.user_id !== userId) {
-    return null;
-  }
-
-  // Map API response to form state (handle both snake_case and camelCase)
-  return {
-    companyName: (data.company_name || data.companyName || "").trim(),
-    headquarters: (data.headquarters || "").trim(),
-    employeeSize: (data.employee_size || data.employeeSize || "").trim(),
-    industry: (data.industry || "").trim(),
-    revenue: (data.revenue_band || data.revenue || "").trim(),
-    gtmModel: (data.gtm_model || data.gtmModel || "").trim(),
-    regionFocus: (data.region_focus || data.regionFocus || "").trim(),
-    dealSize: (data.typical_deal_size || data.dealSize || "").trim(),
-    companyUrl: (data.company_url || data.companyUrl || "").trim(),
-    keyBuyerPersona: (data.key_buyer_persona || data.keyBuyerPersona || "").trim(),
-    goals: (data.goals || "").trim(),
-    painPoints: (data.pain_points || data.painPoints || "").trim(),
-    targetSegments: (data.target_segments || data.targetSegments || "").trim(),
-    excludeSegments: (data.exclude_segments || data.excludeSegments || "").trim(),
-    compliance: (data.compliance || "").trim(),
-    constraints: (data.constraints || "").trim(),
-  };
-};
 
 export default function CompanyProfileForm({ onSavedChange }: CompanyProfileFormProps) {
   const { toast } = useToast();
@@ -176,7 +142,7 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
       if (!data || (typeof data === "object" && Object.keys(data).length === 0)) {
         return;
       }
-      const profileData = mapApiDataToFormState(data, userId);
+      const profileData = mapApiDataToCompanyProfileFields(data, userId);
       if (profileData) {
         setCompanyProfile(profileData);
         const companyName = (

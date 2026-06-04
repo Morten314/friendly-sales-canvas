@@ -2,6 +2,7 @@ import { Building2, Database, Users } from "lucide-react";
 import { useState, useEffect } from "react";
 
 import CompanyProfileForm from "../components/company-profile/CompanyProfileForm";
+import { mapApiDataToCompanyProfileFields } from "../components/company-profile/companyProfileMapping";
 import ConnectorApprovals from "../components/company-profile/ConnectorApprovals";
 import type { DataSource } from "../components/company-profile/connectorTypes";
 import DataSourcesManager from "../components/data-sources/DataSourcesManager";
@@ -60,37 +61,6 @@ const MissionControlPage = () => {
     orgIdToUse,
     !!currentUser?.uid,
   );
-
-  // Helper: map an API payload to the form-shaped fields used to build the
-  // localStorage backup + evaluate the "meaningful data" gate. Kept page-side for
-  // the read-driven backup write (the editable form state itself lives in
-  // CompanyProfileForm). Mirrors the old mapApiDataToFormState transform.
-  const mapApiDataForBackup = (data: UntypedBackendApiResponse, userId: string) => {
-    if (!data || (typeof data === "object" && Object.keys(data).length === 0)) {
-      return null;
-    }
-    if (data.user_id && data.user_id !== userId) {
-      return null;
-    }
-    return {
-      companyName: (data.company_name || data.companyName || "").trim(),
-      headquarters: (data.headquarters || "").trim(),
-      employeeSize: (data.employee_size || data.employeeSize || "").trim(),
-      industry: (data.industry || "").trim(),
-      revenue: (data.revenue_band || data.revenue || "").trim(),
-      gtmModel: (data.gtm_model || data.gtmModel || "").trim(),
-      regionFocus: (data.region_focus || data.regionFocus || "").trim(),
-      dealSize: (data.typical_deal_size || data.dealSize || "").trim(),
-      companyUrl: (data.company_url || data.companyUrl || "").trim(),
-      keyBuyerPersona: (data.key_buyer_persona || data.keyBuyerPersona || "").trim(),
-      goals: (data.goals || "").trim(),
-      painPoints: (data.pain_points || data.painPoints || "").trim(),
-      targetSegments: (data.target_segments || data.targetSegments || "").trim(),
-      excludeSegments: (data.exclude_segments || data.excludeSegments || "").trim(),
-      compliance: (data.compliance || "").trim(),
-      constraints: (data.constraints || "").trim(),
-    };
-  };
 
   // Apply the data_sources branch of a company-profile payload to the page's
   // data-source state. This is a DIFFERENT tab's concern than the company form
@@ -215,7 +185,7 @@ const MissionControlPage = () => {
     const data = companyProfileData;
     if (!data) return;
     const userId = currentUser.uid;
-    const profileData = mapApiDataForBackup(data as UntypedBackendApiResponse, userId);
+    const profileData = mapApiDataToCompanyProfileFields(data as UntypedBackendApiResponse, userId);
     if (!profileData) return;
 
     applyDataSourcesFromPayload(data as UntypedBackendApiResponse);
