@@ -2,16 +2,15 @@ import { ArrowRight, LogOut } from "lucide-react";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { Button } from "../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { useTenants } from "../hooks/useTenants";
 
-import { useTenants } from "./useTenants";
-
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/shared/auth";
 import { useTenant } from "@/shared/tenant";
 import type { Tenant } from "@/shared/tenant";
 
-const TenantSelection: React.FC = () => {
+const TenantSelectionPage: React.FC = () => {
   const { selectTenant, clearTenant } = useTenant();
   const { logout, currentUser } = useAuth();
   const navigate = useNavigate();
@@ -98,4 +97,4 @@ const TenantSelection: React.FC = () => {
   );
 };
 
-export default TenantSelection;
+export default TenantSelectionPage;

@@ -8,10 +8,12 @@ import { authRoutes } from "@/features/auth";
 import { customersRoutes } from "@/features/customers";
 import { marketResearchRoutes } from "@/features/market-research";
 import { missionControlRoutes } from "@/features/mission-control";
+import { tenantRoutes } from "@/features/tenant";
 
 export const featureRoutes = [
   ...marketResearchRoutes,
   ...missionControlRoutes,
   ...customersRoutes,
   ...authRoutes,
+  ...tenantRoutes,
 ];

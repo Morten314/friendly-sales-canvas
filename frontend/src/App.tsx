@@ -11,7 +11,6 @@ import Reports from "./pages/Reports";
 import ScoutDeploymentPage from "./pages/ScoutDeployment";
 import Settings from "./pages/Settings";
 import Signals from "./pages/Signals";
-import TenantSelection from "./pages/TenantSelection";
 
 import { featureRoutes } from "@/app/routes";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -30,16 +29,6 @@ const App = () => (
           <TooltipProvider>
             <BrowserRouter>
               <Routes>
-                {/* Protected routes that require authentication only */}
-                <Route
-                  path="/tenant-selection"
-                  element={
-                    <ProtectedRoute>
-                      <TenantSelection />
-                    </ProtectedRoute>
-                  }
-                />
-
                 {/* Protected routes that require both authentication and tenant selection */}
                 <Route
                   path="/signals"
