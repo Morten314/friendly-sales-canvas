@@ -15,6 +15,8 @@ import {
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { fetchSignals, generateSignalsBatch } from "../services/signals";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +34,9 @@ import { useToast } from "@/hooks/use-toast";
 import type { UntypedBackendSignal } from "@/lib/types/escape-hatches";
 import { sanitizeAnswerText } from "@/lib/utils";
 import { useAuth } from "@/shared/auth";
+import { useSignalAction } from "@/shared/chat/useSignalAction";
+import { useSignalAsk } from "@/shared/chat/useSignalAsk";
+
 type Agent = "scout" | "profiler";
 type ActionType = "accept" | "dismiss" | "save" | "ask";
 interface ContextualSuggestion {
@@ -67,141 +72,6 @@ interface SignalCard {
   NBAs?: NBAItem[];
   contextualSuggestions: ContextualSuggestion[];
 }
-// API functions
-const generateSignalsBatch = async (userId: string) => {
-  try {
-    const response = await fetch("/api/generate-signals-batch", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        user_id: userId,
-        component_name: "test",
-        data: {
-          industry: "SaaS",
-          companySize: "50-200 employees",
-          companyUrl: "https://example.com",
-          strategicGoals: "Market expansion",
-          primaryGTMModel: "Direct sales",
-          revenueStage: "Growth",
-          keyBuyerPersona: "CTO",
-          targetMarkets: ["North America", "Europe"],
-        },
-        refresh: true,
-      }),
-    });
-
-    console.log("Generate signals response status:", response.status);
-    console.log("Generate signals response headers:", response.headers);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Generate signals error response:", errorText);
-      throw new Error(`Failed to generate signals: ${response.status} ${response.statusText}`);
-    }
-
-    const contentType = response.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-      const text = await response.text();
-      console.error("Non-JSON response:", text);
-      throw new Error("Server returned non-JSON response");
-    }
-
-    return response.json();
-  } catch (error) {
-    console.error("Generate signals API error:", error);
-    throw error;
-  }
-};
-
-const signalAsk = async (body: {
-  org_id: string;
-  user_id: string;
-  question: string;
-  history: { user: string; assistant: string }[];
-}) => {
-  try {
-    const response = await fetch("/api/signal_Ask", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`signal_Ask failed: ${response.status} ${text}`);
-    }
-    const data = await response.json();
-    return data;
-  } catch (err) {
-    console.error("signal_Ask error:", err);
-    throw err;
-  }
-};
-
-const fetchSignals = async (userId: string) => {
-  try {
-    const response = await fetch(`/api/fetch-signals?user_id=${userId}&limit=10`);
-
-    console.log("Fetch signals response status:", response.status);
-    console.log("Fetch signals response headers:", response.headers);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Fetch signals error response:", errorText);
-      throw new Error(`Failed to fetch signals: ${response.status} ${response.statusText}`);
-    }
-
-    const contentType = response.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-      const text = await response.text();
-      console.error("Non-JSON response:", text);
-      throw new Error("Server returned non-JSON response");
-    }
-
-    return response.json();
-  } catch (error) {
-    console.error("Fetch signals API error:", error);
-    throw error;
-  }
-};
-
-const signalAction = async (orgId: string, signalId: string, action: "accept" | "reject") => {
-  try {
-    const response = await fetch("/api/signal_action", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        org_id: orgId,
-        signal_id: signalId,
-        action: action,
-      }),
-    });
-
-    console.log("Signal action response status:", response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Signal action error response:", errorText);
-      throw new Error(`Failed to ${action} signal: ${response.status} ${response.statusText}`);
-    }
-
-    const contentType = response.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-      const text = await response.text();
-      console.error("Non-JSON response:", text);
-      throw new Error("Server returned non-JSON response");
-    }
-
-    return response.json();
-  } catch (error) {
-    console.error("Signal action API error:", error);
-    throw error;
-  }
-};
-
 // Helper function to generate a stable content-based ID for a signal
 const getSignalContentHash = (signal: SignalCard): string => {
   const content = `${signal.headline}-${signal.snippet}-${signal.description || ""}-${signal.agent}`;
@@ -501,6 +371,8 @@ function getFallbackSampleSignals(): SignalCard[] {
 const SignalsPage = () => {
   const { currentUser, orgId } = useAuth();
   const navigate = useNavigate();
+  const askMutation = useSignalAsk();
+  const actionMutation = useSignalAction();
   const [currentTab] = useState("signals");
   const [signals, setSignals] = useState<SignalCard[]>([]);
   const [savedInsights, setSavedInsights] = useState<SignalCard[]>([]);
@@ -571,7 +443,7 @@ const SignalsPage = () => {
 
       try {
         const data = await fetchSignals(uid);
-        const rawSignals = data.signals || [];
+        const rawSignals = (data as { signals?: UntypedBackendSignal[] }).signals || [];
         console.log(
           "Raw signals from API:",
           rawSignals.map((s: UntypedBackendSignal) => ({
@@ -696,14 +568,16 @@ const SignalsPage = () => {
     const key = `${signalId}-${index}`;
     if (recommendationAnswers[key]) return;
     setRecommendationAnswerLoading(key);
-    signalAsk({
-      org_id: orgId,
-      user_id: currentUser.uid,
-      question: item.prompt,
-      history: [],
-    })
+    askMutation
+      .mutateAsync({
+        org_id: orgId,
+        user_id: currentUser.uid,
+        question: item.prompt,
+        history: [],
+      })
       .then((res) => {
-        const answer = res?.answer ?? res?.response ?? (typeof res === "string" ? res : "");
+        const r = res as Record<string, unknown>;
+        const answer = r?.answer ?? r?.response ?? (typeof res === "string" ? res : "");
         setRecommendationAnswers((prev) => ({ ...prev, [key]: String(answer) }));
       })
       .catch((err) => {
@@ -715,6 +589,7 @@ const SignalsPage = () => {
         });
       })
       .finally(() => setRecommendationAnswerLoading(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- askMutation is a fresh object per render; including it would loop. mutateAsync is stable.
   }, [expandedRecommendation, signals, currentUser?.uid, orgId, recommendationAnswers, toast]);
 
   const handleRefresh = async () => {
@@ -901,7 +776,7 @@ const SignalsPage = () => {
 
       // Call API to unaccept (action: reject)
       try {
-        await signalAction(orgId, signalId, "reject");
+        await actionMutation.mutateAsync({ orgId, signalId, action: "reject" });
       } catch (error) {
         console.error("Error calling signal action API:", error);
         // Still update UI even if API fails
@@ -926,7 +801,7 @@ const SignalsPage = () => {
 
       // Call API to accept
       try {
-        await signalAction(orgId, signalId, "accept");
+        await actionMutation.mutateAsync({ orgId, signalId, action: "accept" });
         toast({
           title: "Signal accepted",
           description: "This signal has been marked as accepted.",
@@ -1009,7 +884,7 @@ const SignalsPage = () => {
 
         // Call API to reject
         try {
-          await signalAction(orgId, signalId, "reject");
+          await actionMutation.mutateAsync({ orgId, signalId, action: "reject" });
           console.log("Signal rejected via API:", signalId);
         } catch (error) {
           console.error("Error calling signal action API for reject:", error);
