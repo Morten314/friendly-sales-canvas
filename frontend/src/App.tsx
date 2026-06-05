@@ -6,7 +6,6 @@ import Artifacts from "./pages/Artifacts";
 import Calendar from "./pages/Calendar";
 import Deals from "./pages/Deals";
 import Insights from "./pages/Insights";
-import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import Reports from "./pages/Reports";
 import ScoutDeploymentPage from "./pages/ScoutDeployment";
@@ -31,10 +30,6 @@ const App = () => (
           <TooltipProvider>
             <BrowserRouter>
               <Routes>
-                {/* Public routes */}
-                <Route path="/" element={<Login />} />
-                <Route path="/login" element={<Login />} />
-
                 {/* Protected routes that require authentication only */}
                 <Route
                   path="/tenant-selection"
