@@ -9,7 +9,6 @@ import Insights from "./pages/Insights";
 import NotFound from "./pages/NotFound";
 import Reports from "./pages/Reports";
 import ScoutDeploymentPage from "./pages/ScoutDeployment";
-import Settings from "./pages/Settings";
 import Signals from "./pages/Signals";
 
 import { featureRoutes } from "@/app/routes";
@@ -75,14 +74,6 @@ const App = () => (
                   element={
                     <ProtectedRoute requireTenant>
                       <Reports />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/settings"
-                  element={
-                    <ProtectedRoute requireTenant>
-                      <Settings />
                     </ProtectedRoute>
                   }
                 />
