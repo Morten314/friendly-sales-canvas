@@ -1,6 +1,6 @@
 // Cross-feature scout/profiler chat substrate. Consumed by market-research
 // (ScoutChatWithHistory) + customers (ProfilerChatWithHistory) via the shared
-// history shell. The substrate keeps the `SignalsChatContext` TYPE name (TD-FE-58).
+// history shell. The substrate keeps the `SignalsChatContext` TYPE name (TD-FE-61).
 export { ContextChat } from "./ContextChat";
 export type { SignalsChatContext, ChatMessage } from "./ContextChat";
 

@@ -32,4 +32,4 @@ Two pieces were explicitly **Phase 9's** to finish, not Phase 8's:
   unifying them into one parameterised component via `ChatWithHistory` (see `ChatWithHistory`);
   Phase 8 only relocated the substrate + repointed importers (TD-FE-45).
 - **Rename.** Renamed `SignalsContextChat` → `ContextChat` in Phase 9; the `SignalsChatContext`
-  type name is retained — TD-FE-58.
+  type name is retained — TD-FE-61.
