@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Layout } from "@/features/shell";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
-const Calendar = () => {
+const CalendarPage = () => {
   usePageTitle("⚡ Activator - Brewra");
   const [isChatOpen] = useState(false);
   const [messages, setMessages] = useState([
@@ -166,4 +166,4 @@ const Calendar = () => {
   );
 };
 
-export default Calendar;
+export default CalendarPage;

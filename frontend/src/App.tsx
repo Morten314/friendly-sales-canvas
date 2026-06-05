@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import Artifacts from "./pages/Artifacts";
-import Calendar from "./pages/Calendar";
 import Deals from "./pages/Deals";
 import Insights from "./pages/Insights";
 import Login from "./pages/Login";
@@ -77,14 +76,6 @@ const App = () => (
                 <Route
                   path="/your-ai-team/strategist"
                   element={<Navigate to="/your-ai-team/strategist/workspace" replace />}
-                />
-                <Route
-                  path="/calendar"
-                  element={
-                    <ProtectedRoute requireTenant>
-                      <Calendar />
-                    </ProtectedRoute>
-                  }
                 />
                 <Route
                   path="/reports"
