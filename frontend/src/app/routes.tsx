@@ -6,6 +6,7 @@
  */
 import { calendarRoutes } from "@/features/calendar";
 import { customersRoutes } from "@/features/customers";
+import { insightsRoutes } from "@/features/insights";
 import { marketResearchRoutes } from "@/features/market-research";
 import { missionControlRoutes } from "@/features/mission-control";
 
@@ -14,4 +15,5 @@ export const featureRoutes = [
   ...missionControlRoutes,
   ...customersRoutes,
   ...calendarRoutes,
+  ...insightsRoutes,
 ];

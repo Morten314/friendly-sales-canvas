@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Layout } from "@/features/shell";
 
-const Insights = () => {
+const InsightsPage = () => {
   return (
     <Layout>
       <div className="animate-fade-in">
@@ -243,4 +243,4 @@ const Insights = () => {
   );
 };
 
-export default Insights;
+export default InsightsPage;

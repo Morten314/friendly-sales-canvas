@@ -4,7 +4,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import Artifacts from "./pages/Artifacts";
 import Deals from "./pages/Deals";
-import Insights from "./pages/Insights";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import Reports from "./pages/Reports";
@@ -90,14 +89,6 @@ const App = () => (
                   element={
                     <ProtectedRoute requireTenant>
                       <Settings />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/insights"
-                  element={
-                    <ProtectedRoute requireTenant>
-                      <Insights />
                     </ProtectedRoute>
                   }
                 />
