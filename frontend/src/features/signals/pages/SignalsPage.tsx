@@ -498,7 +498,7 @@ function getFallbackSampleSignals(): SignalCard[] {
   ];
 }
 
-const Index = () => {
+const SignalsPage = () => {
   const { currentUser, orgId } = useAuth();
   const navigate = useNavigate();
   const [currentTab] = useState("signals");
@@ -1726,4 +1726,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default SignalsPage;

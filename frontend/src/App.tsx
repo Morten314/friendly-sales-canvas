@@ -11,7 +11,6 @@ import NotFound from "./pages/NotFound";
 import Reports from "./pages/Reports";
 import ScoutDeploymentPage from "./pages/ScoutDeployment";
 import Settings from "./pages/Settings";
-import Signals from "./pages/Signals";
 import TenantSelection from "./pages/TenantSelection";
 
 import { featureRoutes } from "@/app/routes";
@@ -46,22 +45,6 @@ const App = () => (
                 />
 
                 {/* Protected routes that require both authentication and tenant selection */}
-                <Route
-                  path="/signals"
-                  element={
-                    <ProtectedRoute requireTenant>
-                      <Signals />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/agent-hub"
-                  element={
-                    <ProtectedRoute requireTenant>
-                      <Signals />
-                    </ProtectedRoute>
-                  }
-                />
                 <Route
                   path="/deals"
                   element={<Navigate to="/your-ai-team/strategist/workspace" replace />}

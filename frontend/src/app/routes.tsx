@@ -7,5 +7,11 @@
 import { customersRoutes } from "@/features/customers";
 import { marketResearchRoutes } from "@/features/market-research";
 import { missionControlRoutes } from "@/features/mission-control";
+import { signalsRoutes } from "@/features/signals";
 
-export const featureRoutes = [...marketResearchRoutes, ...missionControlRoutes, ...customersRoutes];
+export const featureRoutes = [
+  ...marketResearchRoutes,
+  ...missionControlRoutes,
+  ...customersRoutes,
+  ...signalsRoutes,
+];

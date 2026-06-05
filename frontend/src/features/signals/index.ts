@@ -1,3 +1,3 @@
-// Public surface for the `signals` feature. Finalized in Task 6 (routes),
-// locked at finalize. Exposes `signalsRoutes` only.
-export {};
+// Public surface for the `signals` feature.
+// Cross-feature consumers import from "@/features/signals", never a deep path.
+export { signalsRoutes } from "./routes";
