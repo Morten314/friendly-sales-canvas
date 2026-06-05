@@ -4,7 +4,7 @@
 
 **Goal:** Dedup the two chat-history wrappers (`ScoutChatWithHistory` ~473 LOC + `ProfilerChatWithHistory` ~336 LOC) onto a single shared **history shell** in `src/shared/chat/` that takes a `renderChat` render prop; rename the substrate `SignalsContextChat` → `ContextChat`; relocate 5 scout/chat-adjacent residue files out of the legacy `src/components/market-research/` into `features/market-research/` (resolving TD-FE-51); create `features/scout/` for the ScoutDeployment surface; and close the Phase 6 Profiler-ICP open item by confirm-and-document (no code). Behavior, routes, storage keys, persona prompts, and visuals are frozen (Spec 30 §11).
 
-**Architecture:** One branch (`worktree-phase-9-scout-profiler`, already created off `master` `9b2438d`), one plan, a staged commit-series with green checkpoints (Spec 30 §13): **S1** shared/chat rename + history-shell, **S2** collapse both wrappers onto the shell, **S3** relocate the 5 residue files, **S4** create `features/scout/` + route rewire, **finalize** (§8 doc, READMEs, TECH_DEBT, master-plan delta, serial preflight, merge). S2 depends on S1; S3/S4 are independent of S1–S2 and of each other. The whole phase merges **once**, `--no-ff`, only after a green serial `npm run preflight`.
+**Architecture:** One branch (`worktree-phase-9-scout-profiler`, already created off `master` `9b2438d`), one plan, a staged commit-series with green checkpoints (Spec 30 §13): **S1** shared/chat rename + history-shell, **S2** collapse both wrappers onto the shell, **S3** relocate the 5 residue files, **S4** create `features/scout/` + route rewire, **finalize** (§8 doc, READMEs, TECH_DEBT, master-plan delta, serial preflight, merge). S2 depends on S1; S3/S4 are independent of S1–S2 and of each other — they may be dispatched to **parallel subagents** (each commits only its own named paths: S3 = market-research components, S4 = `features/scout` + `App.tsx`/`routes.tsx` — no file overlap; the surgical-commit rule keeps them isolated). The whole phase merges **once**, `--no-ff`, only after a green serial `npm run preflight`.
 
 **Tech Stack:** React 18 + Vite + TypeScript, MSW (`src/test/msw/`), Vitest + React Testing Library (RTL), Playwright e2e/VR (signals journey `03`, market-research journey `04`, customers journey `06`). The shell lives in `src/shared/chat/` because `shared ↛ features` (Spec 30 §4) — it is persona-agnostic; everything persona-specific is supplied by the caller.
 
@@ -13,23 +13,24 @@
 ## Conventions & execution rules (read first — these override habits)
 
 - **Branch & merge.** Work on `worktree-phase-9-scout-profiler` (already created off `master` `9b2438d`, with the spec + reviews committed). The whole phase merges **once**, `--no-ff`, after the finalize serial preflight is green. Do **not** merge per-stage. The branch is local/unshared, so a failed stage may be discarded with `git reset --hard <last-green-checkpoint-commit>` (Spec 30 §13).
-- **Worktree git.** This executes in the `.claude/worktrees/phase-9-scout-profiler/` worktree. Run every git op as `git -C /projects/Brewra/brewra-gtm-intelligence/.claude/worktrees/phase-9-scout-profiler …` — a bare `cd <repo-root>` lands in the **main checkout (`master`)**, not the worktree (`feedback_worktree_cwd_gotcha`). All `npm`/`vite`/`eslint` commands run from the worktree's `frontend/` subdir.
+- **Worktree git.** This executes in the `.claude/worktrees/phase-9-scout-profiler/` worktree. Run every git op as `git -C "$WT" …` where `WT=/projects/Brewra/brewra-gtm-intelligence/.claude/worktrees/phase-9-scout-profiler` — a bare `cd <repo-root>` lands in the **main checkout (`master`)**, not the worktree (`feedback_worktree_cwd_gotcha`). **Define `WT` in the first git step of each task** (subagents start fresh; the variable does not persist across task boundaries). All `npm`/`vite`/`eslint` commands run from the worktree's `frontend/` subdir. **Exception: the merge (Task 14 Step 4) runs against the MAIN checkout, not the worktree** — `master` is checked out in the main checkout, so `git -C "$WT" checkout master` fails (`'master' is already checked out`).
 - **Surgical commits in a shared tree.** Three worktrees (Phase 9/10/12) share the working tree. **Never `git add -A`.** Stage only the explicit paths each task names. One logical step = one commit (`feedback_surgical_commit_shared_tree`).
 - **Commit messages.** `type(scope):` form (`feat(fe):`, `refactor(fe):`, `chore(fe):`, `test(fe):`, `docs(fe):` / `docs:`). No `[N/M]` suffixes. **No `Co-Authored-By` footer** (`feedback_no_co_authored_by`). Body only when the *why* isn't obvious.
 - **Inner loop (per task).** From `frontend/`: `npm run verify` (= `typecheck && lint && test`). Plus, because `verify` omits `format:check`, run `npx prettier --check <touched files>` (`feedback_verify_omits_format_check`) — **except** never prettier `docs/TECH_DEBT.md` (outside the FE prettier gate; prettier corrupts its unfenced markdown — append entries by hand — `feedback_no_prettier_on_tech_debt`).
 - **Do NOT run `npm run knip` before finalize.** S1 creates the `ChatWithHistory` shell + its barrel export before S2 consumes it (the shell is briefly an unused export). `knip --strict` would flag the transient unused export; the window closes in S2. `verify` does not run knip, so per-task gates stay green. `knip` runs only inside the finalize serial `preflight`.
-- **Grep-driven repoints.** When a task repoints an import path, after editing the named files run `grep -rn "<old path>" frontend/src/` to confirm zero stragglers, then `npm run typecheck`. The enumerated importer lists below are the verified known set (extracted file-by-file); the grep is the backstop for anything not enumerated.
+- **Grep-driven repoints.** When a task repoints an import path, after editing the named files run `grep -rn "<old path>" frontend/src/` to confirm zero stragglers, then `npm run typecheck`. The enumerated importer lists below are the verified known set (extracted file-by-file); the grep is the backstop for anything not enumerated. If the grep finds an importer **not** in the list (e.g. a concurrent worktree added one since authoring), edit **and** stage it — **re-derive each task's final `git add` set from the actually-edited files (`git -C "$WT" status`), not by copying the plan's enumerated staging list verbatim.**
 - **Shared test infra.** MSW handlers for `/api/signal_Ask` + `/api/signal_action` already exist (Phase 8, `handlers.ts:230-231`). Expect **no new handlers**. If a test needs a different shape, scope it with `server.use()` inside that test — do **not** change the shared default (a shared-default change can VR-regress a sibling feature's journey — `feedback_subphase_verification_shared_test_infra`).
 - **Vitest flake.** If the full suite flakes on async `waitFor` tests under CPU contention, rerun `npm run test -- --no-file-parallelism` (100% green; not a defect — `project_vitest_parallel_contention_flake`). Do not weaken assertions.
 - **Stage gates** (run from `frontend/`, after killing any orphan preview server by **specific PID** — never broad `pkill` in the shared sandbox, `feedback_no_broad_pkill_shared_sandbox`; find it with `lsof -ti :5173` and kill that PID if and only if it's a stale `vite preview`, `feedback_fe_e2e_orphan_preview_server`):
   - **S1 (rename + shell):** `npm run test:e2e -- e2e/journeys/06-customers-page-load.spec.ts e2e/journeys/04-market-research-5-components.spec.ts e2e/journeys/03-signals-feed-action.spec.ts` (the substrate underpins customers' chat tab + market-research's Trends tab; signals shares the `signal_*` endpoints + the substrate type).
-  - **S2 (collapse wrappers):** profiler → `06`; scout → `04`. Both wrappers render through the new shell.
+  - **S2 (collapse wrappers):** profiler → `06`; scout → `04` + `03`. Both wrappers render through the new shell; `03` (signals) is cheap belt-and-suspenders — the signals page renders `ContextChat` directly (not through either wrapper), so the collapse cannot regress it, but the substrate is shared, so run it anyway.
   - **S3 (relocate residue):** `04` (the 5 files are consumed by live market-research surfaces: Trends, Intelligence, MarketIntelligenceSections, MarketResearchPage).
   - **S4 (features/scout):** no scout-deployment Playwright journey exists — rely on the S4 Vitest render test + the finalize manual smoke of `/scout-deployment`.
   - VR threshold is 2% (`maxDiffPixelRatio: 0.02`); minor bounding-box shifts from added wrappers are acceptable if visually identical.
 - **Final merge gate.** Serial `npm run preflight` (`typecheck && lint && format:check && test && build && bundle:check && test:e2e && knip`). **Serial** runner, never `preflight:par` (VR flakes under concurrent load; three worktrees share the box — `project_fe_test_infra_state`, TD-FE-29).
 - **Parity is the contract.** No behavior or pixel change. If a step would change a rendered loading/error/empty state, a URL, a storage key (`scout_chat_sessions_<uid>`, `profiler_chat_sessions_<uid>`, `signalsChatContext`, `LEAD_STREAM_CHAT_CONTEXT_KEY`), a session id prefix (`scout_`/`profiler_`), or the substrate persona styling — stop. That's a parity break, not a refactor.
-- **Abort / escalation.** Per-step parity + per-stage `git reset --hard <last-green-checkpoint>` are the recovery primitives. Above them: the **shell build (Task 2)** and the **scout-wrapper collapse (Task 5)** are the parity-critical seams. If either fails its gate **three** times with no clear fix, stop forcing the shell+`renderChat` boundary and escalate to the human controller. Fallback (Spec 30 §17, in order): (1) refactor the divergent piece into an optional shell hook (the contract already provides `hydrateExtraSessions`/`serializeSession`/`onNewChat`/`getSessionDisplayTitle`); (2) if the boundary still leaks, fall back to **Approach-2** — a `ChatWithHistoryBase` + named per-feature wrappers, suspend and revisit Spec 30. The branch is local/unshared, so suspension costs only discarded work.
+- **Abort / escalation.** Per-step parity + per-stage `git reset --hard <last-green-checkpoint>` are the recovery primitives. Above them: the **shell build (Task 2)** and the **scout-wrapper collapse (Task 5)** are the parity-critical seams. If either fails its gate **three** times with no clear fix, stop forcing the shell+`renderChat` boundary and escalate to the human controller. Fallback (Spec 30 §17, in order): (1) refactor the divergent piece into an optional shell hook (the contract already provides `hydrateExtraSessions`/`serializeSession`/`onNewChat`/`getSessionDisplayTitle`); (2) if the boundary still leaks, fall back to **Approach-2** — keep the shared file as a `ChatWithHistoryBase` but give each persona its **own named wrapper that owns the divergent render/effects directly** (no render-prop boundary), accepting the duplication the dedup was meant to remove; suspend and revisit Spec 30 before landing a partial cut.
+- **Global abort (whole-plan kill criterion).** The phase is suspended (branch left in place for a later revisit, no merge) when a stage gate **or** the finalize preflight fails on a *genuine parity break* — a rendered behavior/visual change, or a changed storage key / route / session-id prefix — that cannot be fixed without changing behavior. This is distinct from (a) a mechanical cross-worktree conflict in `App.tsx`/`routes.tsx`/`TECH_DEBT.md` (union-resolve, see §S4/Task 14) and (b) a known vitest flake (rerun `--no-file-parallelism`), neither of which is an abort trigger. The same rule covers a failed **manual smoke (Task 14 Step 2)**: fix-on-branch and re-run smoke + preflight; if the failure is an unfixable parity break, suspend and escalate. The branch is local/unshared, so suspension costs only discarded work — **never land a partial or behavior-changing cut to clear a gate.**
 
 ---
 
@@ -87,8 +88,10 @@ UNCHANGED: src/shared/profiler/* (merge util already here);
 This block is the **reference contract** for Tasks 2/4/5. It finalizes the signatures Spec 30 §4 left to the plan. Where it refines §4, the refinement is faithful to the **actual current behavior** (verified file-by-file) — a behavior-preserving refactor must match the code, not the §4 prose:
 
 1. **`emptyContext` is NOT a shell config field.** Verified: new sessions are created with `context: null` in **both** personas; Profiler applies `EMPTY_PROFILER_CONTEXT` at *render time* (`context={session.context ?? EMPTY_PROFILER_CONTEXT}`), not at session creation. So the fallback lives in **Profiler's `renderChat`**, and the shell stays free of it. (Spec 30 §4's "shell consults emptyContext on new-session creation" note described a mechanism the code doesn't use.)
-2. **`renderExtras` takes no args** (`() => ReactNode`) — Scout's only root-level overlay is `AddLeadModal`, driven by wrapper-internal state, not session state. Scout's `SuggestedCompaniesSection` + "Back to Lead Stream" button live *inside* the null-context branch, so they ride along in Scout's `renderChat`, not `renderExtras`.
+2. **`renderExtras` takes no args** (`() => ReactNode`) — Scout's only root-level overlay is `AddLeadModal`, driven by wrapper-internal state, not session state. Scout's `SuggestedCompaniesSection` + "Back to Lead Stream" button live *inside* the null-context branch, so they ride along in Scout's `renderChat`, not `renderExtras`. *Tradeoff:* this narrows the extension point §4 left open (`(state) => ReactNode`) — a future session-aware root overlay would need a one-line signature widening at that time. No current overlay reads session data, so YAGNI applies.
 3. **Added beyond §4** (each maps to a real, verified divergence; all default to a no-op/identity so Profiler stays trivial): `gateIncomingByAgent`, `outerMaxWidthNone`, `emptyState`, `getSessionDisplayTitle`, `hydrateExtraSessions`, `serializeSession`, `onNewChat`.
+4. **Renamed §4 fields** (same intent, clearer names, verified runtime): `config.storageKey` → `config.storageKeyPrefix` (the shell appends `_${uid}`, reproducing today's `${prefix}_${uid}` key exactly); `config.sidebarClassName` → `config.sidebarOpenClassName` (it sets only the *open-state* width — collapsed is always `w-0 overflow-hidden`).
+5. **Replaced / dropped §4 fields.** Spec's `buildInitialSession` is replaced by three composable hooks — `hydrateExtraSessions` (Scout's lead-stream load injection) + `serializeSession` (Scout's persist strip) + `onNewChat` (Scout's new-chat side-effects) — because they are distinct concerns, not one. Spec's `onTabChange?` is **dropped from the shared props**: the shell never used it; only Scout's `renderChat` closure references it, so it stays a Scout-only wrapper prop, and Profiler's vestigial (declared-but-unused) `onTabChange` is deleted.
 
 ```ts
 import type { ReactNode } from "react";
@@ -152,6 +155,8 @@ export interface ChatWithHistoryProps<TMeta = unknown> {
   renderExtras?: () => ReactNode;
 }
 ```
+
+**Render-prop semantics (parity-critical).** `renderChat`/`renderExtras` MUST be **inline arrows** in the wrappers, recreated on every wrapper render — **never `useCallback`-memoized** — and the `ChatWithHistory` shell is **not** `React.memo`-wrapped. So when a wrapper's persona state changes (e.g. Scout's `suggestionPrefill`, `addLeadModalOpen`), the wrapper re-renders, passes fresh `renderChat`/`renderExtras` identities to the shell, the shell re-renders, and the surface is re-invoked with an up-to-date closure. Memoizing them (or memoizing the shell) would reintroduce a stale-closure bug where, e.g., a suggested-question prefill never reaches `ScoutChatPanel`.
 
 **Shell ownership (what `ChatWithHistory.tsx` implements):** `sessions`/`activeSessionId`/`sidebarOpen` state; the localStorage **load** effect (parse → title-migrate → prepend `hydrateExtraSessions()` → set active to combined[0] when none set) and **persist** effect (remove-if-empty else `JSON.stringify(sessions.map(serializeSession))`); `getSessionTitle`; `generateId` (`${sessionIdPrefix}${Date.now()}_${Math.random().toString(36).slice(2, 9)}`); the incoming-context ingest effect (gated by `gateIncomingByAgent`); `handleNewChat` (+ `onNewChat?.()`), `handleSelectSession`, `handleCloseChat`, `handleDeleteSession`, `handleMessagesChange`; the **entire sidebar JSX** (header + "New chat" button + session-list rows + collapsed-toggle button) parameterized by `sidebarOpenClassName` + `getSessionDisplayTitle`; the main-area wrapper; the **empty-state** (parameterized by `config.emptyState`); and the `renderExtras()` root slot.
 
@@ -226,8 +231,10 @@ Remaining hits should be **doc comments only** — update each for accuracy (non
 ```
 npm run verify
 npx prettier --check src/shared/chat/ContextChat.tsx src/shared/chat/index.ts "src/shared/chat/__tests__/ContextChat.test.tsx" src/features/customers/components/chat/ProfilerChatWithHistory.tsx "src/features/customers/components/chat/__tests__/ProfilerChatWithHistory.test.tsx" src/features/market-research/components/scout-chat/ScoutChatWithHistory.tsx "src/features/market-research/components/scout-chat/__tests__/ScoutChatWithHistory.test.tsx"
+# targeted mock-key check (verify won't catch a stale key — both real + mocked substrate render "New chat"):
+grep -A2 'vi.mock("@/shared/chat"' "src/features/customers/components/chat/__tests__/ProfilerChatWithHistory.test.tsx" "src/features/market-research/components/scout-chat/__tests__/ScoutChatWithHistory.test.tsx"
 ```
-Expected: PASS. Typecheck confirms the barrel + every repoint resolves; the two wrapper smoke tests still mount (mocks intercept).
+Expected: PASS. Typecheck confirms the barrel + every repoint resolves; the two wrapper smoke tests still mount. **The grep's two mock blocks must each read `ContextChat:` as the object key — a leftover `SignalsContextChat:` key silently disables the mock and the test would mount the real substrate (which hits `useSignalAsk` → MSW).**
 
 - [ ] **Step 9: Stage gate (substrate consumers).**
 
@@ -391,15 +398,18 @@ Expected: PASS. (Do **not** run knip — the shell is an unused export until S2.
 - [ ] **Step 9: Commit.**
 
 ```bash
+WT=/projects/Brewra/brewra-gtm-intelligence/.claude/worktrees/phase-9-scout-profiler
 git -C "$WT" add frontend/src/shared/chat/ChatWithHistory.tsx frontend/src/shared/chat/index.ts
 git -C "$WT" commit -m "feat(fe): add ChatWithHistory shared history shell"
 ```
+
+> **Optional finer-grained split (recommended for bisectability):** land two commits instead — (1) the structural shell (state + `generateId` + the four handlers + sidebar/main-area/empty-state JSX, with the three effects stubbed), gated on `npm run typecheck`; (2) the LOAD/PERSIST/INGEST effects, gated on `npm run verify`. The shell is **unused until S2**, so neither a whole-component commit nor the split carries any parity exposure — this is purely commit granularity, not safety.
 
 ## Task 3: Shell unit test
 
 **Files:** Create `frontend/src/shared/chat/__tests__/ChatWithHistory.test.tsx`
 
-Context: test the shell's **own** behavior (the persona-agnostic core), independent of either wrapper. Mock `@/shared/auth` for `currentUser.uid` (mirror `ContextChat.test.tsx` / the wrapper tests). Use a trivial `renderChat` test double; assert the shell's contract.
+Context: test the shell's **own** behavior (the persona-agnostic core), independent of either wrapper. Mock `@/shared/auth` for `currentUser.uid` (mirror `ContextChat.test.tsx` / the wrapper tests). Use a trivial `renderChat` test double; assert the shell's contract. This is a **focused smoke** of the core (3 scenarios — empty state, create+persist, hydrate+select), **not** exhaustive: sidebar toggle, delete, the INGEST effect, `serializeSession` strip, `gateIncomingByAgent`, and `getSessionDisplayTitle` are exercised end-to-end through the existing wrapper tests + the finalize e2e, which are the real behavior guards for this behavior-preserving refactor. Add more shell-level cases only if a real gap surfaces.
 
 - [ ] **Step 1: Write the test.**
 
@@ -655,9 +665,9 @@ Expected: PASS. The existing `ScoutChatWithHistory.test.tsx` (asserts ≥1 "New 
 
 ```
 lsof -ti :5173 | xargs -r -I{} sh -c 'ps -p {} -o args= | grep -q "vite preview" && kill {}'
-npm run test:e2e -- e2e/journeys/04-market-research-5-components.spec.ts
+npm run test:e2e -- e2e/journeys/04-market-research-5-components.spec.ts e2e/journeys/03-signals-feed-action.spec.ts
 ```
-Expected: PASS, VR within 2%. If a lead-stream-entry regression appears tied to active-session selection, apply the `config.resetActiveOnLoad` fallback from Task 2 Step 2 (add the flag to the shell + set it in `SCOUT_CHAT_CONFIG`), re-run. Three failures with no clear fix → escalate (see Abort/escalation).
+Expected: PASS, VR within 2% (`03` is cheap insurance per the S2 gate convention — the signals page uses the substrate directly). If a lead-stream-entry regression appears tied to active-session selection, apply the `config.resetActiveOnLoad` fallback from Task 2 Step 2 (add the flag to the shell + set it in `SCOUT_CHAT_CONFIG`), re-run. Three failures with no clear fix → escalate (see Abort/escalation).
 
 - [ ] **Step 7: Commit.**
 
@@ -739,7 +749,7 @@ git -C "$WT" commit -m "refactor(fe): relocate ScoutChatPanel + types into featu
 - Move: `src/components/market-research/ChatWithScout.tsx` → `src/features/market-research/components/ChatWithScout.tsx`
 - Modify: `src/features/market-research/components/trends/TrendsTab.tsx`
 
-Context: `ChatWithScout`'s own imports are all `@/…` absolute (`@/lib/api` `BACKEND_BASE_URL`, ui) — nothing breaks on move. **Sole component consumer is `TrendsTab.tsx:6`** (verified — `MarketResearchPage.tsx`'s `ChatWithScout` references are an unrelated local handler/prop, not this import). `components/` root is the destination (neutral for a file with one Trends consumer; Spec 30 §9/§17).
+Context: `ChatWithScout`'s own imports are all `@/…` absolute (`@/lib/api` `BACKEND_BASE_URL`, ui) — nothing breaks on move. **Sole component consumer is `TrendsTab.tsx:6`** (verified — `MarketResearchPage.tsx`'s `ChatWithScout` references are an unrelated local handler/prop, not this import). This **corrects Spec 30 §9's two-consumer premise** ("TrendsTab + MarketResearchPage") to one. `components/` root is still the destination: `ChatWithScout` is a general scout-chat entry surface, not trends-specific, so the neutral root is preferred over co-locating in `trends/` with its lone current consumer (and Spec 30 §17 grants the plan this destination authority). The 1-vs-2 correction is recorded here in the plan (current truth), not as a spec erratum — the spec is a frozen intent record.
 
 - [ ] **Step 1: `git mv`.**
 
@@ -870,7 +880,7 @@ Spec 30 §7. Move ScoutDeployment page + component into a new feature folder, ad
 - Modify: `src/app/routes.tsx`
 - Modify: `src/App.tsx`
 
-Context: the page already exports `ScoutDeploymentPage` (default) — only the **filename** changes (`ScoutDeployment.tsx` → `ScoutDeploymentPage.tsx`), no symbol rename. The page imports the settings component (`@/components/settings/ScoutDeployment`) — after both move, that becomes a same-feature import. The settings component has **no other importer** than the page. The route currently lives in `App.tsx` (import line 11 + `<Route path="/scout-deployment">` block lines 87-96) wrapped only in `<ProtectedRoute requireTenant>` (no `FeatureErrorBoundary` — the page applies `Layout` internally). We migrate it to `scoutRoutes` and **add `FeatureErrorBoundary`** to match the converged feature pattern (signals/customers both wrap); this is additive and does not change happy-path behavior or the `/scout-deployment` path/guard.
+Context: the page already exports `ScoutDeploymentPage` (default) — only the **filename** changes (`ScoutDeployment.tsx` → `ScoutDeploymentPage.tsx`), no symbol rename. The page imports the settings component (`@/components/settings/ScoutDeployment`) — after both move, that becomes a same-feature import. The settings component has **no other importer** than the page. The route currently lives in `App.tsx` (import line 11 + `<Route path="/scout-deployment">` block lines 87-96) wrapped only in `<ProtectedRoute requireTenant>` (no `FeatureErrorBoundary` — the page applies `Layout` internally). We migrate it to `scoutRoutes` and **add `FeatureErrorBoundary`** to match the converged feature pattern (signals/customers both wrap). This is additive and does not change happy-path behavior or the `/scout-deployment` path/guard **by construction**: `FeatureErrorBoundary` renders its `children` unchanged and only swaps to a fallback when a descendant *throws* — the same transparent wrapper every migrated feature route already uses. The only behavioral addition in an otherwise pure-refactor plan is therefore provably output-neutral on the happy path; the finalize manual smoke (Task 14 Step 2) confirms the integrated render, and no automated route-level test is added for a wrapper already proven transparent across signals/customers.
 
 - [ ] **Step 1: `git mv` both files.**
 
@@ -1088,13 +1098,14 @@ lsof -ti :5173 | xargs -r -I{} sh -c 'ps -p {} -o args= | grep -q "vite preview"
 npm run preflight
 ```
 Expected: all green (typecheck, lint, format:check, test, build, bundle:check advisory, test:e2e incl. all VR journeys, knip --strict). The `ChatWithHistory` shell is now consumed by both wrappers, so knip passes. Red = report the failing check, do not merge, fix-on-branch-and-re-run (smoke + preflight) or abort (Spec 14 §5.3). No fix-forward.
-- [ ] **Step 4: Human-approved merge** (controller; coordinate with the in-flight Phase 10/12 worktrees — `App.tsx`/`app/routes.tsx`/`TECH_DEBT.md` conflicts are mechanical union resolutions per Spec 30 §14; reconcile TD-FE numbers if Phase 10 merged 54-56 first).
+- [ ] **Step 4: Human-approved merge** (controller; coordinate with the in-flight Phase 10/12 worktrees — `App.tsx`/`app/routes.tsx`/`TECH_DEBT.md` conflicts are mechanical union resolutions per Spec 30 §14; reconcile TD-FE numbers if Phase 10 merged 54-56 first). **Run the merge against the MAIN checkout, NOT the worktree** — `master` is checked out in the main checkout, so `git -C "$WT" checkout master` fails (`fatal: 'master' is already checked out at '/projects/Brewra/brewra-gtm-intelligence'`). The main checkout is already on `master`, so no checkout is needed; target it with `-C`:
 
 ```bash
-git -C "$WT" checkout master
-git -C "$WT" merge --no-ff worktree-phase-9-scout-profiler -m "Merge phase-9-scout-profiler: scout+profiler chat dedup + features/scout (Spec/plan 30)"
-git -C "$WT" push origin master
+MAIN=/projects/Brewra/brewra-gtm-intelligence
+git -C "$MAIN" merge --no-ff worktree-phase-9-scout-profiler -m "Merge phase-9-scout-profiler: scout+profiler chat dedup + features/scout (Spec/plan 30)"
+git -C "$MAIN" push origin master
 ```
+(If the main checkout is somehow not on `master`, `git -C "$MAIN" checkout master` first — that succeeds in the main checkout; only the worktree is blocked from checking out `master`.)
 
 ---
 
