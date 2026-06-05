@@ -17,6 +17,19 @@ import {
 import React, { useState, useEffect, useLayoutEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
+import {
+  readLeadStreamHeatmapFromSession,
+  writeLeadStreamHeatmapToSession,
+} from "../../lib/leadStreamHeatmapSession";
+import {
+  getDescriptionTextForColumn,
+  type MarketScoreDescriptionsResponse,
+} from "../../lib/marketScoreDescriptions";
+import {
+  extractMarketScoreRowsFromResponse,
+  heatmapLeadFromUnknownRow,
+} from "../../lib/marketScoresHeatmap";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -37,18 +50,6 @@ import {
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  readLeadStreamHeatmapFromSession,
-  writeLeadStreamHeatmapToSession,
-} from "@/lib/leadStreamHeatmapSession";
-import {
-  getDescriptionTextForColumn,
-  type MarketScoreDescriptionsResponse,
-} from "@/lib/marketScoreDescriptions";
-import {
-  extractMarketScoreRowsFromResponse,
-  heatmapLeadFromUnknownRow,
-} from "@/lib/marketScoresHeatmap";
 import { buildApiUrl } from "@/shared/api/transport";
 import { useAuthToken } from "@/shared/auth";
 import jwtManager from "@/shared/auth/jwt";

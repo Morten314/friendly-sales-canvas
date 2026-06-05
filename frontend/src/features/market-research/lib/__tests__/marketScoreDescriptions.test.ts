@@ -9,7 +9,7 @@ import {
   REPORT_KEY_TO_DESCRIPTION_LABEL,
   getDescriptionTextForColumn,
   type MarketScoreDescriptionsResponse,
-} from '@/lib/marketScoreDescriptions';
+} from '../marketScoreDescriptions';
 
 describe('REPORT_KEY_TO_DESCRIPTION_LABEL', () => {
   it('contains the 5 expected report column keys', () => {

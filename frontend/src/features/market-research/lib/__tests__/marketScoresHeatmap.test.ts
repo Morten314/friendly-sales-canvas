@@ -10,7 +10,7 @@ import {
   mapMarketScoresRowToHeatmapLead,
   scorePercentToRating,
   type MarketScoresApiRow,
-} from "@/lib/marketScoresHeatmap";
+} from "../marketScoresHeatmap";
 
 describe("scorePercentToRating", () => {
   it('returns "High" at >= 75', () => {

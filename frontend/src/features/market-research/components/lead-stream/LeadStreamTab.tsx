@@ -4,7 +4,8 @@
 // cross-tab/nav/Strategist coordination is injected by the feature shell as callback props.
 import { useState } from "react";
 
-import ScoutLeadStream from "@/components/market-research/ScoutLeadStream";
+import ScoutLeadStream from "../ScoutLeadStream";
+
 import type { UntypedLead } from "@/shared/types/escape-hatches";
 
 interface LeadStreamTabProps {

@@ -12,6 +12,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 import IntelligenceTab from "../components/intelligence/IntelligenceTab";
+import LeadStreamTab from "../components/lead-stream/LeadStreamTab";
 import { MarketDetailDrawer } from "../components/MarketDetailDrawer";
 import { ScoutSettingsForm } from "../components/ScoutSettingsForm";
 import TrendsTab from "../components/trends/TrendsTab";
@@ -22,7 +23,6 @@ import {
 } from "../lib/leadStreamChatContext";
 import type { ScoutResearchContext } from "../types";
 
-import LeadStreamTab from "@/components/market-research/lead-stream/LeadStreamTab";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
