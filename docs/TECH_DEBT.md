@@ -1478,6 +1478,8 @@ Phase 8 (import path update) / Phase 9 (deduplication).
 
 **Owner:** TBD.
 
+**Resolved (substrate-relocation part only):** 2026-06-05 (Phase 8). The `SignalsContextChat` substrate was relocated from the legacy `@/components/signals/` path to `src/shared/chat/`, and all importers — including `ProfilerChatWithHistory` (in `src/features/customers/`) — were repointed off the legacy path onto the relocated substrate. The stale-import-path break risk this entry tracked is closed. The `ProfilerChatWithHistory` ↔ `ScoutChatWithHistory` ~90% duplication (the "Phase 9 dedups" half of this entry) remains a separate, still-open concern owned by Phase 9 — see Phase 9's chat-surface dedup scope. Original entry preserved below.
+
 ---
 
 ## TD-FE-46 — Phase 7 stage-4 behavioral test covers only accept + reject happy paths; optimistic edge-case matrix and fake-timer deadlock unresolved
@@ -1500,9 +1502,226 @@ The undo grace-period, the 404-as-success branch, and the delete-current path ar
 **Pull-forward trigger:**
 A behavioral-coverage hardening pass / when the fake-timer + MSW interplay is solved.
 
+---
+
+## TD-FE-54 — `lib/jwt.ts` + `hooks/useAuth.ts` still live in legacy `src/lib/`/`src/hooks/` rather than `shared/auth/`
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 10 (Task 6). `lib/jwt.ts` and `hooks/useAuth.ts` were left in their legacy locations; Phase 10 promoted `firebase.ts` into `shared/auth/` but did not move these two files because mission-control and market-research features consume them and those features are not yet modularised.
+
+**Current state:**
+`src/lib/jwt.ts` and `src/hooks/useAuth.ts` are imported by several features that have not yet been extracted (mission-control, market-research). Moving them to `shared/auth/` before those call sites are updated would require touching a large surface outside Phase 10's scope.
+
+**What it should be:**
+Both files should live in `src/shared/auth/` alongside `firebase.ts`, with a barrel `src/shared/auth/index.ts` exporting all three. All call sites (mission-control, market-research, and any remaining legacy imports) should be updated to import from `@/shared/auth`. At the same time, reconcile the split import surface flagged in impl-review-1: `firebase.ts`'s `auth` export is currently reachable only via the deep path `@/shared/auth/firebase` (the barrel exports only `AuthProvider`/`useAuth`, intentionally per Spec 28 §5), so a consumer needing `auth.currentUser` must discover the deep path. When consolidating, decide whether to surface `auth` through the barrel or document the deep path in a `shared/auth/` README.
+
+**Why we deferred:**
+Phase 10 scope was settings + tenant + auth-file relocation only; rewiring all consumers of `jwt.ts`/`useAuth.ts` would pull in mission-control and market-research extraction work that belongs to Phase 11.
+
+**What we lose by staying as-is:**
+Auth-related utilities are split across two directories (`src/lib/`, `src/hooks/`, and `src/shared/auth/`), making the auth boundary harder to reason about and increasing the risk of duplicate or diverging auth logic.
+
+**Pull-forward trigger:**
+Phase 11 auth-infra consolidation.
+
 **Owner:** TBD.
 
-## TD-FE-47 — Phase 12 features still import legacy `@/hooks/usePageTitle`
+---
+
+## TD-FE-55 — `features/tenant/hooks/useTenants.ts` serves a hardcoded `MOCK_TENANTS` list; no real "list tenants" backend endpoint exists
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 10 (Task 4). `TenantSelection` was extracted to `features/tenant/` with its `useTenants` hook intact; the hook returns a `MOCK_TENANTS` constant because the backend model is one-org-per-user (`GET /org`) with no multi-tenant listing endpoint.
+
+**Current state:**
+`src/features/tenant/hooks/useTenants.ts` exports a hook that returns a hardcoded `MOCK_TENANTS` array. There is no backend endpoint that lists tenants for a user. The product question of whether a tenant-selection page should exist at all (given the one-org-per-user model) is unresolved.
+
+**What it should be:**
+Either (a) a real `GET /tenants` (or equivalent) backend endpoint is added and `useTenants` is wired to it, or (b) the `/tenant-selection` route and the `TenantSelection` feature are removed if the product decision is that the app is single-org-per-user. Until that decision is made, the mock data should be clearly labelled as provisional.
+
+**Why we deferred:**
+Open product question; implementing or removing the feature requires a product decision on multi-org support that has not been made.
+
+**What we lose by staying as-is:**
+The tenant-selection UI shows mock data to real users if the route is ever reached, which would be confusing. The route already exists in `App.tsx` and is reachable post-login.
+
+**Pull-forward trigger:**
+Product decision on multi-org support, or a real list-tenants backend endpoint being added.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-56 — `features/settings/components/AgentProfile.tsx` and `components/settings/ScoutDeployment.tsx` are near-duplicate forms
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 10 (Task 5). `AgentProfile.tsx` was relocated into `features/settings/components/` during Phase 10; `ScoutDeployment.tsx` remains in the legacy `src/components/settings/` location. Both render agent/deployment configuration forms with substantial structural overlap but no shared base component.
+
+**Current state:**
+`src/features/settings/components/AgentProfile.tsx` and `src/components/settings/ScoutDeployment.tsx` are near-duplicate form components. They share field layout, save/cancel patterns, and profile-data binding logic but are maintained as independent files with no shared abstraction.
+
+**What it should be:**
+After Phase 9 extracts the scout feature, the two components should be evaluated for unification into a single parameterised form component (or a shared form primitive), eliminating the duplication. The legacy `src/components/settings/ScoutDeployment.tsx` should be relocated into the scout feature at the same time.
+
+**Why we deferred:**
+Deduplication requires Phase 9's scout extraction to be complete so the correct home for the unified component is clear. Merging them before Phase 9 would land the result in the wrong directory.
+
+**What we lose by staying as-is:**
+Fixes or UI changes to one form must be manually mirrored to the other. Divergence risk grows with every modification.
+
+**Pull-forward trigger:**
+Phase 9 scout feature extraction.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-47 — `StrategistWorkspace` relocated as-is; live but large, decomposition + `GET /chat/` deferred
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 8 (strategist relocation). `StrategistWorkspace` was moved verbatim into the strategist feature — only the stale handoff annotation was removed — rather than decomposed or rewritten, per the Phase 8 relocation-not-rewrite scope.
+
+**Current state:**
+`StrategistWorkspace` now lives at `features/strategist/components/StrategistWorkspace.tsx`, relocated verbatim (the only delta vs. the legacy file is removal of the stale HANDOFF annotation). It is a large live component that makes a raw direct-backend `GET ${BACKEND_BASE_URL}/chat/` fetch, bypassing the `/api` proxy and the `apiFetch` → `enhancedApi` → `authenticatedApi` client stack.
+
+**What it should be:**
+Decomposed into smaller components, with the `GET ${BACKEND_BASE_URL}/chat/` fetch moved into a dedicated service/hook routed through the standard client layer rather than a raw inline direct-backend call.
+
+**Why we deferred:**
+Phase 8's scope was relocation, not rewrite. The component works as-is; decomposing it or re-routing its fetch is out of the structure-only Phase 8 boundary.
+
+**Pull-forward trigger:**
+Phase 13 (monster-file decomposition, Spec 14 §6.2).
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-48 — `deals`/`Deals` naming: `Deals.tsx` is the Strategist page, not a Phase-12 small-page
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 8 (strategist relocation). The legacy `Deals.tsx` is in fact the Strategist page; Spec 14 §12 lists it as a Phase-12 small-page, which is stale.
+
+**Current state:**
+`Deals.tsx` is the Strategist page and was relocated to `features/strategist/pages/StrategistPage.tsx`. The `/deals` route is retained as a redirect to `/your-ai-team/strategist/workspace`. Spec 14 §12's small-pages-sweep source list still names `Deals.tsx` as Phase-12 territory — stale; it is Phase-8 strategist territory and has already moved.
+
+**What it should be:**
+Spec 14 §12 no longer lists `Deals.tsx` among the Phase-12 small pages (it has been claimed by Phase 8). This is a documentation-only correction; the code disposition is already done.
+
+**Why we deferred:**
+The §12 phase description is a frozen record of intent (CLAUDE.md spec-driven flow); rather than rewriting it, the divergence is annotated as a Phase 8 delta in Spec 14 and tracked here.
+
+**Pull-forward trigger:**
+Spec 14 §12 rescope (doc-only).
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-49 — Signals accepted/rejected `localStorage` is primary state, not cache
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 8 (signals relocation). The `signals_<uid>_accepted` / `signals_<uid>_rejected` `localStorage` keys hold the user's accept/reject decisions and are primary state, not a cache layer — so they stay on `localStorage` rather than migrating into the TanStack cache.
+
+**Current state:**
+Signal accept/reject decisions persist as `signals_<uid>_accepted` and `signals_<uid>_rejected` in `localStorage`. This is primary, user-owned state (NOT cache), so it is kept on `localStorage`. The read accessor was extracted as `useSignalAcceptance`, but the page's accept/reject write paths remain inline (see TD-FE-53).
+
+**What it should be:**
+As-is is correct for the current product scope — `localStorage` is the right home for device-local user decisions. Only a cross-device-sync requirement would change this.
+
+**Why we deferred:**
+There is no defect here; the entry exists to record that this `localStorage` usage is intentional primary state and must not be "fixed" into a cache during a data-layer pass.
+
+**Pull-forward trigger:**
+A "signal decisions sync across devices" product requirement.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-50 — `signalsChatContext` sessionStorage handoff is untyped
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 8 (signals relocation). The signals → scout/profiler chat handoff writes `sessionStorage.setItem("signalsChatContext", JSON.stringify(...))` with no shared type contract.
+
+**Current state:**
+The signals-to-chat handoff serialises an untyped payload via `sessionStorage.setItem("signalsChatContext", JSON.stringify(...))`; the consuming chat surface reads and parses it with no shared TypeScript type describing the shape.
+
+**What it should be:**
+A shared, typed contract for the `signalsChatContext` payload (a named interface/type imported by both the producer and consumer), so the handoff shape is statically checkable.
+
+**Why we deferred:**
+The untyped handoff works at MVP scale; introducing the shared contract is best done alongside the chat-surface work where both ends are touched.
+
+**Pull-forward trigger:**
+Phase 9 chat-surface dedup.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-51 — `components/market-research/` retains `ScoutChatPanel.tsx` + `types.ts` legacy residue
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 8 (scout-chat relocation). The scout-chat relocation moved `ScoutChatWithHistory` and its deps into `features/market-research`, but left `ScoutChatPanel.tsx` and `types.ts` behind in the legacy `components/market-research/` directory.
+
+**Current state:**
+`components/market-research/` still contains `ScoutChatPanel.tsx` and `types.ts`, consumed by the relocated scout-chat now living in `features/market-research`. The relocation crossed the feature boundary but did not fully drain the legacy directory.
+
+**What it should be:**
+`ScoutChatPanel.tsx` and `types.ts` fully migrated into the `features/market-research` feature, with the legacy `components/market-research/` directory emptied/removed.
+
+**Why we deferred:**
+Phase 8's authority was the signals/strategist + scout-chat relocation; fully draining the legacy market-research directory overlaps the shared-chat dedup work sequenced later.
+
+**Pull-forward trigger:**
+Phase 9 shared-chat dedup / Phase 13.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-52 — No strategist Playwright/VR journey; coverage is behavioral-only
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 8 (strategist relocation). Strategist shipped with Vitest render tests only; no Playwright journey or visual-regression baseline was added (Spec 27 §8 gap).
+
+**Current state:**
+Strategist coverage is behavioral-only (Vitest render tests). The workspace is visually rich — a two-panel dashboard plus chat plus a sequence timeline — and has no Playwright end-to-end journey and no pixel/VR baseline.
+
+**What it should be:**
+A strategist Playwright journey and a visual-regression baseline covering the two-panel workspace, chat, and sequence timeline, so visual regressions are caught.
+
+**Why we deferred:**
+Behavioral-only coverage is the accepted pre-launch advisory-gate default; pixel/VR baselines are added when a surface churns visually or during a dedicated pre-launch VR sweep.
+
+**Pull-forward trigger:**
+Strategist visual churn or a pre-launch VR sweep.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-53 — Signals page data flow NOT migrated to TanStack (Phase 8 was structure-only)
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 8 (signals relocation). Phase 8 relocated the signals page structurally but, with user approval, did not migrate its data flow to TanStack Query — the page's optimistic/undo/event-driven flow is the same declarative-migration blocker recorded in TD-FE-19.
+
+**Current state:**
+The signals page data flow stays imperative: `loadSignals` is an imperative loader; `signals` is editable `useState` with optimistic add/remove, a 5 s `pendingRejections` undo timer, and an event-driven (`signalsStateChanged`) refetch — all of which resist a declarative `useQuery` (the same blocker as TD-FE-19). The `useFetchSignals` / `useGenerateSignalsBatch` hooks plus `useSignalAcceptance` are pre-positioned but currently UNUSED (advisory knip flags them). Additionally, the `SignalAskResponse` / `FetchSignalsResponse` zod contracts are permissive (`z.object({}).passthrough()`), forcing `as Record<string, unknown>` / `as { signals?: ... }` casts at the consumption sites.
+
+**What it should be:**
+A behavior-preserving migration of the signals data flow onto TanStack Query (or a deliberate decision that the optimistic/undo/event-driven flow stays imperative), with the pre-positioned hooks actually wired in and the permissive zod contracts tightened (`answer?` / `response?` / `signals?`) so the consumption-site casts can be removed.
+
+**Why we deferred:**
+A behavior-preserving full migration is high-risk on the app's most complex page (optimistic add/remove + undo timer + event-driven refetch); structure-only relocation was chosen with explicit user approval.
+
+**Pull-forward trigger:**
+Backend stabilization (TD-FE-13) + a dedicated signals-data-layer migration.
+
+**Owner:** TBD.
+
+## TD-FE-57 — Phase 12 features still import legacy `@/hooks/usePageTitle`
 
 **Current state:**
 `features/calendar`, `features/reports`, and `features/artifacts` import `usePageTitle` from the legacy `@/hooks/usePageTitle` rather than a `@/shared/hooks` home.
@@ -1515,7 +1734,7 @@ Phase 11 (shared-hooks promotion).
 
 **Owner:** TBD.
 
-## TD-FE-48 — Artefacts cross-component coupling via untyped `window` CustomEvents
+## TD-FE-58 — Artefacts cross-component coupling via untyped `window` CustomEvents
 
 **Current state:**
 `features/artifacts/pages/ArtifactsPage.tsx` listens on `window` for `CustomEvent("artifactsSearch")` and `CustomEvent("addArtefact")` (dispatched by the header). The coupling is untyped, global, and hard to test; it should be a typed feature/shared mechanism. Same class of debt as TD-FE-44.
@@ -1528,7 +1747,7 @@ Artefacts gets real data, or a shared search/event bus lands.
 
 **Owner:** TBD.
 
-## TD-FE-49 — Small-page surfaces are mock/placeholder (no backend)
+## TD-FE-59 — Small-page surfaces are mock/placeholder (no backend)
 
 **Current state:**
 `features/{calendar,insights,reports,artifacts}` render hardcoded mock data with no API. They should be wired to real endpoints once those exist.
@@ -1541,4 +1760,4 @@ Each product's backend exists.
 
 **Owner:** TBD.
 
-_Phase 12 note: TD-FE-47–49 numbers are provisional — Phase 8 also claimed 47+ on a sibling branch; the integrator reconciles the actual integers at merge._
+_Phase 12 note: these entries were authored as provisional TD-FE-47–49 and renumbered to TD-FE-57–59 at the Phase 12 merge, since Phase 8 (47–53) and Phase 10 (54–56) had already landed those integers on master._

@@ -64,8 +64,8 @@ export type UntypedProfilerIcpRecord = any;
 
 // TODO(phase-13): replace with concrete UserProfile/AgentProfile/CompanyProfile interfaces
 // once the backend customer_profile contract is defined.
-// src/components/settings/UserProfile.tsx:24, src/components/settings/AgentProfile.tsx:19,
-// src/components/settings/CompanyProfile.tsx (companyProfileData prop).
+// src/features/settings/components/UserProfile.tsx:24, src/features/settings/components/AgentProfile.tsx:19,
+// src/features/settings/components/CompanyProfile.tsx (companyProfileData prop).
 // — Props receive untyped JSON from backend; tightening to `Record<string, unknown>`
 // cascades into ~10 TS2322 errors at `setX(profileData?.field)` consumer sites.
 export type UntypedBackendProfile = any;
@@ -109,7 +109,7 @@ export type UntypedVisualDataCardRaw = any;
 
 // TODO(phase-13): replace with a BackendSignal interface once the
 // /api/generate-signals-batch and /api/signals contracts are typed.
-// src/pages/Signals.tsx:271, :273, :576
+// src/features/signals/pages/SignalsPage.tsx:271, :273, :576
 // — Raw signal objects from backend mix snake/camel aliases (`signal_id` vs `id`,
 // `NBAs`, `nextBestMoves`, `contextualSuggestions`, `source` as array or string) and
 // are consumed across `buildSignalCardsFromFetchData` and inline console.log mappings.

@@ -21,10 +21,14 @@ Add a feature's name here **before** scaffolding it. Backend uses snake_case; th
 
 | Feature           | Phase                                                      |
 | ----------------- | ---------------------------------------------------------- |
+| `artifacts`       | 12                                                         |
 | `auth`            | 10 (UI) — primitive lives in `shared/auth` from Phase 4b   |
+| `calendar`        | 12                                                         |
 | `customers`       | 7                                                          |
+| `insights`        | 12                                                         |
 | `market-research` | 5                                                          |
 | `mission-control` | 6                                                          |
+| `reports`         | 12                                                         |
 | `scout`           | 9                                                          |
 | `settings`        | 10                                                         |
 | `shell`           | 4b                                                         |
@@ -32,7 +36,9 @@ Add a feature's name here **before** scaffolding it. Backend uses snake_case; th
 | `strategist`      | 8                                                          |
 | `tenant`          | 10 (UI) — primitive lives in `shared/tenant` from Phase 4b |
 
-`profiler` is **reserved** — Phase 9 decides the scout/profiler split (Spec 14 §8 Q10). Phase 12's small-page names (e.g. `calendar`, `deals`, `insights`, `reports`, `artifacts`) are appended **by Phase 12** when it runs. The scaffolder only _warns_ (does not block) on a name that is not yet on this map.
+`profiler` is **reserved** — Phase 9 decides the scout/profiler split (Spec 14 §8 Q10). Phase 12's small-page names (`calendar`, `insights`, `reports`, `artifacts`) were appended **by Phase 12** (rows above). The scaffolder only _warns_ (does not block) on a name that is not yet on this map.
+
+> **`deals` is NOT a feature.** `src/pages/Deals.tsx` _was_ the Strategist page; in Phase 8 it became `features/strategist/pages/StrategistPage.tsx`. The `/deals` URL is retained only as a redirect to `/your-ai-team/strategist/workspace`. Spec 14 §12's listing of `Deals.tsx` as a Phase-12 small-page is therefore stale — it's Phase-8 strategist territory (TD-FE-48).
 
 ## Dependency rules (enforced by `eslint.config.js`, Spec 14 §3.3)
 

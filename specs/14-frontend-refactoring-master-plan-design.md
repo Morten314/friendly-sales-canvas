@@ -493,6 +493,8 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 
 **Per-phase deliverables:** see Phase 5's deliverables block.
 
+> **Phase 8 deltas (recorded 2026-06-05, frozen-record convention — does not rewrite the intent above).** (a) The chat substrate was relocated to `src/shared/chat/` (not left in its legacy `@/components/signals/` location); importers were repointed onto the shared substrate (TD-FE-45 resolved for the relocation part). (b) **Scout-chat** (`ScoutChatWithHistory` + its deps) was relocated into `features/market-research`, **not** `features/signals` as the §8 key-risks bullet anticipated — the `ScoutChatPanel` import cycle ties scout-chat to market-research, so it landed there (residue tracked TD-FE-51). (c) `StrategistWorkspace` is **live and reachable** — it renders on `StrategistPage`'s default workspace tab; any framing of it as dead/unreachable is incorrect. Strategist correctly still has no dedicated backend (its data hydrates from `sessionStorage`), consistent with the §8 bullet. (d) `Deals.tsx` **is** the Strategist page (relocated to `features/strategist/pages/StrategistPage.tsx`, with `/deals` kept as a redirect to `/your-ai-team/strategist/workspace`); the §12 small-pages listing of `Deals.tsx` is therefore stale (TD-FE-48).
+
 ### Phase 9 — Feature: scout + profiler
 
 **Sources moving in:** `src/pages/ScoutDeployment.tsx`, scout/profiler-related components currently split across mission-control and customers (per CLAUDE.md frontend topology note).
@@ -557,6 +559,8 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 **Destinations:** each becomes its own small feature folder under `src/features/`, or merges into the nearest related feature (decided per-page in Phase 12 spec).
 
 **Per-phase deliverables:** see Phase 5's deliverables block (TanStack migration where the page has data fetching; route update; error-boundary wrapping; per-feature README). Small pages may not need all of these — Phase 12 spec applies per-page judgment.
+
+> **Phase 12 deltas (recorded 2026-06-05, frozen-record convention — does not rewrite the intent above).** (a) Four leaf pages became their own route-named feature folders — `Calendar` → `features/calendar` (`/calendar`), `Insights` → `features/insights` (`/insights`), `Reports` → `features/reports` (`/reports`), `Artifacts` → `features/artifacts` (`/artifacts`) — each shipping `pages/<X>Page.tsx` + `routes.tsx` + `index.ts` + `README.md` + a render test, wired append-only into `app/routes.tsx`. (b) `NotFound` moved into `features/shell` (barrel-exported); the `path="*"` catch-all stays in `App.tsx`. (c) `Artifacts.tsx` (729 LOC) was decomposed into `types` / `data/mockArtefacts` / `lib/{artefactPdf,artefactPresentation}` / `components/{LibraryCard,ArtefactStats,FolderGrid}` + a ~170-LOC orchestrator page. (d) `Deals.tsx` was **excluded** — it is the Strategist page, relocated by Phase 8 (see the Phase 8 deltas above and TD-FE-48); the §12 source list naming it is stale. (e) No data layer was added (presentational/mock surfaces — TD-FE-59); `usePageTitle` stays on its legacy import pending Phase 11 (TD-FE-57); the Artefacts `window`-CustomEvent coupling is preserved as-is (TD-FE-58). Authority: Spec 29 / plan 29.
 
 ### Phase 13 — LOC reduction pass #2 (post-modularization audit)
 

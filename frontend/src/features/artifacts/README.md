@@ -17,5 +17,5 @@ The Artefacts library surface (route `/artifacts`). Presentational / local-state
 
 ## Dependency notes
 
-- Imports `Layout` from `@/features/shell`, `FeatureErrorBoundary` from `@/shared/components`, legacy `@/hooks/usePageTitle` (Phase 11 — TD-FE-47).
-- Listens on `window` for `CustomEvent("artifactsSearch")` / `CustomEvent("addArtefact")` (header search + add-artefact). Untyped global-event coupling — TD-FE-48.
+- Imports `Layout` from `@/features/shell`, `FeatureErrorBoundary` from `@/shared/components`, legacy `@/hooks/usePageTitle` (Phase 11 — TD-FE-57).
+- Listens on `window` for `CustomEvent("artifactsSearch")` / `CustomEvent("addArtefact")` (header search + add-artefact). Untyped global-event coupling — TD-FE-58.

@@ -12,4 +12,4 @@ The Activator surface (route `/calendar`). Presentational / local-state only —
 
 ## Dependency notes
 
-- Imports `Layout` from `@/features/shell`, `FeatureErrorBoundary` from `@/shared/components`, and the legacy `@/hooks/usePageTitle` (promoted to `@/shared/hooks` in Phase 11 — TD-FE-47).
+- Imports `Layout` from `@/features/shell`, `FeatureErrorBoundary` from `@/shared/components`, and the legacy `@/hooks/usePageTitle` (promoted to `@/shared/hooks` in Phase 11 — TD-FE-57).

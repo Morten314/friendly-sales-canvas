@@ -3,7 +3,6 @@ import { useCallback, useEffect, useState } from "react";
 
 import { mapApiDataToCompanyProfileFields } from "./companyProfileMapping";
 
-import { useCompanyProfile } from "@/components/settings/useCompanyProfile";
 import {
   Accordion,
   AccordionContent,
@@ -26,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import type { UntypedBackendApiResponse } from "@/lib/types/escape-hatches";
 import { qk } from "@/shared/api/queryKeys";
+import { useCompanyProfile } from "@/shared/company-profile";
 import {
   ensureMissionProfilerScope,
   isMissionControlCacheValid,
