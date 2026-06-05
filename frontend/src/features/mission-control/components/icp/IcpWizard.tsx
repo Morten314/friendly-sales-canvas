@@ -23,8 +23,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/components/ui/utils";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 
 // Region options (single select)
 const REGIONS_OPTIONS = [

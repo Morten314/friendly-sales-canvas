@@ -30,8 +30,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/components/ui/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { cn } from "@/lib/utils";
 import { useTenant } from "@/shared/tenant";
 // import { AskBrewra } from "@/components/agent-hub/AskBrewra"; // Commented out - removed Ask button
 // import { ViewToggle } from "@/components/market-research/ViewToggle"; // Commented out - removed User/AI toggle

@@ -1,8 +1,6 @@
-// Spec 15 §3.3 — characterization for src/lib/utils.ts.
-// Exported function: cn (shadcn classnames).
 import { describe, expect, it } from "vitest";
 
-import { cn } from "@/lib/utils";
+import { cn } from "../utils";
 
 describe("cn", () => {
   it("joins string class names", () => {

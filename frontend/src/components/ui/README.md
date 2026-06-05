@@ -2,7 +2,7 @@
 
 These are generated shadcn-ui primitives built on Radix. They are owned by **no feature**.
 
-- **Do not** import from `@/features/**` or `@/shared/**` here — `components/ui/` sits below the app's own code (enforced by `import-x/no-restricted-paths` in `eslint.config.js`). It may import only npm packages, other `ui/` primitives, and `@/lib/utils`.
+- **Do not** import from `@/features/**` or `@/shared/**` here — `components/ui/` sits below the app's own code (enforced by `import-x/no-restricted-paths` in `eslint.config.js`). It may import only npm packages, other `ui/` primitives, and `./utils`.
 - This folder is `knip`-ignored and exempt from `react-refresh/only-export-components` (it intentionally co-exports variants and hooks).
 
 ## Name-twin warning
