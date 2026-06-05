@@ -1,6 +1,3 @@
-// HANDOFF → strategist (Spec 24 §7). This component is NOT part of market-research;
-// it stays here until the strategist feature phase relocates + decomposes it.
-
 import {
   Bot,
   CheckCircle2,
