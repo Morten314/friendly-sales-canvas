@@ -8,8 +8,9 @@ import {
 import type { ReactNode } from "react";
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 
+import { auth } from "./firebase";
+
 import { buildApiUrl } from "@/lib/api";
-import { auth } from "@/lib/firebase";
 
 interface AuthContextType {
   currentUser: User | null;

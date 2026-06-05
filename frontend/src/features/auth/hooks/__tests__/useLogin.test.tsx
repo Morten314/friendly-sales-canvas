@@ -12,7 +12,7 @@ const { login, signup, fetchOrgId, selectTenant } = vi.hoisted(() => ({
 
 vi.mock("@/shared/auth", () => ({ useAuth: () => ({ login, signup, fetchOrgId }) }));
 vi.mock("@/shared/tenant", () => ({ useTenant: () => ({ selectTenant }) }));
-vi.mock("@/lib/firebase", () => ({ auth: { currentUser: { uid: "u1" } } }));
+vi.mock("@/shared/auth/firebase", () => ({ auth: { currentUser: { uid: "u1" } } }));
 
 import { useLogin, useSignup } from "../useLogin";
 

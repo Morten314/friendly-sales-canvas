@@ -1502,6 +1502,76 @@ The undo grace-period, the 404-as-success branch, and the delete-current path ar
 **Pull-forward trigger:**
 A behavioral-coverage hardening pass / when the fake-timer + MSW interplay is solved.
 
+---
+
+## TD-FE-54 — `lib/jwt.ts` + `hooks/useAuth.ts` still live in legacy `src/lib/`/`src/hooks/` rather than `shared/auth/`
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 10 (Task 6). `lib/jwt.ts` and `hooks/useAuth.ts` were left in their legacy locations; Phase 10 promoted `firebase.ts` into `shared/auth/` but did not move these two files because mission-control and market-research features consume them and those features are not yet modularised.
+
+**Current state:**
+`src/lib/jwt.ts` and `src/hooks/useAuth.ts` are imported by several features that have not yet been extracted (mission-control, market-research). Moving them to `shared/auth/` before those call sites are updated would require touching a large surface outside Phase 10's scope.
+
+**What it should be:**
+Both files should live in `src/shared/auth/` alongside `firebase.ts`, with a barrel `src/shared/auth/index.ts` exporting all three. All call sites (mission-control, market-research, and any remaining legacy imports) should be updated to import from `@/shared/auth`. At the same time, reconcile the split import surface flagged in impl-review-1: `firebase.ts`'s `auth` export is currently reachable only via the deep path `@/shared/auth/firebase` (the barrel exports only `AuthProvider`/`useAuth`, intentionally per Spec 28 §5), so a consumer needing `auth.currentUser` must discover the deep path. When consolidating, decide whether to surface `auth` through the barrel or document the deep path in a `shared/auth/` README.
+
+**Why we deferred:**
+Phase 10 scope was settings + tenant + auth-file relocation only; rewiring all consumers of `jwt.ts`/`useAuth.ts` would pull in mission-control and market-research extraction work that belongs to Phase 11.
+
+**What we lose by staying as-is:**
+Auth-related utilities are split across two directories (`src/lib/`, `src/hooks/`, and `src/shared/auth/`), making the auth boundary harder to reason about and increasing the risk of duplicate or diverging auth logic.
+
+**Pull-forward trigger:**
+Phase 11 auth-infra consolidation.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-55 — `features/tenant/hooks/useTenants.ts` serves a hardcoded `MOCK_TENANTS` list; no real "list tenants" backend endpoint exists
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 10 (Task 4). `TenantSelection` was extracted to `features/tenant/` with its `useTenants` hook intact; the hook returns a `MOCK_TENANTS` constant because the backend model is one-org-per-user (`GET /org`) with no multi-tenant listing endpoint.
+
+**Current state:**
+`src/features/tenant/hooks/useTenants.ts` exports a hook that returns a hardcoded `MOCK_TENANTS` array. There is no backend endpoint that lists tenants for a user. The product question of whether a tenant-selection page should exist at all (given the one-org-per-user model) is unresolved.
+
+**What it should be:**
+Either (a) a real `GET /tenants` (or equivalent) backend endpoint is added and `useTenants` is wired to it, or (b) the `/tenant-selection` route and the `TenantSelection` feature are removed if the product decision is that the app is single-org-per-user. Until that decision is made, the mock data should be clearly labelled as provisional.
+
+**Why we deferred:**
+Open product question; implementing or removing the feature requires a product decision on multi-org support that has not been made.
+
+**What we lose by staying as-is:**
+The tenant-selection UI shows mock data to real users if the route is ever reached, which would be confusing. The route already exists in `App.tsx` and is reachable post-login.
+
+**Pull-forward trigger:**
+Product decision on multi-org support, or a real list-tenants backend endpoint being added.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-56 — `features/settings/components/AgentProfile.tsx` and `components/settings/ScoutDeployment.tsx` are near-duplicate forms
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 10 (Task 5). `AgentProfile.tsx` was relocated into `features/settings/components/` during Phase 10; `ScoutDeployment.tsx` remains in the legacy `src/components/settings/` location. Both render agent/deployment configuration forms with substantial structural overlap but no shared base component.
+
+**Current state:**
+`src/features/settings/components/AgentProfile.tsx` and `src/components/settings/ScoutDeployment.tsx` are near-duplicate form components. They share field layout, save/cancel patterns, and profile-data binding logic but are maintained as independent files with no shared abstraction.
+
+**What it should be:**
+After Phase 9 extracts the scout feature, the two components should be evaluated for unification into a single parameterised form component (or a shared form primitive), eliminating the duplication. The legacy `src/components/settings/ScoutDeployment.tsx` should be relocated into the scout feature at the same time.
+
+**Why we deferred:**
+Deduplication requires Phase 9's scout extraction to be complete so the correct home for the unified component is clear. Merging them before Phase 9 would land the result in the wrong directory.
+
+**What we lose by staying as-is:**
+Fixes or UI changes to one form must be manually mirrored to the other. Divergence risk grows with every modification.
+
+**Pull-forward trigger:**
+Phase 9 scout feature extraction.
+
 **Owner:** TBD.
 
 ---

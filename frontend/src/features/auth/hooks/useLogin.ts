@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 
-import { auth } from "@/lib/firebase";
 import { useAuth } from "@/shared/auth";
+import { auth } from "@/shared/auth/firebase";
 import { useTenant } from "@/shared/tenant";
 
 // Wraps the existing Login.tsx post-login sequence verbatim. AuthContext is NOT

@@ -8,7 +8,6 @@ import type { DataSource } from "../components/company-profile/connectorTypes";
 import DataSourcesManager from "../components/data-sources/DataSourcesManager";
 import ICPManager from "../components/icp/ICPManager";
 
-import { useCompanyProfile } from "@/components/settings/useCompanyProfile";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
@@ -16,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Layout } from "@/features/shell";
 import { useAuth } from "@/hooks/useAuth";
 import type { UntypedBackendApiResponse } from "@/lib/types/escape-hatches";
+import { useCompanyProfile } from "@/shared/company-profile";
 import {
   ensureMissionProfilerScope,
   isMissionControlCacheValid,

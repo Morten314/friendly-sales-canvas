@@ -4,11 +4,14 @@
  * deep path — so feature phases append one line here and own their routes in
  * `<feature>/routes.tsx`, instead of editing App.tsx's shared `<Routes>` table.
  */
+import { authRoutes } from "@/features/auth";
 import { customersRoutes } from "@/features/customers";
 import { marketResearchRoutes } from "@/features/market-research";
 import { missionControlRoutes } from "@/features/mission-control";
+import { settingsRoutes } from "@/features/settings";
 import { signalsRoutes } from "@/features/signals";
 import { strategistRoutes } from "@/features/strategist";
+import { tenantRoutes } from "@/features/tenant";
 
 export const featureRoutes = [
   ...marketResearchRoutes,
@@ -16,4 +19,7 @@ export const featureRoutes = [
   ...customersRoutes,
   ...signalsRoutes,
   ...strategistRoutes,
+  ...authRoutes,
+  ...tenantRoutes,
+  ...settingsRoutes,
 ];

@@ -5,12 +5,9 @@ import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import Artifacts from "./pages/Artifacts";
 import Calendar from "./pages/Calendar";
 import Insights from "./pages/Insights";
-import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import Reports from "./pages/Reports";
 import ScoutDeploymentPage from "./pages/ScoutDeployment";
-import Settings from "./pages/Settings";
-import TenantSelection from "./pages/TenantSelection";
 
 import { featureRoutes } from "@/app/routes";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -29,20 +26,6 @@ const App = () => (
           <TooltipProvider>
             <BrowserRouter>
               <Routes>
-                {/* Public routes */}
-                <Route path="/" element={<Login />} />
-                <Route path="/login" element={<Login />} />
-
-                {/* Protected routes that require authentication only */}
-                <Route
-                  path="/tenant-selection"
-                  element={
-                    <ProtectedRoute>
-                      <TenantSelection />
-                    </ProtectedRoute>
-                  }
-                />
-
                 {/* Protected routes that require both authentication and tenant selection */}
                 <Route
                   path="/calendar"
@@ -57,14 +40,6 @@ const App = () => (
                   element={
                     <ProtectedRoute requireTenant>
                       <Reports />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/settings"
-                  element={
-                    <ProtectedRoute requireTenant>
-                      <Settings />
                     </ProtectedRoute>
                   }
                 />
