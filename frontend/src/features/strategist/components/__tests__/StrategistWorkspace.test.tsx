@@ -27,7 +27,7 @@ import { server } from "@/test/msw/server";
 // The chat panel scrolls the latest message into view on mount via
 // Element.scrollIntoView, which jsdom does not implement. Polyfill it locally
 // (scoped to this file, not shared setup) — same convention as IcpWizard.test
-// and SignalsContextChat.test.
+// and ContextChat.test.
 beforeAll(() => {
   if (!Element.prototype.scrollIntoView) {
     Element.prototype.scrollIntoView = () => {};

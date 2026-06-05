@@ -4,10 +4,10 @@ import { http, HttpResponse } from "msw";
 import { MemoryRouter } from "react-router-dom";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
-import { SignalsContextChat, type SignalsChatContext } from "@/shared/chat";
+import { ContextChat, type SignalsChatContext } from "@/shared/chat";
 import { server } from "@/test/msw/server";
 
-// SignalsContextChat reads currentUser/orgId from useAuth and calls useNavigate.
+// ContextChat reads currentUser/orgId from useAuth and calls useNavigate.
 // The real AuthProvider depends on Firebase (onAuthStateChanged) and only renders
 // children once loading resolves, so it never mounts children under jsdom. The
 // established pattern in the sibling ProfilerChatWithHistory test is to stub
@@ -25,7 +25,7 @@ function renderChat(context: SignalsChatContext) {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <SignalsContextChat context={context} />
+        <ContextChat context={context} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -40,7 +40,7 @@ beforeAll(() => {
   }
 });
 
-describe("SignalsContextChat (substrate)", () => {
+describe("ContextChat (substrate)", () => {
   it("renders the provided context and a message input", () => {
     // A context with a prompt but no answer triggers the answer-prefetch effect
     // (POST /api/signal_Ask). setup.ts runs MSW with onUnhandledRequest: "error",

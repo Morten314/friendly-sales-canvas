@@ -62,7 +62,7 @@ Authoritative Phase 6 record (Spec 25 §6); input for Phases 7 and 9.
 
 ### Phase-7 resolution (customers side — amended 2026-06-04)
 
-Phase 7 resolved the customers side of the above table. The `@/shared/profiler` cluster stays **shared** (unchanged by Phase 7). Customers reads ICPs via its own `useCustomerProfile`/`useSuggestedIcps` hooks — it does **not** use mission-control's `useICPs` (the divergence is tracked as TD-FE-42). `ProfilerChatWithHistory` has been relocated to `features/customers/components/chat/`. `SignalsContextChat` stays legacy in `src/components/signals/` pending Phase 8. The profiler-merge display logic (`mergeProfilerAcceptedIcpDisplay`) and the `UntypedProfilerIcpRecord` escape-hatch are both unchanged — Phase 9 and Phase 13 remain their resolution phases.
+Phase 7 resolved the customers side of the above table. The `@/shared/profiler` cluster stays **shared** (unchanged by Phase 7). Customers reads ICPs via its own `useCustomerProfile`/`useSuggestedIcps` hooks — it does **not** use mission-control's `useICPs` (the divergence is tracked as TD-FE-42). `ProfilerChatWithHistory` has been relocated to `features/customers/components/chat/`. `ContextChat` (was `SignalsContextChat`) was relocated to `src/shared/chat/` in Phase 8 and renamed in Phase 9 (TD-FE-58). The profiler-merge display logic (`mergeProfilerAcceptedIcpDisplay`) and the `UntypedProfilerIcpRecord` escape-hatch are both unchanged — Phase 9 and Phase 13 remain their resolution phases.
 
 ## Decisions
 

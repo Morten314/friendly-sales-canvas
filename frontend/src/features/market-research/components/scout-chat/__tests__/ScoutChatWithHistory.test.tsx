@@ -6,7 +6,7 @@ import { ScoutChatWithHistory } from "../ScoutChatWithHistory";
 // Mock the heavy children so the test stays a pure mount check
 // (no real fetch/WebSocket, no nested chat substrate).
 vi.mock("@/shared/chat", () => ({
-  SignalsContextChat: () => <div data-testid="substrate" />,
+  ContextChat: () => <div data-testid="substrate" />,
 }));
 
 vi.mock("@/shared/auth", () => ({

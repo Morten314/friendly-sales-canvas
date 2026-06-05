@@ -14,7 +14,7 @@ Imported via `@/shared/chat` (index-only). Internals are private.
 
 | Export               | Kind      | Description                                                                                                                                                                                |
 | -------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `SignalsContextChat` | component | The chat panel. Props: `context: SignalsChatContext` (required), `onClearContext?`, `onClose?`, `initialMessages?: ChatMessage[]`, `onMessagesChange?: (messages: ChatMessage[]) => void`. |
+| `ContextChat`        | component | The chat panel. Props: `context: SignalsChatContext` (required), `onClearContext?`, `onClose?`, `initialMessages?: ChatMessage[]`, `onMessagesChange?: (messages: ChatMessage[]) => void`. |
 | `SignalsChatContext` | type      | The chat context shape: `agent: "scout" \| "profiler"`, `signalId?`, `contentHash?`, `signalHeading?`, `recommendations?`, `recommendation?`, `prompt`, `answer?`.                         |
 | `ChatMessage`        | type      | `{ role: "user" \| "assistant"; content: string }`.                                                                                                                                        |
 | `useSignalAsk`       | hook      | TanStack mutation for the signal **Ask** (chat question) call. Also exports the `SignalAskBody` body type.                                                                                 |
@@ -23,14 +23,13 @@ Imported via `@/shared/chat` (index-only). Internals are private.
 The `useSignalAsk` / `useSignalAction` hooks are the single mutation path shared by both
 the substrate and the `signals` page.
 
-## Phase 9 ownership (deferred)
+## Phase 9 ownership
 
-Two pieces are explicitly **Phase 9's** to finish, not Phase 8's:
+Two pieces were explicitly **Phase 9's** to finish, not Phase 8's:
 
 - **Wrapper dedup.** `ProfilerChatWithHistory` (in `customers`) and `ScoutChatWithHistory`
   (in `market-research`) are ~90% the same wrapper around this substrate. Phase 9 owns
-  unifying them into one parameterised component (coordinating with both features via their
-  `index.ts` surfaces). Phase 8 only relocated the substrate + repointed importers (TD-FE-45).
-- **Final rename.** The substrate keeps its legacy `SignalsContextChat` name through Phase 8
-  for move-traceability. Renaming it to a generic name (e.g. `ContextChat`) is **deferred to
-  Phase 9**, alongside the wrapper dedup, so the rename and the consolidation land together.
+  unifying them into one parameterised component via `ChatWithHistory` (see `ChatWithHistory`);
+  Phase 8 only relocated the substrate + repointed importers (TD-FE-45).
+- **Rename.** Renamed `SignalsContextChat` → `ContextChat` in Phase 9; the `SignalsChatContext`
+  type name is retained — TD-FE-58.

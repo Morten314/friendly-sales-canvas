@@ -9,7 +9,7 @@ export interface SignalAskBody {
   history: { user: string; assistant: string }[];
 }
 
-/** POST /api/signal_Ask. Shared by the signals page + the SignalsContextChat substrate. */
+/** POST /api/signal_Ask. Shared by the signals page + the ContextChat substrate. */
 export function useSignalAsk() {
   return useMutation<SignalAskResponse, Error, SignalAskBody>({
     mutationFn: async (body) => {

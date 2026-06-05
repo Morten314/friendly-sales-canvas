@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 // Mock the substrate so no real fetch/WebSocket fires.
 vi.mock("@/shared/chat", () => ({
-  SignalsContextChat: () => <div data-testid="signals-context-chat" />,
+  ContextChat: () => <div data-testid="signals-context-chat" />,
 }));
 
 vi.mock("@/shared/auth", () => ({

@@ -16,7 +16,7 @@ import type { EditRecord } from "@/components/market-research/types";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/shared/auth";
 import type { SignalsChatContext, ChatMessage } from "@/shared/chat";
-import { SignalsContextChat } from "@/shared/chat";
+import { ContextChat } from "@/shared/chat";
 import {
   LEAD_STREAM_CHAT_CONTEXT_KEY,
   type LeadStreamChatContext,
@@ -374,7 +374,7 @@ export function ScoutChatWithHistory({
         )}
         {activeSession ? (
           activeSession.context ? (
-            <SignalsContextChat
+            <ContextChat
               key={activeSession.id}
               context={activeSession.context}
               initialMessages={activeSession.messages}

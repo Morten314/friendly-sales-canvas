@@ -34,7 +34,7 @@ export interface SignalsChatContext {
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
-interface SignalsContextChatProps {
+interface ContextChatProps {
   context: SignalsChatContext;
   onClearContext?: () => void;
   onClose?: () => void;
@@ -42,13 +42,13 @@ interface SignalsContextChatProps {
   onMessagesChange?: (messages: ChatMessage[]) => void;
 }
 
-export const SignalsContextChat = ({
+export const ContextChat = ({
   context,
   onClearContext,
   onClose,
   initialMessages,
   onMessagesChange,
-}: SignalsContextChatProps) => {
+}: ContextChatProps) => {
   const { currentUser, orgId } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();

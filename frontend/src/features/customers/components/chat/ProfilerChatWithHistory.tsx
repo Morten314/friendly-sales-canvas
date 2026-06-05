@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/shared/auth";
 import type { SignalsChatContext, ChatMessage } from "@/shared/chat";
-import { SignalsContextChat } from "@/shared/chat";
+import { ContextChat } from "@/shared/chat";
 
 const STORAGE_KEY_PREFIX = "profiler_chat_sessions";
 
@@ -302,7 +302,7 @@ export function ProfilerChatWithHistory({
           </Button>
         )}
         {activeSession ? (
-          <SignalsContextChat
+          <ContextChat
             key={activeSession.id}
             context={activeSession.context ?? EMPTY_PROFILER_CONTEXT}
             initialMessages={activeSession.messages}
