@@ -6,7 +6,6 @@ import Artifacts from "./pages/Artifacts";
 import Deals from "./pages/Deals";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
-import Reports from "./pages/Reports";
 import ScoutDeploymentPage from "./pages/ScoutDeployment";
 import Settings from "./pages/Settings";
 import Signals from "./pages/Signals";
@@ -75,14 +74,6 @@ const App = () => (
                 <Route
                   path="/your-ai-team/strategist"
                   element={<Navigate to="/your-ai-team/strategist/workspace" replace />}
-                />
-                <Route
-                  path="/reports"
-                  element={
-                    <ProtectedRoute requireTenant>
-                      <Reports />
-                    </ProtectedRoute>
-                  }
                 />
                 <Route
                   path="/settings"

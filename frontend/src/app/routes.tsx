@@ -9,6 +9,7 @@ import { customersRoutes } from "@/features/customers";
 import { insightsRoutes } from "@/features/insights";
 import { marketResearchRoutes } from "@/features/market-research";
 import { missionControlRoutes } from "@/features/mission-control";
+import { reportsRoutes } from "@/features/reports";
 
 export const featureRoutes = [
   ...marketResearchRoutes,
@@ -16,4 +17,5 @@ export const featureRoutes = [
   ...customersRoutes,
   ...calendarRoutes,
   ...insightsRoutes,
+  ...reportsRoutes,
 ];
