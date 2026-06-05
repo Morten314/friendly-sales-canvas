@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Layout } from "@/features/shell";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
-const Reports = () => {
+const ReportsPage = () => {
   usePageTitle("📊 Presenter - Brewra");
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [messages, setMessages] = useState([
@@ -296,4 +296,4 @@ const Reports = () => {
   );
 };
 
-export default Reports;
+export default ReportsPage;

@@ -560,6 +560,8 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 
 **Per-phase deliverables:** see Phase 5's deliverables block (TanStack migration where the page has data fetching; route update; error-boundary wrapping; per-feature README). Small pages may not need all of these — Phase 12 spec applies per-page judgment.
 
+> **Phase 12 deltas (recorded 2026-06-05, frozen-record convention — does not rewrite the intent above).** (a) Four leaf pages became their own route-named feature folders — `Calendar` → `features/calendar` (`/calendar`), `Insights` → `features/insights` (`/insights`), `Reports` → `features/reports` (`/reports`), `Artifacts` → `features/artifacts` (`/artifacts`) — each shipping `pages/<X>Page.tsx` + `routes.tsx` + `index.ts` + `README.md` + a render test, wired append-only into `app/routes.tsx`. (b) `NotFound` moved into `features/shell` (barrel-exported); the `path="*"` catch-all stays in `App.tsx`. (c) `Artifacts.tsx` (729 LOC) was decomposed into `types` / `data/mockArtefacts` / `lib/{artefactPdf,artefactPresentation}` / `components/{LibraryCard,ArtefactStats,FolderGrid}` + a ~170-LOC orchestrator page. (d) `Deals.tsx` was **excluded** — it is the Strategist page, relocated by Phase 8 (see the Phase 8 deltas above and TD-FE-48); the §12 source list naming it is stale. (e) No data layer was added (presentational/mock surfaces — TD-FE-59); `usePageTitle` stays on its legacy import pending Phase 11 (TD-FE-57); the Artefacts `window`-CustomEvent coupling is preserved as-is (TD-FE-58). Authority: Spec 29 / plan 29.
+
 ### Phase 13 — LOC reduction pass #2 (post-modularization audit)
 
 **Mission:** the Phase-L-proper analog. Now that strict TS + tests + features are in place, do the systematic per-file audit.

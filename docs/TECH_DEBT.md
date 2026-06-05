@@ -1720,3 +1720,44 @@ A behavior-preserving full migration is high-risk on the app's most complex page
 Backend stabilization (TD-FE-13) + a dedicated signals-data-layer migration.
 
 **Owner:** TBD.
+
+## TD-FE-57 — Phase 12 features still import legacy `@/hooks/usePageTitle`
+
+**Current state:**
+`features/calendar`, `features/reports`, and `features/artifacts` import `usePageTitle` from the legacy `@/hooks/usePageTitle` rather than a `@/shared/hooks` home.
+
+**Why we deferred:**
+Spec 14 §4's staging rule — Phase 11 promotes shared hooks; feature phases must not pre-extract shared infra ahead of it.
+
+**Pull-forward trigger:**
+Phase 11 (shared-hooks promotion).
+
+**Owner:** TBD.
+
+## TD-FE-58 — Artefacts cross-component coupling via untyped `window` CustomEvents
+
+**Current state:**
+`features/artifacts/pages/ArtifactsPage.tsx` listens on `window` for `CustomEvent("artifactsSearch")` and `CustomEvent("addArtefact")` (dispatched by the header). The coupling is untyped, global, and hard to test; it should be a typed feature/shared mechanism. Same class of debt as TD-FE-44.
+
+**Why we deferred:**
+Out of scope for Phase 12's parity-only relocation (behavior was frozen).
+
+**Pull-forward trigger:**
+Artefacts gets real data, or a shared search/event bus lands.
+
+**Owner:** TBD.
+
+## TD-FE-59 — Small-page surfaces are mock/placeholder (no backend)
+
+**Current state:**
+`features/{calendar,insights,reports,artifacts}` render hardcoded mock data with no API. They should be wired to real endpoints once those exist.
+
+**Why we deferred:**
+These products are not built yet; the pages are placeholder surfaces.
+
+**Pull-forward trigger:**
+Each product's backend exists.
+
+**Owner:** TBD.
+
+_Phase 12 note: these entries were authored as provisional TD-FE-47–49 and renumbered to TD-FE-57–59 at the Phase 12 merge, since Phase 8 (47–53) and Phase 10 (54–56) had already landed those integers on master._
