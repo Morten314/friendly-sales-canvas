@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import React, { useState, useEffect } from "react";
 
+import type { ArtefactItem } from "../types";
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,34 +27,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Layout } from "@/features/shell";
 import { usePageTitle } from "@/hooks/usePageTitle";
-
-interface ArtefactItem {
-  id: string;
-  agentName: string;
-  // SVG icon component (lucide-react) so test snapshots are pixel-stable
-  // across OSes — emoji glyphs vary by OS/font version. See agent → icon map
-  // in mockArtefacts and StrategistWorkspace.tsx.
-  agentIcon: React.ComponentType<{ className?: string }>;
-  agentColor: string;
-  taskNumber: string;
-  timestamp: string;
-  status: "new" | "viewed" | "updated";
-  type: "report" | "analysis" | "insight" | "proposal" | "enrichment" | "playbook";
-  folder?: string;
-  actionDelegated: string;
-  contextRationale: string;
-  systemImpact: string;
-  actionPerformed: string;
-  outputSummary: string;
-  fullReport: {
-    title: string;
-    executiveSummary: string;
-    keyFindings: string[];
-    analysis: string;
-    recommendations: string[];
-    charts?: string[];
-  };
-}
 
 // Mock data for demonstration
 const mockArtefacts: ArtefactItem[] = [
