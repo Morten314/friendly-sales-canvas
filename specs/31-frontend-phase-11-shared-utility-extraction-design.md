@@ -1,6 +1,6 @@
 # Spec 31 — Frontend Phase 11: shared utility extraction
 
-**Status:** Design — round 1 (revised after spec-review-1; synthesis at `docs/reviews/31-frontend-phase-11-shared-utility-extraction-design-spec-synthesis-1.md`)
+**Status:** Design — round 2 (revised after spec-review-1 and -2; syntheses at `docs/reviews/31-frontend-phase-11-shared-utility-extraction-design-spec-synthesis-1.md` and `…-spec-synthesis-2.md`)
 **Date:** 2026-06-05
 **Type:** Phase spec (implements Spec 14 §4 Phase 11)
 **Paired plan:** `plans/31-frontend-phase-11-shared-utility-extraction.md` (written after this spec converges)
@@ -35,16 +35,16 @@ This spec records four orchestrator decisions taken before drafting:
 
 | File | Feature consumers | Disposition (§4) |
 |---|---|---|
-| `hooks/use-toast.ts` | 5 features + **`components/ui/{toaster,use-toast}`** | → `components/ui/use-toast.ts` (ui-consumed — §5.1) |
+| `hooks/use-toast.ts` | 5 features + `shared/chat/ContextChat` + residue (`LeadsTable`) + **`components/ui/{toaster,use-toast}`** (26 sites total) | → `components/ui/use-toast.ts` (ui-consumed — §5.1) |
 | `hooks/usePageTitle.ts` | 6 (artifacts, calendar, customers, market-research, reports, strategist) | → `shared/hooks/` (resolves **TD-FE-57**) |
 | `hooks/use-mobile.tsx` | shell (Header, Sidebar, PWAInstallPrompt) + **`components/ui/sidebar.tsx`** | → `components/ui/use-mobile.tsx` (ui-consumed — §5.1) |
 | `hooks/useAuth.ts` | mission-control (4 sites) + residue (`LeadsTable`) + test mocks | → `shared/auth/` **renamed** (auth-infra; name collision — §5.2) |
-| `lib/utils.ts` → `cn` | 31 `ui/` files + 3 non-ui (shell Header/Sidebar, mission-control IcpWizard) | → `components/ui/utils.ts` (zone-rule — §5.1) |
+| `lib/utils.ts` → `cn` | 30 `ui/` files + 3 non-ui (shell Header/Sidebar, mission-control IcpWizard) | → `components/ui/utils.ts` (zone-rule — §5.1) |
 | `lib/utils.ts` → `sanitizeAnswerText` | signals (`SignalCard`) + `shared/chat/ContextChat` | → `shared/lib/` (shared-consumer corollary §1.1) |
 | `lib/types/escape-hatches.ts` | 7 | → `shared/types/escape-hatches.ts` |
 | `lib/jwt.ts` | 2 features (market-research, mission-control) + residue (`LeadsTable`) + the `useAuth` hook + tests | → `shared/auth/` (resolves **TD-FE-54**) |
 | `lib/api.ts` | 4 features (customers, market-research, mission-control, strategist; 19 sites) + `shared/api/client`, `shared/auth/AuthContext`, residue, `test/msw` | → `shared/api/transport.ts` (pure move — §5.3) |
-| `lib/rateLimitManager.ts` | 0 features; consumed by `shared/api/rateLimiter.ts` | → `shared/api/` (pure move — §5.3) |
+| `lib/rateLimitManager.ts` | Phase-3 back-compat **shim** re-exporting from `@/shared/api/rateLimiter`; 0 runtime importers, 2 test importers | **delete** + repoint the 2 tests (§5.3) |
 | `lib/timestampUtils.ts` | 1 (market-research) | → `features/market-research/` |
 | `lib/leadStreamHeatmapSession.ts`, `lib/marketScoreDescriptions.ts`, `lib/marketScoresHeatmap.ts` | 0 features; consumed only by `components/market-research/lead-stream/LeadsTable.tsx` | travel with `LeadsTable` (§6) |
 | `utils/cacheUtils.ts` | 5 | → `shared/lib/` |
@@ -74,10 +74,10 @@ Counts are from an import grep at spec-write time and are a **starting estimate*
 1. Relocate every file in §1.3 to its §4 destination; repoint **all** import sites (features, `shared/`, `components/ui/`, `App.tsx`, tests).
 2. Split `lib/utils.ts`: `cn` → `components/ui/utils.ts` (§5.1); `sanitizeAnswerText` → `shared/lib/`.
 3. Consolidate the auth-infra cluster (`lib/jwt.ts` + the `useAuth` composition hook, renamed) into `shared/auth/` (§5.2).
-4. Relocate api-transport (`lib/api.ts` → `shared/api/transport.ts`; `lib/rateLimitManager.ts` → `shared/api/`) as **pure moves** (§5.3).
+4. Relocate api-transport: `lib/api.ts` → `shared/api/transport.ts` (pure move); **delete the `lib/rateLimitManager.ts` back-compat shim** and repoint its 2 test importers to `@/shared/api/rateLimiter` (§5.3).
 5. Resolve the lead-stream residue per-file via full consumer trace (§6).
 6. Move `src/styles/` + `src/index.css` under `src/shared/styles/`; update `main.tsx` import lines (§7).
-7. Relocate co-located `__tests__/` with their subjects (e.g. `lib/__tests__/*` follow their files).
+7. Relocate co-located `__tests__/` with their subjects (e.g. `lib/__tests__/*` follow their files). **Exceptions:** `lib/__tests__/utils.test.ts` is **split** (it covers both `cn` and `sanitizeAnswerText`, which now land in different homes — see §5.1); `lib/__tests__/rateLimitManager.test.ts` is **deleted** with its shim (see §5.3).
 8. **Capstone:** delete the now-empty legacy dirs; extend `import-x/no-restricted-paths` to forbid `features/`/`shared/` importing legacy paths; run the DoD §6.1 verification (§8).
 9. Per-feature `README.md` touch-ups where a moved file changes a feature's public surface or key-files list.
 
@@ -109,9 +109,11 @@ src/shared/
   types/        # escape-hatches.ts
   styles/       # index.css, scrollbar-hide.css
   auth/         # + jwt.ts, + useAuthToken (renamed useAuth hook)
-  api/          # + transport.ts (was lib/api.ts), + rateLimitManager
+  api/          # + transport.ts (was lib/api.ts); rateLimitManager shim DELETED
 components/ui/
-  utils.ts      # cn() — co-located with the primitives that consume it
+  utils.ts        # cn()
+  use-toast.ts    # toast hook (was hooks/use-toast.ts; replaces the re-export shim)
+  use-mobile.tsx  # useIsMobile (was hooks/use-mobile.tsx)
 ```
 
 **Dependency rules honored (Spec 14 §3.3):**
@@ -136,7 +138,7 @@ The relocations group into five mechanical classes plus the trace-resolved resid
 
 **D — Auth-infra cluster → `shared/auth/`:** `jwt.ts` + renamed `useAuth` hook (§5.2).
 
-**E — api-transport (pure move) → `shared/api/`:** `lib/api.ts` → `shared/api/transport.ts`; `rateLimitManager.ts` → `shared/api/` (§5.3).
+**E — api-transport → `shared/api/`:** `lib/api.ts` → `shared/api/transport.ts` (pure move). `lib/rateLimitManager.ts` is a back-compat **shim** and is **deleted**, not moved (§5.3).
 
 **F — Lead-stream residue + the 3 zero-consumer score libs:** resolved per-file by trace (§6).
 
@@ -146,13 +148,15 @@ The relocations group into five mechanical classes plus the trace-resolved resid
 
 ### 5.1 The three ui-layer-consumed utilities co-locate into `components/ui/`
 
-Enumerating every legacy import from `components/ui/` yields **exactly three** symbols that locked primitives depend on: `cn` (`@/lib/utils`, 31 ui files), `useToast` (`@/hooks/use-toast` — `ui/toaster.tsx` + the existing 3-line `ui/use-toast.ts` re-export shim), and `useIsMobile` (`@/hooks/use-mobile` — `ui/sidebar.tsx`). For all three the naive promote-to-`shared/` is **wrong**: §3.3 forbids `components/ui/ → shared/`, so it would make locked shadcn primitives import upward. The fix is the same for each — co-locate with the primitives that consume it (these are shadcn primitive-layer utilities; shadcn itself ships `cn` and `use-toast` alongside its components):
+Enumerating every legacy import from `components/ui/` yields **exactly three** symbols that locked primitives depend on: `cn` (`@/lib/utils`, 30 ui files), `useToast` (`@/hooks/use-toast` — `ui/toaster.tsx` + the existing 3-line `ui/use-toast.ts` re-export shim), and `useIsMobile` (`@/hooks/use-mobile` — `ui/sidebar.tsx`). For all three the naive promote-to-`shared/` is **wrong**: §3.3 forbids `components/ui/ → shared/`, so it would make locked shadcn primitives import upward. The fix is the same for each — co-locate with the primitives that consume it (these are shadcn primitive-layer utilities; shadcn itself ships `cn` and `use-toast` alongside its components):
 
-- **`cn`** → `components/ui/utils.ts`. The 31 `ui/` files repoint to relative `./utils`. Its non-ui consumers are **3 feature files** — `features/shell/components/{Header,Sidebar}.tsx` and `features/mission-control/.../IcpWizard.tsx` — which repoint to `@/components/ui/utils` (`features → ui` allowed). **`shared/chat/ContextChat` and `signals/SignalCard` are not `cn` consumers** — they import `sanitizeAnswerText` (corrected from the round-1 draft, which wrongly listed ContextChat here).
-- **`use-toast`** → `components/ui/use-toast.ts` (the real hook implementation replaces today's re-export shim at that path). `ui/toaster.tsx` repoints to relative `./use-toast`; the 5 feature consumers (auth, customers, market-research, mission-control, signals) repoint `@/hooks/use-toast` → `@/components/ui/use-toast`.
+- **`cn`** → `components/ui/utils.ts`. The 30 `ui/` files repoint to relative `./utils`. Its non-ui consumers are **3 feature files** — `features/shell/components/{Header,Sidebar}.tsx` and `features/mission-control/.../IcpWizard.tsx` — which repoint to `@/components/ui/utils` (`features → ui` allowed). **`shared/chat/ContextChat` and `signals/SignalCard` are not `cn` consumers** — they import `sanitizeAnswerText` (corrected from the round-1 draft, which wrongly listed ContextChat here).
+- **`use-toast`** → `components/ui/use-toast.ts` (the real hook implementation replaces today's re-export shim at that path). `ui/toaster.tsx` repoints to relative `./use-toast`; the **non-ui consumers all repoint `@/hooks/use-toast` → `@/components/ui/use-toast`** — 5 features (auth, customers, market-research, mission-control, signals) **plus the shared consumer `shared/chat/ContextChat` and the residue consumer `LeadsTable`** (§6).
 - **`use-mobile`** → `components/ui/use-mobile.tsx`. `ui/sidebar.tsx` repoints to relative `./use-mobile`; the shell consumers (`Header`, `Sidebar`, `PWAInstallPrompt`) repoint to `@/components/ui/use-mobile`.
 
 Separately, **`sanitizeAnswerText`** (the other `lib/utils.ts` export) → `shared/lib/` per the §1.1 shared-consumer corollary (consumed by `shared/chat/ContextChat` + `signals/SignalCard`; it cannot live in `features/signals/` without `shared/chat` illegally importing a feature). `signals` + `shared/chat` repoint to `@/shared/lib`. This empties `lib/utils.ts`.
+
+**Co-located test split.** `lib/__tests__/utils.test.ts` imports **both** `cn` and `sanitizeAnswerText`, whose homes now diverge. It is **split** into two: the `cn` cases → `components/ui/__tests__/utils.test.ts`, the `sanitizeAnswerText` cases → `shared/lib/__tests__/` (alongside that subject). Neither destination keeps a cross-zone test import.
 
 All three placements keep the four zone rules intact and are recorded together in **ADR-0005 — "ui-layer-consumed utilities live in `components/ui/`"** (generalized from the round-1 cn-only framing; it is the precedent future feature work will hit, e.g. adding a shadcn component that ships its own hook).
 
@@ -165,8 +169,8 @@ All three placements keep the four zone rules intact and are recorded together i
 ### 5.3 api-transport — pure relocation, semantics frozen
 
 `shared/api/client.ts` already **imports** `lib/api.ts` (`apiFetchJson`, `buildApiUrl`, `ApiFetchOptions`) — `lib/api.ts` is the base transport Phase 3 layered `shared/api/` on top of, never relocated. This phase finishes that move:
-- `lib/api.ts` → `shared/api/transport.ts` (verbatim; `API_BASE_URL`/`ICP_BACKEND_URL`/`BACKEND_BASE_URL`/`buildApiUrl`/`buildIcpUrl`/`apiFetch`/`apiFetchJson` unchanged). `shared/api/client.ts`'s import becomes relative (`./transport`); the 7 feature import sites repoint `@/lib/api` → `@/shared/api/transport` (or a barrel re-export from `shared/api/index.ts` if one is introduced — plan decides).
-- `lib/rateLimitManager.ts` → `shared/api/` (consumed by `shared/api/rateLimiter.ts`; becomes a relative import). One 30 req/min budget, unchanged.
+- `lib/api.ts` → `shared/api/transport.ts` (verbatim; `API_BASE_URL`/`ICP_BACKEND_URL`/`BACKEND_BASE_URL`/`buildApiUrl`/`buildIcpUrl`/`apiFetch`/`apiFetchJson` unchanged). `shared/api/client.ts`'s import becomes relative (`./transport`); the **19 `@/lib/api` import sites** (across 4 features + `shared/auth/AuthContext` + the residue + `test/msw`) repoint to `@/shared/api/transport` (or a barrel re-export from `shared/api/index.ts` if one is introduced — plan decides).
+- `lib/rateLimitManager.ts` is **not** moved — it is a Phase-3 back-compat shim that *re-exports from* `@/shared/api/rateLimiter` (the canonical instance; the dependency runs shim → rateLimiter, not the reverse). It is **deleted**. Its only importers are 2 tests: `lib/__tests__/rateLimitManager.test.ts` (asserts the shim's `rateLimitManager === rateLimiter` identity — deleted with the shim, since `shared/api/__tests__/client.test.ts` already covers the canonical instance) and `shared/api/__tests__/client.test.ts:16` (repoints its `@/lib/rateLimitManager` import → `@/shared/api/rateLimiter`). The single 30 req/min budget is unchanged.
 - **No fetch logic, header injection, rate-limit value, or URL construction changes.** The transport's behavior is a §2.3 frozen interface; the per-call-site TanStack migration remains out of scope (§2.2).
 
 ---
@@ -177,7 +181,7 @@ All three placements keep the four zone rules intact and are recorded together i
 
 | File | Known consumers (spec-write estimate) | Provisional owner (plan validates) |
 |---|---|---|
-| `lead-stream/leadData.ts` | strategist + `src/lib` + customers (per TD-FE-63) | likely `shared/` (≥2 features) |
+| `lead-stream/leadData.ts` | strategist (2 sites) + score libs (`marketScoresHeatmap`, `leadStreamHeatmapSession`) + residue (`LeadsTable`, `ScoutLeadStream`, `OpportunityDashboard`) — **no `customers` consumer** (round-2 grep disproved the TD-FE-63 attribution) | likely `shared/` (strategist + market-research ≥2 post-relocation) |
 | `lead-stream/LeadsTable.tsx` (+ `leadStreamHeatmapSession`, `marketScoreDescriptions`, `marketScoresHeatmap` which feed only it) | lead-stream cluster | likely `features/market-research/` (cluster home); the 3 score libs travel with it |
 | `lead-stream/LeadStreamTab.tsx`, `lead-stream/OpportunityDashboard.tsx` | lead-stream cluster | with the cluster |
 | `ScoutLeadStream.tsx` | market-research | likely `features/market-research/` |
@@ -185,14 +189,16 @@ All three placements keep the four zone rules intact and are recorded together i
 
 Rule applied per file: **≥2 features → `shared/`; exactly 1 → that feature; 0 (only fed by a sibling residue file) → travels with that sibling.** If the trace surfaces a file whose ownership is genuinely unresolvable without a product decision, it is logged as a fresh `TD-FE` with a recommended owner rather than force-moved — but the working assumption is that all 6 + 3 resolve mechanically. No `features/lead-stream/` feature is created.
 
-**Cross-stage import dependency (the residue depends on earlier-moved clusters).** `LeadsTable.tsx` imports `useAuth` + `jwtManager` (the §5.2 auth cluster) and `@/lib/api` (§5.3) — all of which relocate in **11b**, before the residue file itself relocates in **11d**. So 11b must **repoint LeadsTable's `@/hooks/useAuth` / `@/lib/jwt` / `@/lib/api` import lines in place** (the file stays put; only its import specifiers update) — otherwise those legacy paths break at the end of 11b. The §9 stage order (clusters in 11b, residue in 11d) is correct; this note makes the in-place repoint explicit so the plan accounts for it.
+**Cross-stage import dependency (the residue depends on earlier-moved clusters).** `LeadsTable.tsx` imports `useAuth` + `jwtManager` (the §5.2 auth cluster), `@/lib/api` (§5.3), and `useToast` (the §5.1 ui co-location) — all of which relocate in **11b/11c**, before the residue file itself relocates in **11d**. So those stages must **repoint LeadsTable's import lines in place** (the file stays put; only its specifiers update) — otherwise the legacy paths break before 11d. The §9 stage order is correct; this note makes the in-place repoint explicit.
+
+**Bidirectional dependency within the lead-stream cluster (L2).** The data flow is layered: `leadData.ts` is the leaf; the score libs `marketScoresHeatmap.ts` + `leadStreamHeatmapSession.ts` **import types/`getPriority` from `leadData`**; `LeadsTable.tsx` imports both the score libs and `leadData`. So when `leadData` → `shared/` and the score libs + `LeadsTable` → `market-research`, the score libs' `leadData` import becomes `market-research → shared` (allowed) and must be repointed during 11d. The plan accounts for this leaf-first ordering when relocating the cluster.
 
 ---
 
 ## §7 Styles → `src/shared/styles/`
 
 - Move `src/styles/scrollbar-hide.css` and `src/index.css` (the Tailwind entry) into `src/shared/styles/`.
-- Update `main.tsx`: `import "./index.css"` → `import "@/shared/styles/index.css"`; `import "./styles/scrollbar-hide.css"` → `import "@/shared/styles/scrollbar-hide.css"`.
+- Update `main.tsx`: `import "./index.css"` → `import "@/shared/styles/index.css"`; `import "./styles/scrollbar-hide.css"` → `import "@/shared/styles/scrollbar-hide.css"`. (This switches the two CSS imports from relative to the `@/` alias; both forms resolve identically from `src/main.tsx`. The plan follows whichever the repo's prevailing convention is — alias is the spec's default for cross-dir imports.)
 - `tailwind.config` content globs are `./src/**/*.{ts,tsx}` only (no CSS-path reference) — **no Tailwind config change** needed.
 - `src/App.css` liveness is checked in the trace: it is not imported by `main.tsx`/`App.tsx`; if confirmed dead it is deleted (logged), otherwise it moves to `shared/styles/` too. PostCSS/Vite resolve the moved entry by its new import path; no build-config edit expected (plan verifies the `vite build` output is byte-stable).
 
@@ -230,7 +236,7 @@ Commit style `type(fe): …`, no `[N/M]` suffix, no Co-Authored-By footer.
 ## §11 Risks
 
 1. **A ui-layer-consumed utility mishandled** (`cn`, `use-toast`, or `use-mobile` promoted to `shared/`, breaking `ui ↛ shared`). *Mitigated:* §5.1 enumerates the **complete** set (3, from grepping `ui/`'s imports) and mandates `components/ui/`; ADR-0005 records the rationale; the §8 lint + typecheck catch any regression. (Round 1 of spec review caught two of these — `use-mobile`, `use-toast` — that the first draft missed; the set is now verified exhaustive.) **Medium → Low.**
-2. **api-transport repoint breaks a call site** (7 features + `shared/api`). *Mitigated:* pure move, byte-identical exports, typecheck proves every import resolves; the `/icp` bypass + rate-limit value are covered by existing `shared/api` tests. **Medium → Low.**
+2. **api-transport repoint breaks a call site** (19 `@/lib/api` sites across 4 features + `shared/auth` + residue + tests). *Mitigated:* pure move, byte-identical exports, typecheck proves every import resolves; the `/icp` bypass + rate-limit value are covered by existing `shared/api` tests. **Medium → Low.**
 3. **`useAuth` rename misses a call site or changes token behavior.** *Mitigated:* single consumer (mission-control); rename is mechanical; the JWT-lifecycle effect body is moved verbatim. **Low.**
 4. **Lead-stream trace surfaces an ambiguous owner.** *Mitigated:* §6 fallback — log a fresh TD-FE with a recommended owner rather than force-move; does not block the rest of the drain. **Low.**
 5. **Styles move changes computed CSS / build output.** *Mitigated:* §7 keeps Tailwind config untouched; plan verifies `vite build` output and visual regression are stable. **Low.**
@@ -251,7 +257,7 @@ Commit style `type(fe): …`, no `[N/M]` suffix, no Co-Authored-By footer.
 ## §14 Done when
 
 - `src/hooks/`, `src/lib/`, `src/utils/` are **deleted**; `src/contexts/`, `src/services/`, `src/pages/` confirmed gone; `src/components/` contains **only** `ui/`.
-- Every §1.3 file lives at its §4 destination; the three ui-consumed utilities are co-located in `components/ui/` (`utils.ts`, `use-toast.ts`, `use-mobile.tsx`); the auth cluster (`jwt` + renamed `useAuthToken`) and api-transport (`transport.ts` + `rateLimitManager`) live under `shared/`; styles under `shared/styles/`.
+- Every §1.3 file lives at its §4 destination; the three ui-consumed utilities are co-located in `components/ui/` (`utils.ts`, `use-toast.ts`, `use-mobile.tsx`); the auth cluster (`jwt` + renamed `useAuthToken`) and api-transport (`transport.ts`) live under `shared/`; the `rateLimitManager` shim is **deleted**; styles under `shared/styles/`.
 - **No** `@/hooks|@/lib|@/utils|@/contexts|@/services|@/pages` or non-`ui` `@/components/*` import resolves anywhere under `features/` or `shared/`; the new `import-x/no-restricted-paths` zones are **blocking** and green.
 - Lead-stream residue disposition table (§6) completed from a full trace; each file landed or logged.
 - Relocated tests pass at their new paths; `npm run verify` + `prettier --check` green per stage; full `npm run preflight` (incl. visual regression + e2e) green at the gate.
