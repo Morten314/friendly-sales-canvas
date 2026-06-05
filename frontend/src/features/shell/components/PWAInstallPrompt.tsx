@@ -2,7 +2,7 @@ import { Download } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/components/ui/use-mobile";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
