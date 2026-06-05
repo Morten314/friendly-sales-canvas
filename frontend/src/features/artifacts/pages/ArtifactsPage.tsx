@@ -1,9 +1,5 @@
 import {
   FileText,
-  TrendingUp,
-  Users,
-  Target,
-  BarChart,
   Clock,
   AlertCircle,
   CheckCircle,
@@ -19,6 +15,7 @@ import React, { useState, useEffect } from "react";
 
 import { mockArtefacts } from "../data/mockArtefacts";
 import { generateAndDownloadPDF } from "../lib/artefactPdf";
+import { getStatusIcon, getTypeIcon } from "../lib/artefactPresentation";
 import type { ArtefactItem } from "../types";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -126,38 +123,6 @@ const ArtifactsPage = () => {
 
     // Generate and download PDF
     generateAndDownloadPDF(artefact);
-  };
-
-  const getTypeIcon = (type: ArtefactItem["type"]) => {
-    switch (type) {
-      case "report":
-        return FileText;
-      case "analysis":
-        return TrendingUp;
-      case "insight":
-        return Target;
-      case "proposal":
-        return BarChart;
-      case "enrichment":
-        return Users;
-      case "playbook":
-        return Target;
-      default:
-        return FileText;
-    }
-  };
-
-  const getStatusIcon = (status: ArtefactItem["status"]) => {
-    switch (status) {
-      case "new":
-        return <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />;
-      case "viewed":
-        return <CheckCircle className="w-4 h-4 text-blue-500" />;
-      case "updated":
-        return <AlertCircle className="w-4 h-4 text-amber-500" />;
-      default:
-        return null;
-    }
   };
 
   // Library Card Component (Compact view)
