@@ -20,7 +20,7 @@ import type {
   UntypedRegionData,
 } from "@/lib/types/escape-hatches";
 import { useAuth } from "@/shared/auth";
-import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
+import { getUserLocalStorage, setUserLocalStorage } from "@/shared/lib/cacheUtils";
 
 const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = ({
   isEditing,

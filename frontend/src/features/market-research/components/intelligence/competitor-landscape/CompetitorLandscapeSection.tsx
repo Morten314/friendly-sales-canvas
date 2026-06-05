@@ -40,7 +40,7 @@ import { useCompetitorLandscape } from "./useCompetitorLandscape";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/shared/auth";
-import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
+import { getUserLocalStorage, setUserLocalStorage } from "@/shared/lib/cacheUtils";
 
 const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   isEditing: isCompetitorLandscapeEditing,

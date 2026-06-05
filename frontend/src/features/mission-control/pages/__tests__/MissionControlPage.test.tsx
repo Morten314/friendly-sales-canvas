@@ -15,7 +15,7 @@
  *    so no network requests fire (server.listen({ onUnhandledRequest: "error" }))
  *  - @/shared/profiler — no-op cache helpers to skip localStorage/session writes
  *  - @/features/shell Layout — renders children directly (no router/sidebar needed)
- *  - @/utils/cacheUtils (dynamic import inside page) — no-op setUserLocalStorage
+ *  - @/shared/lib/cacheUtils (dynamic import inside page) — no-op setUserLocalStorage
  *  - All four child components — stable testid stubs
  *
  * Tab-switch implementation note:
@@ -70,7 +70,7 @@ vi.mock("@/features/shell", () => ({
 // ---------------------------------------------------------------------------
 // cacheUtils dynamic import inside the page's read-effect.
 // ---------------------------------------------------------------------------
-vi.mock("@/utils/cacheUtils", () => ({
+vi.mock("@/shared/lib/cacheUtils", () => ({
   setUserLocalStorage: () => {},
   getUserLocalStorage: () => null,
   getUserCacheKey: () => "",

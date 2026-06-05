@@ -87,7 +87,7 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
   const loadProfileFromLocalStorage = useCallback(
     async (userId: string): Promise<Record<string, unknown> | null> => {
       try {
-        const { getUserLocalStorage } = await import("@/utils/cacheUtils");
+        const { getUserLocalStorage } = await import("@/shared/lib/cacheUtils");
         const localData = getUserLocalStorage("companyProfile", userId);
         if (localData) {
           const localProfile = JSON.parse(localData) as Record<string, unknown>;
@@ -280,7 +280,7 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
 
       // Save to localStorage for offline access and refresh persistence
       try {
-        const { setUserLocalStorage } = await import("@/utils/cacheUtils");
+        const { setUserLocalStorage } = await import("@/shared/lib/cacheUtils");
         const dataToSave = {
           ...data,
           user_id: currentUser.uid,

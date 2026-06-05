@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/shared/auth";
 import { FeatureErrorBoundary } from "@/shared/components";
-import { setUserLocalStorage } from "@/utils/cacheUtils";
+import { setUserLocalStorage } from "@/shared/lib/cacheUtils";
 
 interface IndustryTrendsSectionProps {
   isIndustryTrendsEditing: boolean;

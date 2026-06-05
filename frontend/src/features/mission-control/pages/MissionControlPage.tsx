@@ -206,7 +206,7 @@ const MissionControlPage = () => {
     if (hasCompanyName || profileData.headquarters || profileData.industry || profileData.revenue) {
       void (async () => {
         try {
-          const { setUserLocalStorage } = await import("@/utils/cacheUtils");
+          const { setUserLocalStorage } = await import("@/shared/lib/cacheUtils");
           const dataToSave = {
             ...(data as Record<string, unknown>),
             ...profileData,

@@ -15,12 +15,12 @@ import type {
   UntypedVisualDataCardRaw,
 } from "@/lib/types/escape-hatches";
 import { useAuth } from "@/shared/auth";
-import { logApiCallResult } from "@/utils/apiUtils";
 import {
   getUserLocalStorage,
   setUserLocalStorage,
   removeUserLocalStorage,
-} from "@/utils/cacheUtils";
+} from "@/shared/lib/cacheUtils";
+import { logApiCallResult } from "@/utils/apiUtils";
 
 // Module augmentation: window-attached refresh-coordination + debug helpers.
 // These are written in this file and read elsewhere within it; declaring them

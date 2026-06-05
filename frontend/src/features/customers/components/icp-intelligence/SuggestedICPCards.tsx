@@ -46,6 +46,7 @@ import { useToast } from "@/hooks/use-toast";
 import { buildApiUrl } from "@/lib/api";
 import type { UntypedProfilerIcpRecord } from "@/lib/types/escape-hatches";
 import { useAuth } from "@/shared/auth";
+import { getUserLocalStorage, setUserLocalStorage } from "@/shared/lib/cacheUtils";
 import {
   ensureMissionProfilerScope,
   isProfilerCacheValid,
@@ -59,7 +60,6 @@ import {
   resolveAcceptedPersistedIcpId,
   removeProfilerAcceptedIcpDisplayMeta,
 } from "@/shared/profiler";
-import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
 
 /** Dev-only logs for verifying Refresh → GET /icp → mapped cards/reports. Strip or disable for production noise. */
 function profilerIcpDebug(...args: unknown[]) {

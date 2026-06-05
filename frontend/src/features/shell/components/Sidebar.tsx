@@ -337,8 +337,8 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/shared/auth";
+import { clearUserCache } from "@/shared/lib/cacheUtils";
 import { useTenant } from "@/shared/tenant";
-import { clearUserCache } from "@/utils/cacheUtils";
 
 type NavItem = {
   icon: React.ElementType;
