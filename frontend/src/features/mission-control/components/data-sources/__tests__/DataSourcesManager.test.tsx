@@ -6,8 +6,8 @@ import DataSourcesManager from "../DataSourcesManager";
 
 // Mock auth so the container resolves a userId/orgId (the reads are enabled and
 // the lead-stream sync effect runs).
-vi.mock("@/hooks/useAuth", () => ({
-  useAuth: () => ({ currentUser: { uid: "u1" }, orgId: "brewra" }),
+vi.mock("@/shared/auth", () => ({
+  useAuthToken: () => ({ currentUser: { uid: "u1" }, orgId: "brewra" }),
 }));
 
 // Stub the read hooks: the container maps their `.data` into local state via

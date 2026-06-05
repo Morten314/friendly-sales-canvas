@@ -22,8 +22,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
 import { qk } from "@/shared/api/queryKeys";
+import { useAuthToken } from "@/shared/auth";
 import { useCompanyProfile } from "@/shared/company-profile";
 import {
   ensureMissionProfilerScope,
@@ -47,7 +47,7 @@ interface CompanyProfileFormProps {
 
 export default function CompanyProfileForm({ onSavedChange }: CompanyProfileFormProps) {
   const { toast } = useToast();
-  const { currentUser, orgId } = useAuth();
+  const { currentUser, orgId } = useAuthToken();
   const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
   const queryClient = useQueryClient();
 

@@ -5,8 +5,8 @@ import type { ICP } from "../../../types";
 import ICPManager from "../ICPManager";
 
 // Auth so the read hook is enabled and the settle effect has a uid.
-vi.mock("@/hooks/useAuth", () => ({
-  useAuth: () => ({ currentUser: { uid: "u1" }, orgId: "brewra" }),
+vi.mock("@/shared/auth", () => ({
+  useAuthToken: () => ({ currentUser: { uid: "u1" }, orgId: "brewra" }),
 }));
 
 // Toast is a no-op for these container tests.

@@ -10,7 +10,7 @@
  * ICPManager, or DataSourcesManager.
  *
  * Heavy infrastructure mocked:
- *  - @/hooks/useAuth — provides a stable uid + orgId without Firebase
+ *  - @/shared/auth (useAuthToken) — provides a stable uid + orgId without Firebase
  *  - @/shared/company-profile — returns no data + not loading,
  *    so no network requests fire (server.listen({ onUnhandledRequest: "error" }))
  *  - @/shared/profiler — no-op cache helpers to skip localStorage/session writes
@@ -35,8 +35,8 @@ import MissionControlPage from "../MissionControlPage";
 // ---------------------------------------------------------------------------
 // Auth mock — stable uid + orgId, no Firebase calls.
 // ---------------------------------------------------------------------------
-vi.mock("@/hooks/useAuth", () => ({
-  useAuth: () => ({ currentUser: { uid: "u1" }, orgId: "brewra" }),
+vi.mock("@/shared/auth", () => ({
+  useAuthToken: () => ({ currentUser: { uid: "u1" }, orgId: "brewra" }),
 }));
 
 // ---------------------------------------------------------------------------

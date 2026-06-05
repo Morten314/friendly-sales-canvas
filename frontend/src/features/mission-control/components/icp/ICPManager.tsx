@@ -9,8 +9,8 @@ import IcpWizard from "./IcpWizard";
 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
 import { apiFetch } from "@/lib/api";
+import { useAuthToken } from "@/shared/auth";
 import { setUserLocalStorage, removeUserLocalStorage } from "@/shared/lib/cacheUtils";
 import {
   mergeProfilerAcceptedIcpDisplay,
@@ -20,7 +20,7 @@ import type { UntypedProfilerIcpRecord } from "@/shared/types/escape-hatches";
 
 const ICPManager: React.FC = () => {
   const { toast } = useToast();
-  const { currentUser, orgId } = useAuth();
+  const { currentUser, orgId } = useAuthToken();
   const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
   const [icps, setIcps] = useState<ICP[]>([]);
 

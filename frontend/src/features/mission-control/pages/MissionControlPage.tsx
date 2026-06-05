@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Layout } from "@/features/shell";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthToken } from "@/shared/auth";
 import { useCompanyProfile } from "@/shared/company-profile";
 import {
   ensureMissionProfilerScope,
@@ -46,7 +46,7 @@ const MissionControlPage = () => {
   // READ by calculateOverallCompleteness + the hasDataSources sync effect.
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
 
-  const { currentUser, orgId } = useAuth();
+  const { currentUser, orgId } = useAuthToken();
   const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
   /** Profiler accept/delete set missionControlIcpsNeedRefetch — show loading until ICPManager GET finishes. */
   const [syncingProfilerCustomerProfile, setSyncingProfilerCustomerProfile] = useState(false);

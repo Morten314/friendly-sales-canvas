@@ -46,7 +46,6 @@ import {
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
 import { buildApiUrl } from "@/lib/api";
 import {
   readLeadStreamHeatmapFromSession,
@@ -60,6 +59,7 @@ import {
   extractMarketScoreRowsFromResponse,
   heatmapLeadFromUnknownRow,
 } from "@/lib/marketScoresHeatmap";
+import { useAuthToken } from "@/shared/auth";
 import jwtManager from "@/shared/auth/jwt";
 import { useTenant } from "@/shared/tenant";
 
@@ -325,7 +325,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
   onHeatmapRowsForDashboardChange,
 }) => {
   const navigate = useNavigate();
-  const { currentUser, orgId: authOrgId, fetchOrgId } = useAuth();
+  const { currentUser, orgId: authOrgId, fetchOrgId } = useAuthToken();
   const { selectedTenant } = useTenant();
   const { toast } = useToast();
   const [apiHeatmapLeads, setApiHeatmapLeads] = useState<HeatmapLead[] | null>(null);
