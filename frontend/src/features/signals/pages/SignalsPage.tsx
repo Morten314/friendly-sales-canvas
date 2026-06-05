@@ -1,20 +1,8 @@
-import {
-  X,
-  Bookmark,
-  MessageCircle,
-  Info,
-  Share2,
-  Bot,
-  Send,
-  ThumbsUp,
-  ThumbsDown,
-  Loader2,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
+import { X, Bookmark, MessageCircle, Share2, Bot, Send } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { SignalCard } from "../components/SignalCard";
 import {
   applyRejectedFilterAndSort,
   buildSignalCardsFromFetchData,
@@ -22,7 +10,7 @@ import {
   getSignalContentHash,
 } from "../components/signalCards";
 import { fetchSignals, generateSignalsBatch } from "../services/signals";
-import type { Agent, NBAItem, SignalCard } from "../types";
+import type { Agent, NBAItem, SignalCard as SignalCardType } from "../types";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,11 +23,9 @@ import {
 } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Toaster } from "@/components/ui/toaster";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Layout } from "@/features/shell";
 import { useToast } from "@/hooks/use-toast";
 import type { UntypedBackendSignal } from "@/lib/types/escape-hatches";
-import { sanitizeAnswerText } from "@/lib/utils";
 import { useAuth } from "@/shared/auth";
 import { useSignalAction } from "@/shared/chat/useSignalAction";
 import { useSignalAsk } from "@/shared/chat/useSignalAsk";
@@ -52,10 +38,10 @@ const SignalsPage = () => {
   const askMutation = useSignalAsk();
   const actionMutation = useSignalAction();
   const [currentTab] = useState("signals");
-  const [signals, setSignals] = useState<SignalCard[]>([]);
-  const [savedInsights, setSavedInsights] = useState<SignalCard[]>([]);
+  const [signals, setSignals] = useState<SignalCardType[]>([]);
+  const [savedInsights, setSavedInsights] = useState<SignalCardType[]>([]);
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
-  const [selectedSignal, setSelectedSignal] = useState<SignalCard | null>(null);
+  const [selectedSignal, setSelectedSignal] = useState<SignalCardType | null>(null);
   const [chatMessage, setChatMessage] = useState("");
   /** Which recommendation's prompt is expanded: { signalId, index } */
   const [expandedRecommendation, setExpandedRecommendation] = useState<{
@@ -90,7 +76,7 @@ const SignalsPage = () => {
     Map<
       string,
       {
-        signal: SignalCard;
+        signal: SignalCardType;
         originalIndex: number;
         timer: NodeJS.Timeout;
       }
@@ -332,7 +318,7 @@ const SignalsPage = () => {
 
   /** Navigate to Chat with Scout or Profiler, passing recommendation + prompt + answer as context */
   const handleNavigateToAgentChat = (
-    signal: SignalCard,
+    signal: SignalCardType,
     recommendation: string,
     prompt: string,
     answer?: string,
@@ -356,7 +342,7 @@ const SignalsPage = () => {
   };
 
   /** Navigate to Chat from bot icon (signal-level context, uses first recommendation if available) */
-  const handleBotIconClick = (signal: SignalCard) => {
+  const handleBotIconClick = (signal: SignalCardType) => {
     const list: NBAItem[] =
       signal.NBAs && signal.NBAs.length > 0
         ? signal.NBAs
@@ -367,12 +353,12 @@ const SignalsPage = () => {
     const answer = first ? recommendationAnswers[`${signal.id}-0`] : undefined;
     handleNavigateToAgentChat(signal, recommendation, prompt, answer);
   };
-  const getContextualGreeting = (_signal: SignalCard) => {
+  const getContextualGreeting = (_signal: SignalCardType) => {
     const name = "Alex"; // This would come from user context in real app
     return `Hi ${name} 👋, I'm ready to delegate this insight for you. Please instruct.`;
   };
 
-  const getContextualSuggestions = (signal: SignalCard) => {
+  const getContextualSuggestions = (signal: SignalCardType) => {
     if (
       signal.headline.toLowerCase().includes("competitor") &&
       signal.headline.toLowerCase().includes("pricing")
@@ -682,7 +668,7 @@ const SignalsPage = () => {
     };
   }, [pendingRejections]);
 
-  const filteredSavedInsights: SignalCard[] =
+  const filteredSavedInsights: SignalCardType[] =
     savedInsightsFilter === "all"
       ? savedInsights
       : savedInsights.filter((insight) => {
@@ -722,405 +708,57 @@ const SignalsPage = () => {
                 const contentHash = getSignalContentHash(signal);
                 const isAccepted = acceptedSignals.has(contentHash);
                 return (
-                  <div key={signal.id} className="space-y-0">
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-lg transition-all duration-200">
-                      {/* Card Header */}
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                          {getAgentBadge(signal.agent)}
-                          <span className="text-sm text-gray-500">•</span>
-                          <span className="text-sm text-gray-500">{signal.timestamp}</span>
-                          {isAccepted && (
-                            <Badge
-                              variant="secondary"
-                              className="bg-green-100 text-green-800 border-green-200"
-                            >
-                              Accepted
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={`h-8 w-8 p-0 ${
-                              isAccepted
-                                ? "text-green-600 bg-green-50"
-                                : "text-gray-500 hover:text-green-600 hover:bg-green-50"
-                            }`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void handleAcceptSignal(signal.id);
-                            }}
-                          >
-                            <ThumbsUp className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRejectSignal(signal.id);
-                            }}
-                          >
-                            <ThumbsDown className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 text-gray-500 hover:text-blue-600 hover:bg-blue-50"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleBotIconClick(signal);
-                            }}
-                            title={
-                              signal.agent === "scout" ? "Chat with Scout" : "Chat with Profiler"
-                            }
-                          >
-                            <Bot className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Card Body */}
-                      <div className="mb-2">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-1">
-                              <h3 className="text-lg font-semibold text-gray-900">
-                                {signal.headline}
-                              </h3>
-                              {/* <div className="flex items-center gap-3">
-                           <button 
-                             className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
-                             onClick={() => toast({
-                               title: "Added",
-                               description: "This insight will be included in your weekly digest and sent to your registered email.",
-                               duration: 3000,
-                             })}
-                           >
-                             ➕ Add to my Weekly Digest
-                           </button>
-                           <button 
-                             className="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-md text-gray-700 flex items-center gap-1"
-                             onClick={() => handleAction(signal.id, 'ask')}
-                           >
-                             💬 Discuss with Agent
-                           </button>
-                         </div> */}
-                            </div>
-                            <p className="text-gray-600 text-sm leading-relaxed mb-2">
-                              {signal.snippet}
-                            </p>
-                            {/* Description field - detailed ICP/customer context with Read more/Show less */}
-                            {signal.description && (
-                              <div className="mt-2">
-                                {expandedDescriptions.has(signal.id) ? (
-                                  <>
-                                    <p className="text-gray-700 text-sm leading-relaxed mb-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                      {signal.description}
-                                    </p>
-                                    {/* Citations from API - bottom left of expanded description; click opens url */}
-                                    {Array.isArray(signal.source) && signal.source.length > 0 && (
-                                      <div className="mt-2 flex flex-col gap-1.5 justify-start">
-                                        {signal.source.map((src, idx) => {
-                                          const label = src.citation || src.url || "Source";
-                                          const hasUrl = src.url && /^https?:\/\//i.test(src.url);
-                                          return hasUrl ? (
-                                            <a
-                                              key={idx}
-                                              href={src.url}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="block w-fit"
-                                            >
-                                              <Badge
-                                                variant="secondary"
-                                                className="text-xs font-normal hover:bg-gray-300 cursor-pointer max-w-full text-left"
-                                              >
-                                                {label}
-                                              </Badge>
-                                            </a>
-                                          ) : (
-                                            <Badge
-                                              key={idx}
-                                              variant="secondary"
-                                              className="text-xs font-normal w-fit"
-                                            >
-                                              {label}
-                                            </Badge>
-                                          );
-                                        })}
-                                      </div>
-                                    )}
-                                    {/* Recommendations - click to show corresponding prompt */}
-                                    {(() => {
-                                      const recommendationsList: NBAItem[] =
-                                        signal.NBAs && signal.NBAs.length > 0
-                                          ? signal.NBAs
-                                          : (signal.nextBestMoves || []).map((m) => ({
-                                              nba: m,
-                                              prompt: "",
-                                            }));
-                                      if (recommendationsList.length === 0) return null;
-                                      return (
-                                        <div className="mt-4 space-y-2">
-                                          <h4 className="text-sm font-medium text-gray-900">
-                                            Recommendations
-                                          </h4>
-                                          <div className="space-y-2">
-                                            {recommendationsList.map((item, index) => {
-                                              const isExpanded =
-                                                expandedRecommendation?.signalId === signal.id &&
-                                                expandedRecommendation?.index === index;
-                                              const hasPrompt = (item.prompt ?? "").trim() !== "";
-                                              return (
-                                                <div
-                                                  key={index}
-                                                  className="rounded-lg border border-gray-100 overflow-hidden"
-                                                >
-                                                  <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                      setExpandedRecommendation(
-                                                        isExpanded
-                                                          ? null
-                                                          : { signalId: signal.id, index },
-                                                      );
-                                                    }}
-                                                    className={`w-full flex items-start gap-2 p-2.5 text-left cursor-pointer transition-colors ${
-                                                      isExpanded
-                                                        ? "bg-blue-50/50 border-blue-200"
-                                                        : "bg-gray-50 hover:border-blue-200 hover:bg-blue-50/30"
-                                                    }`}
-                                                  >
-                                                    <p className="text-sm text-gray-700 flex-1">
-                                                      {item.nba}
-                                                    </p>
-                                                  </button>
-                                                  {isExpanded && (
-                                                    <div className="px-3 pb-3 pt-1 border-t border-gray-100">
-                                                      <div className="p-3 rounded-lg bg-gradient-to-br from-slate-50 to-blue-50/50 border border-slate-200 space-y-3">
-                                                        <p className="text-sm text-slate-700 leading-relaxed font-semibold">
-                                                          {hasPrompt
-                                                            ? "Review the answer below. If this signal and its recommendations are relevant to you, accept it. Need more clarity? Chat with the agent to explore further."
-                                                            : "If this signal and its recommendations are relevant to you, accept it. Need more clarity? Chat with the agent to explore further."}
-                                                        </p>
-                                                        {hasPrompt && (
-                                                          <div className="rounded-md bg-white/80 border border-slate-200 p-2.5">
-                                                            <p className="text-xs font-medium text-slate-600 mb-1.5">
-                                                              Answer
-                                                            </p>
-                                                            {recommendationAnswerLoading ===
-                                                            `${signal.id}-${index}` ? (
-                                                              <div className="flex items-center gap-2 py-4 text-slate-500">
-                                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                                                <span className="text-sm">
-                                                                  Loading answer...
-                                                                </span>
-                                                              </div>
-                                                            ) : (
-                                                              <>
-                                                                <div className="relative">
-                                                                  <p
-                                                                    className={`text-sm text-slate-800 whitespace-pre-wrap pr-1 ${
-                                                                      answerExpandedKeys.has(
-                                                                        `${signal.id}-${index}`,
-                                                                      )
-                                                                        ? ""
-                                                                        : "max-h-24 overflow-hidden"
-                                                                    }`}
-                                                                  >
-                                                                    {sanitizeAnswerText(
-                                                                      recommendationAnswers[
-                                                                        `${signal.id}-${index}`
-                                                                      ] ?? item.prompt,
-                                                                    )}
-                                                                  </p>
-                                                                  {!answerExpandedKeys.has(
-                                                                    `${signal.id}-${index}`,
-                                                                  ) && (
-                                                                    <>
-                                                                      <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
-                                                                      <Button
-                                                                        variant="ghost"
-                                                                        size="sm"
-                                                                        className="mt-1.5 h-7 px-2 text-xs text-slate-600 hover:text-slate-800 hover:bg-slate-100 -ml-2"
-                                                                        onClick={(e) => {
-                                                                          e.stopPropagation();
-                                                                          setAnswerExpandedKeys(
-                                                                            (prev) => {
-                                                                              const next = new Set(
-                                                                                prev,
-                                                                              );
-                                                                              next.add(
-                                                                                `${signal.id}-${index}`,
-                                                                              );
-                                                                              return next;
-                                                                            },
-                                                                          );
-                                                                        }}
-                                                                      >
-                                                                        Show more
-                                                                        <ChevronDown className="h-3.5 w-3.5 ml-0.5" />
-                                                                      </Button>
-                                                                    </>
-                                                                  )}
-                                                                </div>
-                                                                {answerExpandedKeys.has(
-                                                                  `${signal.id}-${index}`,
-                                                                ) && (
-                                                                  <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    className="mt-1 h-7 px-2 text-xs text-slate-600 hover:text-slate-800 hover:bg-slate-100 -ml-2"
-                                                                    onClick={(e) => {
-                                                                      e.stopPropagation();
-                                                                      setAnswerExpandedKeys(
-                                                                        (prev) => {
-                                                                          const next = new Set(
-                                                                            prev,
-                                                                          );
-                                                                          next.delete(
-                                                                            `${signal.id}-${index}`,
-                                                                          );
-                                                                          return next;
-                                                                        },
-                                                                      );
-                                                                    }}
-                                                                  >
-                                                                    Show less
-                                                                    <ChevronUp className="h-3.5 w-3.5 ml-0.5" />
-                                                                  </Button>
-                                                                )}
-                                                                <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-200">
-                                                                  <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    className={`h-8 w-8 p-0 ${
-                                                                      isAccepted
-                                                                        ? "text-green-600 bg-green-50"
-                                                                        : "text-slate-500 hover:text-green-600 hover:bg-green-50"
-                                                                    }`}
-                                                                    onClick={(e) => {
-                                                                      e.stopPropagation();
-                                                                      void handleAcceptSignal(
-                                                                        signal.id,
-                                                                      );
-                                                                    }}
-                                                                    title={
-                                                                      isAccepted
-                                                                        ? "Accepted"
-                                                                        : "Accept signal"
-                                                                    }
-                                                                  >
-                                                                    <ThumbsUp className="h-4 w-4" />
-                                                                  </Button>
-                                                                  <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    className="h-8 w-8 p-0 text-slate-500 hover:text-red-600 hover:bg-red-50"
-                                                                    onClick={(e) => {
-                                                                      e.stopPropagation();
-                                                                      handleRejectSignal(signal.id);
-                                                                    }}
-                                                                    title="Reject signal"
-                                                                  >
-                                                                    <ThumbsDown className="h-4 w-4" />
-                                                                  </Button>
-                                                                  <Button
-                                                                    size="sm"
-                                                                    variant="outline"
-                                                                    className="text-xs font-medium h-8 border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400"
-                                                                    onClick={(e) => {
-                                                                      e.stopPropagation();
-                                                                      handleNavigateToAgentChat(
-                                                                        signal,
-                                                                        item.nba,
-                                                                        item.prompt ?? "",
-                                                                        recommendationAnswers[
-                                                                          `${signal.id}-${index}`
-                                                                        ],
-                                                                      );
-                                                                    }}
-                                                                  >
-                                                                    <MessageCircle className="h-3.5 w-3.5 mr-1.5" />
-                                                                    {signal.agent === "scout"
-                                                                      ? "Chat with Scout"
-                                                                      : "Chat with Profiler"}
-                                                                  </Button>
-                                                                </div>
-                                                              </>
-                                                            )}
-                                                          </div>
-                                                        )}
-                                                      </div>
-                                                    </div>
-                                                  )}
-                                                </div>
-                                              );
-                                            })}
-                                          </div>
-                                        </div>
-                                      );
-                                    })()}
-                                    <div className="flex justify-center mt-3">
-                                      <Button
-                                        variant="outline"
-                                        size="default"
-                                        className="text-blue-600 border-blue-600 hover:text-blue-700 hover:bg-blue-50 text-sm"
-                                        onClick={() => {
-                                          setExpandedDescriptions((prev) => {
-                                            const newSet = new Set(prev);
-                                            newSet.delete(signal.id);
-                                            return newSet;
-                                          });
-                                        }}
-                                      >
-                                        Show less
-                                      </Button>
-                                    </div>
-                                  </>
-                                ) : (
-                                  <div className="flex justify-center">
-                                    <Button
-                                      variant="outline"
-                                      size="default"
-                                      className="text-blue-600 border-blue-600 hover:text-blue-700 hover:bg-blue-50 text-sm"
-                                      onClick={() => {
-                                        setExpandedDescriptions(
-                                          (prev) => new Set([...prev, signal.id]),
-                                        );
-                                      }}
-                                    >
-                                      Read more
-                                    </Button>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <Info className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="text-xs">Source: {signal.sourceLabel}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                      </div>
-
-                      {/* Card Actions */}
-                      {/* <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
-                  <Button size="sm" variant="outline" className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300" onClick={() => handleAction(signal.id, 'save')}>
-                    <Bookmark className="h-4 w-4 mr-1" />
-                    Save for Later
-                  </Button>
-                </div> */}
-                    </div>
-                  </div>
+                  <SignalCard
+                    key={signal.id}
+                    signal={signal}
+                    isAccepted={isAccepted}
+                    getAgentBadge={getAgentBadge}
+                    isDescriptionExpanded={expandedDescriptions.has(signal.id)}
+                    expandedRecommendationIndex={
+                      expandedRecommendation?.signalId === signal.id
+                        ? expandedRecommendation.index
+                        : null
+                    }
+                    recommendationAnswers={recommendationAnswers}
+                    recommendationAnswerLoading={recommendationAnswerLoading}
+                    answerExpandedKeys={answerExpandedKeys}
+                    onAccept={(signalId) => {
+                      void handleAcceptSignal(signalId);
+                    }}
+                    onReject={handleRejectSignal}
+                    onBotIconClick={handleBotIconClick}
+                    onNavigateToAgentChat={handleNavigateToAgentChat}
+                    onExpandDescription={() => {
+                      setExpandedDescriptions((prev) => new Set([...prev, signal.id]));
+                    }}
+                    onCollapseDescription={() => {
+                      setExpandedDescriptions((prev) => {
+                        const newSet = new Set(prev);
+                        newSet.delete(signal.id);
+                        return newSet;
+                      });
+                    }}
+                    onToggleRecommendation={(index) => {
+                      const isExpanded =
+                        expandedRecommendation?.signalId === signal.id &&
+                        expandedRecommendation?.index === index;
+                      setExpandedRecommendation(isExpanded ? null : { signalId: signal.id, index });
+                    }}
+                    onExpandAnswer={(key) => {
+                      setAnswerExpandedKeys((prev) => {
+                        const next = new Set(prev);
+                        next.add(key);
+                        return next;
+                      });
+                    }}
+                    onCollapseAnswer={(key) => {
+                      setAnswerExpandedKeys((prev) => {
+                        const next = new Set(prev);
+                        next.delete(key);
+                        return next;
+                      });
+                    }}
+                  />
                 );
               })
             )}
