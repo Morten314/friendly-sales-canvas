@@ -1501,3 +1501,44 @@ The undo grace-period, the 404-as-success branch, and the delete-current path ar
 A behavioral-coverage hardening pass / when the fake-timer + MSW interplay is solved.
 
 **Owner:** TBD.
+
+## TD-FE-47 — Phase 12 features still import legacy `@/hooks/usePageTitle`
+
+**Current state:**
+`features/calendar`, `features/reports`, and `features/artifacts` import `usePageTitle` from the legacy `@/hooks/usePageTitle` rather than a `@/shared/hooks` home.
+
+**Why we deferred:**
+Spec 14 §4's staging rule — Phase 11 promotes shared hooks; feature phases must not pre-extract shared infra ahead of it.
+
+**Pull-forward trigger:**
+Phase 11 (shared-hooks promotion).
+
+**Owner:** TBD.
+
+## TD-FE-48 — Artefacts cross-component coupling via untyped `window` CustomEvents
+
+**Current state:**
+`features/artifacts/pages/ArtifactsPage.tsx` listens on `window` for `CustomEvent("artifactsSearch")` and `CustomEvent("addArtefact")` (dispatched by the header). The coupling is untyped, global, and hard to test; it should be a typed feature/shared mechanism. Same class of debt as TD-FE-44.
+
+**Why we deferred:**
+Out of scope for Phase 12's parity-only relocation (behavior was frozen).
+
+**Pull-forward trigger:**
+Artefacts gets real data, or a shared search/event bus lands.
+
+**Owner:** TBD.
+
+## TD-FE-49 — Small-page surfaces are mock/placeholder (no backend)
+
+**Current state:**
+`features/{calendar,insights,reports,artifacts}` render hardcoded mock data with no API. They should be wired to real endpoints once those exist.
+
+**Why we deferred:**
+These products are not built yet; the pages are placeholder surfaces.
+
+**Pull-forward trigger:**
+Each product's backend exists.
+
+**Owner:** TBD.
+
+_Phase 12 note: TD-FE-47–49 numbers are provisional — Phase 8 also claimed 47+ on a sibling branch; the integrator reconciles the actual integers at merge._
