@@ -19,9 +19,10 @@
 - **Inner loop (per task).** From `frontend/`: `npm run verify` (= `typecheck && lint && test:changed` — **incremental**, only changed-graph tests). Because `verify` omits `format:check`, also run `npx prettier --check <touched .ts/.tsx files>` — but **never** prettier `docs/TECH_DEBT.md` (outside the FE prettier gate; prettier corrupts its unfenced markdown).
 - **Do NOT run `npm run knip` before Stage 5.** Each feature barrel's export is consumed in the same task (no hook-first window is expected), but reserve `knip` for the merge preflight regardless, per house convention. `verify` does not run knip.
 - **Vitest flake.** If the full suite flakes on async `waitFor` tests under CPU contention (phases 8/10 are active), rerun with `npm run test -- --no-file-parallelism` (100% green; not a defect). Do not weaken assertions.
+- **Stage gate (cross-cutting regression guard).** `verify` is incremental (`test:changed`), so a relocation that broke a test *outside* the changed graph wouldn't surface until the final `preflight`. (Grep confirms only `App.tsx` imports the five pages and no test imports them, so the practical risk is low — but it is structural.) At the **multi-task stage boundaries (end of Stage 1 and end of Stage 3)** run the **full** Vitest suite — `npm run test` (all files; `-- --no-file-parallelism` if it flakes) — before starting the next stage, so an early regression surfaces at the stage that caused it rather than 13 tasks later.
 - **Parity is the contract.** No behavior, route, storage-key, event-name, or pixel change. User-facing copy is frozen (Spec 29 §2.3) — including the `⚡ Activator` / `📊 Presenter` / `Artefacts` titles and Insights' existing `<h1>Reports</h1>` quirk. Renaming a React **component identifier** (e.g. `Artefacts` → `ArtifactsPage`) is code, not copy, and is allowed.
 - **`react-router-dom` import ordering.** ESLint `import/order` enforces alphabetical ordering **within** the `@/features/*` group of `src/app/routes.tsx`. Insert each new `import { xRoutes } from "@/features/x";` in alphabetical position; the `featureRoutes` **array** order is insertion-order (append) and is not lint-enforced. Run `lint` to confirm.
-- **Abort / escalation.** Per-step parity + per-stage `git reset --hard <last-green-checkpoint>` are the recovery primitives. If a single task fails its gate three times with no clear fix, stop and escalate to the human controller; the branch is unshared, so suspension costs only the discarded work.
+- **Abort / escalation.** Per-step parity + per-stage `git reset --hard <last-green-checkpoint>` are the recovery primitives. *Per-task:* if a single task fails its gate three times with no clear fix, stop and escalate to the human controller. *Global criteria:* (a) if **Stage 3 (Artifacts decomposition)** can't reach green, `git reset --hard` to the **Task 4 checkpoint** and ship Phase 12 as **relocation-only** — decomposition was an additive choice that overlaps Phase 13, and relocation alone satisfies the empty-`pages/` goal; (b) if the final `preflight` can't go green, or more than ~3 tasks escalate, **suspend the phase** and revisit Spec 29 rather than landing a partial/behavior-changing cut. The branch is unshared, so suspension costs only the discarded work.
 - **Parallelizable (subagent mode).** Tasks 1, 2, 3 (calendar/insights/reports relocations) are mutually independent except for the shared edits to `src/app/routes.tsx` and `src/App.tsx`; if run concurrently they will trivially conflict on those two files. Prefer **serial** execution for these three to keep the route-registry edits clean. The Artifacts decomposition (Tasks 5–11) is strictly serial (each consumes the prior extraction).
 
 ---
@@ -532,6 +533,13 @@ git add frontend/src/features/reports/pages/__tests__/ReportsPage.test.tsx
 git commit -m "test(fe): add ReportsPage render smoke test"
 ```
 
+- [ ] **Stage 1 gate — full suite.** Before Stage 2, run the full Vitest suite to catch any cross-cutting regression from the three relocations:
+
+```
+npm run test
+```
+Expected: PASS (rerun `-- --no-file-parallelism` if it flakes under contention).
+
 ---
 
 # Stage 2 — Artifacts relocation (verbatim skeleton)
@@ -601,14 +609,13 @@ export { artifactsRoutes } from "./routes";
 ```markdown
 # `artifacts` feature
 
-The Artefacts library surface (route `/artifacts`). Presentational / local-state only — no data layer; mock seed data.
+The Artefacts library surface (route `/artifacts`). Presentational / local-state only — no data layer; mock seed data. **The "Key files" list is finalized in Task 11**, after the page is decomposed.
 
 ## Public surface
 - `artifactsRoutes` — registry entry (`/artifacts`, `ProtectedRoute requireTenant` + `FeatureErrorBoundary`), composed by `src/app/routes.tsx`.
 
 ## Key files
-- `pages/ArtifactsPage.tsx` — orchestrator (state, window-event listeners, handlers, layout).
-- `types.ts` — `ArtefactItem`. `data/mockArtefacts.ts` — seed data. `lib/artefactPdf.ts` — PDF export. `lib/artefactPresentation.tsx` — icon mappers. `components/{LibraryCard,ArtefactStats,FolderGrid}.tsx` — view pieces.
+- `pages/ArtifactsPage.tsx` — the page (relocated from `src/pages/Artifacts.tsx`; decomposed in Stage 3).
 
 ## Dependency notes
 - Imports `Layout` from `@/features/shell`, `FeatureErrorBoundary` from `@/shared/components`, legacy `@/hooks/usePageTitle` (Phase 11 — TD-FE-47).
@@ -1036,12 +1043,31 @@ wc -l src/features/artifacts/pages/ArtifactsPage.tsx
 ```
 Expected: PASS. `ArtifactsPage.tsx` is now the orchestrator (state, two `window` effects, handlers, derived `filteredArtefacts` + `folders`, and the assembled layout). LOC is validated here — Spec 29's ~200 target is a guide, not a gate.
 
-- [ ] **Step 4: Commit.**
+- [ ] **Step 4: Finalize the Artifacts `README.md`.** Now that the files exist, replace the "Key files" section with the real structure and drop the "finalized in Task 11" note from the intro line:
+
+```markdown
+## Key files
+- `pages/ArtifactsPage.tsx` — orchestrator (state, the two `window` CustomEvent listeners, handlers, derived `filteredArtefacts`/`folders`, layout).
+- `types.ts` — `ArtefactItem`.
+- `data/mockArtefacts.ts` — mock seed data (`folders` is derived in the page, not seeded).
+- `lib/artefactPdf.ts` — `createSimplePDF` / `generateAndDownloadPDF`.
+- `lib/artefactPresentation.tsx` — `getTypeIcon` / `getStatusIcon`.
+- `components/LibraryCard.tsx`, `ArtefactStats.tsx`, `FolderGrid.tsx` — view pieces.
+```
+
+- [ ] **Step 5: Commit.**
 
 ```bash
-git add frontend/src/features/artifacts/components/FolderGrid.tsx frontend/src/features/artifacts/pages/ArtifactsPage.tsx
+git add frontend/src/features/artifacts/components/FolderGrid.tsx frontend/src/features/artifacts/pages/ArtifactsPage.tsx frontend/src/features/artifacts/README.md
 git commit -m "refactor(fe): extract artifacts FolderGrid component"
 ```
+
+- [ ] **Step 6: Stage 3 gate — full suite.** Before Stage 4, run the full Vitest suite (cross-cutting guard — the first full run after the seven-step decomposition):
+
+```
+npm run test
+```
+Expected: PASS (rerun `-- --no-file-parallelism` if it flakes under contention).
 
 ---
 
@@ -1176,7 +1202,30 @@ ls frontend/src/pages
 ```
 Expected: `Calendar/Insights/Reports/Artifacts/NotFound.tsx` are gone. Remaining entries (`Signals.tsx`, `Deals.tsx`, `ScoutDeployment.tsx`, `Login.tsx`, `Settings.tsx`, `TenantSelection.tsx`, `useLogin.ts`, `useTenants.ts`, `__tests__/`) belong to Phases 8/9/10 and are intentionally untouched.
 
-- [ ] **Step 2: Kill any orphan preview server, then run the serial preflight on an idle box.** From `frontend/`:
+- [ ] **Step 2: Add a route-registry integration test** (closes the smoke-test gap from review F3: per-page render tests mount components directly and don't prove the route is wired into `featureRoutes` — a missing `...xRoutes` spread is invisible to `typecheck` and to those tests). Create `frontend/src/app/__tests__/phase12-routes.test.ts`:
+
+```ts
+import { describe, expect, it } from "vitest";
+
+import { featureRoutes } from "@/app/routes";
+
+describe("Phase 12 routes are registered in featureRoutes", () => {
+  it.each(["/calendar", "/insights", "/reports", "/artifacts"])("registers %s", (path) => {
+    const found = featureRoutes.some(
+      (el) => (el as { props?: { path?: string } }).props?.path === path,
+    );
+    expect(found).toBe(true);
+  });
+});
+```
+Run: `npm run test -- src/app/__tests__/phase12-routes.test.ts` → Expected: PASS (4 cases). If importing `featureRoutes` pulls heavy sibling feature modules and the test is slow/brittle, fall back to importing each feature's own `xRoutes` barrel and asserting its `path` (loses missing-spread coverage — note it). Commit:
+
+```bash
+git add frontend/src/app/__tests__/phase12-routes.test.ts
+git commit -m "test(fe): assert Phase 12 routes are registered in featureRoutes"
+```
+
+- [ ] **Step 3: Kill any orphan preview server, then run the serial preflight on an idle box.** From `frontend/`:
 
 ```
 pkill -f "vite preview" || true
@@ -1184,7 +1233,7 @@ npm run preflight
 ```
 Expected: PASS (`typecheck`, `lint`, `format:check`, full Vitest, `build`, `bundle:check` (advisory), `test:e2e`, `knip`). If `knip` flags transitional findings, confirm they are the relocated paths and expected — not new dead code. If Vitest flakes under contention, rerun `npm run test -- --no-file-parallelism`. **Use serial `preflight`, never `preflight:par`, while phases 8/10 share the machine.**
 
-- [ ] **Step 3: Hand off for the human-approved merge.** Report preflight result. At merge (synthesize-impl-review, Spec 14 §5.5), the integrator appends a Spec 14 Phase-12 post-merge amendment recording the **`Deals.tsx` scope correction** (Spec 29 §1.2) — Spec 14 is **not** edited mid-phase (it is a shared file the parallel phases also amend at their own merges).
+- [ ] **Step 4: Hand off for the human-approved merge.** Report preflight result. At merge (synthesize-impl-review, Spec 14 §5.5), the integrator appends a Spec 14 Phase-12 post-merge amendment recording the **`Deals.tsx` scope correction** (Spec 29 §1.2) — Spec 14 is **not** edited mid-phase (it is a shared file the parallel phases also amend at their own merges).
 
 ---
 
@@ -1194,7 +1243,7 @@ Expected: PASS (`typecheck`, `lint`, `format:check`, full Vitest, `build`, `bund
 - `src/pages/` holds no Phase-12 pages.
 - `ArtifactsPage.tsx` is the thin orchestrator; `types`/`data`/`lib`/`components` are split out per Spec 29 §4; `folders` and `filteredArtefacts` stay derived in the page.
 - Routes `/calendar`, `/insights`, `/reports`, `/artifacts`, and the `*` catch-all resolve and render unchanged, each wrapped in `FeatureErrorBoundary`.
-- 5 render tests + the `artefactPdf` unit test pass; `verify` + scoped `prettier --check` green per task; serial `preflight` green at the gate.
+- 5 render tests + the `artefactPdf` unit test + the `featureRoutes` registry test pass; `verify` + scoped `prettier --check` green per task; the full Vitest suite runs at the Stage 1 and Stage 3 gates; serial `preflight` green at the final gate.
 - Provisional TD-FE-47…49 appended to `docs/TECH_DEBT.md` (surgically).
 
 ## Self-review against the spec (verification)
@@ -1204,7 +1253,7 @@ Expected: PASS (`typecheck`, `lint`, `format:check`, full Vitest, `build`, `bund
 - **§4 decomposition (incl. review F1/F5)** → Task 6 keeps `folders` derived in the page; Tasks 10/11 flag `ArtefactStats`/`FolderGrid` as new inline-JSX lifts with prop-drilling; LOC validated in Task 11, not asserted. ✓
 - **§5 routing / NotFound catch-all stays in App.tsx** → Tasks 1/2/3/4 (append registry, drop App routes), 12 (NotFound import re-point, catch-all left in place). ✓
 - **§6 parallel-safety** → surgical per-path commits; shared-file edits (`app/routes.tsx`, `App.tsx`, `shell/index.ts`, `TECH_DEBT.md`) isolated to their tasks; serial execution for the route-registry edits. ✓
-- **§8 testing/gate** → render smoke tests + `artefactPdf` unit test; per-task incremental `verify` + scoped prettier; serial `preflight` at merge. ✓
+- **§8 testing/gate (incl. review F1/F3)** → render smoke tests + `artefactPdf` unit test + `featureRoutes` registry test (catches missing-spread wiring); per-task incremental `verify` + scoped prettier; **full Vitest at the Stage 1 & 3 gates** (cross-cutting guard); serial `preflight` at merge. ✓
 - **§2.3 frozen** → titles/copy untouched; only component identifiers renamed; `window` event names preserved. ✓
 - **Type consistency** → `ArtefactItem` (Task 5) is the single type imported by `data` (T6), `lib/artefactPdf` (T7), `lib/artefactPresentation` (T8), `components/*` (T9–11). `createSimplePDF` signature consistent between T7 lib and test. Route-array names (`calendarRoutes`/`insightsRoutes`/`reportsRoutes`/`artifactsRoutes`) consistent between each `routes.tsx`, `index.ts`, and `app/routes.tsx`. ✓
 
