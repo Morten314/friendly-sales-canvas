@@ -1,9 +1,7 @@
-// Spec 15 §3.3 — characterization for the shared rate limiter. The implementation
-// moved to src/shared/api/rateLimiter.ts (spec 20 §3.2); src/lib/rateLimitManager.ts
-// is now a re-export shim. This test still imports from "@/lib/rateLimitManager"
-// (the shim) to prove the public surface is unchanged. vi.resetModules() re-imports
-// a fresh singleton through the shim (resetting the transitively-imported shared
-// module), so requestHistory does not leak between tests.
+// Spec 15 §3.3 — characterization for the shared rate limiter.
+// Canonical implementation: src/shared/api/rateLimiter.ts (spec 20 §3.2).
+// vi.resetModules() re-imports a fresh singleton on each test so requestHistory
+// does not leak between tests.
 //
 // IMPORTANT: spec 15 §3.3 asserts the cap is "4 req/min." The actual default is
 // RATE_LIMIT_RPM = 30 (src/shared/api/rateLimiter.ts). Tests below assert the ACTUAL
@@ -23,13 +21,13 @@ describe("rateLimitManager", () => {
 
   describe("singleton default config", () => {
     it("exports a singleton at default 30 req/min cap (NOT spec-stated 4)", async () => {
-      const { rateLimitManager } = await import("@/lib/rateLimitManager");
+      const { rateLimiter: rateLimitManager } = await import("@/shared/api/rateLimiter");
       const status = rateLimitManager.getQueueStatus();
       expect(status.maxRequestsPerMinute).toBe(30);
     });
 
     it("queue starts empty", async () => {
-      const { rateLimitManager } = await import("@/lib/rateLimitManager");
+      const { rateLimiter: rateLimitManager } = await import("@/shared/api/rateLimiter");
       expect(rateLimitManager.getQueueStatus().queueLength).toBe(0);
       expect(rateLimitManager.getQueueStatus().requestsThisMinute).toBe(0);
     });
@@ -40,7 +38,7 @@ describe("rateLimitManager", () => {
     // promises in tight succession.
     it("runs requests up to the cap immediately", async () => {
       vi.setSystemTime(new Date("2026-05-08T10:00:00.000Z"));
-      const { RateLimitManager } = await import("@/lib/rateLimitManager");
+      const { RateLimitManager } = await import("@/shared/api/rateLimiter");
       const m = new RateLimitManager({
         maxRequestsPerMinute: 2,
         maxRetries: 0,
@@ -68,7 +66,7 @@ describe("rateLimitManager", () => {
 
     it("queues a request beyond the cap until the rolling window slides", async () => {
       vi.setSystemTime(new Date("2026-05-08T10:00:00.000Z"));
-      const { RateLimitManager } = await import("@/lib/rateLimitManager");
+      const { RateLimitManager } = await import("@/shared/api/rateLimiter");
       const m = new RateLimitManager({
         maxRequestsPerMinute: 2,
         maxRetries: 0,
@@ -113,7 +111,7 @@ describe("rateLimitManager", () => {
 
     it("rejects non-rate-limit errors immediately (no retry path)", async () => {
       vi.setSystemTime(new Date("2026-05-08T10:00:00.000Z"));
-      const { RateLimitManager } = await import("@/lib/rateLimitManager");
+      const { RateLimitManager } = await import("@/shared/api/rateLimiter");
       const m = new RateLimitManager({
         maxRequestsPerMinute: 5,
         maxRetries: 3,
@@ -137,7 +135,7 @@ describe("rateLimitManager", () => {
 
     it("retries rate-limit-classified errors up to maxRetries", async () => {
       vi.setSystemTime(new Date("2026-05-08T10:00:00.000Z"));
-      const { RateLimitManager } = await import("@/lib/rateLimitManager");
+      const { RateLimitManager } = await import("@/shared/api/rateLimiter");
       const m = new RateLimitManager({
         maxRequestsPerMinute: 5,
         maxRetries: 2,
@@ -164,7 +162,7 @@ describe("rateLimitManager", () => {
 
     it("classifies common rate-limit error strings (isRateLimitError fan-out)", async () => {
       vi.setSystemTime(new Date("2026-05-08T10:00:00.000Z"));
-      const { RateLimitManager } = await import("@/lib/rateLimitManager");
+      const { RateLimitManager } = await import("@/shared/api/rateLimiter");
       const m = new RateLimitManager({
         maxRequestsPerMinute: 5,
         maxRetries: 1,
@@ -210,7 +208,7 @@ describe("rateLimitManager", () => {
   describe("clearQueue", () => {
     it('rejects every queued request with "Queue cleared"', async () => {
       vi.setSystemTime(new Date("2026-05-08T10:00:00.000Z"));
-      const { RateLimitManager } = await import("@/lib/rateLimitManager");
+      const { RateLimitManager } = await import("@/shared/api/rateLimiter");
       const m = new RateLimitManager({
         maxRequestsPerMinute: 1,
         maxRetries: 0,
@@ -236,7 +234,8 @@ describe("rateLimitManager", () => {
   describe("executeWithRateLimit helper export", () => {
     it("forwards to the singleton", async () => {
       vi.setSystemTime(new Date("2026-05-08T10:00:00.000Z"));
-      const { executeWithRateLimit, rateLimitManager } = await import("@/lib/rateLimitManager");
+      const { executeWithRateLimit, rateLimiter: rateLimitManager } =
+        await import("@/shared/api/rateLimiter");
       vi.spyOn(console, "log").mockImplementation(() => {});
       const p = executeWithRateLimit(async () => "via-helper", "TestCaller");
       await vi.runAllTimersAsync();
