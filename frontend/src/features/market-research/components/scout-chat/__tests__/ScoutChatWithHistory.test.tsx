@@ -19,7 +19,7 @@ vi.mock("@/shared/auth", () => ({
   useAuth: () => ({ currentUser: { uid: "u1" }, orgId: "org1" }),
 }));
 
-vi.mock("@/components/market-research/ScoutChatPanel", () => ({
+vi.mock("../ScoutChatPanel", () => ({
   default: () => <div />,
 }));
 

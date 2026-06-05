@@ -1,11 +1,12 @@
 import { Users } from "lucide-react";
 import { useState, useCallback } from "react";
 
+import type { EditRecord } from "../types";
+
 import { AddLeadModal } from "./AddLeadModal";
+import ScoutChatPanel from "./ScoutChatPanel";
 import { SuggestedCompaniesSection } from "./SuggestedCompaniesSection";
 
-import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
-import type { EditRecord } from "@/components/market-research/types";
 import { Button } from "@/components/ui/button";
 import type { SignalsChatContext, ChatSession, ChatWithHistoryConfig } from "@/shared/chat";
 import { ChatWithHistory, ContextChat } from "@/shared/chat";

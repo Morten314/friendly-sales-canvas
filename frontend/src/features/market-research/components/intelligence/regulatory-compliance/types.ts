@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 
-import type { EditRecord } from "@/components/market-research/types";
+import type { EditRecord } from "../../types";
+
 import type {
   UntypedBackendApiResponse,
   UntypedBackendProfile,

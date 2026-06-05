@@ -5,9 +5,9 @@ import IndustryTrendsSection from "./intelligence/industry-trends/IndustryTrends
 import MarketEntrySection from "./intelligence/market-entry/MarketEntrySection";
 import MarketSizeSection from "./intelligence/market-size/MarketSizeSection";
 import RegulatoryComplianceSection from "./intelligence/regulatory-compliance/RegulatoryComplianceSection";
+import ScoutChatPanel from "./scout-chat/ScoutChatPanel";
+import type { EditRecord, TrendSnapshot } from "./types";
 
-import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
-import type { EditRecord, TrendSnapshot } from "@/components/market-research/types";
 import type { UntypedBackendProfile, UntypedReportState } from "@/lib/types/escape-hatches";
 
 export interface MarketIntelligenceSectionsProps {
