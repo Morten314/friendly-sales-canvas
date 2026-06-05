@@ -51,7 +51,7 @@ export const apiFetch = async (endpoint: string, options: ApiFetchOptions = {}) 
   // Get JWT token for authentication
   let authHeader = "";
   try {
-    const jwtManager = (await import("./jwt")).default;
+    const jwtManager = (await import("@/shared/auth/jwt")).default;
     authHeader = await jwtManager.getAuthHeader();
   } catch (error) {
     console.warn("🔐 No JWT token available for API request:", error);

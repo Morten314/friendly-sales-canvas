@@ -10,8 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { buildApiUrl } from "@/lib/api";
-import jwtManager from "@/lib/jwt";
 import { useAuth } from "@/shared/auth";
+import jwtManager from "@/shared/auth/jwt";
 
 interface AddLeadFormData {
   fullName: string;

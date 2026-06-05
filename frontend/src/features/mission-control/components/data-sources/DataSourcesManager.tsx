@@ -51,7 +51,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { buildApiUrl } from "@/lib/api";
-import jwtManager from "@/lib/jwt";
+import jwtManager from "@/shared/auth/jwt";
 import type { UntypedBackendDocument } from "@/shared/types/escape-hatches";
 
 interface CompanyProfile {

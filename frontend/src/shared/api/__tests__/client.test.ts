@@ -2,9 +2,9 @@ import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import jwtManager from "@/lib/jwt";
 import { apiGet, authEndpointRequest } from "@/shared/api/client";
 import { rateLimiter } from "@/shared/api/rateLimiter";
+import jwtManager from "@/shared/auth/jwt";
 import { server } from "@/test/msw/server";
 
 const Health = z.object({ ok: z.boolean() });

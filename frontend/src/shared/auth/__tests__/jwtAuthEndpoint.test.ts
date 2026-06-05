@@ -2,7 +2,7 @@ import type { User } from "firebase/auth";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import jwtManager from "@/lib/jwt";
+import jwtManager from "@/shared/auth/jwt";
 import { server } from "@/test/msw/server";
 
 const fakeUser = { getIdToken: async () => "firebase-id-token" } as unknown as User;

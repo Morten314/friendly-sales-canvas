@@ -48,7 +48,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { buildApiUrl } from "@/lib/api";
-import jwtManager from "@/lib/jwt";
 import {
   readLeadStreamHeatmapFromSession,
   writeLeadStreamHeatmapToSession,
@@ -61,6 +60,7 @@ import {
   extractMarketScoreRowsFromResponse,
   heatmapLeadFromUnknownRow,
 } from "@/lib/marketScoresHeatmap";
+import jwtManager from "@/shared/auth/jwt";
 import { useTenant } from "@/shared/tenant";
 
 // ─── Score Breakdown Popover ────────────────────────────────────────────────
