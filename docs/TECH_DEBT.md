@@ -1584,7 +1584,9 @@ A shared, typed contract for the `signalsChatContext` payload (a named interface
 The untyped handoff works at MVP scale; introducing the shared contract is best done alongside the chat-surface work where both ends are touched.
 
 **Pull-forward trigger:**
-Phase 9 chat-surface dedup.
+When the signals→chat handoff is given a typed contract (deferred beyond Phase 9; Phase 9 chose not to type it to stay behavior-preserving).
+
+**Note:** Phase 9 deliberately did not add the typed contract — the shared-chat dedup was behavior-preserving and typing the handoff is a contract addition beyond that scope.
 
 **Owner:** TBD.
 
@@ -1608,6 +1610,8 @@ Phase 8's authority was the signals/strategist + scout-chat relocation; fully dr
 Phase 9 shared-chat dedup / Phase 13.
 
 **Owner:** TBD.
+
+**Resolved (Phase 9):** 2026-06-05. `ScoutChatPanel.tsx` and `types.ts` were relocated into `features/market-research/components/scout-chat/` as part of Phase 9 Task 6. The legacy `components/market-research/` directory retains 6 other files (tracked separately as TD-FE-63), but the two files this entry tracked have moved. Original entry preserved above.
 
 ---
 
@@ -1648,5 +1652,91 @@ A behavior-preserving full migration is high-risk on the app's most complex page
 
 **Pull-forward trigger:**
 Backend stabilization (TD-FE-13) + a dedicated signals-data-layer migration.
+
+**Owner:** TBD.
+
+---
+
+<!-- TD-FE-60 through TD-FE-63 are Phase 9 entries. They were originally drafted as TD-FE-57–60 in plan 30, but Phase 10 (added 54–56) and Phase 12 (added 57–59) landed on master before Phase 9 merged, so they were renumbered to 60–63 at T13 reconciliation. -->
+
+## TD-FE-60 — No `features/profiler/` folder; Profiler distributed across three areas
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 9 (scout + profiler extraction). Spec 30 §1.1 resolved the §3.1 open question: Profiler is **not** extracted into a standalone `features/profiler/` folder.
+
+**Current state:**
+Profiler UI is distributed across `features/customers/` (ICP Intelligence, Lead Stream, Profiler Chat), `features/mission-control/` (ICPManager, ICP wizard), and `src/shared/profiler/` (shared merge algorithm). There is intentionally no `src/features/profiler/`.
+
+**What it should be:**
+This is an accepted architectural decision, not a defect. A dedicated `features/profiler/` would only be warranted if Profiler grows a standalone, first-class surface that is not naturally co-located with customers or mission-control.
+
+**Why we deferred:**
+The asymmetry (Scout has a thin `features/scout/`; Profiler is distributed) is intentional per Spec 30 §1.1. Profiler's UI naturally co-locates with its two host surfaces. Creating a stub `features/profiler/` would add ceremony without co-location benefit.
+
+**Pull-forward trigger:**
+Profiler grows a standalone surface that is not naturally customers or mission-control territory.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-61 — `SignalsChatContext` type name retained after component renamed to `ContextChat`
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 9 (Task 1 — rename `SignalsContextChat` → `ContextChat`). The component was renamed but the context-shape type was deliberately left as `SignalsChatContext` to avoid a wide consumer churn.
+
+**Current state:**
+`src/shared/chat/ContextChat.tsx` exports the component as `ContextChat` and the context-shape type as `SignalsChatContext`. The type name reflects the old component name and carries a "Signals" prefix that no longer matches the generic shared substrate.
+
+**What it should be:**
+The type should be renamed to `ChatContext` (or similar) so the exported type name matches the component name and the generic-substrate framing.
+
+**Why we deferred:**
+Renaming the type requires touching all consumers (`SignalsChatContext` is the prop type at every `ContextChat` call site + the `signalsChatContext` sessionStorage key). Phase 9 chose not to widen scope beyond behavior-preserving moves.
+
+**Pull-forward trigger:**
+Next time `src/shared/chat` types are touched (e.g. when typing the `signalsChatContext` sessionStorage handoff — TD-FE-50).
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-62 — `src/utils/leadStreamChatContext.ts` remains in `utils/`
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 9 (scout + profiler extraction). `leadStreamChatContext.ts` is scout lead-stream plumbing that may be shared with Strategist; its ownership was not resolved in Phase 9.
+
+**Current state:**
+`src/utils/leadStreamChatContext.ts` lives in the legacy `utils/` directory. It is scout lead-stream plumbing and may be consumed by Strategist as well; ownership between `features/market-research/`, `features/signals/`, and `features/strategist/` is unclear.
+
+**What it should be:**
+Moved to whichever feature owns lead-stream chat context, or promoted to `src/shared/` if it is genuinely cross-feature. The `utils/` legacy dir is a Phase 11 cleanup target overall.
+
+**Why we deferred:**
+Phase 9's authority was the scout/profiler extraction; resolving lead-stream ownership (which touches Strategist) is outside that scope.
+
+**Pull-forward trigger:**
+Lead-stream ownership settled (likely Phase 11 shared-utility extraction or a dedicated lead-stream phase).
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-63 — `components/market-research/` retains 6 files after Phase 9's partial drain
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 9 (Task 6 — relocate ScoutChatPanel + types). Phase 9 moved `ScoutChatPanel.tsx` and `types.ts` (TD-FE-51 resolved), but 6 files remain in the legacy `components/market-research/` directory because they have cross-feature coupling that Phase 9 did not have authority to resolve.
+
+**Current state:**
+`components/market-research/` still contains: `ScoutLeadStream.tsx`, `EditDropdownMenu.tsx`, and the `lead-stream/` sub-folder (`LeadStreamTab.tsx`, `LeadsTable.tsx`, `OpportunityDashboard.tsx`, `leadData.ts`). These files are cross-feature-coupled: `leadData.ts` is consumed by Strategist and `src/lib`; `EditDropdownMenu.tsx` is consumed by `features/customers/`.
+
+**What it should be:**
+Lead-stream UI (`ScoutLeadStream.tsx`, `lead-stream/` sub-folder) → `features/customers/` (or a dedicated lead-stream feature). `leadData.ts` → `src/shared/` (consumed cross-feature). `EditDropdownMenu.tsx` → `src/shared/` or `features/customers/`. The legacy `components/market-research/` directory should be fully drained.
+
+**Why we deferred:**
+Cross-feature coupling means these moves require coordinating with customers and strategist; that is Phase 11 / a dedicated customers-lead-stream phase territory, not Phase 9's scout+profiler scope.
+
+**Pull-forward trigger:**
+A customers/lead-stream phase or Phase 11 shared-utility extraction.
 
 **Owner:** TBD.
