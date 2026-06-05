@@ -45,24 +45,41 @@ Locked in T22 (`index.ts`). Cross-feature consumers import only via `@/features/
 
 These belong to **other** features and are NOT part of mission-control long-term. The owning phase relocates each.
 
-| Component(s)                                                                                      | Target feature     | Claiming phase                                                                   |
-| ------------------------------------------------------------------------------------------------- | ------------------ | -------------------------------------------------------------------------------- |
-| ICP profiler-merge display logic (`mergeProfilerAcceptedIcpDisplay` overlay in `components/icp/`) | customers/profiler | 9 (customers reads via `index.ts` + the `@/shared/profiler` util in the interim) |
-| `@/shared/profiler` util cluster (shared mission-control + customers)                             | customers          | 7 (already promoted in T8; relocation/ownership resolved as customers migrates)  |
+| Component(s)                                                                                      | Target feature     | Claiming phase                                                                                                    |
+| ------------------------------------------------------------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| ICP profiler-merge display logic (`mergeProfilerAcceptedIcpDisplay` overlay in `components/icp/`) | customers/profiler | 9 — closed (confirm-and-document; algorithm already in `@/shared/profiler`, inline mapper upheld per Plan-25 T21) |
+| `@/shared/profiler` util cluster (shared mission-control + customers)                             | customers          | 7 (already promoted in T8; relocation/ownership resolved as customers migrates)                                   |
 
 ## Profiler disposition
 
 Authoritative Phase 6 record (Spec 25 §6); input for Phases 7 and 9.
 
-| Artefact                                                                                    | Disposition                                                                                                                                   | Phase resolved |
-| ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| `profileIcpsExtract`, `profilerAcceptedIcpDisplay`, `missionProfilerSessionCache`           | Promoted to `@/shared/profiler` — **done** (T8). Shared by mission-control + customers.                                                       | 6 (T8) — done  |
-| ICP profiler-merge logic (`mergeProfilerAcceptedIcpDisplay` in `ICPManager` mapping effect) | Stays in `components/icp/`. Customers reads ICPs via mission-control's `index.ts` (`useICPs` / `ICP`) + the shared util; final ownership TBD. | 9              |
-| `UntypedProfilerIcpRecord` typing (escape-hatch `as` cast)                                  | Retyping deferred. Carries TD-FE-9/10 posture.                                                                                                | 13             |
+| Artefact                                                                                    | Disposition                                                                                                                                                                              | Phase resolved |
+| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| `profileIcpsExtract`, `profilerAcceptedIcpDisplay`, `missionProfilerSessionCache`           | Promoted to `@/shared/profiler` — **done** (T8). Shared by mission-control + customers.                                                                                                  | 6 (T8) — done  |
+| ICP profiler-merge logic (`mergeProfilerAcceptedIcpDisplay` in `ICPManager` mapping effect) | Stays in `components/icp/`. Algorithm is shared via `@/shared/profiler`; inline view-model mapper in `ICPManager.tsx` is a container data-transform (Plan-25 T21 upheld). No extraction. | 9 — done       |
+| `UntypedProfilerIcpRecord` typing (escape-hatch `as` cast)                                  | Retyping deferred. Carries TD-FE-9/10 posture.                                                                                                                                           | 13             |
 
 ### Phase-7 resolution (customers side — amended 2026-06-04)
 
 Phase 7 resolved the customers side of the above table. The `@/shared/profiler` cluster stays **shared** (unchanged by Phase 7). Customers reads ICPs via its own `useCustomerProfile`/`useSuggestedIcps` hooks — it does **not** use mission-control's `useICPs` (the divergence is tracked as TD-FE-42). `ProfilerChatWithHistory` has been relocated to `features/customers/components/chat/`. `ContextChat` (was `SignalsContextChat`) was relocated to `src/shared/chat/` in Phase 8 and renamed in Phase 9 (TD-FE-58). The profiler-merge display logic (`mergeProfilerAcceptedIcpDisplay`) and the `UntypedProfilerIcpRecord` escape-hatch are both unchanged — Phase 9 and Phase 13 remain their resolution phases.
+
+### Phase-9 resolution (ICP-merge disposition — 2026-06-05)
+
+Phase 9 closed the Spec 25 §6 "Phase 9 resolves" open item by **confirm-and-document, no extraction**.
+
+Verified facts:
+
+- `mergeProfilerAcceptedIcpDisplay` lives in `src/shared/profiler/profilerAcceptedIcpDisplay.ts` and is
+  exported from `@/shared/profiler`. There is NO `customers → mission-control` import for this logic.
+- Both consumers (`features/customers/components/icp-intelligence/icpMapping.ts` and
+  `features/mission-control/components/icp/ICPManager.tsx`) import the algorithm from `@/shared/profiler`.
+- The inline view-model mapper in `ICPManager.tsx` (~lines 174–195) is a container data-transform that
+  shapes ICP rows before rendering. It has no extractable render region. **Plan-25 T21 decision is upheld.**
+- The ICP decomposition remains: `ICPManager` (container) + `IcpWizard` (add/edit form) + `IcpList`
+  (presentational table/empty-state). No `ProfilerMergeView` was created; none is needed.
+
+No code was changed in Phase 9 for this item.
 
 ## Decisions
 
