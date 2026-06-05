@@ -11,7 +11,7 @@
  *
  * Heavy infrastructure mocked:
  *  - @/hooks/useAuth — provides a stable uid + orgId without Firebase
- *  - @/components/settings/useCompanyProfile — returns no data + not loading,
+ *  - @/shared/company-profile — returns no data + not loading,
  *    so no network requests fire (server.listen({ onUnhandledRequest: "error" }))
  *  - @/shared/profiler — no-op cache helpers to skip localStorage/session writes
  *  - @/features/shell Layout — renders children directly (no router/sidebar needed)
@@ -43,7 +43,7 @@ vi.mock("@/hooks/useAuth", () => ({
 // useCompanyProfile mock — returns no data, not loading.
 // Prevents GET /api/profile/company firing (global MSW is onUnhandledRequest:"error").
 // ---------------------------------------------------------------------------
-vi.mock("@/components/settings/useCompanyProfile", () => ({
+vi.mock("@/shared/company-profile", () => ({
   useCompanyProfile: () => ({ data: null, isLoading: false }),
 }));
 
