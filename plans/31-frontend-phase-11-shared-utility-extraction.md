@@ -24,6 +24,7 @@ The spec (§1.3) flagged its consumer counts as estimates and delegated a full r
 4. **Dead commented imports cleaned.** `features/shell/components/Sidebar.tsx:15` and `:133` are commented-out `@/lib/utils` lines. They are AST-invisible to lint but would false-positive a naive DoD grep for `@/lib`. They are deleted in Task 14.
 5. **`App.tsx` imports `PWAInstallPrompt` via the shell barrel.** `App.tsx` is outside `features/`; importing `@/features/shell/components/PWAInstallPrompt` would violate `import-x/no-internal-modules` (`@/features/*/!(index)`). So Task 6 adds `PWAInstallPrompt` to `features/shell/index.ts` and `App.tsx` imports the barrel.
 6. **`shared/auth/index.ts` barrel gains `jwtManager` + `useAuthToken`** (satisfies TD-FE-54's "barrel exporting all three"). Runtime feature consumers import the renamed token hook from the barrel; `jwt` is imported via the deep path `@/shared/auth/jwt` (pure path swap, preserves the existing default-import shape at all 5 sites). (Tasks 9–10.)
+7. **Spec §3 summary line is stale for `use-toast`.** The spec's §3 target-tree summary lists `use-toast` under `shared/hooks/`, but the spec's own §5.1 and §1.3 disposition correctly place it in `components/ui/use-toast.ts` (the ui-layer exception). The plan implements the §5.1 placement (Task 15); `usePageTitle` is the only hook that actually lands in `shared/hooks/`. This is a spec-internal inconsistency, not a plan change — it is logged as a Spec 14/Spec 31 erratum delta at merge (Task 23), per the frozen-record convention (no rewrite of the shipped spec).
 
 ---
 
@@ -66,9 +67,21 @@ The spec (§1.3) flagged its consumer counts as estimates and delegated a full r
 - **Normalize after every edit batch** (handles `import-x/order` reclassification + Prettier):
   `npx prettier --write <touched files>` then `npx eslint --fix <touched files>`.
 - **Per-task gate (`G`):** `npm run verify` (typecheck + lint + `test:changed`) **and** `npx prettier --check <touched files>` — `verify` omits `format:check`, so check it explicitly. Both must be clean before commit.
-- **Commit surgically by path** (shared working tree; never `git add -A`). No `Co-Authored-By` footer. Style: `refactor(fe): …` for moves, `test(fe): …`, `docs(fe): …`, `chore(fe): …`. No `[N/M]` suffix.
-- **`docs/TECH_DEBT.md` is never Prettier-formatted** — edit it surgically (Task 26).
+- **Commit surgically by path** (shared working tree; never `git add -A` at the repo root — stage only the paths a task touches). No `Co-Authored-By` footer. Style: `refactor(fe): …` for moves, `test(fe): …`, `docs(fe): …`, `chore(fe): …`. No `[N/M]` suffix.
+- **`docs/TECH_DEBT.md` is never Prettier-formatted** — edit it surgically (Task 23).
+- **Execute tasks sequentially within a stage — do NOT parallelize.** Many tasks edit the *same* consumer file (e.g. `features/market-research/hooks/useMarketResearchData.ts` is touched by Task 2 *and* Task 5; `MarketResearchPage.tsx` by Task 1 *and* Task 5), so parallel dispatch would collide. The subagent-driven harness runs one task at a time with review between — that is the intended model. (Stages 11a→11e are themselves strictly ordered by the cross-stage dependencies in §6/§9.)
+- **Failure protocol.** A gate (`G`) failure is never committed and never skipped. Diagnose the root cause and fix it *within the same task*, then re-run `G`. If it cannot be resolved within the task's scope (e.g. a lint-config form that won't load and the documented fallback also fails, or a preflight regression unrelated to a simple import path), **stop and report to the operator** with the failing output — do not improvise out-of-scope changes, do not proceed to the next task.
 - Each sub-phase ends green; commits within a sub-phase are also individually green.
+
+---
+
+## Stage 0 — before you start (baseline)
+
+Establishes that the gates are meaningful before any move, so a later failure can be attributed to Phase 11 and not to inherited breakage. No commit; record the output.
+
+- [ ] **Step 1: Confirm the branch is green.** From `frontend/`: `npm run verify`. Expected: typecheck + lint + `test:changed` all clean. If it fails on the untouched branch, **stop and report** — the gates cannot validate the phase until the baseline is green.
+- [ ] **Step 2: Record the `knip` baseline.** `npm run knip` and save the output (e.g. paste into the operator log). Any dead-code findings here are *pre-existing*; Task 24's `knip` must not introduce *new* ones beyond this baseline. (A relocation should net-reduce dead code, never add it.)
+- [ ] **Step 3: Confirm the scripts exist** — `npm run` lists `verify`, `preflight`, `knip`, `build`, `test:e2e`. (They do at `6e5a428`; this guards against executing from an unexpected base.)
 
 ---
 
@@ -298,7 +311,7 @@ export { default as PWAInstallPrompt } from "./components/PWAInstallPrompt";
 
 - [ ] **Step 3: Repoint `App.tsx`** — change line 4 `import PWAInstallPrompt from "./components/PWAInstallPrompt";` to a barrel import: `import { PWAInstallPrompt } from "@/features/shell";`. (If `App.tsx` already imports from `@/features/shell`, merge into that statement instead.) Leave `<PWAInstallPrompt variant="fixed" />` unchanged.
 
-- [ ] **Step 4:** Confirm `PWAInstallPrompt`'s own import of `@/hooks/use-mobile` (line 5) is left as-is — it co-locates in Task 16.
+- [ ] **Step 4:** Confirm `PWAInstallPrompt`'s own import of `@/hooks/use-mobile` (line 5) is left as-is — it **will be repointed** to `@/components/ui/use-mobile` in Task 16 (after `use-mobile` co-locates into `components/ui/`).
 
 - [ ] **Step 5: Normalize** the moved file + `index.ts` + `App.tsx`.
 
@@ -546,7 +559,7 @@ git commit -m "refactor(fe): delete rateLimitManager shim, relocate its behavior
 
 ### Task 13: In-place repoint of the lead-stream residue's auth/api imports
 
-`LeadsTable.tsx` stays at `components/market-research/lead-stream/` until 11d, but its `useAuth`/`jwt`/`api` imports point to files that moved in 11b. Repoint the **lines in place** (the file does not move yet). These are absolute `@/` imports, so they remain valid after the file relocates in Task 19.
+`LeadsTable.tsx` stays at `components/market-research/lead-stream/` until 11d, but its `useAuth`/`jwt`/`api` imports point to files that moved in 11b. Repoint the **lines in place** (the file does not move yet). These are absolute `@/` imports, so they remain valid after the file relocates in Task 19a. **This is an intentional intermediate state** (per spec §6 cross-stage note): a file in a legacy directory importing exclusively from the new `shared/` layout — expected, not a smell, until Task 19a relocates the file itself.
 
 **Files:** `src/components/market-research/lead-stream/LeadsTable.tsx`
 
@@ -775,15 +788,14 @@ git add src/shared/lib/leadData.ts src/lib/leadStreamHeatmapSession.ts src/lib/m
 git commit -m "refactor(fe): promote leadData to shared/lib (Phase 11d; TD-FE-63)"
 ```
 
-### Task 19: Relocate the lead-stream cluster (atomic) + `EditDropdownMenu`
+### Task 19a: Relocate the lead-stream cluster (atomic)
 
-One commit. Move the score libs + their tests → `features/market-research/lib/`; the cluster components → `features/market-research/components/`; `EditDropdownMenu` → `features/customers/`; fix all internal relative imports + external consumers; delete the empty `components/market-research/`.
+One commit. Move the score libs + their tests → `features/market-research/lib/` and the cluster components → `features/market-research/components/`; fix all internal relative imports + the `MarketResearchPage` consumer. `EditDropdownMenu` is **independent of the cluster** (verified: it imports only `lucide-react`, `react`, and `@/components/ui/*` — no `leadData`/`LeadsTable`/heatmap dependency) and moves separately in Task 19b, which also removes the now-empty `components/market-research/` directory.
 
 **Files:**
 - Move (score libs + tests): `src/lib/{leadStreamHeatmapSession,marketScoreDescriptions,marketScoresHeatmap}.ts` → `src/features/market-research/lib/`; `src/lib/__tests__/{marketScoreDescriptions,marketScoresHeatmap}.test.ts` → `src/features/market-research/lib/__tests__/`
 - Move (components): `src/components/market-research/ScoutLeadStream.tsx` → `src/features/market-research/components/`; `src/components/market-research/lead-stream/{LeadStreamTab,LeadsTable,OpportunityDashboard}.tsx` → `src/features/market-research/components/lead-stream/`
-- Move: `src/components/market-research/EditDropdownMenu.tsx` → `src/features/customers/components/icp-intelligence/EditDropdownMenu.tsx`
-- Modify: external consumers `MarketResearchPage`, `CurrentIcpsTable`, `SuggestedICPCard`
+- Modify: external consumer `MarketResearchPage`
 
 - [ ] **Step 1: Move the score libs + tests**
 ```bash
@@ -794,15 +806,14 @@ git mv src/lib/__tests__/marketScoreDescriptions.test.ts src/features/market-res
 git mv src/lib/__tests__/marketScoresHeatmap.test.ts src/features/market-research/lib/__tests__/marketScoresHeatmap.test.ts
 ```
 
-- [ ] **Step 2: Move the cluster components**
+- [ ] **Step 2: Move the cluster components** (leave `EditDropdownMenu` and the `components/market-research/` dir in place for Task 19b)
 ```bash
 mkdir -p src/features/market-research/components/lead-stream
 git mv src/components/market-research/ScoutLeadStream.tsx src/features/market-research/components/ScoutLeadStream.tsx
 git mv src/components/market-research/lead-stream/LeadStreamTab.tsx src/features/market-research/components/lead-stream/LeadStreamTab.tsx
 git mv src/components/market-research/lead-stream/LeadsTable.tsx src/features/market-research/components/lead-stream/LeadsTable.tsx
 git mv src/components/market-research/lead-stream/OpportunityDashboard.tsx src/features/market-research/components/lead-stream/OpportunityDashboard.tsx
-git mv src/components/market-research/EditDropdownMenu.tsx src/features/customers/components/icp-intelligence/EditDropdownMenu.tsx
-rmdir src/components/market-research/lead-stream src/components/market-research 2>/dev/null || true
+rmdir src/components/market-research/lead-stream 2>/dev/null || true
 ```
 
 - [ ] **Step 3: Repoint the relocated score-lib tests** — `@/lib/marketScoreDescriptions` → `../marketScoreDescriptions`; `@/lib/marketScoresHeatmap` → `../marketScoresHeatmap`.
@@ -817,27 +828,55 @@ rmdir src/components/market-research/lead-stream src/components/market-research 
   - `ScoutLeadStream.tsx`: `./lead-stream/LeadsTable` and `./lead-stream/OpportunityDashboard` remain valid (the `lead-stream/` subdir moved with it). No change unless the import strings differ — verify with typecheck.
   - `LeadStreamTab.tsx:7`: `@/components/market-research/ScoutLeadStream` → `../ScoutLeadStream` (now a sibling-dir relative within the feature).
 
-- [ ] **Step 6: Repoint `EditDropdownMenu` consumers** (co-located with them now):
+- [ ] **Step 6: Repoint `MarketResearchPage.tsx:21`** — `@/components/market-research/lead-stream/LeadStreamTab` → `../components/lead-stream/LeadStreamTab` (same-feature relative).
+
+- [ ] **Step 7: Confirm only `EditDropdownMenu` remains in the residue**
+```bash
+ls src/components/market-research   # expect: EditDropdownMenu.tsx only
+grep -rn '@/components/market-research/lead-stream\|@/components/market-research/ScoutLeadStream' src   # expect: no output
+```
+
+- [ ] **Step 8: Normalize** every moved + touched file (`eslint --fix` for ordering).
+
+- [ ] **Step 9: Gate `G`** — run `npx vitest run src/features/market-research src/features/strategist`. (Tree is green: `EditDropdownMenu` still at its legacy path, its two customers consumers still resolve it.)
+
+- [ ] **Step 10: Commit**
+```bash
+git add src/features/market-research
+git commit -m "refactor(fe): drain lead-stream cluster into features/market-research (Phase 11d; TD-FE-63)"
+```
+
+### Task 19b: Move `EditDropdownMenu` → `features/customers/`; remove the empty residue dir
+
+**Files:**
+- Move: `src/components/market-research/EditDropdownMenu.tsx` → `src/features/customers/components/icp-intelligence/EditDropdownMenu.tsx`
+- Modify: `CurrentIcpsTable.tsx:19`, `SuggestedICPCard.tsx:21`
+
+- [ ] **Step 1: Move + remove the now-empty residue dir**
+```bash
+git mv src/components/market-research/EditDropdownMenu.tsx src/features/customers/components/icp-intelligence/EditDropdownMenu.tsx
+rmdir src/components/market-research 2>/dev/null || true
+```
+
+- [ ] **Step 2: Repoint the 2 consumers** (co-located now → relative `./EditDropdownMenu`):
   - `features/customers/components/icp-intelligence/CurrentIcpsTable.tsx:19`: `@/components/market-research/EditDropdownMenu` → `./EditDropdownMenu`
   - `features/customers/components/icp-intelligence/SuggestedICPCard.tsx:21`: same → `./EditDropdownMenu`
-  - Read `EditDropdownMenu.tsx` and repoint any of its own legacy/absolute imports that the move invalidates (verify via typecheck — escape-hatches/ui imports are absolute and already valid).
+  - `EditDropdownMenu.tsx`'s own imports are `@/components/ui/*` (absolute, valid after the move) — no internal repoint needed; confirm with typecheck.
 
-- [ ] **Step 7: Repoint `MarketResearchPage.tsx:21`** — `@/components/market-research/lead-stream/LeadStreamTab` → `../components/lead-stream/LeadStreamTab` (same-feature relative).
-
-- [ ] **Step 8: Confirm the residue is gone**
+- [ ] **Step 3: Confirm the residue is gone**
 ```bash
 grep -rn '@/components/market-research' src   # expect: no output
 ls src/components/market-research 2>&1   # expect: No such file or directory
 ```
 
-- [ ] **Step 9: Normalize** every moved + touched file (`eslint --fix` for ordering).
+- [ ] **Step 4: Normalize** the moved file + 2 consumers (`eslint --fix`).
 
-- [ ] **Step 10: Gate `G`** — run `npx vitest run src/features/market-research src/features/customers src/features/strategist`.
+- [ ] **Step 5: Gate `G`** — run `npx vitest run src/features/customers`.
 
-- [ ] **Step 11: Commit**
+- [ ] **Step 6: Commit**
 ```bash
-git add src/features/market-research src/features/customers
-git commit -m "refactor(fe): drain components/market-research lead-stream cluster into features (Phase 11d; TD-FE-63)"
+git add src/features/customers
+git commit -m "refactor(fe): move EditDropdownMenu into features/customers (Phase 11d; TD-FE-63)"
 ```
 
 **Stage 11d complete.** `src/lib/`, `src/hooks/`, `src/utils/`, `src/components/market-research/` are all empty/gone; `src/components/` holds only `ui/`.
@@ -857,15 +896,13 @@ ls -1 src/components   # expect: only "ui"
 ```
 Expected: all six legacy dirs absent; `src/components/` lists only `ui`.
 
-- [ ] **Step 2: Commit** (git tracks the deletions via the moves; this commit captures any leftover dir removal)
-```bash
-git add -A src/hooks src/lib src/utils 2>/dev/null || true
-git commit -m "chore(fe): remove drained legacy directories (Phase 11e)" --allow-empty
-```
+- [ ] **Step 2: No commit needed.** Every legacy *file* deletion was already committed by its relocating task (`git mv`/`git rm`); git does not track empty directories, so the `rmdir` in Step 1 only tidies the working tree and stages nothing. Confirm `git status` is clean (no staged or unstaged changes) and proceed to Task 21. (Do **not** `git add -A` — there is nothing to add, and the convention forbids it.)
 
 ### Task 21: Tighten lint — blocking zones forbidding legacy-path imports (red-green)
 
 Extend the existing `import-x/no-restricted-paths` (in `eslint.config.js`) so `features/**` and `shared/**` can never import a legacy path again.
+
+**Runs after Task 20** (sequential — see the Conventions failure/sequencing note). Step 2's red proof creates and then deletes `src/lib/_scratch.ts`; this only works cleanly once Task 20 has already removed the real `src/lib/`, and it must not overlap Task 20's emptiness check. **No commit is made until the working zone form passes lint** — if the array form errors at config load, the agent reverts it in place and switches to the single-string-pair fallback *before* any commit, so a failed attempt never pollutes history.
 
 **Files:** `frontend/eslint.config.js`
 
@@ -942,7 +979,7 @@ No commit (verification only).
   - **TD-FE-62** → `**Resolved (Phase 11):** 2026-06-05. leadStreamChatContext → src/features/market-research/lib/leadStreamChatContext.ts (sole-consumer feature; not shared).`
   - **TD-FE-63** → `**Resolved (Phase 11):** 2026-06-05. components/market-research/ fully drained: leadData → shared/lib; ScoutLeadStream + lead-stream/{LeadStreamTab,LeadsTable,OpportunityDashboard} + the 3 score libs → features/market-research; EditDropdownMenu → features/customers.`
 
-- [ ] **Step 2: Log Spec 14 deltas** — in `specs/14-frontend-refactoring-master-plan-design.md` §8, annotate **Q12** (styles → `src/shared/styles/`) and **Q14** (Phase 11 standalone) as **RESOLVED (Phase 11)** per the spec's §13. Follow the master plan's existing delta convention (append, don't rewrite shipped text).
+- [ ] **Step 2: Log Spec deltas** — (a) in `specs/14-frontend-refactoring-master-plan-design.md` §8, annotate **Q12** (styles → `src/shared/styles/`) and **Q14** (Phase 11 standalone) as **RESOLVED (Phase 11)** per the spec's §13; (b) append a one-line erratum noting Spec 31 §3's summary tree lists `use-toast` under `shared/hooks/` whereas §5.1 (authoritative) places it in `components/ui/` — the implementation followed §5.1. Follow the master plan's existing delta convention (append, don't rewrite shipped text).
 
 - [ ] **Step 3: README touch-ups** — update `shared/README.md` (or add the new `shared/{hooks,lib,types,styles}` subtrees to its inventory) and any per-feature `README.md` whose key-files list changed (market-research gained the lead-stream cluster + score libs + the single-consumer utils; customers gained ErrorBoundary + EditDropdownMenu; shell gained PWAInstallPrompt). Keep edits factual and minimal.
 
@@ -962,7 +999,7 @@ npm run preflight
 ```
 This runs typecheck + lint + `format:check` + full Vitest + `build` + `bundle:check` + Playwright e2e + `knip`. Expected: all green. `knip` should report no dead code (every moved file has live consumers; the deleted shim + dead `App.css` are removed).
 
-- [ ] **Step 3:** If `knip` flags anything, investigate — a relocation should leave no orphan. Resolve before declaring the phase done.
+- [ ] **Step 3:** Compare `knip` output against the **Stage 0 Step 2 baseline**. Any finding present in the baseline is pre-existing (not this phase's concern); any *new* finding is a Phase 11 orphan and must be resolved before declaring the phase done — a relocation should net-reduce dead code (the deleted shim + dead `App.css`), never add it.
 
 - [ ] **Step 4: Final commit** (only if preflight produced incidental fixes; otherwise the phase is already committed)
 ```bash
@@ -978,7 +1015,7 @@ git status   # confirm clean
 - §2.1.2 split `lib/utils.ts` → Tasks 3 (sanitizeAnswerText) + 14 (cn) ✓
 - §2.1.3 auth-infra cluster → Tasks 9–10 ✓
 - §2.1.4 api-transport move + **delete** rateLimitManager shim + repoint its tests → Tasks 11–12 (refined: relocate the behavioral test) ✓
-- §2.1.5 lead-stream residue per-file trace → Tasks 18–19 ✓
+- §2.1.5 lead-stream residue per-file trace → Tasks 18, 19a, 19b ✓
 - §2.1.6 styles → Task 8 ✓
 - §2.1.7 co-located tests follow subjects; `utils.test.ts` split; `rateLimitManager.test.ts` handled → Tasks 3, 5, 9, 12, 14, 19 ✓
 - §2.1.8 capstone (delete dirs, lint, DoD) → Tasks 20–22 ✓
@@ -986,7 +1023,7 @@ git status   # confirm clean
 - §5.1 three ui-layer co-locations + ADR-0005 → Tasks 14–17 ✓
 - §5.2 useAuth rename → Task 10 ✓
 - §5.3 transport + shim delete → Tasks 11–12 ✓
-- §6 residue (incl. cross-stage in-place repoint, bidirectional leadData dep) → Tasks 13, 18, 19 ✓
+- §6 residue (incl. cross-stage in-place repoint, bidirectional leadData dep) → Tasks 13, 18, 19a, 19b ✓
 - §7 styles (incl. App.css liveness, relative→alias) → Task 8 ✓
 - §8 capstone → Tasks 20–22 ✓
 - §9 5-way sub-split (11a–11e) → stage structure ✓
@@ -996,4 +1033,4 @@ git status   # confirm clean
 
 **Type/name consistency:** The renamed hook is `useAuthToken` everywhere (Tasks 10, 13, disposition table, ADR, TD-FE-54 note). The transport is `@/shared/api/transport` everywhere (Tasks 11, 13). `jwtManager` default import preserved at the deep path `@/shared/auth/jwt` (Tasks 9, 13). The rate limiter canonical module is `@/shared/api/rateLimiter` (Task 12). ✓
 
-**Known residual risk:** Task 21's array `target`/`from` for `import-x/no-restricted-paths` — fallback to per-pair single-string zones is documented inline if the array form errors at config load. Task 19's relative-depth recomputations (`../../lib/…`) are verified by typecheck at the gate. No silent caps.
+**Known residual risk:** Task 21's array `target`/`from` for `import-x/no-restricted-paths` — fallback to per-pair single-string zones is documented inline if the array form errors at config load. Task 19a's relative-depth recomputations (`../../lib/…`) are verified by typecheck at the gate. No silent caps.
