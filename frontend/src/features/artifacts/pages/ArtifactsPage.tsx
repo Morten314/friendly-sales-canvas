@@ -1,14 +1,7 @@
-import {
-  FileText,
-  AlertCircle,
-  CheckCircle,
-  Bot,
-  FolderOpen,
-  ChevronRight,
-  Mail,
-} from "lucide-react";
+import { FileText, Bot, FolderOpen, ChevronRight, Mail } from "lucide-react";
 import React, { useState, useEffect } from "react";
 
+import { ArtefactStats } from "../components/ArtefactStats";
 import { LibraryCard } from "../components/LibraryCard";
 import { mockArtefacts } from "../data/mockArtefacts";
 import { generateAndDownloadPDF } from "../lib/artefactPdf";
@@ -125,58 +118,7 @@ const ArtifactsPage = () => {
         {/* Header - Content moved to main header */}
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Artefacts</p>
-                  <p className="text-2xl font-bold">{artefacts.length}</p>
-                </div>
-                <FileText className="h-8 w-8 text-muted-foreground" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">New</p>
-                  <p className="text-2xl font-bold">
-                    {artefacts.filter((a) => a.status === "new").length}
-                  </p>
-                </div>
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Viewed</p>
-                  <p className="text-2xl font-bold">
-                    {artefacts.filter((a) => a.status === "viewed").length}
-                  </p>
-                </div>
-                <CheckCircle className="h-8 w-8 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Updated</p>
-                  <p className="text-2xl font-bold">
-                    {artefacts.filter((a) => a.status === "updated").length}
-                  </p>
-                </div>
-                <AlertCircle className="h-8 w-8 text-amber-500" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <ArtefactStats artefacts={artefacts} />
 
         {/* Folders */}
         {folders.length > 0 && (
