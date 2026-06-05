@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { MemoryRouter } from "react-router-dom";
@@ -16,13 +17,17 @@ vi.mock("@/shared/auth", () => ({
 }));
 
 // Behavioural harness: render via the real public surface (props + providers),
-// not the fetch internals. A LATER task migrates the fetch calls to TanStack
-// hooks; MSW intercepts at the network boundary, so this test survives that.
+// not the fetch internals. The signal_Ask/signal_action calls now flow through
+// shared TanStack mutation hooks, so a QueryClientProvider is required; MSW still
+// intercepts at the network boundary, so the public-surface assertions are stable.
 function renderChat(context: SignalsChatContext) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter>
-      <SignalsContextChat context={context} />
-    </MemoryRouter>,
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <SignalsContextChat context={context} />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 

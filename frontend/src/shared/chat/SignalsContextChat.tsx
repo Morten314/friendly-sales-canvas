@@ -18,37 +18,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { sanitizeAnswerText } from "@/lib/utils";
 import { useAuth } from "@/shared/auth";
-
-const signalAction = async (orgId: string, signalId: string, action: "accept" | "reject") => {
-  const response = await fetch("/api/signal_action", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ org_id: orgId, signal_id: signalId, action }),
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`signal_action failed: ${response.status} ${text}`);
-  }
-  return response.json();
-};
-
-const signalAsk = async (body: {
-  org_id: string;
-  user_id: string;
-  question: string;
-  history: { user: string; assistant: string }[];
-}) => {
-  const response = await fetch("/api/signal_Ask", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`signal_Ask failed: ${response.status} ${text}`);
-  }
-  return response.json();
-};
+import { useSignalAction } from "@/shared/chat/useSignalAction";
+import { useSignalAsk } from "@/shared/chat/useSignalAsk";
 
 export interface SignalsChatContext {
   agent: "scout" | "profiler";
@@ -81,6 +52,8 @@ export const SignalsContextChat = ({
   const { currentUser, orgId } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const askMutation = useSignalAsk();
+  const actionMutation = useSignalAction();
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages ?? []);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -100,18 +73,21 @@ export const SignalsContextChat = ({
     if (!context.prompt?.trim() || context.answer || fetchedAnswer || !currentUser?.uid || !orgId)
       return;
     setIsFetchingAnswer(true);
-    signalAsk({
-      org_id: orgId ?? "org-123",
-      user_id: currentUser.uid,
-      question: context.prompt,
-      history: [],
-    })
+    askMutation
+      .mutateAsync({
+        org_id: orgId ?? "org-123",
+        user_id: currentUser.uid,
+        question: context.prompt,
+        history: [],
+      })
       .then((res) => {
-        const ans = res?.answer ?? res?.response ?? (typeof res === "string" ? res : "");
+        const r = res as Record<string, unknown>;
+        const ans = r?.answer ?? r?.response ?? (typeof res === "string" ? res : "");
         setFetchedAnswer(String(ans));
       })
       .catch(() => setFetchedAnswer(""))
       .finally(() => setIsFetchingAnswer(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- askMutation is a fresh object per render; including it would loop. mutateAsync is stable.
   }, [context.prompt, context.answer, fetchedAnswer, currentUser?.uid, orgId]);
 
   // Sync accepted state from localStorage on mount
@@ -177,15 +153,16 @@ export const SignalsContextChat = ({
         ? `${buildContextPrefix()}User question: ${userMessage}`
         : userMessage;
 
-      const res = await signalAsk({
+      const res = await askMutation.mutateAsync({
         org_id: orgId ?? "org-123",
         user_id: currentUser.uid,
         question,
         history: historyForApi,
       });
 
+      const r = res as Record<string, unknown>;
       const assistantText =
-        res?.answer ?? res?.response ?? res?.data ?? (typeof res === "string" ? res : "");
+        r?.answer ?? r?.response ?? r?.data ?? (typeof res === "string" ? res : "");
       const cleaned =
         typeof assistantText === "string"
           ? sanitizeAnswerText(assistantText)
@@ -217,7 +194,7 @@ export const SignalsContextChat = ({
     if (!context.signalId || !context.contentHash || !currentUser?.uid || !orgId) return;
     setIsActionLoading(true);
     try {
-      await signalAction(orgId, context.signalId, "accept");
+      await actionMutation.mutateAsync({ orgId, signalId: context.signalId, action: "accept" });
       const storageKey = `signals_${currentUser.uid}`;
       const saved = localStorage.getItem(`${storageKey}_accepted`);
       const accepted = saved ? (JSON.parse(saved) as string[]) : [];
@@ -244,7 +221,7 @@ export const SignalsContextChat = ({
     if (!context.signalId || !context.contentHash || !currentUser?.uid || !orgId) return;
     setIsActionLoading(true);
     try {
-      await signalAction(orgId, context.signalId, "reject");
+      await actionMutation.mutateAsync({ orgId, signalId: context.signalId, action: "reject" });
       const storageKey = `signals_${currentUser.uid}`;
       const saved = localStorage.getItem(`${storageKey}_rejected`);
       const rejected = saved ? (JSON.parse(saved) as string[]) : [];
