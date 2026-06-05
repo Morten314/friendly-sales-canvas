@@ -130,7 +130,6 @@ const CustomersPage = () => {
                     sessionStorage.removeItem("signalsChatContext");
                     setSignalsChatContext(null);
                   }}
-                  onTabChange={setActiveTab}
                 />
               </div>
             </TabsContent>
