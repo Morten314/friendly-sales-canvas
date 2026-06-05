@@ -1552,16 +1552,16 @@ Product decision on multi-org support, or a real list-tenants backend endpoint b
 
 ---
 
-## TD-FE-56 — `features/settings/components/AgentProfile.tsx` and `components/settings/ScoutDeployment.tsx` are near-duplicate forms
+## TD-FE-56 — `features/settings/components/AgentProfile.tsx` and `features/scout/components/ScoutDeployment.tsx` are near-duplicate forms
 
 **Date logged:** 2026-06-05
 **Origin:** Phase 10 (Task 5). `AgentProfile.tsx` was relocated into `features/settings/components/` during Phase 10; `ScoutDeployment.tsx` remains in the legacy `src/components/settings/` location. Both render agent/deployment configuration forms with substantial structural overlap but no shared base component.
 
 **Current state:**
-`src/features/settings/components/AgentProfile.tsx` and `src/components/settings/ScoutDeployment.tsx` are near-duplicate form components. They share field layout, save/cancel patterns, and profile-data binding logic but are maintained as independent files with no shared abstraction.
+`src/features/settings/components/AgentProfile.tsx` and `src/features/scout/components/ScoutDeployment.tsx` are near-duplicate form components. They share field layout, save/cancel patterns, and profile-data binding logic but are maintained as independent files with no shared abstraction. (Phase 9 relocated `ScoutDeployment.tsx` from `src/components/settings/` into `features/scout/components/`; the forms are still not unified.)
 
 **What it should be:**
-After Phase 9 extracts the scout feature, the two components should be evaluated for unification into a single parameterised form component (or a shared form primitive), eliminating the duplication. The legacy `src/components/settings/ScoutDeployment.tsx` should be relocated into the scout feature at the same time.
+Phase 9 relocated `ScoutDeployment.tsx` into `features/scout/components/` (the relocation half of this item is **done**). The two components should now be evaluated for unification into a single parameterised form component (or a shared form primitive), eliminating the remaining duplication.
 
 **Why we deferred:**
 Deduplication requires Phase 9's scout extraction to be complete so the correct home for the unified component is clear. Merging them before Phase 9 would land the result in the wrong directory.
@@ -1570,7 +1570,7 @@ Deduplication requires Phase 9's scout extraction to be complete so the correct 
 Fixes or UI changes to one form must be manually mirrored to the other. Divergence risk grows with every modification.
 
 **Pull-forward trigger:**
-Phase 9 scout feature extraction.
+Phase 9 relocated the form into `features/scout/` (done); the remaining trigger is a settings/scout form-unification pass.
 
 **Owner:** TBD.
 
