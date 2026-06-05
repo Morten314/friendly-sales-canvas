@@ -1,10 +1,11 @@
-// HANDOFF → scout (Spec 24 §7). This component is NOT part of market-research;
-// it stays here until the scout feature phase relocates + decomposes it.
+// Scout's chat panel, rendered inside the market-research surface (Scout's research
+// surface IS market-research — Spec 30 §1.1). Only the ScoutDeployment page lives in
+// features/scout; Scout's chat stays here under scout-chat/.
 
 import { Bot, X, Send, Loader2, User } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 
-import type { EditRecord } from "./types";
+import type { EditRecord } from "../types";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

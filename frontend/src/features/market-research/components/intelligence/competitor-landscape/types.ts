@@ -1,4 +1,5 @@
-import type { EditRecord } from "@/components/market-research/types";
+import type { EditRecord } from "../../types";
+
 import type { UntypedBackendApiResponse, UntypedBackendProfile } from "@/lib/types/escape-hatches";
 
 export type { EditRecord, UntypedBackendApiResponse, UntypedBackendProfile };

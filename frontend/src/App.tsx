@@ -2,13 +2,12 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
-import ScoutDeploymentPage from "./pages/ScoutDeployment";
 
 import { featureRoutes } from "@/app/routes";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { NotFound, ProtectedRoute, SidebarProvider } from "@/features/shell";
+import { NotFound, SidebarProvider } from "@/features/shell";
 import { queryClient } from "@/shared/api/queryClient";
 import { AuthProvider } from "@/shared/auth";
 import { TenantProvider } from "@/shared/tenant";
@@ -21,15 +20,6 @@ const App = () => (
           <TooltipProvider>
             <BrowserRouter>
               <Routes>
-                {/* Protected routes that require both authentication and tenant selection */}
-                <Route
-                  path="/scout-deployment"
-                  element={
-                    <ProtectedRoute requireTenant>
-                      <ScoutDeploymentPage />
-                    </ProtectedRoute>
-                  }
-                />
                 {featureRoutes}
                 <Route path="*" element={<NotFound />} />
               </Routes>

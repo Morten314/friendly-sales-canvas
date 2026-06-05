@@ -8,7 +8,7 @@ export interface SignalActionVars {
   action: "accept" | "reject";
 }
 
-/** POST /api/signal_action. Shared by the signals page + the SignalsContextChat substrate. */
+/** POST /api/signal_action. Shared by the signals page + the ContextChat substrate. */
 export function useSignalAction() {
   return useMutation<SignalActionResponse, Error, SignalActionVars>({
     mutationFn: async ({ orgId, signalId, action }) => {

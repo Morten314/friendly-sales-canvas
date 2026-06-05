@@ -226,7 +226,7 @@ export const handlers = [
   http.delete("/api/icp/recommended/:icpId", () => HttpResponse.json({ success: true })),
 
   // ── signals (Phase 8) ────────────────────────────────────────────────────────
-  // Shared by useSignalAsk / useSignalAction and the SignalsContextChat substrate.
+  // Shared by useSignalAsk / useSignalAction and the ContextChat substrate.
   http.post("/api/signal_Ask", () => HttpResponse.json({ answer: "ok" })),
   http.post("/api/signal_action", () => HttpResponse.json({ success: true })),
   // Page-only signals service (Task 9): read + batch-generate.

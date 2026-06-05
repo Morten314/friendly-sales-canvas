@@ -36,7 +36,7 @@ Add a feature's name here **before** scaffolding it. Backend uses snake_case; th
 | `strategist`      | 8                                                          |
 | `tenant`          | 10 (UI) — primitive lives in `shared/tenant` from Phase 4b |
 
-`profiler` is **reserved** — Phase 9 decides the scout/profiler split (Spec 14 §8 Q10). Phase 12's small-page names (`calendar`, `insights`, `reports`, `artifacts`) were appended **by Phase 12** (rows above). The scaffolder only _warns_ (does not block) on a name that is not yet on this map.
+There is intentionally **no `features/profiler/`** — Phase 9 resolved Spec 14 §8 Q10 by distributing Profiler across `customers` + `mission-control` + `shared/profiler`. The ICP-merge algorithm lives in `@/shared/profiler`; the inline view-model mapper in `ICPManager.tsx` is a container data-transform upheld by Plan-25 T21. `features/scout/` is intentionally thin (Spec 30 §1.1): it holds only the Scout deployment surface; Scout chat and shared infrastructure live in `shared/`. Both decisions are recorded as TD-FE-60. Phase 12's small-page names (`calendar`, `insights`, `reports`, `artifacts`) were appended **by Phase 12** (rows above). The scaffolder only _warns_ (does not block) on a name that is not yet on this map.
 
 > **`deals` is NOT a feature.** `src/pages/Deals.tsx` _was_ the Strategist page; in Phase 8 it became `features/strategist/pages/StrategistPage.tsx`. The `/deals` URL is retained only as a redirect to `/your-ai-team/strategist/workspace`. Spec 14 §12's listing of `Deals.tsx` as a Phase-12 small-page is therefore stale — it's Phase-8 strategist territory (TD-FE-48).
 

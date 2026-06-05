@@ -7,8 +7,8 @@ import MarketIntelligenceSections from "../MarketIntelligenceSections";
 import type { MarketIntelligenceSectionsProps } from "../MarketIntelligenceSections";
 
 import { sanitizeIntelligenceProps } from "./sanitizeIntelligenceProps";
+import { ScoutDeploymentDetails } from "./ScoutDeploymentDetails";
 
-import { ScoutDeploymentDetails } from "@/components/market-research/ScoutDeploymentDetails";
 import { Button } from "@/components/ui/button";
 import type { DeploymentData } from "@/features/shell";
 import type { UntypedReportState } from "@/lib/types/escape-hatches";

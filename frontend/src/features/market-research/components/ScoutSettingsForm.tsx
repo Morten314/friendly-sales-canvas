@@ -1,5 +1,4 @@
-// HANDOFF → scout (Spec 24 §7). This component is NOT part of market-research;
-// it stays here until the scout feature phase relocates + decomposes it.
+// Scout settings dialog — lives in features/market-research/components (Phase 9 relocation).
 
 import { useState } from "react";
 

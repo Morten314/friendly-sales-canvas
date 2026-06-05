@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 
 import type { ScoutResearchContext } from "../../types";
+import { ChatWithScout } from "../ChatWithScout";
 import { ScoutChatWithHistory } from "../scout-chat/ScoutChatWithHistory";
+import type { EditRecord } from "../types";
 
-import { ChatWithScout } from "@/components/market-research/ChatWithScout";
-import type { EditRecord } from "@/components/market-research/types";
 import type { SignalsChatContext } from "@/shared/chat";
 
 // trends = Scout chat (Spec 24 §9 delta 6), NOT an emerging-trends view. Feature-owned thin

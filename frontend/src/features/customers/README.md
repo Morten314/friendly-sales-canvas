@@ -27,7 +27,7 @@ never a deep path. Today the surface is routes-only; exports are added lazily if
 - `components/icp-intelligence/suggestedIcpStorage.ts` — pure optimistic-`localStorage` helpers (T10).
 - `components/icp-intelligence/ICPIntelligence.tsx` — thin wrapper; `profilerRefresh` header-event handler.
 - `components/lead-stream/LeadStream.tsx` — pure mock panel; exports `LeadStreamPanel` + `getLeadCountForICP`.
-- `components/chat/ProfilerChatWithHistory.tsx` — relocated Profiler chat shell; imports the `SignalsContextChat` substrate from `@/shared/chat` (relocated Phase 8; TD-FE-45 resolved).
+- `components/chat/ProfilerChatWithHistory.tsx` — relocated Profiler chat shell; imports the `ContextChat` substrate from `@/shared/chat` (relocated Phase 8; renamed Phase 9; TD-FE-45 resolved).
 - `contracts.ts` — permissive zod for `/icp` + `customer_profile` (T4).
 - `types.ts` — feature-local types (`ExistingICP`, `SuggestedICP`, `ICPCardStatus`, `ICPAnalysis`, …) (T8).
 - `hooks/*` — TanStack read (`useCustomerProfile`, `useSuggestedIcps`) + write (`useSaveCustomerProfile`, `useAcceptSuggestedIcp`, `useRejectSuggestedIcp` / `useDeleteCurrentIcp`) hooks.
@@ -43,11 +43,11 @@ never a deep path. Today the surface is routes-only; exports are added lazily if
 
 ## Pending handoffs
 
-| Component(s)                                             | Target / resolution                                                       | Phase                                |
-| -------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------ |
-| `SignalsContextChat` substrate                           | Relocated to `src/shared/chat/` (Phase 8); Phase 9 finalizes shared chat. | 8 relocates; 9 finalizes shared chat |
-| `ProfilerChatWithHistory` ↔ `ScoutChatWithHistory` dedup | Relocated unchanged; differ by 244 lines.                                 | 9 dedups                             |
-| Customers vs mission-control ICP read                    | Both read `/api/icp` + `customer_profile` independently (TD-FE-42).       | 9 may consolidate                    |
+| Component(s)                                             | Target / resolution                                                    | Phase                  |
+| -------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------- |
+| `ContextChat` substrate (was `SignalsContextChat`)       | Relocated to `src/shared/chat/` (Phase 8); renamed Phase 9 (TD-FE-61). | 8 relocates; 9 renames |
+| `ProfilerChatWithHistory` ↔ `ScoutChatWithHistory` dedup | Relocated unchanged; differ by 244 lines.                              | 9 dedups               |
+| Customers vs mission-control ICP read                    | Both read `/api/icp` + `customer_profile` independently (TD-FE-42).    | 9 may consolidate      |
 
 ## Deferred (TD-FE-41…45)
 

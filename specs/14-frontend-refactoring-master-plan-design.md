@@ -19,20 +19,20 @@ The backend just completed a multi-phase modularization (Phases A–L on `backen
 
 ### 1.3 Starting state
 
-| Aspect | Current state |
-|---|---|
-| Location | `brewra-gtm-intelligence/frontend/`, branch `master` |
-| Stack | React 18 + Vite + TypeScript + shadcn/Radix + Tailwind + Firebase + React Router v6 + TanStack Query (installed but unused) |
-| Total LOC | 75,894 across `.ts`/`.tsx` files in `src/` |
-| Largest files | `pages/MarketResearch.tsx` (14,956), `components/customers/ICPSummaryOpportunity.tsx` (6,925), `pages/MissionControl.tsx` (5,645), `components/mission-control/DataSourcesManager.tsx` (3,747), `components/mission-control/ICPManager.tsx` (3,269), 9 files > 1,500 LOC |
-| TS config | Non-strict: `strict: false`, `noImplicitAny: false`, `strictNullChecks: false`, `noUnusedLocals: false`, `noUnusedParameters: false` |
-| Tests | Playwright E2E only (`frontend/e2e/`). No Vitest. No RTL. No MSW. |
-| Linting | ESLint flat-config v9, react-hooks plugin, react-refresh. No Prettier config. No type-aware rules. No `knip`. |
-| Layout | Flat `src/components/`, `src/pages/`, `src/contexts/`, `src/hooks/`, `src/lib/`, `src/services/`, `src/utils/`. `src/components/ui/` holds shadcn primitives. `src/components/` has weak feature subfolders (`customers/`, `market-research/`, `mission-control/`, `signals/`, `strategist/`). |
-| Data layer | Manual `fetch`. Base transport `apiFetch`/`apiFetchJson` (`src/lib/api.ts`) injects JWT and throws on non-2xx. `rateLimitManager` (30/min) is an opt-in wrapper, not middleware. **No `enhancedApi`/`authenticatedApi` and no 5-min in-memory map exist** (those labels in earlier drafts were aspirational). Caching is manual `localStorage` (no TTL) + `sessionStorage`. TanStack Query installed but inert. (Corrected by Phase 3 — see spec 20 §1.2/§1.4.) |
-| Build artifacts | Lovable provenance: `lovable-tagger` in `vite.config.ts`. Originally Lovable-generated. |
-| Branch model | `master` is trunk (recently shifted from working-branch — commit `adacae4`). Feature work on short-lived branches with review for non-trivial changes, then merge back. |
-| Backend coordination | Backend `app/services/` is the reference shape for the frontend's `src/features/` target. See backend Phase K/L specs for the converged pattern. |
+| Aspect               | Current state                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Location             | `brewra-gtm-intelligence/frontend/`, branch `master`                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Stack                | React 18 + Vite + TypeScript + shadcn/Radix + Tailwind + Firebase + React Router v6 + TanStack Query (installed but unused)                                                                                                                                                                                                                                                                                                                                     |
+| Total LOC            | 75,894 across `.ts`/`.tsx` files in `src/`                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Largest files        | `pages/MarketResearch.tsx` (14,956), `components/customers/ICPSummaryOpportunity.tsx` (6,925), `pages/MissionControl.tsx` (5,645), `components/mission-control/DataSourcesManager.tsx` (3,747), `components/mission-control/ICPManager.tsx` (3,269), 9 files > 1,500 LOC                                                                                                                                                                                        |
+| TS config            | Non-strict: `strict: false`, `noImplicitAny: false`, `strictNullChecks: false`, `noUnusedLocals: false`, `noUnusedParameters: false`                                                                                                                                                                                                                                                                                                                            |
+| Tests                | Playwright E2E only (`frontend/e2e/`). No Vitest. No RTL. No MSW.                                                                                                                                                                                                                                                                                                                                                                                               |
+| Linting              | ESLint flat-config v9, react-hooks plugin, react-refresh. No Prettier config. No type-aware rules. No `knip`.                                                                                                                                                                                                                                                                                                                                                   |
+| Layout               | Flat `src/components/`, `src/pages/`, `src/contexts/`, `src/hooks/`, `src/lib/`, `src/services/`, `src/utils/`. `src/components/ui/` holds shadcn primitives. `src/components/` has weak feature subfolders (`customers/`, `market-research/`, `mission-control/`, `signals/`, `strategist/`).                                                                                                                                                                  |
+| Data layer           | Manual `fetch`. Base transport `apiFetch`/`apiFetchJson` (`src/lib/api.ts`) injects JWT and throws on non-2xx. `rateLimitManager` (30/min) is an opt-in wrapper, not middleware. **No `enhancedApi`/`authenticatedApi` and no 5-min in-memory map exist** (those labels in earlier drafts were aspirational). Caching is manual `localStorage` (no TTL) + `sessionStorage`. TanStack Query installed but inert. (Corrected by Phase 3 — see spec 20 §1.2/§1.4.) |
+| Build artifacts      | Lovable provenance: `lovable-tagger` in `vite.config.ts`. Originally Lovable-generated.                                                                                                                                                                                                                                                                                                                                                                         |
+| Branch model         | `master` is trunk (recently shifted from working-branch — commit `adacae4`). Feature work on short-lived branches with review for non-trivial changes, then merge back.                                                                                                                                                                                                                                                                                         |
+| Backend coordination | Backend `app/services/` is the reference shape for the frontend's `src/features/` target. See backend Phase K/L specs for the converged pattern.                                                                                                                                                                                                                                                                                                                |
 
 > **Note on staleness.** LOC counts above are the pre-Phase-0 baseline. Phase 1's reduction pass will lower these; later feature phases work from post-Phase-1 counts measured in their own specs. The starting-state table here is a point-in-time anchor, not a continuously-updated reference.
 
@@ -47,7 +47,7 @@ The backend just completed a multi-phase modularization (Phases A–L on `backen
 - Adversarial review at every artifact (spec, plan, implementation) so slop gets caught before merging
 - Humans drive (kick off phases, approve transitions, take final call) — agents do the writing
 
-The two roles are deliberately layered: agents *author* the spec/plan/impl text and code; humans *orchestrate* by directing what gets worked on, adjudicating disagreements between rounds, and approving transitions. "Authors" and "drive" name different acts, not contradictory ones.
+The two roles are deliberately layered: agents _author_ the spec/plan/impl text and code; humans _orchestrate_ by directing what gets worked on, adjudicating disagreements between rounds, and approving transitions. "Authors" and "drive" name different acts, not contradictory ones.
 
 ### 1.5 Alternatives considered
 
@@ -164,13 +164,13 @@ The diagram shows one of two possible final states. Phase 9 may split `scout/` a
 
 ### 3.2 Mapping to backend's converged shape
 
-| Frontend element | Backend analog |
-|---|---|
-| `src/features/<feature>/` | `backend/app/services/<feature>/` (Phase K converged shape) |
-| `src/features/<feature>/index.ts` (public re-exports) | `backend/app/services/<feature>/__init__.py` |
-| `src/shared/` | `backend/app/services/_llm_helpers.py`, `_neo4j_helpers.py`, `_retrieval.py`, `_claude_budget.py` |
-| `src/components/ui/` (shadcn) | (no analog — primitives nobody owns) |
-| Per-feature `README.md` | Phase L's per-file scorecard pattern, adapted for forward-looking doc |
+| Frontend element                                      | Backend analog                                                                                    |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `src/features/<feature>/`                             | `backend/app/services/<feature>/` (Phase K converged shape)                                       |
+| `src/features/<feature>/index.ts` (public re-exports) | `backend/app/services/<feature>/__init__.py`                                                      |
+| `src/shared/`                                         | `backend/app/services/_llm_helpers.py`, `_neo4j_helpers.py`, `_retrieval.py`, `_claude_budget.py` |
+| `src/components/ui/` (shadcn)                         | (no analog — primitives nobody owns)                                                              |
+| Per-feature `README.md`                               | Phase L's per-file scorecard pattern, adapted for forward-looking doc                             |
 
 ### 3.3 Dependency rules
 
@@ -179,7 +179,7 @@ The diagram shows one of two possible final states. Phase 9 may split `scout/` a
 - `shared/` may not import from `features/`.
 - `components/ui/` may not import from `features/` or `shared/` (it's pure primitives).
 - **Transitional exception (Phases 4b–12):** `features/<X>/` may import from not-yet-migrated legacy dirs (`src/contexts`, `src/hooks`, `src/lib`, `src/utils`, `src/pages`) while extraction is in flight; the lint config does **not** forbid it. Cleanup is verified in Phases 11–12, at which point the rule may be tightened to forbid legacy-dir imports from `features/`.
-- **Circular imports between features are forbidden.** The `index.ts`-only rule prevents *deep* coupling but does not prevent *cyclic* coupling — feature A importing from feature B's index.ts while feature B imports from feature A's index.ts is still a cycle. If two features genuinely need each other's types or utilities, the shared surface moves to `src/shared/types/` (or the appropriate `src/shared/*` subfolder). Enforced by `import/no-cycle` from `eslint-plugin-import`, configured in Phase 4 alongside the other features-specific lint rules.
+- **Circular imports between features are forbidden.** The `index.ts`-only rule prevents _deep_ coupling but does not prevent _cyclic_ coupling — feature A importing from feature B's index.ts while feature B imports from feature A's index.ts is still a cycle. If two features genuinely need each other's types or utilities, the shared surface moves to `src/shared/types/` (or the appropriate `src/shared/*` subfolder). Enforced by `import/no-cycle` from `eslint-plugin-import`, configured in Phase 4 alongside the other features-specific lint rules.
 - **Enforcement mechanism:** `eslint-plugin-import`'s `import/no-internal-modules` rule (configured to allow `features/<Y>/index` but not deeper paths) is the preferred enforcement for the "index.ts-only" cross-feature constraint. Zone-level restrictions (e.g., `shared/` may not import from `features/`) are enforced by `import/no-restricted-paths`. A heavier alternative is `dependency-cruiser` if the ESLint rules prove insufficient. Exact tool choice is decided in Phase 4's spec (when `src/features/` exists to be enforced against).
 
 ### 3.4 Naming canonicalization
@@ -194,51 +194,51 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 
 ### Status
 
-| Phase | Status | Merged |
-|---|---|---|
-| 0a — Inventory | done | 2026-05-26 |
-| 0b — Test harness + characterization + gap journeys | done | 2026-05-27 |
-| 1 — LOC reduction pass #1 | done | 2026-05-27 |
-| 2a — Strict TS turn-on | done | 2026-05-28 |
-| 2b — ESLint type-aware + Prettier | done | 2026-05-28 |
-| 2c — Preflight gates + bundle comparator (advisory) | done | 2026-05-29 |
-| 3 — API/data layer consolidation | done | 2026-05-29 |
-| 4a — Scaffolding + conventions | done | 2026-05-29 |
-| 4b — Shell extraction | done | 2026-05-29 |
-| 5 — Feature: market-research | done | 2026-06-03 |
-| 6 — Feature: mission-control | done | 2026-06-04 |
-| 7 — Feature: customers | done | 2026-06-04 |
-| 8 — Feature: signals + strategist | pending | — |
-| 9 — Feature: scout + profiler | pending | — |
-| 10 — Feature: settings + tenant + auth | pending | — |
-| 11 — Shared utility extraction | pending | — |
-| 12 — Small-pages sweep | pending | — |
-| 13 — LOC reduction pass #2 | pending | — |
-| 14 — Agent affordances | pending | — |
+| Phase                                               | Status  | Merged     |
+| --------------------------------------------------- | ------- | ---------- |
+| 0a — Inventory                                      | done    | 2026-05-26 |
+| 0b — Test harness + characterization + gap journeys | done    | 2026-05-27 |
+| 1 — LOC reduction pass #1                           | done    | 2026-05-27 |
+| 2a — Strict TS turn-on                              | done    | 2026-05-28 |
+| 2b — ESLint type-aware + Prettier                   | done    | 2026-05-28 |
+| 2c — Preflight gates + bundle comparator (advisory) | done    | 2026-05-29 |
+| 3 — API/data layer consolidation                    | done    | 2026-05-29 |
+| 4a — Scaffolding + conventions                      | done    | 2026-05-29 |
+| 4b — Shell extraction                               | done    | 2026-05-29 |
+| 5 — Feature: market-research                        | done    | 2026-06-03 |
+| 6 — Feature: mission-control                        | done    | 2026-06-04 |
+| 7 — Feature: customers                              | done    | 2026-06-04 |
+| 8 — Feature: signals + strategist                   | done    | 2026-06-05 |
+| 9 — Feature: scout + profiler                       | done    | 2026-06-05 |
+| 10 — Feature: settings + tenant + auth              | done    | 2026-06-05 |
+| 11 — Shared utility extraction                      | pending | —          |
+| 12 — Small-pages sweep                              | pending | —          |
+| 13 — LOC reduction pass #2                          | pending | —          |
+| 14 — Agent affordances                              | pending | —          |
 
-*Status reflects merge state to `master`. Update at merge time only. Phase descriptions below are intentionally not amended after a phase ships — they're a frozen record of intent per CLAUDE.md "Spec-driven flow."*
+_Status reflects merge state to `master`. Update at merge time only. Phase descriptions below are intentionally not amended after a phase ships — they're a frozen record of intent per CLAUDE.md "Spec-driven flow."_
 
 ### Overview
 
-| # | Phase | Mission |
-|---|---|---|
-| 0 | Inventory + full safety net | Audit, lock Playwright, visual regression baselines, Vitest+RTL+MSW setup, characterization tests for stable utilities + behavioral E2E for monster-file routes (not monster-file internals) |
-| 1 | LOC reduction pass #1 (pre-foundation) | Phase-L-style audit-execute for dead code, dead deps, dead routes, dedup. Backstopped by Phase 0's safety net. |
-| 2a | Foundation: strict TS turn-on | Flip `strict: true`, `noImplicitAny`, `strictNullChecks`, `noUnusedLocals/Parameters`, `noFallthroughCasesInSwitch`. Fix the error storm. |
-| 2b | Foundation: ESLint type-aware + Prettier | Upgrade ESLint config, add type-aware rules, `import/order`, Prettier check. Features-specific dependency rules deferred to Phase 4 (where `src/features/` exists to enforce against). |
-| 2c | Foundation: preflight gates + budget | Wire all gates into `npm run preflight`: typecheck, lint, test, build, Playwright, visual regression, bundle budget, `knip` dead-code |
-| 3 | API/data layer | Adopt TanStack Query. Collapse 3 caching layers into one. Centralize rate-limit. Define contract types in `src/shared/api/`. |
-| 4 | Feature scaffolding + shell extraction | Create `src/features/` skeleton + per-feature template + features-root README. Lock `src/components/ui/` for shadcn only. Establish ADR template. **Extract shell** (Sidebar, Header, AuthContext, route shell) into `src/features/shell/` — features render inside the shell, so it lands before Phase 5. Define `<FeatureErrorBoundary>` component. Wire features-specific lint rules (deferred from Phase 2b). |
-| 5 | Feature: market-research | Hardest feature first. Extract `pages/MarketResearch.tsx` + all `components/market-research/*` into `src/features/market-research/`. May sub-split (5a page decomposition, 5b component reshuffling). |
-| 6 | Feature: mission-control | `pages/MissionControl.tsx` + DataSourcesManager + ICPManager + components/mission-control/* into `src/features/mission-control/`. |
-| 7 | Feature: customers | ICPSummaryOpportunity + SuggestedICPCards + SuggestedICPsGallery + Customers page into `src/features/customers/`. |
-| 8 | Feature: signals + strategist | Signals page + components/signals/* + components/strategist/* into `src/features/signals/` and `src/features/strategist/`. |
-| 9 | Feature: scout + profiler | ScoutDeployment + scout/profiler-related components (split across mission-control and customers today) into `src/features/scout/`. |
-| 10 | Feature: settings + tenant + auth | Login, TenantSelection, Settings, CompanyProfile into `src/features/auth/`, `src/features/tenant/`, `src/features/settings/`. |
-| 11 | Shared utility extraction | Promote hooks, lib, types used by ≥2 features into `src/shared/`. (Shell extraction moved earlier to Phase 4 — see Phase 11 §.) |
-| 12 | Small-pages sweep | Calendar, Deals, Insights, Reports, Artifacts, NotFound — batched. Each becomes a small feature folder or moves into the nearest related feature. |
-| 13 | LOC reduction pass #2 (post-modularization audit) | Phase-L-proper. With strict types + tests + features in place, systematic per-file audit on the whole tree. Codemods extracted into `frontend/scripts/`. |
-| 14 | Agent affordances | Per-feature README backfill, ADR conventions consolidated, agent-callable scripts (feature scaffolder, codemod runner), preflight watchers (bundle, dead-code, stale-doc grep). Amend root `AGENTS.md`/`CLAUDE.md` only where the new structure makes existing guidance stale. |
+| #   | Phase                                             | Mission                                                                                                                                                                                                                                                                                                                                                                                                           |
+| --- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0   | Inventory + full safety net                       | Audit, lock Playwright, visual regression baselines, Vitest+RTL+MSW setup, characterization tests for stable utilities + behavioral E2E for monster-file routes (not monster-file internals)                                                                                                                                                                                                                      |
+| 1   | LOC reduction pass #1 (pre-foundation)            | Phase-L-style audit-execute for dead code, dead deps, dead routes, dedup. Backstopped by Phase 0's safety net.                                                                                                                                                                                                                                                                                                    |
+| 2a  | Foundation: strict TS turn-on                     | Flip `strict: true`, `noImplicitAny`, `strictNullChecks`, `noUnusedLocals/Parameters`, `noFallthroughCasesInSwitch`. Fix the error storm.                                                                                                                                                                                                                                                                         |
+| 2b  | Foundation: ESLint type-aware + Prettier          | Upgrade ESLint config, add type-aware rules, `import/order`, Prettier check. Features-specific dependency rules deferred to Phase 4 (where `src/features/` exists to enforce against).                                                                                                                                                                                                                            |
+| 2c  | Foundation: preflight gates + budget              | Wire all gates into `npm run preflight`: typecheck, lint, test, build, Playwright, visual regression, bundle budget, `knip` dead-code                                                                                                                                                                                                                                                                             |
+| 3   | API/data layer                                    | Adopt TanStack Query. Collapse 3 caching layers into one. Centralize rate-limit. Define contract types in `src/shared/api/`.                                                                                                                                                                                                                                                                                      |
+| 4   | Feature scaffolding + shell extraction            | Create `src/features/` skeleton + per-feature template + features-root README. Lock `src/components/ui/` for shadcn only. Establish ADR template. **Extract shell** (Sidebar, Header, AuthContext, route shell) into `src/features/shell/` — features render inside the shell, so it lands before Phase 5. Define `<FeatureErrorBoundary>` component. Wire features-specific lint rules (deferred from Phase 2b). |
+| 5   | Feature: market-research                          | Hardest feature first. Extract `pages/MarketResearch.tsx` + all `components/market-research/*` into `src/features/market-research/`. May sub-split (5a page decomposition, 5b component reshuffling).                                                                                                                                                                                                             |
+| 6   | Feature: mission-control                          | `pages/MissionControl.tsx` + DataSourcesManager + ICPManager + components/mission-control/\* into `src/features/mission-control/`.                                                                                                                                                                                                                                                                                |
+| 7   | Feature: customers                                | ICPSummaryOpportunity + SuggestedICPCards + SuggestedICPsGallery + Customers page into `src/features/customers/`.                                                                                                                                                                                                                                                                                                 |
+| 8   | Feature: signals + strategist                     | Signals page + components/signals/_ + components/strategist/_ into `src/features/signals/` and `src/features/strategist/`.                                                                                                                                                                                                                                                                                        |
+| 9   | Feature: scout + profiler                         | ScoutDeployment + scout/profiler-related components (split across mission-control and customers today) into `src/features/scout/`.                                                                                                                                                                                                                                                                                |
+| 10  | Feature: settings + tenant + auth                 | Login, TenantSelection, Settings, CompanyProfile into `src/features/auth/`, `src/features/tenant/`, `src/features/settings/`.                                                                                                                                                                                                                                                                                     |
+| 11  | Shared utility extraction                         | Promote hooks, lib, types used by ≥2 features into `src/shared/`. (Shell extraction moved earlier to Phase 4 — see Phase 11 §.)                                                                                                                                                                                                                                                                                   |
+| 12  | Small-pages sweep                                 | Calendar, Deals, Insights, Reports, Artifacts, NotFound — batched. Each becomes a small feature folder or moves into the nearest related feature.                                                                                                                                                                                                                                                                 |
+| 13  | LOC reduction pass #2 (post-modularization audit) | Phase-L-proper. With strict types + tests + features in place, systematic per-file audit on the whole tree. Codemods extracted into `frontend/scripts/`.                                                                                                                                                                                                                                                          |
+| 14  | Agent affordances                                 | Per-feature README backfill, ADR conventions consolidated, agent-callable scripts (feature scaffolder, codemod runner), preflight watchers (bundle, dead-code, stale-doc grep). Amend root `AGENTS.md`/`CLAUDE.md` only where the new structure makes existing guidance stale.                                                                                                                                    |
 
 ### Parallel execution protocol (Phases 6–12)
 
@@ -246,30 +246,30 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 
 Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / coupling points" blocks, the hard dependencies are:
 
-| Phase | Hard dependency | Why |
-|---|---|---|
-| 6 — mission-control | Phase 5 + foundation only | independent of 7–10 |
-| 7 — customers | **6** | consumes `mission-control/index.ts` ICP-CRUD surface |
-| 8 — signals + strategist | Phase 5 only | only *records* a dedup handoff for 9; doesn't modify 6/7 |
-| 9 — scout + profiler | **6, 7, and 8** | reads 6+7 Profiler-disposition sections + 8's chat-history handoff — the join point |
-| 10 — settings + tenant + auth | foundation only (3, 4b — done) | auth/tenant already in `shared/`; **fully independent of 6–9** |
-| 11 — shared utility extraction | **5–10 all done** | promotes utilities demonstrated used by ≥2 features — hard barrier |
-| 12 — small-pages sweep | independent leaf pages | not claimed by 5–10; must precede 11's empty-`pages/` check |
+| Phase                          | Hard dependency                | Why                                                                                 |
+| ------------------------------ | ------------------------------ | ----------------------------------------------------------------------------------- |
+| 6 — mission-control            | Phase 5 + foundation only      | independent of 7–10                                                                 |
+| 7 — customers                  | **6**                          | consumes `mission-control/index.ts` ICP-CRUD surface                                |
+| 8 — signals + strategist       | Phase 5 only                   | only _records_ a dedup handoff for 9; doesn't modify 6/7                            |
+| 9 — scout + profiler           | **6, 7, and 8**                | reads 6+7 Profiler-disposition sections + 8's chat-history handoff — the join point |
+| 10 — settings + tenant + auth  | foundation only (3, 4b — done) | auth/tenant already in `shared/`; **fully independent of 6–9**                      |
+| 11 — shared utility extraction | **5–10 all done**              | promotes utilities demonstrated used by ≥2 features — hard barrier                  |
+| 12 — small-pages sweep         | independent leaf pages         | not claimed by 5–10; must precede 11's empty-`pages/` check                         |
 
 **Critical path:** `5 → 6 → 7 → 9 → 11`. Everything else (8, 10, 12) folds into the gaps.
 
 **Concurrency cap: at most 3 phases in flight** (review bandwidth, not infra, is the ceiling). Suggested waves:
 
-| Wave | Concurrent (≤3) |
-|---|---|
-| 1 (after 5 merges) | 6 · 8 · 10 |
-| 2 | 7 · 12 |
-| 3 | 9 |
-| 4 | 11 |
+| Wave               | Concurrent (≤3) |
+| ------------------ | --------------- |
+| 1 (after 5 merges) | 6 · 8 · 10      |
+| 2                  | 7 · 12          |
+| 3                  | 9               |
+| 4                  | 11              |
 
 **Operating rules for concurrent sessions:**
 
-- **Inner loop = `npm run verify`** (typecheck + lint + change-scoped tests — `vitest run --changed` runs only the tests affected by uncommitted changes; incremental tsc, cached lint). Run this freely in every session. The **full** Vitest suite runs **only** in the `preflight` merge gate. *(Updated 2026-06-04 per this section's re-evaluate caveat: when written, Vitest was ~33s and `verify` ran the whole suite; the suite has since grown to ~10 min / 89 files, so `verify`'s test step was scoped to changed files — full suite stays in `preflight`.)*
+- **Inner loop = `npm run verify`** (typecheck + lint + change-scoped tests — `vitest run --changed` runs only the tests affected by uncommitted changes; incremental tsc, cached lint). Run this freely in every session. The **full** Vitest suite runs **only** in the `preflight` merge gate. _(Updated 2026-06-04 per this section's re-evaluate caveat: when written, Vitest was ~33s and `verify` ran the whole suite; the suite has since grown to ~10 min / 89 files, so `verify`'s test step was scoped to changed files — full suite stays in `preflight`.)_
 - **Do NOT run `npm run preflight:par` or standalone `npm run test:e2e` while another session is active** — the parallel/e2e path spikes CPU and flakes the visual-regression snapshots under concurrent load, and the e2e preview server binds a shared `:5173` (`reuseExistingServer` → wrong-build false results). See `docs/TECH_DEBT.md` TD-FE-29.
 - **Merge gate = serial `npm run preflight` (with e2e), one branch at a time, controller-run** — this is the existing merge ceremony (root `CLAUDE.md` §AI-native flow) and is what keeps the e2e contention from ever materializing.
 - **Integration via merge, not rebase** — refresh a branch with `git merge master`; land it with a `--no-ff` merge commit (the repo's existing `Merge phase-…` pattern). No history rewrite, no force-push.
@@ -280,10 +280,11 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 **Mission:** establish the audit baseline and the safety net that every subsequent phase relies on.
 
 **Deliverables:**
+
 - Per-feature LOC scorecard (`docs/audits/<date>-frontend-baseline.md`)
 - Dependency graph from `knip` / `ts-prune` / `depcheck` (dead exports, dead files, dead deps)
 - Bundle-size baseline captured from `vite build`
-- **NFR baselines** measured and recorded: `vite build` wall time, `vite` dev-server cold start time, `tsc --noEmit` wall time (against current non-strict config), Playwright full-suite wall time. **Preflight wall time:** captured at Phase 0 as *informational* only — the chain at Phase 0 covers only a subset of checks, so its duration is not the post-foundation anchor. The actual budget anchor for preflight wall time is re-measured in Phase 2c after all checks are wired into the chain. Phase 2c's spec sets the preflight duration budget against its own measurement, not Phase 0's.
+- **NFR baselines** measured and recorded: `vite build` wall time, `vite` dev-server cold start time, `tsc --noEmit` wall time (against current non-strict config), Playwright full-suite wall time. **Preflight wall time:** captured at Phase 0 as _informational_ only — the chain at Phase 0 covers only a subset of checks, so its duration is not the post-foundation anchor. The actual budget anchor for preflight wall time is re-measured in Phase 2c after all checks are wired into the chain. Phase 2c's spec sets the preflight duration budget against its own measurement, not Phase 0's.
 - Playwright suite locked green; visual regression snapshots captured for the top screens (market-research, mission-control, customers, signals, scout, settings, login, tenant-selection).
 - **Visual regression default:** Playwright's built-in screenshot diff (since the Playwright suite already exists). Heavier tools (Chromatic, Percy, Loki) deferred to post-MVP unless surfaced as needed during Phase 0 spec writing. **Threshold range: 0.5–1.0% pixel delta per screen** — Phase 0's spec selects the exact value within this range. An explicit re-baseline workflow handles accepted intentional UI changes.
 - Vitest + React Testing Library + MSW installed and wired.
@@ -300,11 +301,12 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 
 **Methodology:** mirrors backend Phase L's audit-execute pattern.
 
-- **Stage 1 — Audit (tooling-driven candidate list).** Run `knip` + `ts-prune` + `depcheck` + targeted `rg`/`ast-grep` queries against the full `src/` tree. The combined outputs are the candidate list. Categorize each candidate: `execute` (mechanical, safe — the tool's confidence is high and the pattern is well-known), `investigate` (needs per-site analysis), `defer` (logged to `TD-FE-<n>`). The agent does *not* "read every file"; the tooling produces the candidates and the agent reads only `investigate` items in full.
+- **Stage 1 — Audit (tooling-driven candidate list).** Run `knip` + `ts-prune` + `depcheck` + targeted `rg`/`ast-grep` queries against the full `src/` tree. The combined outputs are the candidate list. Categorize each candidate: `execute` (mechanical, safe — the tool's confidence is high and the pattern is well-known), `investigate` (needs per-site analysis), `defer` (logged to `TD-FE-<n>`). The agent does _not_ "read every file"; the tooling produces the candidates and the agent reads only `investigate` items in full.
 - **Stage 2 — Investigation.** For each `investigate` finding, enumerate call sites and read each in full.
 - **Stage 3 — Execute.** Apply the `execute` and confirmed-safe `investigate` reductions.
 
 **In-scope opportunities:**
+
 - Dead imports (pure unused symbols)
 - Dead exports (unused outside their file)
 - Dead files (no inbound import or route reference)
@@ -316,6 +318,7 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 - Inline-data-munging blocks that appear ≥3 times
 
 **Out-of-scope deferrals:**
+
 - Behavior changes (must remain pixel-identical and behaviorally identical)
 - Type signature changes (Phase 2a's domain)
 - Cross-feature dedup that requires moving code into `src/shared/` (Phase 11's domain)
@@ -374,7 +377,7 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 - Define API contract types in `src/shared/api/contracts.ts` (hand-written initially; OpenAPI codegen deferred unless surfaced as needed). API infrastructure is unambiguously shared (every feature consumes it); Phase 4's promotion criteria formalize the general rule that this placement already follows.
 - **`src/services/` disposition.** Identify every file under `src/services/` and assign each to a destination: API-related services move to `src/shared/api/` as part of this phase; feature-local services move with their feature in Phases 5–10. The disposition list lives in the Phase 3 spec so later phases can claim their items.
 
-**Per-call-site migration:** *not* all in this phase. This phase establishes the infrastructure and migrates the lowest-coupled call sites (auth, tenant, settings). Per-feature TanStack adoption happens inside each feature's extraction phase (5–10), where context is local.
+**Per-call-site migration:** _not_ all in this phase. This phase establishes the infrastructure and migrates the lowest-coupled call sites (auth, tenant, settings). Per-feature TanStack adoption happens inside each feature's extraction phase (5–10), where context is local.
 
 **Done when:** the `QueryClient` is configured and consumed; `src/shared/api/` exists with zod contract types and the rate-limited fetcher; CompanyProfile/tenant/auth/Login paths use TanStack Query as the proof-of-pattern.
 
@@ -385,6 +388,7 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 **Sub-split (4a/4b).** Phase 4 ships as two sequential merges, mirroring the 0a/0b split. **4a — Scaffolding + conventions:** the `src/features/` structure, the per-feature template + lazy scaffolder, the `features/`/`shared/`/`ui`-lock READMEs, the ADR set, `<FeatureErrorBoundary>` in `src/shared/components/`, and the cross-zone lint rules. **4b — Shell extraction:** moves the shell into `src/features/shell/` and promotes `AuthContext`/`TenantContext` into `src/shared/`. 4b begins only after 4a merges to `master`.
 
 **Scaffolding deliverables (4a):**
+
 - Create `src/features/` whose per-feature folders are generated **on demand** by the scaffolder. The always-present files are `types.ts`, `index.ts`, `README.md`; `pages/`, `components/`, `hooks/`, `services/` are created lazily by the owning phase when first needed (no empty dirs, no `.gitkeep`).
 - Create `src/features/README.md` documenting:
   - the per-feature template
@@ -397,15 +401,18 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 - Create `frontend/scripts/scaffold-feature.sh` (or equivalent) — a script that generates a new feature folder from the template.
 
 **Shell extraction deliverables (folded in from former Phase 11 — see §4 sequencing note):**
+
 - Extract `src/components/layout/Sidebar.tsx` (816), `src/components/layout/Header.tsx` (554), and the **route shell** — the `ProtectedRoute` guard plus the `Layout`/`Header`/`Sidebar` frame, **not** the `<Routes>` table (which stays in `App.tsx`) — into `src/features/shell/`. Per ADR-0002 (§8 Q11, resolved), `src/contexts/AuthContext.tsx` moves to `src/shared/auth/` (app-wide cross-cutting state), not into a feature.
 - The shell is the app frame features render inside; pulling it before Phase 5 avoids forcing features to create local layout adapters that get unwound later.
 - Per ADR-0002, `src/contexts/TenantContext.tsx` also moves to `src/shared/tenant/` in **4b** — promoted once now rather than deferred to Phase 10 (it depends on `AuthContext`, so both live in `shared/`, making that a `shared → shared` import). `SidebarContext` is the exception: shell-local UI state, so it moves into `src/features/shell/`. (Spec 14's original Phase-10 context-move narrative is superseded by ADR-0002; the Phase 10/11 blocks receive dated annotations on the 4b branch, not here.)
 
 **Error-boundary deliverable:**
+
 - Define a feature-scoped `<FeatureErrorBoundary>` component in `src/shared/components/` (per ADR-0002, §8 Q13 resolved — built in **4a**). From Phase 5 onward, each feature's top-level routed component is wrapped in this boundary. Prevents one feature's runtime error from crashing the whole app.
 - **Unit tests** for `<FeatureErrorBoundary>` verifying: (a) catches and renders fallback for thrown errors in children, (b) does not intercept errors outside its subtree, (c) logs error information for debugging. The boundary's whole purpose is fault isolation; an untested one defeats the goal.
 
 **Lint deliverables (the features-specific dependency rules deferred from Phase 2b):**
+
 - Tooling: `eslint-plugin-import-x` plus a resolver dependency (`eslint-import-resolver-typescript`, so the rules resolve the `@/*` alias). 4a ships the zone-boundary rules + `import-x/no-cycle`; the `index.ts`-only rule (`import-x/no-internal-modules`) is **deferred** to Phase 5/6 (TD-FE-15) after a 4a spike found its allow-list could not cleanly separate deep-feature imports from legitimate relative/external deep imports.
 - Add `import/no-restricted-paths` zone rules: `shared/` may not import from `features/`; `components/ui/` may not import from `features/` or `shared/`.
 - Rules are dormant until Phase 5 produces the first feature, but they're in place so the first extraction trips violations immediately.
@@ -419,24 +426,28 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 **Mission:** the hardest extraction first.
 
 **Sources moving in:**
+
 - `src/pages/MarketResearch.tsx` (post-Phase-1 LOC, originally 14,956)
-- `src/components/market-research/*` (MarketEntrySection 3,719; RegulatoryComplianceSection 2,395; CompetitorLandscapeSection 2,375; IndustryTrendsSection 1,615; MarketSizeSection 1,505; DataHistoryDialog 1,244; LeadStream 1,623 if scout-related stays separate; StrategistWorkspace 810; ScoutChatPanel 655; AIPromptingInterface 490; lead-stream/* etc.)
+- `src/components/market-research/*` (MarketEntrySection 3,719; RegulatoryComplianceSection 2,395; CompetitorLandscapeSection 2,375; IndustryTrendsSection 1,615; MarketSizeSection 1,505; DataHistoryDialog 1,244; LeadStream 1,623 if scout-related stays separate; StrategistWorkspace 810; ScoutChatPanel 655; AIPromptingInterface 490; lead-stream/\* etc.)
 - Related hooks, services, types
 
 **Destination:** `src/features/market-research/`.
 
 **Likely sub-split (decided in Phase 5 spec):**
+
 - 5a: extract `MarketResearch.tsx` into a tree of page components (header, tab shells, section wrappers) — page-level decomposition only, no logic moves
 - 5b: move section components and lift their data into TanStack Query hooks
-- 5c: **handoff annotation, not a code move.** Components identified as not belonging in market-research (lead-stream → likely customers or its own feature; scout chat panels → scout; strategist workspace → strategist) **stay in their current pre-extraction location** (under `src/components/<area>/`). Phase 5 spec enumerates each component's exact current path. The Phase 5 spec records each such component with its intended target feature. The owning future-phase (7, 8, 9) claims and moves them when it runs. Phase 5 does *not* create transient staging folders; the only invariant is that the Phase 5 spec is the source of truth for what's leaving market-research and where it lands.
+- 5c: **handoff annotation, not a code move.** Components identified as not belonging in market-research (lead-stream → likely customers or its own feature; scout chat panels → scout; strategist workspace → strategist) **stay in their current pre-extraction location** (under `src/components/<area>/`). Phase 5 spec enumerates each component's exact current path. The Phase 5 spec records each such component with its intended target feature. The owning future-phase (7, 8, 9) claims and moves them when it runs. Phase 5 does _not_ create transient staging folders; the only invariant is that the Phase 5 spec is the source of truth for what's leaving market-research and where it lands.
 
 **Per-phase deliverables (apply to Phases 5 through 12 unless noted):**
+
 - **TanStack Query migration of this feature's fetch sites.** Convert the feature's manual `apiFetch`/`enhancedApi` calls to `useQuery`/`useMutation` per the patterns established in Phase 3. Server state for this feature lives in TanStack Query's cache, not in `enhancedApi`'s 5-min map.
 - **Route update.** Update route definitions in `App.tsx` (or wherever routes are configured) to point to the new feature location (`src/features/market-research/pages/...`). Frozen route URLs (§2.3) do not change; only the imported modules behind them do.
 - **Error-boundary wrapping.** The feature's top-level routed component is wrapped in `<FeatureErrorBoundary>` (defined in Phase 4).
 - **Per-feature `README.md`** populated with the feature's purpose, public surface (re-exports from `index.ts`), key files, and dependency notes.
 
 **Key risks / coupling points (market-research):**
+
 - Cross-feature couplings: lead-stream (likely belongs in `customers/` or its own feature), scout chat panels (belong in `scout/`), strategist workspace (belongs in `strategist/`). Phase 5 spec must explicitly call which components leave market-research vs stay; failing to disentangle here pushes mess into Phases 8–9.
 - `MarketResearch_clean.tsx` duplicate noted in PWA-multi-tenancy may still exist; Phase 1's LOC pass should have removed it, but Phase 5 spec should verify before extraction.
 - Large prop surfaces: section components currently consume tab state, search query state, and result data via prop drilling. Phase 5 spec decides whether to lift these into TanStack Query / URL state or feature-local context.
@@ -452,11 +463,13 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 **Likely sub-split:** 6a page decomposition; 6b DataSourcesManager extraction; 6c ICPManager extraction. Decided in Phase 6 spec.
 
 **First enabling task** (added 2026-06-03 at Phase 6 pre-planning; folds in TD-FE-15 + the §4 route-registry note — lands before the mission-control extraction, now that Phase 5 produced the first stable `index.ts`):
+
 - **Per-feature route registry** (per §4 "Parallel execution protocol"): each feature exposes its routes from `routes.tsx` (re-exported via `index.ts`); a thin `src/app/routes.tsx` composes them **append-only**, so feature phases never edit a shared `<Routes>` table in `App.tsx` (the Wave-1 merge-conflict hazard). Convert the already-extracted market-research route as the worked example; document the convention in `src/features/README.md`. Frozen route URLs (§2.3) do not change.
-- **Finalize the `index.ts`-only cross-feature lint** (TD-FE-15, deferred from Phase 4a): enable the `forbid`-form `import-x/no-internal-modules` (forbids deep-*feature* paths only, leaving relative/external subpaths alone — see TD-FE-15 for the mechanism and the 4a-spike no-regression set). The cross-zone rules + `import-x/no-cycle` are already live from 4a; this adds only the deep-path rule. Resolve TD-FE-15 and update §8 Q16.
+- **Finalize the `index.ts`-only cross-feature lint** (TD-FE-15, deferred from Phase 4a): enable the `forbid`-form `import-x/no-internal-modules` (forbids deep-_feature_ paths only, leaving relative/external subpaths alone — see TD-FE-15 for the mechanism and the 4a-spike no-regression set). The cross-zone rules + `import-x/no-cycle` are already live from 4a; this adds only the deep-path rule. Resolve TD-FE-15 and update §8 Q16.
 - **Order matters — registry first, then lint:** the registry removes `App.tsx`'s deep page import (`@/features/market-research/pages/...`), so the lint needs no shell exception. The Phase 6 spec settles (a) whether any shell route-wire exception remains (should be none), (b) what `index.ts` exposes for routes, (c) where the composed router lives (`src/app/` vs `shell/`).
 
 **Key risks / coupling points:**
+
 - ICPManager owns ICP CRUD that `customers/` features will consume — defines the public surface `mission-control/index.ts` exposes for Phase 7.
 - DataSourcesManager couples to `_helpers`-style cross-cutting upload utilities — Phase 6 spec decides whether to extract these into `src/shared/` immediately or defer to Phase 11.
 - Profiler functionality currently lives split between mission-control and customers (per root `CLAUDE.md`) — Phase 6 spec decides what stays vs migrates to `scout/profiler` in Phase 9.
@@ -472,6 +485,7 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 **Destination:** `src/features/customers/`.
 
 **Key risks / coupling points:**
+
 - `ICPSummaryOpportunity` (the largest customers component at 6,925 LOC) couples to mission-control's ICP CRUD. The Phase 7 spec consumes the public surface defined in Phase 6's `mission-control/index.ts`.
 - Profiler functionality lives split between mission-control and customers — Phase 7 spec coordinates with Phase 9 (scout + profiler) on what migrates where.
 - `LeadStream` (432 LOC here) duplicates name with market-research's `LeadStream` (1,623 LOC) — Phase 1's LOC pass may have surfaced these as candidates for shared extraction; Phase 7 spec confirms whether they're truly duplicates or independent components with shared name.
@@ -487,6 +501,7 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 **Destinations:** `src/features/signals/`, `src/features/strategist/`.
 
 **Key risks / coupling points:**
+
 - `ScoutChatWithHistory` (lives in signals, moves here) and `ProfilerChatWithHistory` (per CLAUDE.md, ~90% the same component) — by Phase 8, `ProfilerChatWithHistory` is already inside `src/features/mission-control/` or `src/features/customers/` from Phases 6/7. Phase 8 lacks authority to modify those feature surfaces (§5.5 scope discipline). **Phase 8 extracts `ScoutChatWithHistory` into `src/features/signals/` and records the dedup opportunity as a handoff annotation** (same pattern as Phase 5's 5c) — listing where `ProfilerChatWithHistory` lives and what surface a shared chat-history primitive should expose. **Phase 9 (scout + profiler) owns the actual deduplication** — it has authority over both scout and profiler surfaces and coordinates with mission-control/customers via their `index.ts` public surfaces. The shared primitive lands in `src/shared/` (which exists from Phase 4 onward), not `src/features/scout/` (which doesn't exist until Phase 9 itself).
 - Strategist has no backend (per CLAUDE.md — it's a sessionStorage-driven sequence builder); Phase 8 spec confirms the data-layer contract doesn't change and tests preserve the `strategistContext` sessionStorage shape.
 - Signals consumes from multiple data sources (market-research, scout) — its public surface defines what `signals/index.ts` exports for cross-feature use.
@@ -502,6 +517,7 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 **Destination:** `src/features/scout/` (and a sibling `src/features/profiler/` if the spec author decides they're distinct enough — §3.1 note).
 
 **Key risks / coupling points:**
+
 - Scout and Profiler share ~80% of backend code per CLAUDE.md, differentiated only by prompt persona. The frontend may or may not share the same structural pattern — Phase 9 spec evaluates whether to keep them as one feature with two persona modes vs split into siblings.
 - `ProfilerChatWithHistory` ↔ `ScoutChatWithHistory` deduplication — **Phase 9 owns this dedup work**, reading Phase 8's handoff annotation that records `ScoutChatWithHistory`'s current location and the proposed shared surface. The shared chat-history primitive lands in `src/shared/` (or inside `src/features/scout/` if Phase 9 decides scout should own it). Phase 9 coordinates with mission-control/customers via their `index.ts` public surfaces to refactor `ProfilerChatWithHistory` call sites without reaching into their internals.
 - Profiler is currently split between `/mission-control` and `/customers` routes (CLAUDE.md) — Phase 9 resolves the Profiler disposition section started in Phase 6 and amended in Phase 7. **Precondition:** Phase 9's spec author reads Phase 6 and Phase 7 specs' Profiler disposition sections before planning.
@@ -509,14 +525,18 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 
 **Per-phase deliverables:** see Phase 5's deliverables block.
 
+> _Phase 9 outcome annotation (2026-06-05):_ Phase 9 resolved the §3.1 scout/profiler "join point" as follows. Scout gets a thin `features/scout/` holding only the ScoutDeployment surface (Spec 30 §1.1). **No `features/profiler/`** was created — Profiler stays distributed across `features/customers/` + `features/mission-control/` + `src/shared/profiler/` (asymmetry is intentional; TD-FE-60). The `ProfilerChatWithHistory` ↔ `ScoutChatWithHistory` dedup was resolved by building a `ChatWithHistory` history shell in `src/shared/chat/` (the shared substrate); both wrappers now delegate to it. The substrate component was renamed `SignalsContextChat` → `ContextChat`; the **type** `SignalsChatContext` was deliberately retained to avoid consumer churn (TD-FE-61). The legacy `components/market-research/` directory was partially drained: `ScoutChatPanel.tsx` + `types.ts` moved into `features/market-research/` (TD-FE-51 resolved); 6 files remain deferred due to cross-feature coupling (TD-FE-63). New TD entries: TD-FE-60 (no profiler feature), TD-FE-61 (type name retained), TD-FE-62 (`leadStreamChatContext.ts` in utils), TD-FE-63 (6-file market-research residue).
+
 ### Phase 10 — Feature: settings + tenant + auth
 
 **Sources moving in:**
+
 - `src/pages/Login.tsx` + Firebase integration → `src/features/auth/`
 - `src/pages/TenantSelection.tsx` + `src/contexts/TenantContext.tsx` → `src/features/tenant/`
 - `src/pages/Settings.tsx` + `src/components/settings/*` (CompanyProfile 601) → `src/features/settings/`
 
 **Key risks / coupling points:**
+
 - AuthContext currently lives at `src/contexts/AuthContext.tsx` and was extracted in Phase 4 into `src/features/shell/` (or `src/features/auth/` per Phase 4 spec decision — §8 Q1). Phase 10's `auth/` feature reuses whichever location was chosen; it does not re-extract. **If Phase 4 placed AuthContext in `shell/`**, Phase 10's auth feature spans two folders: Login + Firebase integration in `src/features/auth/`, context in `src/features/shell/`. Login calls AuthContext methods, so the cross-folder coupling must be mediated by `shell/index.ts`'s public surface — Phase 10 spec confirms `shell/index.ts` exports enough auth surface that `auth/` doesn't reach into shell internals.
 - TenantContext + TenantSelection page form a tight pair — Phase 10 spec confirms they ship together rather than splitting context (in `tenant/`) from page (anywhere else).
 - Firebase email/password integration touches multiple files (auth callbacks, JWT manager); Phase 10 spec maps the full Firebase surface area before extraction.
@@ -524,7 +544,7 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 
 **Per-phase deliverables:** see Phase 5's deliverables block.
 
-> *Amended by Spec 21 (2026-05-29): `AuthContext`/`TenantContext` relocated to `src/shared/` in Phase 4b; this block's original Phase-10 context move is superseded — see ADR-0002. Phase 10 builds the Login/TenantSelection UIs that consume the shared primitives.*
+> _Amended by Spec 21 (2026-05-29): `AuthContext`/`TenantContext` relocated to `src/shared/` in Phase 4b; this block's original Phase-10 context move is superseded — see ADR-0002. Phase 10 builds the Login/TenantSelection UIs that consume the shared primitives._
 
 ### Phase 11 — Shared utility extraction
 
@@ -533,16 +553,19 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 **Note on Phase 11's narrowed scope:** Shell extraction (Sidebar, Header, AuthContext, route shell) was moved to Phase 4 (see §4 sequencing rationale). Phase 11 now focuses exclusively on **shared utility extraction** — promoting hooks, lib utilities, and types that multiple features depend on into `src/shared/`. The promotion criteria documented in `src/shared/README.md` (per Phase 4) drive these decisions.
 
 **Sources moving in:**
+
 - Cross-cutting hooks (whatever remains under `src/hooks/*` after features absorbed their feature-local hooks) → `src/shared/hooks/`
 - Lib utilities (`src/lib/*` outside the api files moved in Phase 3) → `src/shared/lib/`
 - Utils (`src/utils/*`) → `src/shared/lib/` or `src/shared/hooks/` depending on shape
 - Types depended on by multiple features → `src/shared/types/`
 
 **Key risks / coupling points:**
-- Premature shared extraction creates wrong abstractions. Phase 11 only promotes when a utility is *demonstrated* to be used by ≥2 features after Phases 5–10. Single-feature utilities stay inside their feature.
+
+- Premature shared extraction creates wrong abstractions. Phase 11 only promotes when a utility is _demonstrated_ to be used by ≥2 features after Phases 5–10. Single-feature utilities stay inside their feature.
 - Features that need a "shared" utility before Phase 11 land it in their feature folder and let Phase 11 promote — do not pre-extract.
 
 **Per-phase deliverables (lighter than Phases 5–10 — no feature extraction):**
+
 - Verify `src/pages/` is empty (or only contains `App.tsx`-routed entry points).
 - Verify `src/components/` contains only `ui/`.
 - Verify `src/contexts/`/`hooks/`/`lib/`/`services/`/`utils/` are gone or redirected. Any remaining file is justified in the Phase 11 spec or moved.
@@ -550,7 +573,7 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 
 **Done when:** the above verifications pass; `src/shared/` is populated with the genuinely-shared utilities discovered in Phases 5–10. Phase 12 handles any additional shared-utility surface inline as it runs (per the description text above).
 
-> *Amended by Spec 21 (2026-05-29): `shared/{auth,tenant,components}` already exist from Phase 4; Phase 11 promotes the remaining hooks/lib/types and verifies that `features/` hold no legacy-dir imports (see Spec 21 §2.2).*
+> _Amended by Spec 21 (2026-05-29): `shared/{auth,tenant,components}` already exist from Phase 4; Phase 11 promotes the remaining hooks/lib/types and verifies that `features/` hold no legacy-dir imports (see Spec 21 §2.2)._
 
 ### Phase 12 — Small-pages sweep
 
@@ -575,7 +598,7 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 - Inline state-management blocks (same `useState` + `useEffect` triplet ≥3 times) — extract to a hook
 - Single-use trivial wrapper components (one-line return) — inline unless they add semantic clarity
 
-**Codemods (selective, not auto-mandated):** the ≥3-occurrence threshold is a *candidacy signal* for codemod treatment, not an automatic mandate. A pattern earns a codemod only when it is (a) **likely to recur** in future feature work or future codebase changes, and (b) **mechanically transformable** (the transformation is structural enough that a script can apply it correctly). Ad-hoc one-off patterns that happen to appear 3+ times are fixed manually — building a codemod for a pattern that may never appear again is wasted tooling. When the audit decides yes, codemods land in `frontend/scripts/codemods/<name>.ts` (using ts-morph or jscodeshift) with a documented invocation and a test case (input → expected output). The codemod runs against the codebase as part of Phase 13, then stays committed for future re-use.
+**Codemods (selective, not auto-mandated):** the ≥3-occurrence threshold is a _candidacy signal_ for codemod treatment, not an automatic mandate. A pattern earns a codemod only when it is (a) **likely to recur** in future feature work or future codebase changes, and (b) **mechanically transformable** (the transformation is structural enough that a script can apply it correctly). Ad-hoc one-off patterns that happen to appear 3+ times are fixed manually — building a codemod for a pattern that may never appear again is wasted tooling. When the audit decides yes, codemods land in `frontend/scripts/codemods/<name>.ts` (using ts-morph or jscodeshift) with a documented invocation and a test case (input → expected output). The codemod runs against the codebase as part of Phase 13, then stays committed for future re-use.
 
 **Codemod test approach:** Vitest + filesystem fixtures under `frontend/scripts/codemods/__tests__/` — each codemod has an `input.ts` and `expected.ts` pair; the test reads input, applies the codemod, compares against expected. AST-based codemods don't fit the DOM-oriented Vitest+RTL pattern; this filesystem-fixture approach is lightweight enough not to need a separate harness. Phase 13's spec finalizes the exact pattern.
 
@@ -647,18 +670,18 @@ The pre-shaped `frontend/scripts/preflight.sh` wrapper + `npm run preflight` cha
 
 Review and synthesis filenames derive from the spec's or plan's filename. The base is the spec/plan file's basename without `.md`, with `-review-N.md` or `-synthesis-N.md` appended (where `N` is the round number). This matches the precedent set by Spec 14 itself (`14-frontend-refactoring-master-plan-design-spec-review-1.md`) and backend specs.
 
-| Artifact | Location |
-|---|---|
-| Spec | `specs/<NN>-<phase-name>-design.md` |
-| Plan | `plans/<NN>-<phase-name>.md` |
-| Spec reviews | `docs/reviews/<NN>-<phase-name>-design-spec-review-<round>.md` |
-| Spec syntheses | `docs/reviews/<NN>-<phase-name>-design-spec-synthesis-<round>.md` |
-| Plan reviews | `docs/reviews/<NN>-<phase-name>-plan-review-<round>.md` |
-| Plan syntheses | `docs/reviews/<NN>-<phase-name>-plan-synthesis-<round>.md` |
-| Impl reviews | `docs/reviews/<NN>-<phase-name>-impl-review-<round>.md` |
-| Impl syntheses | `docs/reviews/<NN>-<phase-name>-impl-synthesis-<round>.md` |
-| Audit scorecards (Phases 0, 1, 13) | `docs/audits/<date>-<topic>.md` |
-| Tech-debt log | `docs/TECH_DEBT.md` (shared with backend; FE entries use `TD-FE-<n>` prefix) |
+| Artifact                           | Location                                                                     |
+| ---------------------------------- | ---------------------------------------------------------------------------- |
+| Spec                               | `specs/<NN>-<phase-name>-design.md`                                          |
+| Plan                               | `plans/<NN>-<phase-name>.md`                                                 |
+| Spec reviews                       | `docs/reviews/<NN>-<phase-name>-design-spec-review-<round>.md`               |
+| Spec syntheses                     | `docs/reviews/<NN>-<phase-name>-design-spec-synthesis-<round>.md`            |
+| Plan reviews                       | `docs/reviews/<NN>-<phase-name>-plan-review-<round>.md`                      |
+| Plan syntheses                     | `docs/reviews/<NN>-<phase-name>-plan-synthesis-<round>.md`                   |
+| Impl reviews                       | `docs/reviews/<NN>-<phase-name>-impl-review-<round>.md`                      |
+| Impl syntheses                     | `docs/reviews/<NN>-<phase-name>-impl-synthesis-<round>.md`                   |
+| Audit scorecards (Phases 0, 1, 13) | `docs/audits/<date>-<topic>.md`                                              |
+| Tech-debt log                      | `docs/TECH_DEBT.md` (shared with backend; FE entries use `TD-FE-<n>` prefix) |
 
 ### 5.5 Scope discipline
 
@@ -683,7 +706,7 @@ Not every phase will land cleanly. The protocol for when a phase branch cannot r
 - **Action:** revert the branch (do not merge partial progress). Log findings as `TD-FE-<n>` entries in `docs/TECH_DEBT.md` capturing what was discovered. Open a follow-on revised spec (round 2 of the phase) addressing what the failure revealed.
 - **Human checkpoint:** the human orchestrator (user) confirms the abort decision. Agents propose; humans approve. This is not a unilateral agent decision.
 - **No "fix forward" through a failed phase.** Per §5.3, the rule against fixing forward through hook failures extends to phase-level: a phase that cannot finish does not ship partial. The cost of reverting is much smaller than the cost of merging half-broken structural work into `master`.
-- **Sub-phase granularity.** Within a sub-split phase (e.g., Phase 5's 5a/5b/5c, Phase 6's 6a/6b/6c), each sub-phase is a discrete commit (or commit series) that leaves the codebase in a green state. If a sub-phase fails, revert to the last green sub-phase commit and replan the remainder — the full phase doesn't need to revert. The abort/revert protocol above triggers only when the *phase as a whole* can't reach done.
+- **Sub-phase granularity.** Within a sub-split phase (e.g., Phase 5's 5a/5b/5c, Phase 6's 6a/6b/6c), each sub-phase is a discrete commit (or commit series) that leaves the codebase in a green state. If a sub-phase fails, revert to the last green sub-phase commit and replan the remainder — the full phase doesn't need to revert. The abort/revert protocol above triggers only when the _phase as a whole_ can't reach done.
 
 ---
 
@@ -709,27 +732,35 @@ A phase is "done" when its spec, plan, impl, and ≥1 review round of each are m
 ## §7 Risks and sequencing
 
 ### R1 — Strict TS error explosion (Phase 2a)
+
 **Mitigation:** Phase 1's LOC pass shrinks the surface first. Phase 2a has an error-count threshold (1,500) for sub-decomposition trigger — exceeding it requires the plan author to propose a sub-decomposition by feature folder or by error category before execution (the phase still proceeds, just with finer-grained sub-phases). "Gate" terminology is reserved for preflight checks that actually block merge. Behavioral E2E + visual regression (locked in Phase 0) catch behavior regressions even when type signatures change, without requiring deep characterization tests against monster-file internals.
 
 ### R2 — Characterization tests miss behavior
+
 **Mitigation:** layered safety net. Unit tests (Vitest + RTL) catch component behavior. MSW catches data-layer behavior. Visual regression catches rendering. Playwright catches user journeys. Manual smoke-test sign-off before merge of any phase that touches behavior.
 
 ### R3 — TanStack Query migration cascades
+
 **Mitigation:** Phase 3 is purely "adopt the library + collapse caching + define contracts," not "rewrite every fetch site." Per-feature TanStack adoption happens inside each feature phase (5–10), where context is local. Auth/tenant/settings paths migrate in Phase 3 as the proof-of-pattern.
 
 ### R4 — Phase 0 grows too large
+
 **Mitigation:** sub-split trigger documented (0a inventory + Playwright/visual lock; 0b Vitest + RTL + MSW + characterization). Decision deferred to spec author.
 
 ### R5 — Feature extraction reveals hidden cross-feature coupling
+
 **Mitigation:** hardest-first ordering — Phase 5 (market-research) surfaces the worst coupling early. Discovered shared utilities populate `src/shared/` from the start, rather than being retroactively pulled. Phase 4's features-root README codifies the public-surface convention so cross-feature imports are explicit from day one.
 
 ### R6 — Agent context blow-up on monster files
+
 **Mitigation:** Phase 1 trims first. Behavioral E2E tests (Playwright) and visual regression act as the "executable spec" agents can verify against without reading the full file. For Phase 5 specifically (still ≥10k LOC even after pass #1), the spec directs agents to extract in N commits, each commit narrowly scoped to a section of the monster file. The structural decomposition is the agent's path through the file, not a single-shot read.
 
 ### R7 — Master plan staleness as phases land
+
 **Mitigation:** synthesize-impl-review step at each phase merge includes "update master-plan deltas" as a checklist item. The master spec stays current rather than becoming a historical snapshot. Backend Spec 13 set this precedent.
 
 ### R8 — Codemod incidents during Phase 13
+
 **Mitigation:** every codemod runs against a dedicated commit (one codemod per commit). Visual regression + Vitest + Playwright must stay green between codemod commits. Rollback granularity is per-codemod.
 
 ---

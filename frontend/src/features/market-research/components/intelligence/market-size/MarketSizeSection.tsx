@@ -1,6 +1,8 @@
 import { Bot, PieChart, X, Clock, ChevronDown, ChevronUp, Check } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 
+import type { EditRecord } from "../../types";
+
 import { ExecutiveSummary } from "./ExecutiveSummary";
 import { ExportOptions } from "./ExportOptions";
 import { GrowthProjections } from "./GrowthProjections";
@@ -13,7 +15,6 @@ import { ErrorState, LoadingState, NoDataState } from "./states";
 import { StrategicRecommendations } from "./StrategicRecommendations";
 import { useMarketSize } from "./useMarketSize";
 
-import type { EditRecord } from "@/components/market-research/types";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";

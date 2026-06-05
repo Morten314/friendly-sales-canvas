@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import React, { useState } from "react";
 
+import type { EditRecord } from "../../types";
+
 import MarketEntryBulletList from "./MarketEntryBulletList";
 import MarketEntryEditForm from "./MarketEntryEditForm";
 import MarketEntryHeader from "./MarketEntryHeader";
@@ -19,7 +21,6 @@ import MarketEntrySwotGrid from "./MarketEntrySwotGrid";
 import MarketEntryTimeline from "./MarketEntryTimeline";
 import { useMarketEntry } from "./useMarketEntry";
 
-import type { EditRecord } from "@/components/market-research/types";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/shared/auth";

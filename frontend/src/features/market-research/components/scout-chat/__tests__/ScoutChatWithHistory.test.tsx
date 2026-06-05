@@ -3,17 +3,23 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ScoutChatWithHistory } from "../ScoutChatWithHistory";
 
-// Mock the heavy children so the test stays a pure mount check
-// (no real fetch/WebSocket, no nested chat substrate).
-vi.mock("@/shared/chat", () => ({
-  SignalsContextChat: () => <div data-testid="substrate" />,
-}));
+import type * as SharedChat from "@/shared/chat";
+
+// Mock the substrate so no real fetch/WebSocket fires, but keep the real
+// ChatWithHistory shell (the wrapper now renders it).
+vi.mock("@/shared/chat", async () => {
+  const actual = await vi.importActual<typeof SharedChat>("@/shared/chat");
+  return {
+    ...actual,
+    ContextChat: () => <div data-testid="substrate" />,
+  };
+});
 
 vi.mock("@/shared/auth", () => ({
   useAuth: () => ({ currentUser: { uid: "u1" }, orgId: "org1" }),
 }));
 
-vi.mock("@/components/market-research/ScoutChatPanel", () => ({
+vi.mock("../ScoutChatPanel", () => ({
   default: () => <div />,
 }));
 
@@ -25,8 +31,9 @@ vi.mock("../SuggestedCompaniesSection", () => ({
 
 describe("ScoutChatWithHistory (relocated)", () => {
   it("mounts with a null initial context", () => {
-    // initialContext: null + empty localStorage → empty state renders the
-    // "New chat" sidebar button, a stable mount signal.
+    // initialContext: null + empty localStorage → the sidebar (open by default)
+    // renders its "New chat" button, a stable mount signal. (Scout's empty
+    // state itself has no "New chat" button — showNewChatButton: false.)
     const { container } = render(<ScoutChatWithHistory initialContext={null} />);
     expect(container).toBeTruthy();
     expect(screen.getAllByText("New chat").length).toBeGreaterThan(0);
