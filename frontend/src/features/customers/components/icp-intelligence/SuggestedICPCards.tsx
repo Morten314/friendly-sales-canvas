@@ -44,7 +44,6 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ToastAction } from "@/components/ui/toast";
 import { useToast } from "@/hooks/use-toast";
 import { buildApiUrl } from "@/lib/api";
-import type { UntypedProfilerIcpRecord } from "@/lib/types/escape-hatches";
 import { useAuth } from "@/shared/auth";
 import { getUserLocalStorage, setUserLocalStorage } from "@/shared/lib/cacheUtils";
 import {
@@ -60,6 +59,7 @@ import {
   resolveAcceptedPersistedIcpId,
   removeProfilerAcceptedIcpDisplayMeta,
 } from "@/shared/profiler";
+import type { UntypedProfilerIcpRecord } from "@/shared/types/escape-hatches";
 
 /** Dev-only logs for verifying Refresh → GET /icp → mapped cards/reports. Strip or disable for production noise. */
 function profilerIcpDebug(...args: unknown[]) {

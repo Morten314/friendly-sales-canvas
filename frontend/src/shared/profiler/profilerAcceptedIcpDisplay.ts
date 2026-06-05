@@ -5,7 +5,7 @@
  * when rendering Mission Control + Profiler Current ICPs.
  */
 
-import type { UntypedProfilerIcpRecord } from "@/lib/types/escape-hatches";
+import type { UntypedProfilerIcpRecord } from "@/shared/types/escape-hatches";
 
 export const PROFILER_ICP_DISPLAY_KEY = (icpId: string) => `profiler_icp_display_${icpId}`;
 

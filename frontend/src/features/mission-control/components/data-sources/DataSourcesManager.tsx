@@ -52,7 +52,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { buildApiUrl } from "@/lib/api";
 import jwtManager from "@/lib/jwt";
-import type { UntypedBackendDocument } from "@/lib/types/escape-hatches";
+import type { UntypedBackendDocument } from "@/shared/types/escape-hatches";
 
 interface CompanyProfile {
   companyName?: string;

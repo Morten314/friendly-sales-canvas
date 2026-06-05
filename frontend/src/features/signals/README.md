@@ -42,4 +42,4 @@ never a deep path. Today the surface is routes-only; exports are added lazily if
 
 - May import from: `@/features/signals/*` (self, relative), `@/shared/*`, `@/components/ui/*`, npm.
 - May import another feature **only** via its `index.ts` (`@/features/<other>`), never a deep path.
-- Transitional (Phases 4b–12) legacy imports retained: `@/hooks/use-toast`, `@/lib/types/escape-hatches` (`UntypedBackendSignal`), `@/lib/api` (where used).
+- Transitional (Phases 4b–12) legacy imports retained: `@/hooks/use-toast`, `@/shared/types/escape-hatches` (`UntypedBackendSignal`), `@/lib/api` (where used).

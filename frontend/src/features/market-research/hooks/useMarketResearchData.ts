@@ -7,19 +7,19 @@ import React, { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { buildApiUrl } from "@/lib/api";
 import { toUTCTimestamp, isTimestampNewer, logTimestampComparison } from "@/lib/timestampUtils";
-import type {
-  UntypedReportState,
-  UntypedUiComponent,
-  UntypedBackendApiResponse,
-  UntypedCascadeContext,
-  UntypedVisualDataCardRaw,
-} from "@/lib/types/escape-hatches";
 import { useAuth } from "@/shared/auth";
 import {
   getUserLocalStorage,
   setUserLocalStorage,
   removeUserLocalStorage,
 } from "@/shared/lib/cacheUtils";
+import type {
+  UntypedReportState,
+  UntypedUiComponent,
+  UntypedBackendApiResponse,
+  UntypedCascadeContext,
+  UntypedVisualDataCardRaw,
+} from "@/shared/types/escape-hatches";
 import { logApiCallResult } from "@/utils/apiUtils";
 
 // Module augmentation: window-attached refresh-coordination + debug helpers.

@@ -1,6 +1,9 @@
 import type { EditRecord } from "../../types";
 
-import type { UntypedBackendApiResponse, UntypedBackendProfile } from "@/lib/types/escape-hatches";
+import type {
+  UntypedBackendApiResponse,
+  UntypedBackendProfile,
+} from "@/shared/types/escape-hatches";
 
 export type { EditRecord, UntypedBackendApiResponse, UntypedBackendProfile };
 

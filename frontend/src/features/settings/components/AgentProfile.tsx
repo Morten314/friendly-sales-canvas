@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { UntypedBackendProfile } from "@/lib/types/escape-hatches";
+import type { UntypedBackendProfile } from "@/shared/types/escape-hatches";
 
 interface AgentProfileProps {
   onProfileUpdate?: () => void;

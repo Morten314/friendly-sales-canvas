@@ -5,7 +5,7 @@
 import { useState } from "react";
 
 import ScoutLeadStream from "@/components/market-research/ScoutLeadStream";
-import type { UntypedLead } from "@/lib/types/escape-hatches";
+import type { UntypedLead } from "@/shared/types/escape-hatches";
 
 interface LeadStreamTabProps {
   /** Cross-tab filter set by the shell's "view opportunity leads" flow (intelligence → analysis). */

@@ -38,7 +38,7 @@ never a deep path. Today the surface is routes-only; exports are added lazily if
 
 - May import from: `@/features/customers/*` (self, relative), `@/shared/*`, `@/components/ui/*`, npm.
 - May import another feature **only** via its `index.ts` (`@/features/<other>`), never a deep path.
-- Transitional (Phases 4b–12) legacy imports retained: `@/lib/api`, `@/lib/types/escape-hatches`, `@/hooks/usePageTitle`, `@/hooks/use-toast`, `@/shared/lib/cacheUtils`, `@/components/common/ErrorBoundary`, and `@/components/market-research/EditDropdownMenu` (legacy dir not yet migrated). The chat substrate now imports from `@/shared/chat` — a proper shared module, no longer a transitional/legacy path.
+- Transitional (Phases 4b–12) legacy imports retained: `@/lib/api`, `@/shared/types/escape-hatches`, `@/hooks/usePageTitle`, `@/hooks/use-toast`, `@/shared/lib/cacheUtils`, `@/components/common/ErrorBoundary`, and `@/components/market-research/EditDropdownMenu` (legacy dir not yet migrated). The chat substrate now imports from `@/shared/chat` — a proper shared module, no longer a transitional/legacy path.
 - Keeps its **own** `/icp` + `customer_profile` read — does not adopt mission-control's `useICPs` (TD-FE-42).
 
 ## Pending handoffs

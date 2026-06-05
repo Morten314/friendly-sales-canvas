@@ -1,4 +1,4 @@
-import type { UntypedBackendApiResponse } from "@/lib/types/escape-hatches";
+import type { UntypedBackendApiResponse } from "@/shared/types/escape-hatches";
 
 /**
  * The 16 company-profile form fields (snake_case + camelCase tolerated, trimmed).

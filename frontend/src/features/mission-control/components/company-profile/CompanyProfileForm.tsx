@@ -23,7 +23,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import type { UntypedBackendApiResponse } from "@/lib/types/escape-hatches";
 import { qk } from "@/shared/api/queryKeys";
 import { useCompanyProfile } from "@/shared/company-profile";
 import {
@@ -32,6 +31,7 @@ import {
   getMissionControlCompanyProfileJson,
   invalidateProfilerCache,
 } from "@/shared/profiler";
+import type { UntypedBackendApiResponse } from "@/shared/types/escape-hatches";
 
 interface CompanyProfileFormProps {
   /**

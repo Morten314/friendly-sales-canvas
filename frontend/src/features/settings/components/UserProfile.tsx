@@ -11,8 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { UntypedBackendProfile } from "@/lib/types/escape-hatches";
 import { useAuth } from "@/shared/auth";
+import type { UntypedBackendProfile } from "@/shared/types/escape-hatches";
 
 interface SocialMediaUrl {
   platform: string;

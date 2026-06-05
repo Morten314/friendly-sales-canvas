@@ -11,12 +11,12 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiFetch } from "@/lib/api";
-import type { UntypedProfilerIcpRecord } from "@/lib/types/escape-hatches";
 import { setUserLocalStorage, removeUserLocalStorage } from "@/shared/lib/cacheUtils";
 import {
   mergeProfilerAcceptedIcpDisplay,
   removeProfilerAcceptedIcpDisplayMeta,
 } from "@/shared/profiler";
+import type { UntypedProfilerIcpRecord } from "@/shared/types/escape-hatches";
 
 const ICPManager: React.FC = () => {
   const { toast } = useToast();

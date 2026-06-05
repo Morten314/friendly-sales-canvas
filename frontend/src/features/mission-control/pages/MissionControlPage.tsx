@@ -14,7 +14,6 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Layout } from "@/features/shell";
 import { useAuth } from "@/hooks/useAuth";
-import type { UntypedBackendApiResponse } from "@/lib/types/escape-hatches";
 import { useCompanyProfile } from "@/shared/company-profile";
 import {
   ensureMissionProfilerScope,
@@ -25,6 +24,7 @@ import {
   invalidateProfilerCache,
   extractIcpsDataFromFlexibleApiResponse,
 } from "@/shared/profiler";
+import type { UntypedBackendApiResponse } from "@/shared/types/escape-hatches";
 
 const MissionControlPage = () => {
   const [activeTab, setActiveTab] = useState("profile");

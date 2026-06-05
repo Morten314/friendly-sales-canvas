@@ -27,8 +27,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Layout } from "@/features/shell";
 import type { DeploymentData } from "@/features/shell";
-import type { UntypedLead } from "@/lib/types/escape-hatches";
 import { usePageTitle } from "@/shared/hooks/usePageTitle";
+import type { UntypedLead } from "@/shared/types/escape-hatches";
 import {
   buildLeadStreamChatContext,
   LEAD_STREAM_CHAT_CONTEXT_KEY,

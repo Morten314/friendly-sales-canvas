@@ -14,8 +14,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Layout } from "@/features/shell";
-import type { UntypedBackendProfile } from "@/lib/types/escape-hatches";
 import { useAuth } from "@/shared/auth";
+import type { UntypedBackendProfile } from "@/shared/types/escape-hatches";
 
 const SettingsPage = () => {
   const { currentUser } = useAuth();
