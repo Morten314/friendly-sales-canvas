@@ -7,7 +7,7 @@ import {
   isTimestampNewer,
   logTimestampComparison,
   toUTCTimestamp,
-} from "@/lib/timestampUtils";
+} from "../timestampUtils";
 
 describe("toUTCTimestamp", () => {
   it("returns null for null/undefined/0/empty-string inputs", () => {

@@ -16,6 +16,10 @@ import { MarketDetailDrawer } from "../components/MarketDetailDrawer";
 import { ScoutSettingsForm } from "../components/ScoutSettingsForm";
 import TrendsTab from "../components/trends/TrendsTab";
 import { useMarketResearchData } from "../hooks/useMarketResearchData";
+import {
+  buildLeadStreamChatContext,
+  LEAD_STREAM_CHAT_CONTEXT_KEY,
+} from "../lib/leadStreamChatContext";
 import type { ScoutResearchContext } from "../types";
 
 import LeadStreamTab from "@/components/market-research/lead-stream/LeadStreamTab";
@@ -29,10 +33,6 @@ import { Layout } from "@/features/shell";
 import type { DeploymentData } from "@/features/shell";
 import { usePageTitle } from "@/shared/hooks/usePageTitle";
 import type { UntypedLead } from "@/shared/types/escape-hatches";
-import {
-  buildLeadStreamChatContext,
-  LEAD_STREAM_CHAT_CONTEXT_KEY,
-} from "@/utils/leadStreamChatContext";
 
 // Minimal shape the detail drawer needs for its (currently always-null) selected market.
 interface Market {
