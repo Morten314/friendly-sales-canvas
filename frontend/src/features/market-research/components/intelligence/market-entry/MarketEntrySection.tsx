@@ -22,7 +22,7 @@ import MarketEntryTimeline from "./MarketEntryTimeline";
 import { useMarketEntry } from "./useMarketEntry";
 
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/shared/auth";
 
 interface MarketEntrySectionProps {

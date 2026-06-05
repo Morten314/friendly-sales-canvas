@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { qk } from "@/shared/api/queryKeys";
 import { useAuthToken } from "@/shared/auth";
 import { useCompanyProfile } from "@/shared/company-profile";

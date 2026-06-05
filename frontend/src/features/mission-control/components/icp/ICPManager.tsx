@@ -8,7 +8,7 @@ import IcpList from "./IcpList";
 import IcpWizard from "./IcpWizard";
 
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { apiFetch } from "@/shared/api/transport";
 import { useAuthToken } from "@/shared/auth";
 import { setUserLocalStorage, removeUserLocalStorage } from "@/shared/lib/cacheUtils";

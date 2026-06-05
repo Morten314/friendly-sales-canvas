@@ -7,7 +7,7 @@ import IcpWizard from "../IcpWizard";
 // Capture toast calls so the validation-failure toast (parity with the legacy
 // handleSaveICP) can be asserted.
 const toastMock = vi.fn();
-vi.mock("@/hooks/use-toast", () => ({
+vi.mock("@/components/ui/use-toast", () => ({
   useToast: () => ({ toast: toastMock }),
 }));
 

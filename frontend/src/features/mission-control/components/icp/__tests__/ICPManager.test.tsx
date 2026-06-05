@@ -10,7 +10,7 @@ vi.mock("@/shared/auth", () => ({
 }));
 
 // Toast is a no-op for these container tests.
-vi.mock("@/hooks/use-toast", () => ({
+vi.mock("@/components/ui/use-toast", () => ({
   useToast: () => ({ toast: vi.fn() }),
 }));
 

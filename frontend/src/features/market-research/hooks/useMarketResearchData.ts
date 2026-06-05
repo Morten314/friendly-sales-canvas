@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { logApiCallResult } from "../lib/apiUtils";
 import { toUTCTimestamp, isTimestampNewer, logTimestampComparison } from "../lib/timestampUtils";
 
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { buildApiUrl } from "@/shared/api/transport";
 import { useAuth } from "@/shared/auth";
 import {

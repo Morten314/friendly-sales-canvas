@@ -5,7 +5,7 @@ import { StrategicRecommendationsSection } from "../StrategicRecommendationsSect
 import type { UntypedBackendApiResponse } from "../types";
 
 const mockToast = vi.fn();
-vi.mock("@/hooks/use-toast", () => ({
+vi.mock("@/components/ui/use-toast", () => ({
   useToast: () => ({ toast: mockToast }),
 }));
 

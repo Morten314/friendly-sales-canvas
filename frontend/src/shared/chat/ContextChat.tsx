@@ -15,7 +15,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/shared/auth";
 import { useSignalAction } from "@/shared/chat/useSignalAction";
 import { useSignalAsk } from "@/shared/chat/useSignalAsk";

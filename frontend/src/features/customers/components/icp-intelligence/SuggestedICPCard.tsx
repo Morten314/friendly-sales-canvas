@@ -22,7 +22,7 @@ import { EditDropdownMenu } from "@/components/market-research/EditDropdownMenu"
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 
 /** Renders backend GET /icp nested `report` payload (icp-research-style `data` object). */
 const BackendProfilerReportView = ({ report }: { report: Record<string, unknown> }) => {
