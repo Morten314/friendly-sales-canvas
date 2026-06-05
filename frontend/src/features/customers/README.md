@@ -27,7 +27,7 @@ never a deep path. Today the surface is routes-only; exports are added lazily if
 - `components/icp-intelligence/suggestedIcpStorage.ts` — pure optimistic-`localStorage` helpers (T10).
 - `components/icp-intelligence/ICPIntelligence.tsx` — thin wrapper; `profilerRefresh` header-event handler.
 - `components/lead-stream/LeadStream.tsx` — pure mock panel; exports `LeadStreamPanel` + `getLeadCountForICP`.
-- `components/chat/ProfilerChatWithHistory.tsx` — relocated Profiler chat shell; imports the `SignalsContextChat` substrate via the legacy alias (TD-FE-45).
+- `components/chat/ProfilerChatWithHistory.tsx` — relocated Profiler chat shell; imports the `SignalsContextChat` substrate from `@/shared/chat` (relocated Phase 8; TD-FE-45 resolved).
 - `contracts.ts` — permissive zod for `/icp` + `customer_profile` (T4).
 - `types.ts` — feature-local types (`ExistingICP`, `SuggestedICP`, `ICPCardStatus`, `ICPAnalysis`, …) (T8).
 - `hooks/*` — TanStack read (`useCustomerProfile`, `useSuggestedIcps`) + write (`useSaveCustomerProfile`, `useAcceptSuggestedIcp`, `useRejectSuggestedIcp` / `useDeleteCurrentIcp`) hooks.
@@ -38,17 +38,17 @@ never a deep path. Today the surface is routes-only; exports are added lazily if
 
 - May import from: `@/features/customers/*` (self, relative), `@/shared/*`, `@/components/ui/*`, npm.
 - May import another feature **only** via its `index.ts` (`@/features/<other>`), never a deep path.
-- Transitional (Phases 4b–12) legacy imports retained: `@/lib/api`, `@/lib/types/escape-hatches`, `@/hooks/usePageTitle`, `@/hooks/use-toast`, `@/utils/cacheUtils`, `@/components/common/ErrorBoundary`, `@/components/signals/SignalsContextChat` (chat substrate), and `@/components/market-research/EditDropdownMenu` (legacy dir not yet migrated).
+- Transitional (Phases 4b–12) legacy imports retained: `@/lib/api`, `@/lib/types/escape-hatches`, `@/hooks/usePageTitle`, `@/hooks/use-toast`, `@/utils/cacheUtils`, `@/components/common/ErrorBoundary`, and `@/components/market-research/EditDropdownMenu` (legacy dir not yet migrated). The chat substrate now imports from `@/shared/chat` — a proper shared module, no longer a transitional/legacy path.
 - Keeps its **own** `/icp` + `customer_profile` read — does not adopt mission-control's `useICPs` (TD-FE-42).
 
 ## Pending handoffs
 
-| Component(s)                                             | Target / resolution                                                 | Phase                                |
-| -------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------ |
-| `SignalsContextChat` substrate                           | Stays legacy `src/components/signals/`; imported transitionally.    | 8 relocates; 9 finalizes shared chat |
-| `ProfilerChatWithHistory` ↔ `ScoutChatWithHistory` dedup | Relocated unchanged; differ by 244 lines.                           | 9 dedups                             |
-| Customers vs mission-control ICP read                    | Both read `/api/icp` + `customer_profile` independently (TD-FE-42). | 9 may consolidate                    |
+| Component(s)                                             | Target / resolution                                                       | Phase                                |
+| -------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------ |
+| `SignalsContextChat` substrate                           | Relocated to `src/shared/chat/` (Phase 8); Phase 9 finalizes shared chat. | 8 relocates; 9 finalizes shared chat |
+| `ProfilerChatWithHistory` ↔ `ScoutChatWithHistory` dedup | Relocated unchanged; differ by 244 lines.                                 | 9 dedups                             |
+| Customers vs mission-control ICP read                    | Both read `/api/icp` + `customer_profile` independently (TD-FE-42).       | 9 may consolidate                    |
 
 ## Deferred (TD-FE-41…45)
 
-Optimism stays in `localStorage` (41); read overlaps `useICPs` (42); `profiler_recommendedICPs`/session-cache read orchestration not cache-native (43); window-event bridge untyped (44); chat substrate via legacy path (45).
+Optimism stays in `localStorage` (41); read overlaps `useICPs` (42); `profiler_recommendedICPs`/session-cache read orchestration not cache-native (43); window-event bridge untyped (44); chat substrate now in `@/shared/chat` (45 resolved).

@@ -8,15 +8,15 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 
-import type { SignalsChatContext, ChatMessage } from "./SignalsContextChat";
-import { SignalsContextChat } from "./SignalsContextChat";
+import { AddLeadModal } from "./AddLeadModal";
+import { SuggestedCompaniesSection } from "./SuggestedCompaniesSection";
 
-import { AddLeadModal } from "@/components/market-research/AddLeadModal";
 import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
-import { SuggestedCompaniesSection } from "@/components/market-research/SuggestedCompaniesSection";
 import type { EditRecord } from "@/components/market-research/types";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/shared/auth";
+import type { SignalsChatContext, ChatMessage } from "@/shared/chat";
+import { SignalsContextChat } from "@/shared/chat";
 import {
   LEAD_STREAM_CHAT_CONTEXT_KEY,
   type LeadStreamChatContext,

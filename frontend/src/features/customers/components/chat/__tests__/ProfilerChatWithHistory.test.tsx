@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 // Mock the substrate so no real fetch/WebSocket fires.
-vi.mock("@/components/signals/SignalsContextChat", () => ({
+vi.mock("@/shared/chat", () => ({
   SignalsContextChat: () => <div data-testid="signals-context-chat" />,
 }));
 

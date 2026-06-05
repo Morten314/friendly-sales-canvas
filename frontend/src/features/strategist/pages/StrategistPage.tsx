@@ -2,29 +2,16 @@ import { MessageSquare, Users } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import StrategistWorkspace from "@/components/market-research/StrategistWorkspace";
-import StrategistLeadStream from "@/components/strategist/StrategistLeadStream";
-import StrategistRecommendations from "@/components/strategist/StrategistRecommendations";
+import StrategistLeadStream from "../components/StrategistLeadStream";
+import StrategistRecommendations from "../components/StrategistRecommendations";
+import StrategistWorkspace from "../components/StrategistWorkspace";
+import type { StrategistContext } from "../types";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Layout } from "@/features/shell";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
-interface StrategistContext {
-  leads: {
-    name: string;
-    company: string;
-    jobTitle: string;
-    email?: string;
-    tenure?: string;
-    source?: string;
-    signals?: string[];
-  }[];
-  opportunity?: string;
-  icp?: string;
-  triggerPrompt: string;
-}
-
-const Deals = () => {
+const StrategistPage = () => {
   usePageTitle("🧭 Strategist - Brewra");
   const navigate = useNavigate();
   const { tab } = useParams<{ tab?: string }>();
@@ -88,4 +75,4 @@ const Deals = () => {
   );
 };
 
-export default Deals;
+export default StrategistPage;
