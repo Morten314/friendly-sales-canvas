@@ -224,4 +224,9 @@ export const handlers = [
     HttpResponse.json({ success: true, data: { deleted_icp_id: "x", remaining_count: 0 } }),
   ),
   http.delete("/api/icp/recommended/:icpId", () => HttpResponse.json({ success: true })),
+
+  // ── signals (Phase 8) ────────────────────────────────────────────────────────
+  // Shared by useSignalAsk / useSignalAction and the SignalsContextChat substrate.
+  http.post("/api/signal_Ask", () => HttpResponse.json({ answer: "ok" })),
+  http.post("/api/signal_action", () => HttpResponse.json({ success: true })),
 ];
