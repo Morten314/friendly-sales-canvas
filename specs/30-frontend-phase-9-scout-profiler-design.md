@@ -49,6 +49,7 @@ Phase 9 therefore creates **one** feature folder (`features/scout/`), leaves Pro
 - No relocation of `src/utils/leadStreamChatContext.ts` (scout lead-stream plumbing, distinct from the `components/market-research/lead-stream/` subsystem; not part of the dedup). Recorded as TD.
 - No rename of the `SignalsChatContext` **type** (only the component renames). Recorded as TD.
 - No resolution of the `UntypedProfilerIcpRecord` escape-hatch typing (remains a Phase 13 item).
+- **No typing of the `signalsChatContext` sessionStorage handoff** (TD-FE-50). Phase 9 is behavior-preserving; a shared typed contract for that payload is a contract addition deferred to a later phase. TD-FE-50's trigger moves accordingly (§15).
 
 ## 3. Target structure
 
@@ -134,6 +135,8 @@ Notes:
 - Scout-only props such as `editHistory` are **not** part of the shared interface; the Scout wrapper holds them and threads them into the `renderChat` closure it supplies.
 - **No imperative shell→surface calls** are in scope: the shell never calls methods on the rendered surface (`scrollToBottom`, `focusInput`, etc.); each surface owns its own refs internally, as today. No `ref` is added to the contract. If a future need arises it is a plan-time addition.
 - `TMeta` is a Scout-motivated generic; both call sites that don't need per-session metadata parameterize it as `unknown`.
+- `config.emptyContext` and `props.initialContext` are distinct despite sharing a type: `emptyContext` seeds a **new** session's context when `initialContext` is null; `initialContext` is the **live parent handoff** (e.g. the signals→chat handoff). The shell consults `emptyContext` only on new-session creation.
+- `onClearContext?` is optional for forward-compat only; in practice both personas expose a context-clear action and always supply it. It is not a per-persona divergence.
 
 Exact generic signatures are finalized in the plan; this section fixes the boundary: the shell is persona-agnostic, everything persona-specific is supplied by the caller via `config`, `buildInitialSession`, `renderChat`, and `renderExtras`.
 
@@ -184,7 +187,7 @@ Phase 9 therefore makes **no code change here**. It closes the open item by docu
 |---|---|---|
 | `ScoutChatPanel.tsx` (681) | `scout-chat/ScoutChatWithHistory.tsx`, `MarketIntelligenceSections.tsx` (×5) | `components/scout-chat/` |
 | `types.ts` (20, `EditRecord`) | 8 importers across `scout-chat/`, `trends/`, `intelligence/*`, `MarketIntelligenceSections` | `components/types.ts` (feature-level — **not** under `scout-chat/`) |
-| `ChatWithScout.tsx` (255) | `trends/TrendsTab.tsx`, `pages/MarketResearchPage.tsx` | `components/` (plan picks `components/` root vs `trends/`) |
+| `ChatWithScout.tsx` (255) | `trends/TrendsTab.tsx`, `pages/MarketResearchPage.tsx` | `components/` root (recommended default for a 2-consumer file; plan may pick `trends/`) |
 | `ScoutSettingsForm.tsx` (137) | `pages/MarketResearchPage.tsx` | `components/` |
 | `ScoutDeploymentDetails.tsx` (70) | `intelligence/IntelligenceTab.tsx` | `components/intelligence/` (HANDOFF comment rewritten to the corrected home) |
 
@@ -221,7 +224,7 @@ This is a pure refactor. The following are invariant:
 
 ## 12. Testing
 
-- **Behavior guard (no regression):** the existing `ScoutChatWithHistory.test.tsx` (market-research) and `ProfilerChatWithHistory.test.tsx` (customers) stay and must pass through the now-thin wrappers — they exercise persona behavior, the render-surface swap, and scout's lead-stream end-to-end. Green = behavior preserved.
+- **Behavior guard (no regression):** the existing `ScoutChatWithHistory.test.tsx` (market-research) and `ProfilerChatWithHistory.test.tsx` (customers) stay and must pass through the now-thin wrappers — they exercise persona behavior, the render-surface swap, and scout's lead-stream end-to-end. Green = behavior preserved. The swap assertions survive the dedup because the tests query the wrapper's render **output** (which now includes the `renderChat` result), not its internal structure — moving the `ContextChat`↔`ScoutChatPanel` swap into the wrapper's `renderChat` callback leaves that output identical.
 - **New `shared/chat/__tests__/ChatWithHistory.test.tsx`** — shell behavior: session create/select/delete, `localStorage` persistence keyed by `config.storageKey`, sidebar toggle, message handling, and that `renderChat`/`renderExtras` receive the right `ChatWithHistoryRenderState` (using lightweight test doubles for the surface).
 - **Repoint** the existing `shared/chat` tests to the `ContextChat` rename, and any tests/mocks referencing the 5 relocated files (e.g. the `ScoutChatPanel` mock at `ScoutChatWithHistory.test.tsx:16`) to their new paths. Relocation is move-only; no new behavioral tests for the moved files.
 - **No new `profilerIcpMerge` test** (§8 makes no code change).
@@ -258,6 +261,7 @@ Phase 9 runs as a **third concurrent worktree** alongside Phase 10 and Phase 12.
 - **TD-FE-58 (proposed):** `SignalsChatContext` **type** name retained though the component renamed to `ContextChat`. Rename the type when next touching `shared/chat` types.
 - **TD-FE-59 (proposed):** `src/utils/leadStreamChatContext.ts` left in `utils/`; possibly shared between scout and strategist. Relocate when lead-stream ownership is settled.
 - **TD-FE-60 (proposed):** `components/market-research/` retains 6 files after Phase 9's partial drain — the lead-stream subsystem (`ScoutLeadStream`, `lead-stream/{LeadStreamTab,LeadsTable,OpportunityDashboard,leadData}`) and `EditDropdownMenu.tsx`. They are `→ customers`-annotated and cross-feature-coupled (`leadData` → strategist + `src/lib`; `EditDropdownMenu` → customers), so their relocation belongs to a customers/lead-stream-focused phase. Candidate homes: lead-stream UI → `features/customers`; `leadData.ts` + `EditDropdownMenu.tsx` → `shared/`. Trigger: a customers lead-stream phase.
+- **`TD-FE-50` → trigger updated:** Phase 9 is behavior-preserving and does **not** type the `signalsChatContext` sessionStorage handoff; TD-FE-50's pull-forward trigger ("Phase 9 chat-surface dedup") moves to a later phase that introduces the typed contract. The trigger edit lands in `TECH_DEBT.md` at the finalize stage.
 - **Documented (not TD):** mission-control's inline ICP view-model mapper (`ICPManager.tsx:179-237`) stays per Plan-25 T21; recorded in the mission-control README and §8 so it isn't re-litigated.
 
 (Final numbers assigned at write time against the then-current `TECH_DEBT.md` ceiling.)
@@ -274,7 +278,7 @@ Phase 9 runs as a **third concurrent worktree** alongside Phase 10 and Phase 12.
   2. **Refactor `ScoutChatPanel` to wrap `ContextChat`:** collapses the swap into one surface — larger, riskier change to a 681-LOC component; only if (1) proves insufficient.
   3. **Approach-2 fallback:** `ChatWithHistoryBase` + named per-feature wrappers, if the shell+`renderChat` boundary turns out to leak.
 - **`ContextChat` rename blast radius:** Phase 8 consumers (signals/strategist) import the substrate; the plan enumerates every importer before the rename so none are missed.
-- **`ChatWithScout.tsx` destination subfolder:** §9 fixes the destination feature; the plan picks `components/` root vs `components/trends/` (it has two consumers: `TrendsTab` and `MarketResearchPage`).
+- **`ChatWithScout.tsx` destination subfolder:** §9 fixes the destination feature and recommends the `components/` root (neutral for its two consumers, `TrendsTab` and `MarketResearchPage`); the plan retains authority to choose `components/trends/`.
 - **Deferred-residue boundary:** §9 defers the lead-stream subsystem + `EditDropdownMenu` in place; the partial drain is a deliberate, documented stopping point (TD-FE-60), not an omission.
 
 ## Appendix: file manifest
