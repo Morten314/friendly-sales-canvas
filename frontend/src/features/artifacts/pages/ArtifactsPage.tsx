@@ -1,14 +1,13 @@
-import { FileText, Bot, FolderOpen, ChevronRight, Mail } from "lucide-react";
+import { Bot } from "lucide-react";
 import React, { useState, useEffect } from "react";
 
 import { ArtefactStats } from "../components/ArtefactStats";
+import { FolderGrid } from "../components/FolderGrid";
 import { LibraryCard } from "../components/LibraryCard";
 import { mockArtefacts } from "../data/mockArtefacts";
 import { generateAndDownloadPDF } from "../lib/artefactPdf";
 import type { ArtefactItem } from "../types";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Layout } from "@/features/shell";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -121,54 +120,12 @@ const ArtifactsPage = () => {
         <ArtefactStats artefacts={artefacts} />
 
         {/* Folders */}
-        {folders.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              variant={activeFolder === null ? "default" : "outline"}
-              size="sm"
-              className="text-xs gap-1.5"
-              onClick={() => setActiveFolder(null)}
-            >
-              <FileText className="h-3.5 w-3.5" />
-              All Artefacts
-            </Button>
-            {folders.map((folder) => {
-              const count = artefacts.filter((a) => a.folder === folder).length;
-              return (
-                <Button
-                  key={folder}
-                  variant={activeFolder === folder ? "default" : "outline"}
-                  size="sm"
-                  className="text-xs gap-1.5"
-                  onClick={() => setActiveFolder(folder)}
-                >
-                  <FolderOpen className="h-3.5 w-3.5" />
-                  {folder}
-                  <Badge variant="secondary" className="text-[10px] ml-1 px-1.5 py-0">
-                    {count}
-                  </Badge>
-                </Button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Active folder header */}
-        {activeFolder && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <button
-              onClick={() => setActiveFolder(null)}
-              className="hover:text-foreground transition-colors"
-            >
-              Artefacts
-            </button>
-            <ChevronRight className="h-3 w-3" />
-            <span className="font-medium text-foreground flex items-center gap-1.5">
-              <Mail className="h-3.5 w-3.5" />
-              {activeFolder}
-            </span>
-          </div>
-        )}
+        <FolderGrid
+          folders={folders}
+          activeFolder={activeFolder}
+          onFolderSelect={setActiveFolder}
+          artefacts={artefacts}
+        />
 
         {/* Artefacts Library */}
         <div className="space-y-4">
