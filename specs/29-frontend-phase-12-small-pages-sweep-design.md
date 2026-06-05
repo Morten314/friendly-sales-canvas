@@ -14,7 +14,7 @@
 
 ### 1.1 Goal
 
-Relocate every remaining product page under `src/pages/` that is **not** claimed by another phase into its own per-feature folder under `src/features/`, following the converged per-feature shape from Phases 4–7 (append-only route-registry entry, `<FeatureErrorBoundary>` wrap, public `index.ts` surface, README). Behavior, routes, and visuals are frozen (Spec 14 §2.3). This phase exists to leave `src/pages/` empty of leaf pages so **Phase 11's empty-`pages/` verification can pass** (Spec 14 §4: Phase 12 "must precede 11's empty-`pages/` check").
+Relocate every remaining product page under `src/pages/` that is **not** claimed by another phase into its own per-feature folder under `src/features/`, following the converged per-feature shape from Phases 4–7 (append-only route-registry entry, `<FeatureErrorBoundary>` wrap, public `index.ts` surface, README). Behavior, routes, and visuals are frozen (Spec 14 §2.3). This phase exists to clear `src/pages/` of its **Phase-12 leaf pages** (pages owned by Phases 8/9/10 land via those phases) so **Phase 11's eventual empty-`pages/` verification can pass** (Spec 14 §4: Phase 12 "must precede 11's empty-`pages/` check").
 
 The one substantive code change beyond relocation is the **decomposition of `Artifacts.tsx` (729 LOC)** into a thin page plus focused modules (user-directed; see §4).
 
@@ -40,6 +40,8 @@ Therefore `Deals.tsx` is **out of Phase 12 scope**. Spec 14's list is a frozen r
 
 All five Phase-12 pages are **presentational / local-state surfaces with no data layer** (verified: zero `apiFetch`/`enhancedApi`/`useQuery`/`fetch(`/`@/lib`/`@/services`/`@/contexts` imports). This is what makes Phase 12 collision-free with Phases 8/10 on the shared data/test-infra files (§6).
 
+`src/pages/` also holds **non-page residents owned by Phase 10** — `useLogin.ts` (53 LOC), `useTenants.ts` (19 LOC), and `__tests__/{useLogin,useTenants}.test.tsx`. Phase 12 does not touch them; they are surfaced here because they remain in `src/pages/` until **Phase 10** relocates them — so Phase 11's empty-`pages/` check depends on Phase 10, not on Phase 12.
+
 ### 1.4 Already done (no work here)
 
 - The append-only route registry `src/app/routes.tsx` exists (Phase 4b).
@@ -61,7 +63,7 @@ All five Phase-12 pages are **presentational / local-state surfaces with no data
 
 ### 2.2 Out of scope (logged to `docs/TECH_DEBT.md` as provisional `TD-FE-<n>`, see §10)
 
-- **Promoting `usePageTitle`** (and any other legacy `@/hooks` imports these pages carry) to `src/shared/` — that is **Phase 11's** job. Per Spec 14 §4 line 541 ("features … let Phase 11 promote — do not pre-extract"), Phase 12 leaves these imports pointing at the legacy `@/hooks/usePageTitle` path.
+- **Promoting `usePageTitle`** (and any other legacy `@/hooks` imports these pages carry) to `src/shared/` — that is **Phase 11's** job. Per Spec 14 §4's Phase-11 staging rule ("features … let Phase 11 promote — do not pre-extract"), Phase 12 leaves these imports pointing at the legacy `@/hooks/usePageTitle` path.
 - **Refactoring the Artefacts `window` `CustomEvent` coupling** (`artifactsSearch` / `addArtefact`, §2.3) into a typed/shared mechanism — preserved verbatim, flagged as debt.
 - **Wiring real data** for any of these surfaces — they are mock/placeholder pages by current design; mock seed data is treated as page content, not migrated to a backend.
 - Any further LOC reduction beyond the directed Artifacts split (the rest are already small) — defer to **Phase 13** (post-modularization LOC audit).
@@ -97,6 +99,13 @@ src/features/shell/
 Each `routes.tsx` follows the established wrap verbatim (cf. `features/mission-control/routes.tsx`):
 
 ```tsx
+import { Route } from "react-router-dom";
+
+import CalendarPage from "./pages/CalendarPage";
+
+import { ProtectedRoute } from "@/features/shell";
+import { FeatureErrorBoundary } from "@/shared/components";
+
 export const calendarRoutes = [
   <Route key="calendar" path="/calendar" element={
     <ProtectedRoute requireTenant>
@@ -112,7 +121,7 @@ export const calendarRoutes = [
 
 ### 3.1 Dependency posture
 
-Each feature imports only: `@/components/ui/*` (shadcn), `@/features/shell` (`Layout`, `ProtectedRoute` via its public barrel), `@/shared/components` (`FeatureErrorBoundary`), and the legacy `@/hooks/usePageTitle` (left in place for Phase 11; §2.2). **No cross-feature imports, no data layer, no MSW handlers, no contracts, no query keys.** This is the property that keeps the phase parallel-safe (§6).
+Each feature imports only: `@/components/ui/*` (shadcn), `@/features/shell` (`Layout`, `ProtectedRoute` via its public barrel), `@/shared/components` (`FeatureErrorBoundary`), and — for `calendar`/`reports`/`artifacts` **only** (not `insights`, which has no page-title mechanism) — the legacy `@/hooks/usePageTitle`, left in place for Phase 11 (§2.2). **No cross-feature imports, no data layer, no MSW handlers, no contracts, no query keys.** This is the property that keeps the phase parallel-safe (§6).
 
 ---
 
@@ -123,15 +132,17 @@ Each feature imports only: `@/components/ui/*` (shadcn), `@/features/shell` (`La
 | New module | Contents (current source) |
 |---|---|
 | `features/artifacts/types.ts` | `ArtefactItem` interface |
-| `features/artifacts/data/mockArtefacts.ts` | `mockArtefacts` seed array + `folders` seed (page content; no backend) |
+| `features/artifacts/data/mockArtefacts.ts` | `mockArtefacts` seed array **only** (page content; no backend) |
 | `features/artifacts/lib/artefactPdf.ts` | `generateAndDownloadPDF` + `createSimplePDF` (self-contained ~140-LOC PDF generator) — pure, unit-tested |
 | `features/artifacts/lib/artefactPresentation.tsx` | `getTypeIcon` / `getStatusIcon` (icon/label mappers) |
-| `features/artifacts/components/LibraryCard.tsx` | the inner `LibraryCard` sub-component (compact + expanded views, ~140 LOC) |
-| `features/artifacts/components/ArtefactStats.tsx` | the four summary stat cards |
-| `features/artifacts/components/FolderGrid.tsx` | the folders grid + active-folder header |
-| `features/artifacts/pages/ArtifactsPage.tsx` | orchestrator: the 6 `useState`, the 2 `window` `CustomEvent` effects, edit/delete/download handlers, `filteredArtefacts`, and the page layout (target ~200 LOC) |
+| `features/artifacts/components/LibraryCard.tsx` | **relocation** of the existing named inner `LibraryCard` component (compact + expanded views, ~140 LOC) |
+| `features/artifacts/components/ArtefactStats.tsx` | **new component**, lifted from the inline JSX stat-cards block in the page `return` (the four summary cards) |
+| `features/artifacts/components/FolderGrid.tsx` | **new component**, lifted from the inline JSX folders block in the page `return` (folders grid + active-folder header) |
+| `features/artifacts/pages/ArtifactsPage.tsx` | orchestrator: the 6 `useState`, the 2 `window` `CustomEvent` effects, edit/delete/download handlers, and the **derived** `filteredArtefacts` + `folders` (`[...new Set(artefacts.filter((a) => a.folder).map((a) => a.folder!))]` — kept here, not seed data), plus the page layout |
 
 The two `window` `CustomEvent` listeners (`artifactsSearch`, `addArtefact`) stay in `ArtifactsPage.tsx` exactly as today (frozen, §2.3) — their refactor is deferred debt (§2.2, §10).
+
+**Extraction notes:** `LibraryCard` already exists as a named component, so its move is a pure relocation. `ArtefactStats` and `FolderGrid` do **not** exist as components today — they are inline JSX inside the page `return` and must be lifted into new components, drilling `artefacts` / `activeFolder` / `setActiveFolder` / `searchQuery` (plus the relevant handlers) as props. Because of that closure-to-props lift, the resulting `ArtifactsPage.tsx` size is **loosely targeted at ~200 LOC and validated after extraction**, not assumed up front.
 
 ---
 
@@ -169,7 +180,7 @@ Discipline:
 
 ## §7 Execution stages (single branch, staged checkpoints)
 
-One feature per stage; each stage is independently green (`npm run verify` + `prettier --check` on touched files) and committed:
+One feature per stage; each stage is independently green (`npm run verify` — incremental, see §8 — + `prettier --check` on touched files) and committed:
 
 1. **`calendar`** — relocate + routes.tsx + index.ts + README + render test; wire into `app/routes.tsx`; drop from App.tsx.
 2. **`insights`** — same.
@@ -177,7 +188,7 @@ One feature per stage; each stage is independently green (`npm run verify` + `pr
 4. **`artifacts` — relocation skeleton** — move page to `features/artifacts/pages/ArtifactsPage.tsx` verbatim, add routes/index/README, wire routing, drop from App.tsx (still one big file; green).
 5. **`artifacts` — decomposition** — extract `types` → `data` → `lib/artefactPdf` (+ unit test) → `lib/artefactPresentation` → `components/*`, shrinking the page to the orchestrator (§4). Each extraction its own commit.
 6. **`shell` / NotFound** — relocate NotFound into shell, export from `index.ts`, re-point App.tsx import.
-7. **Finalize** — confirm `src/pages/` holds no Phase-12 pages; README sweep; provisional TD-FE entries; run full `npm run preflight` **on an idle box** (avoid CPU-spiking the active phase-8/10 sandboxes).
+7. **Finalize** — confirm `src/pages/` holds no Phase-12 pages; README sweep; provisional TD-FE entries; run full `npm run preflight` **on an idle box** (avoid CPU-spiking the active phase-8/10 sandboxes). `preflight` includes `knip`; expect a few **transitional** dead-code findings right after relocation (old import paths briefly unreferenced) — confirm they're expected, not a blocker.
 
 Each commit message uses `type(fe):` style, no `[N/M]` suffix, no Co-Authored-By footer.
 
@@ -186,7 +197,7 @@ Each commit message uses `type(fe):` style, no `[N/M]` suffix, no Co-Authored-By
 - **Error handling:** each route wrapped in `FeatureErrorBoundary` (§3) — parity with Phases 5–7; previously these pages had none, so this is a net improvement, not a behavior change to existing happy paths.
 - **Tests:** one render/smoke Vitest (RTL) per page asserting it mounts inside `Layout` and shows its title/landmark; one unit test for `artefactPdf` (deterministic string output for a fixed `ArtefactItem`). No MSW needed (no fetches). Run with `--no-file-parallelism` locally if the shared box is under contention (known vitest flake).
 - **Parity:** no VR baseline is added (these are static surfaces; consistent with the Phase 5 visual-guard posture). Behavioral parity = routes resolve, pages render, Artefacts edit/delete/download/search/add behaviors unchanged.
-- **Gate:** per-task `npm run verify` + `prettier --check`; full `npm run preflight` only at the merge gate.
+- **Gate:** per-task `npm run verify` — which is `typecheck` + `lint` + `test:changed`, i.e. **incremental** (only tests whose dependency graph touches the change), not the full suite — plus `prettier --check` on touched files (`verify` omits `format:check`). The **full** Vitest suite, e2e, `knip`, and bundle check run only in `npm run preflight` at the merge gate; a green per-stage `verify` therefore does **not** prove all pre-existing tests still pass.
 
 ## §9 Risks
 
