@@ -12,4 +12,5 @@ export const qk = {
   customersProfile: (userId: string, orgId: string) =>
     ["customers", "profile", userId, orgId] as const,
   customersSuggestedIcps: (userId: string) => ["customers", "suggested-icps", userId] as const,
+  signalsFeed: (userId: string) => ["signals", "feed", userId] as const,
 };

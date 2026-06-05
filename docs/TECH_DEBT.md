@@ -1478,6 +1478,8 @@ Phase 8 (import path update) / Phase 9 (deduplication).
 
 **Owner:** TBD.
 
+**Resolved (substrate-relocation part only):** 2026-06-05 (Phase 8). The `SignalsContextChat` substrate was relocated from the legacy `@/components/signals/` path to `src/shared/chat/`, and all importers — including `ProfilerChatWithHistory` (in `src/features/customers/`) — were repointed off the legacy path onto the relocated substrate. The stale-import-path break risk this entry tracked is closed. The `ProfilerChatWithHistory` ↔ `ScoutChatWithHistory` ~90% duplication (the "Phase 9 dedups" half of this entry) remains a separate, still-open concern owned by Phase 9 — see Phase 9's chat-surface dedup scope. Original entry preserved below.
+
 ---
 
 ## TD-FE-46 — Phase 7 stage-4 behavioral test covers only accept + reject happy paths; optimistic edge-case matrix and fake-timer deadlock unresolved
@@ -1569,5 +1571,152 @@ Fixes or UI changes to one form must be manually mirrored to the other. Divergen
 
 **Pull-forward trigger:**
 Phase 9 scout feature extraction.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-47 — `StrategistWorkspace` relocated as-is; live but large, decomposition + `GET /chat/` deferred
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 8 (strategist relocation). `StrategistWorkspace` was moved verbatim into the strategist feature — only the stale handoff annotation was removed — rather than decomposed or rewritten, per the Phase 8 relocation-not-rewrite scope.
+
+**Current state:**
+`StrategistWorkspace` now lives at `features/strategist/components/StrategistWorkspace.tsx`, relocated verbatim (the only delta vs. the legacy file is removal of the stale HANDOFF annotation). It is a large live component that makes a raw direct-backend `GET ${BACKEND_BASE_URL}/chat/` fetch, bypassing the `/api` proxy and the `apiFetch` → `enhancedApi` → `authenticatedApi` client stack.
+
+**What it should be:**
+Decomposed into smaller components, with the `GET ${BACKEND_BASE_URL}/chat/` fetch moved into a dedicated service/hook routed through the standard client layer rather than a raw inline direct-backend call.
+
+**Why we deferred:**
+Phase 8's scope was relocation, not rewrite. The component works as-is; decomposing it or re-routing its fetch is out of the structure-only Phase 8 boundary.
+
+**Pull-forward trigger:**
+Phase 13 (monster-file decomposition, Spec 14 §6.2).
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-48 — `deals`/`Deals` naming: `Deals.tsx` is the Strategist page, not a Phase-12 small-page
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 8 (strategist relocation). The legacy `Deals.tsx` is in fact the Strategist page; Spec 14 §12 lists it as a Phase-12 small-page, which is stale.
+
+**Current state:**
+`Deals.tsx` is the Strategist page and was relocated to `features/strategist/pages/StrategistPage.tsx`. The `/deals` route is retained as a redirect to `/your-ai-team/strategist/workspace`. Spec 14 §12's small-pages-sweep source list still names `Deals.tsx` as Phase-12 territory — stale; it is Phase-8 strategist territory and has already moved.
+
+**What it should be:**
+Spec 14 §12 no longer lists `Deals.tsx` among the Phase-12 small pages (it has been claimed by Phase 8). This is a documentation-only correction; the code disposition is already done.
+
+**Why we deferred:**
+The §12 phase description is a frozen record of intent (CLAUDE.md spec-driven flow); rather than rewriting it, the divergence is annotated as a Phase 8 delta in Spec 14 and tracked here.
+
+**Pull-forward trigger:**
+Spec 14 §12 rescope (doc-only).
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-49 — Signals accepted/rejected `localStorage` is primary state, not cache
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 8 (signals relocation). The `signals_<uid>_accepted` / `signals_<uid>_rejected` `localStorage` keys hold the user's accept/reject decisions and are primary state, not a cache layer — so they stay on `localStorage` rather than migrating into the TanStack cache.
+
+**Current state:**
+Signal accept/reject decisions persist as `signals_<uid>_accepted` and `signals_<uid>_rejected` in `localStorage`. This is primary, user-owned state (NOT cache), so it is kept on `localStorage`. The read accessor was extracted as `useSignalAcceptance`, but the page's accept/reject write paths remain inline (see TD-FE-53).
+
+**What it should be:**
+As-is is correct for the current product scope — `localStorage` is the right home for device-local user decisions. Only a cross-device-sync requirement would change this.
+
+**Why we deferred:**
+There is no defect here; the entry exists to record that this `localStorage` usage is intentional primary state and must not be "fixed" into a cache during a data-layer pass.
+
+**Pull-forward trigger:**
+A "signal decisions sync across devices" product requirement.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-50 — `signalsChatContext` sessionStorage handoff is untyped
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 8 (signals relocation). The signals → scout/profiler chat handoff writes `sessionStorage.setItem("signalsChatContext", JSON.stringify(...))` with no shared type contract.
+
+**Current state:**
+The signals-to-chat handoff serialises an untyped payload via `sessionStorage.setItem("signalsChatContext", JSON.stringify(...))`; the consuming chat surface reads and parses it with no shared TypeScript type describing the shape.
+
+**What it should be:**
+A shared, typed contract for the `signalsChatContext` payload (a named interface/type imported by both the producer and consumer), so the handoff shape is statically checkable.
+
+**Why we deferred:**
+The untyped handoff works at MVP scale; introducing the shared contract is best done alongside the chat-surface work where both ends are touched.
+
+**Pull-forward trigger:**
+Phase 9 chat-surface dedup.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-51 — `components/market-research/` retains `ScoutChatPanel.tsx` + `types.ts` legacy residue
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 8 (scout-chat relocation). The scout-chat relocation moved `ScoutChatWithHistory` and its deps into `features/market-research`, but left `ScoutChatPanel.tsx` and `types.ts` behind in the legacy `components/market-research/` directory.
+
+**Current state:**
+`components/market-research/` still contains `ScoutChatPanel.tsx` and `types.ts`, consumed by the relocated scout-chat now living in `features/market-research`. The relocation crossed the feature boundary but did not fully drain the legacy directory.
+
+**What it should be:**
+`ScoutChatPanel.tsx` and `types.ts` fully migrated into the `features/market-research` feature, with the legacy `components/market-research/` directory emptied/removed.
+
+**Why we deferred:**
+Phase 8's authority was the signals/strategist + scout-chat relocation; fully draining the legacy market-research directory overlaps the shared-chat dedup work sequenced later.
+
+**Pull-forward trigger:**
+Phase 9 shared-chat dedup / Phase 13.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-52 — No strategist Playwright/VR journey; coverage is behavioral-only
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 8 (strategist relocation). Strategist shipped with Vitest render tests only; no Playwright journey or visual-regression baseline was added (Spec 27 §8 gap).
+
+**Current state:**
+Strategist coverage is behavioral-only (Vitest render tests). The workspace is visually rich — a two-panel dashboard plus chat plus a sequence timeline — and has no Playwright end-to-end journey and no pixel/VR baseline.
+
+**What it should be:**
+A strategist Playwright journey and a visual-regression baseline covering the two-panel workspace, chat, and sequence timeline, so visual regressions are caught.
+
+**Why we deferred:**
+Behavioral-only coverage is the accepted pre-launch advisory-gate default; pixel/VR baselines are added when a surface churns visually or during a dedicated pre-launch VR sweep.
+
+**Pull-forward trigger:**
+Strategist visual churn or a pre-launch VR sweep.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-53 — Signals page data flow NOT migrated to TanStack (Phase 8 was structure-only)
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 8 (signals relocation). Phase 8 relocated the signals page structurally but, with user approval, did not migrate its data flow to TanStack Query — the page's optimistic/undo/event-driven flow is the same declarative-migration blocker recorded in TD-FE-19.
+
+**Current state:**
+The signals page data flow stays imperative: `loadSignals` is an imperative loader; `signals` is editable `useState` with optimistic add/remove, a 5 s `pendingRejections` undo timer, and an event-driven (`signalsStateChanged`) refetch — all of which resist a declarative `useQuery` (the same blocker as TD-FE-19). The `useFetchSignals` / `useGenerateSignalsBatch` hooks plus `useSignalAcceptance` are pre-positioned but currently UNUSED (advisory knip flags them). Additionally, the `SignalAskResponse` / `FetchSignalsResponse` zod contracts are permissive (`z.object({}).passthrough()`), forcing `as Record<string, unknown>` / `as { signals?: ... }` casts at the consumption sites.
+
+**What it should be:**
+A behavior-preserving migration of the signals data flow onto TanStack Query (or a deliberate decision that the optimistic/undo/event-driven flow stays imperative), with the pre-positioned hooks actually wired in and the permissive zod contracts tightened (`answer?` / `response?` / `signals?`) so the consumption-site casts can be removed.
+
+**Why we deferred:**
+A behavior-preserving full migration is high-risk on the app's most complex page (optimistic add/remove + undo timer + event-driven refetch); structure-only relocation was chosen with explicit user approval.
+
+**Pull-forward trigger:**
+Backend stabilization (TD-FE-13) + a dedicated signals-data-layer migration.
 
 **Owner:** TBD.

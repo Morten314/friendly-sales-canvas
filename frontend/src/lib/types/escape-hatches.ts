@@ -109,7 +109,7 @@ export type UntypedVisualDataCardRaw = any;
 
 // TODO(phase-13): replace with a BackendSignal interface once the
 // /api/generate-signals-batch and /api/signals contracts are typed.
-// src/pages/Signals.tsx:271, :273, :576
+// src/features/signals/pages/SignalsPage.tsx:271, :273, :576
 // — Raw signal objects from backend mix snake/camel aliases (`signal_id` vs `id`,
 // `NBAs`, `nextBestMoves`, `contextualSuggestions`, `source` as array or string) and
 // are consumed across `buildSignalCardsFromFetchData` and inline console.log mappings.

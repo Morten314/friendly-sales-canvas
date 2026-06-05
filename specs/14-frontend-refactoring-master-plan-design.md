@@ -493,6 +493,8 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 
 **Per-phase deliverables:** see Phase 5's deliverables block.
 
+> **Phase 8 deltas (recorded 2026-06-05, frozen-record convention — does not rewrite the intent above).** (a) The chat substrate was relocated to `src/shared/chat/` (not left in its legacy `@/components/signals/` location); importers were repointed onto the shared substrate (TD-FE-45 resolved for the relocation part). (b) **Scout-chat** (`ScoutChatWithHistory` + its deps) was relocated into `features/market-research`, **not** `features/signals` as the §8 key-risks bullet anticipated — the `ScoutChatPanel` import cycle ties scout-chat to market-research, so it landed there (residue tracked TD-FE-51). (c) `StrategistWorkspace` is **live and reachable** — it renders on `StrategistPage`'s default workspace tab; any framing of it as dead/unreachable is incorrect. Strategist correctly still has no dedicated backend (its data hydrates from `sessionStorage`), consistent with the §8 bullet. (d) `Deals.tsx` **is** the Strategist page (relocated to `features/strategist/pages/StrategistPage.tsx`, with `/deals` kept as a redirect to `/your-ai-team/strategist/workspace`); the §12 small-pages listing of `Deals.tsx` is therefore stale (TD-FE-48).
+
 ### Phase 9 — Feature: scout + profiler
 
 **Sources moving in:** `src/pages/ScoutDeployment.tsx`, scout/profiler-related components currently split across mission-control and customers (per CLAUDE.md frontend topology note).

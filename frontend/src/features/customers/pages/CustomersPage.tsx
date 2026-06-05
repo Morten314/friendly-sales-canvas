@@ -7,10 +7,10 @@ import { ICPIntelligence } from "../components/icp-intelligence/ICPIntelligence"
 import { LeadStreamPanel } from "../components/lead-stream/LeadStream";
 
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
-import type { SignalsChatContext } from "@/components/signals/SignalsContextChat";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Layout } from "@/features/shell";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import type { SignalsChatContext } from "@/shared/chat";
 
 const CustomersPage = () => {
   usePageTitle("👤 Profiler - Brewra");
