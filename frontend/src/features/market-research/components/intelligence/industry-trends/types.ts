@@ -1,18 +1,11 @@
 import { z } from "zod";
 
 import type { ResearchComponentResponse } from "../../../contracts";
-import type {
-  TrendSnapshot,
-  IndustryTrendsRecommendations,
-} from "../../types";
+import type { TrendSnapshot, IndustryTrendsRecommendations } from "../../types";
 
 // Re-export the shared trio from the legacy types directory.
 // These are consumed by MarketIntelligenceSectionsProps and its sections; do not fork them.
-export type {
-  EditRecord,
-  TrendSnapshot,
-  IndustryTrendsRecommendations,
-} from "../../types";
+export type { EditRecord, TrendSnapshot, IndustryTrendsRecommendations } from "../../types";
 
 /** Industry-trends per-component `data` view-model.
  *  Fields confirmed against the section's inline IndustryTrendsData and the live fetch
