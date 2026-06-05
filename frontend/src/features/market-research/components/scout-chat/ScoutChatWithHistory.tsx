@@ -8,9 +8,10 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 
-import { AddLeadModal } from "@/components/market-research/AddLeadModal";
+import { AddLeadModal } from "./AddLeadModal";
+import { SuggestedCompaniesSection } from "./SuggestedCompaniesSection";
+
 import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
-import { SuggestedCompaniesSection } from "@/components/market-research/SuggestedCompaniesSection";
 import type { EditRecord } from "@/components/market-research/types";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/shared/auth";
