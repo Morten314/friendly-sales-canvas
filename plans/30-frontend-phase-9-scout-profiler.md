@@ -4,7 +4,7 @@
 
 **Goal:** Dedup the two chat-history wrappers (`ScoutChatWithHistory` ~473 LOC + `ProfilerChatWithHistory` ~336 LOC) onto a single shared **history shell** in `src/shared/chat/` that takes a `renderChat` render prop; rename the substrate `SignalsContextChat` → `ContextChat`; relocate 5 scout/chat-adjacent residue files out of the legacy `src/components/market-research/` into `features/market-research/` (resolving TD-FE-51); create `features/scout/` for the ScoutDeployment surface; and close the Phase 6 Profiler-ICP open item by confirm-and-document (no code). Behavior, routes, storage keys, persona prompts, and visuals are frozen (Spec 30 §11).
 
-**Architecture:** One branch (`worktree-phase-9-scout-profiler`, already created off `master` `9b2438d`), one plan, a staged commit-series with green checkpoints (Spec 30 §13): **S1** shared/chat rename + history-shell, **S2** collapse both wrappers onto the shell, **S3** relocate the 5 residue files, **S4** create `features/scout/` + route rewire, **finalize** (§8 doc, READMEs, TECH_DEBT, master-plan delta, serial preflight, merge). S2 depends on S1; S3/S4 are independent of S1–S2 and of each other — they may be dispatched to **parallel subagents** (each commits only its own named paths: S3 = market-research components, S4 = `features/scout` + `App.tsx`/`routes.tsx` — no file overlap; the surgical-commit rule keeps them isolated). The whole phase merges **once**, `--no-ff`, only after a green serial `npm run preflight`.
+**Architecture:** One branch (`worktree-phase-9-scout-profiler`, already created off `master` `9b2438d`), one plan, a staged commit-series with green checkpoints (Spec 30 §13): **S1** shared/chat rename + history-shell, **S2** collapse both wrappers onto the shell, **S3** relocate the 5 residue files, **S4** create `features/scout/` + route rewire, **finalize** (§8 doc, READMEs, TECH_DEBT, master-plan delta, serial preflight, merge). S2 depends on S1; S3/S4 are independent of S1–S2 and of each other — they may be dispatched to **parallel subagents** (each commits only its own named paths: S3 = market-research components, S4 = `features/scout` + `App.tsx`/`routes.tsx` — no file overlap; the surgical-commit rule keeps them isolated). Their **stage gates serialize on the shared `:5173` preview port** (only one `test:e2e` run at a time), so run S3's gate and S4's coverage one at a time even if the edits ran concurrently. The whole phase merges **once**, `--no-ff`, only after a green serial `npm run preflight`.
 
 **Tech Stack:** React 18 + Vite + TypeScript, MSW (`src/test/msw/`), Vitest + React Testing Library (RTL), Playwright e2e/VR (signals journey `03`, market-research journey `04`, customers journey `06`). The shell lives in `src/shared/chat/` because `shared ↛ features` (Spec 30 §4) — it is persona-agnostic; everything persona-specific is supplied by the caller.
 
@@ -30,7 +30,7 @@
 - **Final merge gate.** Serial `npm run preflight` (`typecheck && lint && format:check && test && build && bundle:check && test:e2e && knip`). **Serial** runner, never `preflight:par` (VR flakes under concurrent load; three worktrees share the box — `project_fe_test_infra_state`, TD-FE-29).
 - **Parity is the contract.** No behavior or pixel change. If a step would change a rendered loading/error/empty state, a URL, a storage key (`scout_chat_sessions_<uid>`, `profiler_chat_sessions_<uid>`, `signalsChatContext`, `LEAD_STREAM_CHAT_CONTEXT_KEY`), a session id prefix (`scout_`/`profiler_`), or the substrate persona styling — stop. That's a parity break, not a refactor.
 - **Abort / escalation.** Per-step parity + per-stage `git reset --hard <last-green-checkpoint>` are the recovery primitives. Above them: the **shell build (Task 2)** and the **scout-wrapper collapse (Task 5)** are the parity-critical seams. If either fails its gate **three** times with no clear fix, stop forcing the shell+`renderChat` boundary and escalate to the human controller. Fallback (Spec 30 §17, in order): (1) refactor the divergent piece into an optional shell hook (the contract already provides `hydrateExtraSessions`/`serializeSession`/`onNewChat`/`getSessionDisplayTitle`); (2) if the boundary still leaks, fall back to **Approach-2** — keep the shared file as a `ChatWithHistoryBase` but give each persona its **own named wrapper that owns the divergent render/effects directly** (no render-prop boundary), accepting the duplication the dedup was meant to remove; suspend and revisit Spec 30 before landing a partial cut.
-- **Global abort (whole-plan kill criterion).** The phase is suspended (branch left in place for a later revisit, no merge) when a stage gate **or** the finalize preflight fails on a *genuine parity break* — a rendered behavior/visual change, or a changed storage key / route / session-id prefix — that cannot be fixed without changing behavior. This is distinct from (a) a mechanical cross-worktree conflict in `App.tsx`/`routes.tsx`/`TECH_DEBT.md` (union-resolve, see §S4/Task 14) and (b) a known vitest flake (rerun `--no-file-parallelism`), neither of which is an abort trigger. The same rule covers a failed **manual smoke (Task 14 Step 2)**: fix-on-branch and re-run smoke + preflight; if the failure is an unfixable parity break, suspend and escalate. The branch is local/unshared, so suspension costs only discarded work — **never land a partial or behavior-changing cut to clear a gate.**
+- **Global abort (whole-plan kill criterion).** The phase is suspended (branch left in place for a later revisit, no merge) when a stage gate **or** the finalize preflight fails on a *genuine parity break* — a rendered behavior/visual change, or a changed storage key / route / session-id prefix — that cannot be fixed without changing behavior. This is distinct from (a) a mechanical cross-worktree conflict in `App.tsx`/`routes.tsx`/`TECH_DEBT.md` (union-resolve, see §S4/Task 14) and (b) a known vitest flake (rerun `--no-file-parallelism`), neither of which is an abort trigger. The same rule covers a failed **manual smoke (Task 14 Step 2)**: fix-on-branch and re-run smoke + preflight; if the failure is an unfixable parity break, suspend and escalate. **Catch-all:** any failure mode not covered above — a typecheck break left by a merge-conflict resolution, an e2e/VR flake that won't green after `--no-file-parallelism` reruns, etc. — that resists ~3 fix attempts on the branch escalates to the human controller, who decides suspend vs. continue. **Environmental** failures (dev server won't start, network hiccup, port already bound) are never abort triggers — clear the environment and re-run. The branch is local/unshared, so suspension costs only discarded work — **never land a partial or behavior-changing cut to clear a gate.**
 
 ---
 
@@ -92,6 +92,9 @@ This block is the **reference contract** for Tasks 2/4/5. It finalizes the signa
 3. **Added beyond §4** (each maps to a real, verified divergence; all default to a no-op/identity so Profiler stays trivial): `gateIncomingByAgent`, `outerMaxWidthNone`, `emptyState`, `getSessionDisplayTitle`, `hydrateExtraSessions`, `serializeSession`, `onNewChat`.
 4. **Renamed §4 fields** (same intent, clearer names, verified runtime): `config.storageKey` → `config.storageKeyPrefix` (the shell appends `_${uid}`, reproducing today's `${prefix}_${uid}` key exactly); `config.sidebarClassName` → `config.sidebarOpenClassName` (it sets only the *open-state* width — collapsed is always `w-0 overflow-hidden`).
 5. **Replaced / dropped §4 fields.** Spec's `buildInitialSession` is replaced by three composable hooks — `hydrateExtraSessions` (Scout's lead-stream load injection) + `serializeSession` (Scout's persist strip) + `onNewChat` (Scout's new-chat side-effects) — because they are distinct concerns, not one. Spec's `onTabChange?` is **dropped from the shared props**: the shell never used it; only Scout's `renderChat` closure references it, so it stays a Scout-only wrapper prop, and Profiler's vestigial (declared-but-unused) `onTabChange` is deleted.
+6. **Session field `createdAt`.** The plan's `ChatSession` carries `createdAt: number` (the live session shape in both wrappers), which §4's `ChatSession` sketch omitted; it is preserved verbatim so the on-disk JSON shape is unchanged.
+
+**The spec §4 contract is fully superseded by this block.** Treat the block above as the authoritative shell contract for Tasks 2/4/5; do not diff it against §4 (§4 was design-intent; §16 explicitly deferred signature finalization to this plan).
 
 ```ts
 import type { ReactNode } from "react";
@@ -353,11 +356,13 @@ Profiler sets `gateIncomingByAgent: true`; Scout omits it (no gate), matching to
 - [ ] **Step 5: Handlers.** Lift `handleSelectSession`, `handleCloseChat`, `handleDeleteSession`, `handleMessagesChange` **verbatim** (byte-identical across both wrappers). For `handleNewChat`, lift the shared core (create empty `context: null` session, prepend, set active, `removeItem("signalsChatContext")`, `onClearContext?.()`) and append `onNewChat?.()` at the end for persona side-effects. Build the shared `onClearContext` closure the render state exposes:
 
 ```ts
-const handleClearActiveContext = useCallback(() => {
+// plain arrow recreated each render — matches the live wrappers' inline JSX closure,
+// and is NOT a useCallback (avoids a stale-closure / circular dep on handleNewChat):
+const handleClearActiveContext = () => {
   sessionStorage.removeItem("signalsChatContext");
   onClearContext?.();
   handleNewChat();
-}, [onClearContext, handleNewChat]);
+};
 const activeSession = sessions.find((s) => s.id === activeSessionId) ?? null;
 ```
 
@@ -372,7 +377,7 @@ const displayTitle = session.context
   ? getSessionTitle(session.context)
   : (getSessionDisplayTitle?.(session) ?? session.title);
 ```
-  - Main area: `{activeSession ? renderChat({ session: activeSession, onMessagesChange: handleMessagesChange(activeSession.id), onClearContext: handleClearActiveContext, onCloseChat: handleCloseChat }) : <EmptyState/>}` where `<EmptyState/>` renders the shared icon + `config.emptyState.heading` / `.body`, and — when `config.emptyState.showNewChatButton` — the `<Button onClick={handleNewChat}>` ("New chat", `MessageSquarePlus` icon) with `mb-4` on the body paragraph (matching Profiler); when false, no button + `max-w-sm` on the body (matching Scout).
+  - Main area: `{activeSession ? renderChat({ session: activeSession, onMessagesChange: handleMessagesChange(activeSession.id), onClearContext: handleClearActiveContext, onCloseChat: handleCloseChat }) : <EmptyState/>}` where `<EmptyState/>` renders the shared icon + `config.emptyState.heading` / `.body`, and — when `config.emptyState.showNewChatButton` — the `<Button onClick={handleNewChat}>` ("New chat", `MessageSquarePlus` icon) with `mb-4` on the body paragraph (matching Profiler); when false, no button + `max-w-sm` on the body (matching Scout). **Place a code comment immediately above this `renderChat(...)` call** — e.g. `// renderChat/renderExtras come fresh from the wrapper each render; do NOT memoize this call or wrap ChatWithHistory in React.memo (stale-closure guard, see "Render-prop semantics")` — so a future edit can't silently reintroduce the stale-closure bug.
   - After the two-column `</div>`, render `{renderExtras?.()}` (wrap the whole return in a fragment).
 
 - [ ] **Step 7: Export from the barrel.** Append to `src/shared/chat/index.ts`:
@@ -395,15 +400,26 @@ npx prettier --check src/shared/chat/ChatWithHistory.tsx src/shared/chat/index.t
 ```
 Expected: PASS. (Do **not** run knip — the shell is an unused export until S2.)
 
-- [ ] **Step 9: Commit.**
+- [ ] **Step 9: Commit in two passes (default).** Matches the repo's bias toward smaller commits. The shell is **unused until S2**, so neither pass carries parity exposure — the split is purely for bisectability.
+
+  **Pass 1 — structural shell** (state + `generateId` + the four handlers + sidebar/main-area/empty-state JSX, with the three effects stubbed to empty bodies), gated on typecheck:
 
 ```bash
 WT=/projects/Brewra/brewra-gtm-intelligence/.claude/worktrees/phase-9-scout-profiler
+npm run typecheck   # from frontend/
 git -C "$WT" add frontend/src/shared/chat/ChatWithHistory.tsx frontend/src/shared/chat/index.ts
-git -C "$WT" commit -m "feat(fe): add ChatWithHistory shared history shell"
+git -C "$WT" commit -m "feat(fe): add ChatWithHistory shell skeleton (state, handlers, JSX)"
 ```
 
-> **Optional finer-grained split (recommended for bisectability):** land two commits instead — (1) the structural shell (state + `generateId` + the four handlers + sidebar/main-area/empty-state JSX, with the three effects stubbed), gated on `npm run typecheck`; (2) the LOAD/PERSIST/INGEST effects, gated on `npm run verify`. The shell is **unused until S2**, so neither a whole-component commit nor the split carries any parity exposure — this is purely commit granularity, not safety.
+  **Pass 2 — wire the effects** (LOAD/PERSIST/INGEST, Steps 2–4), gated on verify:
+
+```bash
+npm run verify      # from frontend/
+git -C "$WT" add frontend/src/shared/chat/ChatWithHistory.tsx
+git -C "$WT" commit -m "feat(fe): wire ChatWithHistory load/persist/ingest effects"
+```
+
+  (Single-commit is an acceptable alternative — same Step-8 `verify` gate, one `feat(fe): add ChatWithHistory shared history shell` commit — since there is no parity exposure either way.)
 
 ## Task 3: Shell unit test
 
@@ -476,8 +492,22 @@ describe("ChatWithHistory (shell)", () => {
     );
     expect(screen.getByTestId("chat")).toHaveTextContent("test_injected");
   });
+
+  it("ignores an incoming context whose agent mismatches a gated config", () => {
+    // config.agent is "profiler"; gate on → a scout context must not ingest a session
+    render(
+      <ChatWithHistory
+        config={{ ...config, gateIncomingByAgent: true }}
+        initialContext={{ agent: "scout", prompt: "" }}
+        renderChat={({ session }) => <div data-testid="chat">{session.id}</div>}
+      />,
+    );
+    expect(screen.queryByTestId("chat")).not.toBeInTheDocument();
+    expect(screen.getByText("Chat with Test")).toBeInTheDocument();
+  });
 });
 ```
+This case directly exercises `gateIncomingByAgent` (finding from plan-review R2); without it the gate would only surface in the wrapper e2e/manual smoke. The `storageKey = null` (unauthenticated) branch stays untested — the shell only mounts behind `ProtectedRoute requireTenant`, so `currentUser` is always present; that branch is defensive.
 (If `ChatWithHistory` needs a router or other provider to mount, add the minimal wrapper used by `ContextChat.test.tsx`; read that file first.)
 
 - [ ] **Step 2: Verify + prettier + commit.**
@@ -736,7 +766,7 @@ npm run test:e2e -- e2e/journeys/04-market-research-5-components.spec.ts
 ```
 Expected: PASS, VR within 2%.
 
-- [ ] **Step 8: Commit.**
+- [ ] **Step 8: Commit.** The path list below is the authoring-time known set — **adjust it to match the files you actually edited** (`git -C "$WT" status`) if the Step-6 grep surfaced an importer not enumerated (per the grep-driven-repoints convention); don't blind-copy.
 
 ```bash
 git -C "$WT" add frontend/src/features/market-research/components/scout-chat/ScoutChatPanel.tsx frontend/src/features/market-research/components/types.ts frontend/src/features/market-research/components/scout-chat/ScoutChatWithHistory.tsx frontend/src/features/market-research/components/scout-chat/__tests__/ScoutChatWithHistory.test.tsx frontend/src/features/market-research/components/MarketIntelligenceSections.tsx frontend/src/features/market-research/components/trends/TrendsTab.tsx frontend/src/features/market-research/components/intelligence/regulatory-compliance/types.ts frontend/src/features/market-research/components/intelligence/market-entry/MarketEntrySection.tsx frontend/src/features/market-research/components/intelligence/market-size/MarketSizeSection.tsx frontend/src/features/market-research/components/intelligence/industry-trends/types.ts frontend/src/features/market-research/components/intelligence/competitor-landscape/types.ts
@@ -947,6 +977,8 @@ deployment page + the form component it renders — intentionally thin (Spec 30 
 - `components/ScoutDeployment.tsx` — the deployment form.
 ```
 
+  > The README's `TD-FE-57` is **provisional** — the actual number is assigned at Task 13 against the live ceiling. Task 13's reconciliation sweep fixes this reference if it renumbers.
+
 - [ ] **Step 6: Register in `src/app/routes.tsx`** (append-only). Add `import { scoutRoutes } from "@/features/scout";` to the import block (alphabetical — between `mission-control` and `signals`) and `...scoutRoutes,` to the `featureRoutes` array:
 
 ```ts
@@ -1061,7 +1093,7 @@ git -C "$WT" commit -m "docs(fe): record Phase 9 Profiler-ICP disposition (Plan-
 - Modify: `docs/TECH_DEBT.md` (append/edit **by hand** — never prettier it)
 - Modify: `specs/14-frontend-refactoring-master-plan-design.md`
 
-Context: master ceiling at branch time = **TD-FE-53**; Phase 9 claims **57+** (Spec 30 §14 reserves 54-56 for Phase 10's parallel branch). **Reconcile against the then-current register at execution** — if the merged ceiling has advanced past 56, renumber the new entries to start one past the live ceiling, and note the renumber. Frozen-record convention for Spec 14: annotate, don't rewrite prior intent.
+Context: master ceiling at branch time = **TD-FE-53**; Phase 9 claims **57+** (Spec 30 §14 reserves 54-56 for Phase 10's parallel branch). **Reconcile against the then-current register at execution** — if the merged ceiling has advanced past 56, renumber the new entries to start one past the live ceiling, and note the renumber. Frozen-record convention for Spec 14: annotate, don't rewrite prior intent. **If the new TD numbers renumber from 57–60, also fix the forward reference in `features/scout/README.md`** (written provisionally as `TD-FE-57` in Task 10 Step 5): `grep -rn "TD-FE-57" frontend/src/features/scout/` and update to the final number.
 
 - [ ] **Step 1: Resolve `TD-FE-51`.** Edit the TD-FE-51 entry (`ScoutChatPanel.tsx` + `types.ts` legacy residue) to **Resolved** — both files relocated into `features/market-research` (Task 6).
 
@@ -1102,6 +1134,13 @@ Expected: all green (typecheck, lint, format:check, test, build, bundle:check ad
 
 ```bash
 MAIN=/projects/Brewra/brewra-gtm-intelligence
+# Pre-merge: detect concurrent Phase 10/12 merges before merging.
+git -C "$MAIN" fetch origin
+git -C "$MAIN" log --oneline master..origin/master
+# If that shows Phase 10/12 commits touching App.tsx / app/routes.tsx / TECH_DEBT.md (the S4-touched
+# files), update master, rebase/merge worktree-phase-9-scout-profiler onto it, resolve the (mechanical)
+# conflicts, then RE-RUN the S4 stage coverage + a fresh serial preflight before merging — App.tsx and
+# routes.tsx are S4-owned, so a conflict there must be re-validated, not just typecheck-resolved.
 git -C "$MAIN" merge --no-ff worktree-phase-9-scout-profiler -m "Merge phase-9-scout-profiler: scout+profiler chat dedup + features/scout (Spec/plan 30)"
 git -C "$MAIN" push origin master
 ```
