@@ -2,7 +2,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
-import Artifacts from "./pages/Artifacts";
 import Deals from "./pages/Deals";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -80,14 +79,6 @@ const App = () => (
                   element={
                     <ProtectedRoute requireTenant>
                       <Settings />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/artifacts"
-                  element={
-                    <ProtectedRoute requireTenant>
-                      <Artifacts />
                     </ProtectedRoute>
                   }
                 />

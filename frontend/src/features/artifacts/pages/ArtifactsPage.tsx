@@ -166,7 +166,7 @@ const mockArtefacts: ArtefactItem[] = [
   },
 ];
 
-const Artefacts = () => {
+const ArtifactsPage = () => {
   usePageTitle("Artefacts - Brewra");
   const [artefacts, setArtefacts] = useState<ArtefactItem[]>(mockArtefacts);
   const [searchQuery, setSearchQuery] = useState("");
@@ -726,4 +726,4 @@ startxref
   );
 };
 
-export default Artefacts;
+export default ArtifactsPage;
