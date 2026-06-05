@@ -8,7 +8,6 @@ import Insights from "./pages/Insights";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import Reports from "./pages/Reports";
-import ScoutDeploymentPage from "./pages/ScoutDeployment";
 import Settings from "./pages/Settings";
 import TenantSelection from "./pages/TenantSelection";
 
@@ -81,14 +80,6 @@ const App = () => (
                   element={
                     <ProtectedRoute requireTenant>
                       <Artifacts />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/scout-deployment"
-                  element={
-                    <ProtectedRoute requireTenant>
-                      <ScoutDeploymentPage />
                     </ProtectedRoute>
                   }
                 />

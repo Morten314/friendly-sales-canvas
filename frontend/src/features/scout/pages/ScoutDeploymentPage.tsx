@@ -1,4 +1,5 @@
-import { ScoutDeployment } from "@/components/settings/ScoutDeployment";
+import { ScoutDeployment } from "../components/ScoutDeployment";
+
 import { Layout } from "@/features/shell";
 
 const ScoutDeploymentPage = () => {
