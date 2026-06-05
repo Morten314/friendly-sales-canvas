@@ -42,8 +42,8 @@ current authority for Phase 10.
   `{featureRoutes}`.
 - Sources to move: `pages/{Login,TenantSelection,Settings}.tsx`, `pages/{useLogin,useTenants}.ts`,
   `components/settings/{CompanyProfile,UserProfile,AgentProfile}.tsx`, and their `__tests__`.
-  **`components/settings/useCompanyProfile.ts` does NOT move** — frozen mission-control consumes it
-  (§2.2, §3.1).
+  **`components/settings/useCompanyProfile.ts` → `shared/company-profile/`** (cross-feature shared
+  hook — see §5b and §3.1).
 
 ### 1.4 What is already done (no work here)
 
@@ -66,7 +66,8 @@ Three feature folders, each a vertical slice (page + hooks + `routes.tsx` + `ind
 | `features/tenant/` | `pages/TenantSelectionPage.tsx`, `hooks/useTenants.ts` (mock kept) | `pages/TenantSelection.tsx` (101), `pages/useTenants.ts` (19) |
 | `features/settings/` | `pages/SettingsPage.tsx`, `components/{CompanyProfile,UserProfile,AgentProfile}.tsx` | `pages/Settings.tsx` (291), `components/settings/{CompanyProfile,UserProfile,AgentProfile}.tsx` |
 
-Plus **one infra move**: `lib/firebase.ts` → `src/shared/auth/firebase.ts` (§5).
+Plus **two infra moves to `shared/`**: `lib/firebase.ts` → `shared/auth/firebase.ts` (§5), and
+`components/settings/useCompanyProfile.ts` → `shared/company-profile/` (§5b).
 Plus `App.tsx` + `app/routes.tsx` rewiring (§4) and the stale-comment fix in
 `lib/types/escape-hatches.ts` (path list referencing moved files).
 
@@ -75,12 +76,6 @@ Plus `App.tsx` + `app/routes.tsx` rewiring (§4) and the stale-comment fix in
 - **`lib/jwt.ts` + `hooks/useAuth.ts`** (the composite hook minting JWTs, consumed by
   mission-control + market-research) — broad cross-feature reach; their `lib → shared` promotion is
   **Phase 11**'s mandate. Moving them here would force edits into frozen feature folders.
-- **`components/settings/useCompanyProfile.ts` stays put.** It is imported by frozen mission-control
-  (`CompanyProfileForm.tsx:6`, `MissionControlPage.tsx:11`, + a `vi.mock` in `MissionControlPage.test.tsx:46`)
-  as well as by settings. Moving it would break a frozen feature. The relocated
-  `features/settings/components/CompanyProfile.tsx` consumes it from `@/components/settings/useCompanyProfile`
-  (the same feature→flat-`components/` pattern mission-control already uses — lint-clean). Promotion to
-  `shared/` (updating both consumers) is **Phase 11**'s job. See §3.1, TD-FE-48.
 - **Real tenant data.** `useTenants` keeps `MOCK_TENANTS`. There is no "list tenants" endpoint; the
   real model is one-org-per-user via `GET /org?user_id=` (already used by `useLogin`'s `fetchOrgId`).
   Whether a tenant-selection page should exist at all is a **product question**, not modularization.
@@ -91,10 +86,16 @@ Plus `App.tsx` + `app/routes.tsx` rewiring (§4) and the stale-comment fix in
 
 - Other feature folders: `features/{shell,market-research,mission-control,customers,signals,strategist}`.
   Phase 10 imports only their public `index.ts` if needed (it needs only `shell` for `Layout`/`ProtectedRoute`).
-- `lib/jwt.ts`, `hooks/useAuth.ts`, `components/settings/useCompanyProfile.ts` (Phase 11 — §2.2).
+- `lib/jwt.ts`, `hooks/useAuth.ts` (Phase 11).
 - `components/settings/ScoutDeployment.tsx` and `pages/ScoutDeployment.tsx` (Phase 9 — §6).
-- `shared/auth` and `shared/tenant` public surfaces are **consumed, not changed** — the only addition
-  to `shared/` is `shared/auth/firebase.ts` (§5).
+- `shared/auth` and `shared/tenant` public surfaces are **consumed, not changed** — the additions to
+  `shared/` are `shared/auth/firebase.ts` (§5) and `shared/company-profile/` (§5b).
+
+**One deliberate exception to the frozen rule:** promoting `useCompanyProfile` to `shared/` (§5b)
+requires a mechanical import-path swap in frozen `mission-control` — `CompanyProfileForm.tsx`,
+`MissionControlPage.tsx`, and the `vi.mock` in `MissionControlPage.test.tsx` — no logic change.
+Justified: the hook is genuinely cross-feature shared infra; Phase 6 is already merged (no in-flight
+conflict); and the in-flight Phase 8 does not touch those files (§9).
 
 ## §3 Target structure
 
@@ -122,8 +123,10 @@ src/features/
     README.md
     __tests__/CompanyProfile.test.tsx
 src/shared/auth/firebase.ts      # moved from lib/firebase.ts
-# NOTE: useCompanyProfile.ts (+ its test) stay at components/settings/ — consumed by frozen
-#       mission-control; promotion to shared/ is Phase 11 (§2.2, TD-FE-48).
+src/shared/company-profile/      # moved from components/settings/
+  useCompanyProfile.ts           # useCompanyProfile + useSaveCompanyProfile
+  index.ts
+  __tests__/useCompanyProfile.test.tsx
 ```
 
 ### 3.1 Dependency posture
@@ -135,12 +138,10 @@ src/shared/auth/firebase.ts      # moved from lib/firebase.ts
   `shared/api/contracts/auth`, `shared/auth/firebase`.
 - `tenant/` → `shared/tenant`, `shared/api` (`TenantListSchema`, `qk.tenants`).
 - `settings/` → `shared/auth` (`useAuth`), `shared/api` (`apiGet`/`apiPost`, contracts,
-  `qk.companyProfile`), `components/ui`, and `@/components/settings/useCompanyProfile` (transitional
-  feature→flat-`components/` import; the hook is not moved — §2.2).
-- **Known external consumer:** frozen `features/mission-control` imports `useCompanyProfile` from
-  `@/components/settings/useCompanyProfile`. This pre-existing flat-layer import is left intact (it is
-  feature→flat-`components/`, not feature→feature, so it does not break the no-cross-feature-import
-  rule); Phase 11 promotes the hook to `shared/` and updates both consumers (TD-FE-48).
+  `qk.companyProfile`), `shared/company-profile` (`useCompanyProfile`), `components/ui`.
+- **Second shared consumer:** `features/mission-control` also consumes `useCompanyProfile`; after the
+  §5b promotion both it and `settings/` import from `@/shared/company-profile` — a `feature → shared`
+  dependency, the correct posture. The mission-control import update is the §2.3 exception.
 
 ## §4 Data layer & route wiring
 
@@ -168,6 +169,24 @@ foundation, not auth-feature-private, so it moves to `src/shared/auth/firebase.t
 module need not be re-exported from `shared/auth/index.ts` (internal to the foundation). `lib/jwt.ts`
 stays put (§2.2).
 
+## §5b Second infra move — `useCompanyProfile` → `shared/company-profile/`
+
+`components/settings/useCompanyProfile.ts` (`useCompanyProfile` + `useSaveCompanyProfile`) is a
+TanStack data-hook pair built entirely on `shared/api` (`apiGet`/`apiPost`, `CompanyProfileSchema`,
+`qk.companyProfile`) and is consumed by **two features** — `settings` (Phase 10) and `mission-control`
+(`CompanyProfileForm.tsx`, `MissionControlPage.tsx`). It is therefore cross-feature shared infra, not
+settings-private. Move it (with `__tests__/useCompanyProfile.test.tsx`) to `src/shared/company-profile/`,
+exported via `index.ts` — consistent with the existing domain modules `shared/profiler` and
+`shared/chat`. Update **three** consumer sites to `@/shared/company-profile`:
+
+1. `features/settings/components/CompanyProfile.tsx` (Phase 10's own);
+2. `features/mission-control/components/company-profile/CompanyProfileForm.tsx` (runtime);
+3. `features/mission-control/pages/MissionControlPage.tsx` (runtime) + the
+   `vi.mock("@/components/settings/useCompanyProfile")` in `MissionControlPage.test.tsx`.
+
+Sites 2–3 are the deliberate §2.3 frozen-folder exception (mechanical path swap, no logic change;
+Phase-8-safe per §9).
+
 ## §6 Settings ↔ Scout boundary (coordination artifact for Phase 9)
 
 `components/settings/` physically contains a Scout component that Phase 10 must **not** claim:
@@ -178,23 +197,24 @@ stays put (§2.2).
 | `ScoutDeployment` | `pages/ScoutDeployment.tsx` (the scout route) | **Phase 9 (scout)** — leave in place |
 
 Consequence: `components/settings/` is **not deleted** by Phase 10 — it retains `ScoutDeployment.tsx`
-(plus `useCompanyProfile.ts`, §2.2) until later phases relocate them. **`pages/ScoutDeployment.tsx`**
-(the page wrapper that renders `ScoutDeployment`) also stays in `pages/` for Phase 9. `AgentProfile`
-is a generic settings form (agent name / tasks / instructions); it is not scout-coupled and belongs
-to settings.
+until Phase 9 relocates it into `features/scout/`. **`pages/ScoutDeployment.tsx`** (the page wrapper
+that renders `ScoutDeployment`) also stays in `pages/` for Phase 9. `AgentProfile` is a generic
+settings form (agent name / tasks / instructions); it is not scout-coupled and belongs to settings.
 
 ## §7 Execution stages (single branch, staged checkpoints)
 
 Branch `worktree-phase-10-settings-tenant-auth` off `master` (already created). Single plan
 (`plans/28-…`), ordered:
 
-0. **Enabling:** move `lib/firebase.ts` → `shared/auth/firebase.ts`, update its 2 importers. Verify green.
+0. **Enabling (infra moves to `shared/`):** (a) `lib/firebase.ts` → `shared/auth/firebase.ts`, update
+   its 2 importers; (b) `components/settings/useCompanyProfile.ts` → `shared/company-profile/`, update
+   its 3 consumer sites incl. the 2 mission-control files + test mock (§5b). Verify green.
 1. **auth/:** scaffold skeleton; relocate Login + useLogin; `routes.tsx` (`/`, `/login`); `index.ts`;
    rewire `App.tsx` import → registry (deferred to stage 4 commit); move tests; verify.
 2. **tenant/:** relocate TenantSelection + useTenants (mock); `routes.tsx`; `index.ts`; tests; verify.
-3. **settings/:** relocate Settings + {CompanyProfile,UserProfile,AgentProfile} (NOT
-   `useCompanyProfile.ts` — stays, §2.2); delete the stale commented-out imports in `Settings.tsx`
-   (lines 10–12); `routes.tsx`; `index.ts`; move `CompanyProfile.test.tsx`; verify.
+3. **settings/:** relocate Settings + {CompanyProfile,UserProfile,AgentProfile}; point
+   `CompanyProfile.tsx` at `@/shared/company-profile` (from stage 0b); delete the stale commented-out
+   imports in `Settings.tsx` (lines 10–12); `routes.tsx`; `index.ts`; move `CompanyProfile.test.tsx`; verify.
 4. **Wire-up (one commit):** `App.tsx` route/import removals + `app/routes.tsx` registry additions +
    `escape-hatches.ts` comment fix.
 5. **Docs:** three feature `README.md`s; finalize `docs/TECH_DEBT.md` TD-FE entries (§10).
@@ -230,6 +250,9 @@ with the in-flight Phase 8 (signals + strategist). Operating rules:
   commit (§7 stage 4) keeps the window minimal.
 - All other shared surfaces are append-only and merge clean: `app/routes.tsx`,
   `shared/api/contracts/index.ts`, `shared/api/queryKeys.ts`, `test/msw/handlers.ts`.
+- **mission-control import update (§5b/§2.3 exception) is Phase-8-safe:** Phase 8's diff does not touch
+  `CompanyProfileForm.tsx`, `MissionControlPage.tsx`, or its test, so the 3-site path swap cannot
+  conflict with the in-flight branch.
 - **Refresh via `git merge master`** after Phase 8 lands; integrate with a `--no-ff` merge. No rebase.
 - **Do not run `preflight:par` or standalone `test:e2e`** while a Phase 8 session may share the box
   (CPU + `:5173` contention → false-green VR, per TD-FE-29). Merge gate = serial `npm run preflight`,
@@ -242,24 +265,25 @@ with the in-flight Phase 8 (signals + strategist). Operating rules:
 Highest committed is TD-FE-46 (master and phase-8). Provisional, starting at TD-FE-47:
 
 - **TD-FE-47** — `lib/jwt.ts` + `hooks/useAuth.ts` not yet promoted to `shared/`; deferred to Phase 11.
-- **TD-FE-48** — `components/settings/useCompanyProfile.ts` not moved (frozen mission-control consumes
-  it via the flat path); promote to `shared/` and update both consumers in Phase 11.
-- **TD-FE-49** — `TenantSelection` is mock multi-tenant UI; real model is one-org-per-user via `/org`.
+- **TD-FE-48** — `TenantSelection` is mock multi-tenant UI; real model is one-org-per-user via `/org`.
   Revisit whether a selection page belongs (product question).
-- **TD-FE-50** — `AgentProfile` ↔ `ScoutDeployment` near-duplicate forms; dedup when Phase 9 extracts scout.
+- **TD-FE-49** — `AgentProfile` ↔ `ScoutDeployment` near-duplicate forms; dedup when Phase 9 extracts scout.
+
+(`useCompanyProfile` is **not** a deferral — it is promoted to `shared/company-profile/` within this
+phase; see §5b.)
 
 ## §11 Done when
 
 - `features/{auth,tenant,settings}/` each have page + hooks + `routes.tsx` + `index.ts` + `README.md`
   + relocated tests; `src/pages/{Login,TenantSelection,Settings}.tsx`,
-  `src/pages/{useLogin,useTenants}.ts`, and `src/components/settings/{CompanyProfile,UserProfile,AgentProfile}.tsx`
-  no longer exist at their old paths. (`components/settings/useCompanyProfile.ts` intentionally remains — §2.2.)
-- `firebase.ts` lives in `shared/auth/`; both runtime importers + the `useLogin` test mock updated.
-- `components/settings/` retains `ScoutDeployment.tsx` (Phase 9) plus `useCompanyProfile.ts` and its
-  `__tests__/useCompanyProfile.test.tsx` (§2.2); only `CompanyProfile.test.tsx` moves to `features/settings/`.
+  `src/pages/{useLogin,useTenants}.ts`, `src/components/settings/{CompanyProfile,UserProfile,AgentProfile}.tsx`,
+  and `src/components/settings/useCompanyProfile.ts` no longer exist at their old paths.
+- `firebase.ts` lives in `shared/auth/`; `useCompanyProfile` lives in `shared/company-profile/`; all
+  importers updated (incl. the `useLogin` firebase mock and mission-control's `useCompanyProfile` sites + mock).
+- `components/settings/` retains only `ScoutDeployment.tsx` (Phase 9).
 - `App.tsx` no longer defines the relocated routes; `app/routes.tsx` composes them.
 - `npm run verify` green per stage; full serial `npm run preflight` green at the merge gate.
-- Three TD-FE entries recorded.
+- Three TD-FE entries recorded (TD-FE-47/48/49).
 
 ## §12 Risks & mitigations
 

@@ -41,3 +41,5 @@ Reason: All findings agreed and revised; the [High#1] resolution materially chan
 ## Open Questions
 
 - **`useCompanyProfile` final home (Phase 11):** defaulting to **defer** (stays at `components/settings/`, consistent with `jwt.ts`/`useAuth`). The alternative — promote it to `shared/` *now* — is architecturally cleaner (it's consumed by two features) and is actually low-risk today: Phase 6 (mission-control) is already merged, and the in-flight Phase 8 does not touch `CompanyProfileForm.tsx`/`MissionControlPage.tsx`, so updating their 3 import lines would not cause a parallel-merge conflict. Flagging for the operator: confirm defer, or pull the shared-promotion forward into Phase 10.
+
+  **RESOLVED (operator, 2026-06-05):** promote to `shared/company-profile/` **now**, within Phase 10 — updating mission-control's three `useCompanyProfile` sites as a deliberate, documented §2.3 frozen-folder exception (mechanical path swap, Phase-8-safe). Spec revised accordingly: new §5b, §2.3 exception note, §3/§3.1/§7/§9 updates; the TD-FE-48 deferral was removed and TD-FE renumbered to 47/48/49.
