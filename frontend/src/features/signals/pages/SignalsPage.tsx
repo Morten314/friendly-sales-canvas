@@ -9,6 +9,7 @@ import {
   getFallbackSampleSignals,
   getSignalContentHash,
 } from "../components/signalCards";
+import { SignalsEmptyState, SignalsLoadingState } from "../components/SignalsEmptyState";
 import { fetchSignals, generateSignalsBatch } from "../services/signals";
 import type { Agent, NBAItem, SignalCard as SignalCardType } from "../types";
 
@@ -691,18 +692,9 @@ const SignalsPage = () => {
         {currentTab === "signals" && (
           <div className="w-full max-w-5xl mx-auto space-y-4">
             {isLoading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading signals...</p>
-              </div>
+              <SignalsLoadingState />
             ) : signals.length === 0 ? (
-              <div className="text-center py-12">
-                <Bot className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No signals available</h3>
-                <p className="text-gray-500 mb-4">
-                  Click refresh in the header to generate new signals
-                </p>
-              </div>
+              <SignalsEmptyState />
             ) : (
               signals.map((signal) => {
                 const contentHash = getSignalContentHash(signal);
