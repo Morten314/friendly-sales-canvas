@@ -3,8 +3,6 @@
 import { Plus, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { useCompanyProfile, useSaveCompanyProfile } from "./useCompanyProfile";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +16,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import type { CompanyProfileResponse } from "@/shared/api/contracts";
 import { useAuth } from "@/shared/auth";
+import { useCompanyProfile, useSaveCompanyProfile } from "@/shared/company-profile";
 import { setUserLocalStorage } from "@/utils/cacheUtils";
 
 interface SocialMediaUrl {
