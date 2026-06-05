@@ -13,12 +13,12 @@ import { useNavigate, useLocation } from "react-router-dom";
 
 import IntelligenceTab from "../components/intelligence/IntelligenceTab";
 import { MarketDetailDrawer } from "../components/MarketDetailDrawer";
+import { ScoutSettingsForm } from "../components/ScoutSettingsForm";
 import TrendsTab from "../components/trends/TrendsTab";
 import { useMarketResearchData } from "../hooks/useMarketResearchData";
 import type { ScoutResearchContext } from "../types";
 
 import LeadStreamTab from "@/components/market-research/lead-stream/LeadStreamTab";
-import { ScoutSettingsForm } from "@/components/market-research/ScoutSettingsForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
