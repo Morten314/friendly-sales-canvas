@@ -1511,7 +1511,7 @@ A behavioral-coverage hardening pass / when the fake-timer + MSW interplay is so
 `src/lib/jwt.ts` and `src/hooks/useAuth.ts` are imported by several features that have not yet been extracted (mission-control, market-research). Moving them to `shared/auth/` before those call sites are updated would require touching a large surface outside Phase 10's scope.
 
 **What it should be:**
-Both files should live in `src/shared/auth/` alongside `firebase.ts`, with a barrel `src/shared/auth/index.ts` exporting all three. All call sites (mission-control, market-research, and any remaining legacy imports) should be updated to import from `@/shared/auth`.
+Both files should live in `src/shared/auth/` alongside `firebase.ts`, with a barrel `src/shared/auth/index.ts` exporting all three. All call sites (mission-control, market-research, and any remaining legacy imports) should be updated to import from `@/shared/auth`. At the same time, reconcile the split import surface flagged in impl-review-1: `firebase.ts`'s `auth` export is currently reachable only via the deep path `@/shared/auth/firebase` (the barrel exports only `AuthProvider`/`useAuth`, intentionally per Spec 28 §5), so a consumer needing `auth.currentUser` must discover the deep path. When consolidating, decide whether to surface `auth` through the barrel or document the deep path in a `shared/auth/` README.
 
 **Why we deferred:**
 Phase 10 scope was settings + tenant + auth-file relocation only; rewiring all consumers of `jwt.ts`/`useAuth.ts` would pull in mission-control and market-research extraction work that belongs to Phase 11.
