@@ -1,8 +1,7 @@
 import type { ZodType } from "zod";
 
 import { rateLimiter } from "./rateLimiter";
-
-import { apiFetchJson, buildApiUrl, type ApiFetchOptions } from "@/lib/api";
+import { apiFetchJson, buildApiUrl, type ApiFetchOptions } from "./transport";
 
 // ── Normal path ────────────────────────────────────────────────────────────
 // Routes through apiFetchJson, so JWT is injected by apiFetch and a non-2xx

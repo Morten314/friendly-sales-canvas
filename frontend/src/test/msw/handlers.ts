@@ -14,7 +14,7 @@
 // as unit tests need them. Spec §3.2 last paragraph.
 import { http, HttpResponse } from "msw";
 
-import { BACKEND_BASE_URL } from "@/lib/api";
+import { BACKEND_BASE_URL } from "@/shared/api/transport";
 
 export const handlers = [
   // 1. Proof-of-pipeline

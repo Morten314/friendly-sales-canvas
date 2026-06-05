@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { buildApiUrl } from "@/lib/api";
+import { buildApiUrl } from "@/shared/api/transport";
 import { useAuth } from "@/shared/auth";
 import jwtManager from "@/shared/auth/jwt";
 

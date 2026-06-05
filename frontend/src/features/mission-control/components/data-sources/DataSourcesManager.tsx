@@ -49,7 +49,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { buildApiUrl } from "@/lib/api";
+import { buildApiUrl } from "@/shared/api/transport";
 import { useAuthToken } from "@/shared/auth";
 import jwtManager from "@/shared/auth/jwt";
 import type { UntypedBackendDocument } from "@/shared/types/escape-hatches";

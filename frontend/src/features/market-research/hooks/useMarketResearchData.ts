@@ -8,7 +8,7 @@ import { logApiCallResult } from "../lib/apiUtils";
 import { toUTCTimestamp, isTimestampNewer, logTimestampComparison } from "../lib/timestampUtils";
 
 import { useToast } from "@/hooks/use-toast";
-import { buildApiUrl } from "@/lib/api";
+import { buildApiUrl } from "@/shared/api/transport";
 import { useAuth } from "@/shared/auth";
 import {
   getUserLocalStorage,

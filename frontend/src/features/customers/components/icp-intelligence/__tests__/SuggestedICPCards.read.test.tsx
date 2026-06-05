@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { SuggestedICPCards } from "../SuggestedICPCards";
 
-import { BACKEND_BASE_URL } from "@/lib/api";
+import { BACKEND_BASE_URL } from "@/shared/api/transport";
 import { server } from "@/test/msw/server";
 
 // The container reads currentUser + orgId from @/shared/auth's useAuth.

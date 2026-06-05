@@ -9,7 +9,7 @@ import IcpWizard from "./IcpWizard";
 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { apiFetch } from "@/lib/api";
+import { apiFetch } from "@/shared/api/transport";
 import { useAuthToken } from "@/shared/auth";
 import { setUserLocalStorage, removeUserLocalStorage } from "@/shared/lib/cacheUtils";
 import {

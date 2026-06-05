@@ -12,7 +12,7 @@ import type { RegulatoryComplianceSectionProps } from "./types";
 import { useRegulatoryCompliance } from "./useRegulatoryCompliance";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { BACKEND_BASE_URL } from "@/lib/api";
+import { BACKEND_BASE_URL } from "@/shared/api/transport";
 import { useAuth } from "@/shared/auth";
 import { getUserLocalStorage, setUserLocalStorage } from "@/shared/lib/cacheUtils";
 import type {

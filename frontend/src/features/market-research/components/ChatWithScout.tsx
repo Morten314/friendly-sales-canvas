@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { BACKEND_BASE_URL } from "@/lib/api";
+import { BACKEND_BASE_URL } from "@/shared/api/transport";
 
 interface ChatMessage {
   role: "user" | "assistant";

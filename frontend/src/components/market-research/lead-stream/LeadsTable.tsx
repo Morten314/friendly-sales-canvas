@@ -46,7 +46,6 @@ import {
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { buildApiUrl } from "@/lib/api";
 import {
   readLeadStreamHeatmapFromSession,
   writeLeadStreamHeatmapToSession,
@@ -59,6 +58,7 @@ import {
   extractMarketScoreRowsFromResponse,
   heatmapLeadFromUnknownRow,
 } from "@/lib/marketScoresHeatmap";
+import { buildApiUrl } from "@/shared/api/transport";
 import { useAuthToken } from "@/shared/auth";
 import jwtManager from "@/shared/auth/jwt";
 import { useTenant } from "@/shared/tenant";
