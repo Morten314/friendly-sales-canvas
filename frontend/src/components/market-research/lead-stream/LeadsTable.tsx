@@ -17,15 +17,6 @@ import {
 import React, { useState, useEffect, useLayoutEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
-import {
-  type Rating,
-  type HeatmapLead,
-  REPORT_COLUMNS,
-  RATING_SCORE,
-  TIER_INTELLIGENCE,
-  heatmapLeads,
-} from "./leadData";
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -61,6 +52,14 @@ import {
 import { buildApiUrl } from "@/shared/api/transport";
 import { useAuthToken } from "@/shared/auth";
 import jwtManager from "@/shared/auth/jwt";
+import {
+  type Rating,
+  type HeatmapLead,
+  REPORT_COLUMNS,
+  RATING_SCORE,
+  TIER_INTELLIGENCE,
+  heatmapLeads,
+} from "@/shared/lib/leadData";
 import { useTenant } from "@/shared/tenant";
 
 // ─── Score Breakdown Popover ────────────────────────────────────────────────

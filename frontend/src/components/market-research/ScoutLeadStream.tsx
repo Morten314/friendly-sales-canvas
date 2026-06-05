@@ -3,11 +3,11 @@
 
 import React, { useState } from "react";
 
-import type { HeatmapLead } from "./lead-stream/leadData";
 import LeadsTable from "./lead-stream/LeadsTable";
 import OpportunityDashboard from "./lead-stream/OpportunityDashboard";
 
 import { Separator } from "@/components/ui/separator";
+import type { HeatmapLead } from "@/shared/lib/leadData";
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 

@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-import { heatmapLeads, type HeatmapLead } from "@/components/market-research/lead-stream/leadData";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -29,6 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { heatmapLeads, type HeatmapLead } from "@/shared/lib/leadData";
 
 const COLUMN_OPTIONS = [
   "LinkedIn URL",

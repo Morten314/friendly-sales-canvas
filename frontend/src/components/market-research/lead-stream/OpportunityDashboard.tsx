@@ -16,9 +16,12 @@ import {
   Cell,
 } from "recharts";
 
-import { type HeatmapLead, heatmapLeads, computeReportComponentScoresForLeads } from "./leadData";
-
 import { Card } from "@/components/ui/card";
+import {
+  type HeatmapLead,
+  heatmapLeads,
+  computeReportComponentScoresForLeads,
+} from "@/shared/lib/leadData";
 
 // ─── Custom tooltip ─────────────────────────────────────────────────────────
 

@@ -1,4 +1,4 @@
-import type { HeatmapLead } from "@/components/market-research/lead-stream/leadData";
+import type { HeatmapLead } from "@/shared/lib/leadData";
 
 const PREFIX = "leadStreamMarketScores_v1";
 

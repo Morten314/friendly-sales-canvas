@@ -1,5 +1,5 @@
-import type { HeatmapLead, Rating } from "@/components/market-research/lead-stream/leadData";
-import { getPriority } from "@/components/market-research/lead-stream/leadData";
+import type { HeatmapLead, Rating } from "@/shared/lib/leadData";
+import { getPriority } from "@/shared/lib/leadData";
 
 export function scorePercentToRating(score: number): Rating {
   if (score >= 75) return "High";
