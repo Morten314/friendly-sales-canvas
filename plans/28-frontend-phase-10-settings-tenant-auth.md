@@ -15,22 +15,34 @@
 - **All commands run from `frontend/`.** This repo has no root `package.json`.
 - **Branch:** `worktree-phase-10-settings-tenant-auth` (already created off `master`). Worktree path:
   `/projects/Brewra/brewra-gtm-intelligence/.claude/worktrees/phase-10-settings-tenant-auth`. Run git
-  via `git -C <worktree>` — `cd <repo-root>` lands in the **main** checkout (on `phase-8`), not here.
+  via `git -C <worktree>` — `cd <repo-root>` lands in the **main** checkout, not here.
 - **Inner loop per task:** `npm run verify` (typecheck + lint + `vitest run --changed`) **plus**
   `npx prettier --check <touched files>` — `verify` does **not** run prettier, and import rewrites
   drift formatting. Full serial `npm run preflight` (adds build + Playwright + VR + knip) runs **only**
-  at the merge gate (Task 8).
-- **Do NOT run `npm run preflight:par` or standalone `npm run test:e2e`** while the Phase 8 session may
+  at the merge gate (Task 7).
+- **Do NOT run `npm run preflight:par` or standalone `npm run test:e2e`** while another session may
   share this box — CPU + `:5173` contention flakes the VR snapshots (TD-FE-29). Per-task gate = `verify`.
+- **Execution is serial.** `subagent-driven-development` dispatches **one task at a time** with review
+  between tasks — tasks do not run concurrently. Tasks 3–5 each edit `src/app/routes.tsx` and
+  `src/App.tsx` (the contention-prone files); never dispatch them as parallel sub-agents.
+- **Escalation / abort.** Task 0 halts on a red baseline. Thereafter: if `npm run verify` fails and the
+  cause is **not** a missed import-path update within the current task's listed file set, STOP and
+  report to the operator — do **not** attempt speculative fixes outside the task's file list (parallel
+  sessions share the tree). At the merge gate, cap preflight reruns (Task 7 Step 3).
 - **Surgical commits:** `git add` only the listed paths (parallel agents share the tree). Never `git add -A`.
 - **Use `git mv`** for relocations (preserves history + keeps the index clean).
 - **Divergence from Spec 28 §7/§9** ("batch `App.tsx` into one late commit"): this plan edits `App.tsx`
-  **per feature** (Tasks 5–7), because moving a page `App.tsx` imports requires updating `App.tsx` in
-  the same commit to keep the stage green. This does **not** worsen the Phase 8 merge — git merges the
-  *final* `App.tsx` state, so the import-cluster conflict (§9) is identical whether done in one commit
-  or three. The `<Routes>`-block removals remain non-overlapping with Phase 8's.
-- **TD-FE numbers (47/48/49) are provisional** — Phase 8 also allocates ≥47; whichever merges second
-  renumbers (Spec 28 §10).
+  **per feature** (Tasks 3–5), because moving a page `App.tsx` imports requires updating `App.tsx` in
+  the same commit to keep the stage green. This does **not** worsen the Phase 8 merge — integration is a
+  `git merge` (not a rebase), so the per-feature `App.tsx` commits collapse to the branch tip at merge
+  time and never replay individually; the merge's 3-way diff (and the §9 import-cluster conflict) is
+  identical whether the edits landed in one commit or three. Per-feature granularity also matches the
+  repo's "prefer small, frequent commits — one task = one commit" convention. The `<Routes>`-block
+  removals remain non-overlapping with Phase 8's.
+- **TD-FE numbers: 54/55/56.** Phase 8 merged TD-FE-47–53 to `master` (commit `fa585d3`; verified
+  ceiling = 53), so Phase 10's three deferrals take **54/55/56** — they append cleanly after master's
+  47–53 at the gate merge. (Spec 28 §10 carried 47/48/49 provisionally, written before Phase 8 merged.)
+  Re-confirm 54 is still the next free slot against `master`'s `docs/TECH_DEBT.md` at Task 6.
 
 ## File structure (target — Spec 28 §3, §5, §5b)
 
@@ -63,6 +75,11 @@ src/shared/company-profile/
   __tests__/useCompanyProfile.test.tsx
   index.ts                              # export { useCompanyProfile, useSaveCompanyProfile }
 ```
+
+**Note on test placement:** tests are co-located with the module they cover (`hooks/__tests__/`,
+`components/__tests__/`) — this matches the established repo convention (e.g.
+`features/mission-control/pages/__tests__/`). Spec §3's tree sketches them as direct `features/<x>/__tests__/`
+children; the plan's co-location is the authoritative target (see self-review notes).
 
 **Left in place (not Phase 10):** `lib/jwt.ts`, `hooks/useAuth.ts` (Phase 11);
 `components/settings/ScoutDeployment.tsx` + `pages/ScoutDeployment.tsx` (Phase 9). So
@@ -248,10 +265,12 @@ git commit -m "refactor(fe): promote useCompanyProfile to shared/company-profile
 
 # Stage 1 — `auth` feature
 
-## Task 3: Scaffold the `auth` skeleton
+## Task 3: Scaffold + relocate Login + wire the route registry
 
 **Files:**
-- Create: `src/features/auth/README.md`, `src/features/auth/index.ts` (placeholder)
+- Create: `src/features/auth/README.md`, `src/features/auth/routes.tsx`, `src/features/auth/index.ts`
+- Move: `src/pages/Login.tsx` → `src/features/auth/pages/LoginPage.tsx`; `src/pages/useLogin.ts` → `src/features/auth/hooks/useLogin.ts`; `src/pages/__tests__/useLogin.test.tsx` → `src/features/auth/hooks/__tests__/useLogin.test.tsx`
+- Modify: `src/app/routes.tsx`, `src/App.tsx`
 
 - [ ] **Step 1: Create `README.md`.**
 
@@ -265,29 +284,7 @@ Login + signup UI (Firebase email/password). Consumes the `shared/auth` context
 config live in `shared/auth/` (ADR-0002), not here. Public surface: `authRoutes` (`/`, `/login`).
 ```
 
-- [ ] **Step 2: Create placeholder `index.ts`** (finalized in Task 4):
-
-```ts
-// Public surface for the `auth` feature.
-export {};
-```
-
-- [ ] **Step 3: Verify + commit.** Run from `frontend/`:
-
-```bash
-npm run verify
-git add src/features/auth/README.md src/features/auth/index.ts
-git commit -m "chore(fe): scaffold auth feature skeleton"
-```
-
-## Task 4: Relocate Login + wire the route registry
-
-**Files:**
-- Move: `src/pages/Login.tsx` → `src/features/auth/pages/LoginPage.tsx`; `src/pages/useLogin.ts` → `src/features/auth/hooks/useLogin.ts`; `src/pages/__tests__/useLogin.test.tsx` → `src/features/auth/hooks/__tests__/useLogin.test.tsx`
-- Create: `src/features/auth/routes.tsx`; finalize `src/features/auth/index.ts`
-- Modify: `src/app/routes.tsx`, `src/App.tsx`
-
-- [ ] **Step 1: Move the files.** Run from `frontend/`:
+- [ ] **Step 2: Move the files.** Run from `frontend/`:
 
 ```bash
 mkdir -p src/features/auth/pages src/features/auth/hooks/__tests__
@@ -296,7 +293,7 @@ git mv src/pages/useLogin.ts src/features/auth/hooks/useLogin.ts
 git mv src/pages/__tests__/useLogin.test.tsx src/features/auth/hooks/__tests__/useLogin.test.tsx
 ```
 
-- [ ] **Step 2: Fix `LoginPage.tsx` imports + rename the component.**
+- [ ] **Step 3: Fix `LoginPage.tsx` imports + rename the component.**
 
 In `src/features/auth/pages/LoginPage.tsx`: the relative imports now break (the file moved two levels
 deep). Rewrite them — `../components/ui/*` → `@/components/ui/*`, `../hooks/use-toast` →
@@ -324,13 +321,14 @@ import { useLogin, useSignup } from "../hooks/useLogin";
 imports as-is.) Then rename the component: line 23 `const Login: React.FC = () => {` →
 `const LoginPage: React.FC = () => {`, and line 277 `export default Login;` → `export default LoginPage;`.
 
-- [ ] **Step 3: `useLogin.ts` — no import change.** Its imports (`@/shared/auth/firebase`, `@/shared/auth`,
-  `@/shared/tenant`, `@tanstack/react-query`) are all absolute and remain valid after the move. Leave as-is.
+- [ ] **Step 4: `useLogin.ts` — no import change.** Its imports (`@/shared/auth/firebase`, `@/shared/auth`,
+  `@/shared/tenant`, `@tanstack/react-query`) are all absolute and remain valid after the move (the
+  `@/lib/firebase` → `@/shared/auth/firebase` rewrite already happened in Task 1). Leave as-is.
 
-- [ ] **Step 4: `useLogin.test.tsx` — no import change.** Its `../useLogin` (line 17) resolves to
+- [ ] **Step 5: `useLogin.test.tsx` — no import change.** Its `../useLogin` (line 17) resolves to
   `features/auth/hooks/useLogin`; the `vi.mock` paths are absolute (already fixed in Task 1). Leave as-is.
 
-- [ ] **Step 5: Create `routes.tsx`.**
+- [ ] **Step 6: Create `routes.tsx`.**
 
 Create `src/features/auth/routes.tsx`:
 
@@ -364,7 +362,7 @@ export const authRoutes = [
 ];
 ```
 
-- [ ] **Step 6: Finalize `index.ts`** (replace the placeholder):
+- [ ] **Step 7: Create `index.ts`** (the real public surface — no placeholder):
 
 ```ts
 // Public surface for the `auth` feature.
@@ -372,7 +370,7 @@ export const authRoutes = [
 export { authRoutes } from "./routes";
 ```
 
-- [ ] **Step 7: Register in `src/app/routes.tsx`** (append-only; keep imports alphabetical for `import/order`).
+- [ ] **Step 8: Register in `src/app/routes.tsx`** (append-only; keep imports alphabetical for `import/order`).
 
 Add the import (alphabetically first) and spread `...authRoutes` into the array:
 
@@ -390,7 +388,10 @@ export const featureRoutes = [
 ];
 ```
 
-- [ ] **Step 8: Remove the legacy auth wiring from `src/App.tsx`.**
+(This is the pre-Phase-8 base state — `signalsRoutes`/`strategistRoutes` arrive at the gate merge,
+Task 7 Step 2. Do not hand-add them here.)
+
+- [ ] **Step 9: Remove the legacy auth wiring from `src/App.tsx`.**
 
 Delete the import (line 9): `import Login from "./pages/Login";`. Delete the two inline routes:
 
@@ -401,7 +402,7 @@ Delete the import (line 9): `import Login from "./pages/Login";`. Delete the two
 
 The `/` and `/login` URLs now resolve through `{featureRoutes}`.
 
-- [ ] **Step 9: Verify.** Run from `frontend/`:
+- [ ] **Step 10: Verify.** Run from `frontend/`:
 
 ```bash
 npm run verify
@@ -410,7 +411,7 @@ npx prettier --check src/features/auth/pages/LoginPage.tsx src/features/auth/rou
 
 Expected: PASS. Typecheck confirms `App.tsx` no longer references the moved module.
 
-- [ ] **Step 10: Commit.**
+- [ ] **Step 11: Commit.**
 
 ```bash
 git add src/features/auth/ src/app/routes.tsx src/App.tsx
@@ -421,7 +422,7 @@ git commit -m "refactor(fe): extract Login into features/auth + route registry"
 
 # Stage 2 — `tenant` feature
 
-## Task 5: Scaffold + relocate TenantSelection + wire the route registry
+## Task 4: Scaffold + relocate TenantSelection + wire the route registry
 
 **Files:**
 - Create: `src/features/tenant/README.md`, `src/features/tenant/routes.tsx`, `src/features/tenant/index.ts`
@@ -437,7 +438,7 @@ Create `src/features/tenant/README.md`:
 
 Tenant-selection UI. Consumes `shared/tenant` (`useTenant`, `selectTenant`) and `shared/auth`.
 `useTenants` currently serves a mock list (no "list tenants" backend endpoint; real model is
-one-org-per-user via `/org`) — see TD-FE-48. Public surface: `tenantRoutes` (`/tenant-selection`).
+one-org-per-user via `/org`) — see TD-FE-55. Public surface: `tenantRoutes` (`/tenant-selection`).
 ```
 
 - [ ] **Step 2: Move the files.** Run from `frontend/`:
@@ -451,8 +452,11 @@ git mv src/pages/__tests__/useTenants.test.tsx src/features/tenant/hooks/__tests
 
 - [ ] **Step 3: Fix `TenantSelectionPage.tsx` imports + rename the component.**
 
-In `src/features/tenant/pages/TenantSelectionPage.tsx`, rewrite the relative imports —
-`../components/ui/*` → `@/components/ui/*`, `./useTenants` → `../hooks/useTenants`:
+In `src/features/tenant/pages/TenantSelectionPage.tsx`, rewrite the two relative imports —
+`../components/ui/*` → `@/components/ui/*`, and `./useTenants` → `../hooks/useTenants`. (Those are the
+*only* relative imports in this file: `TenantSelectionPage` does **not** import `use-toast` or any other
+relative path. `@/shared/auth`, `@/shared/tenant`, `lucide-react`, `react`, `react-router-dom` are
+already absolute/package imports and stay as-is.)
 
 ```ts
 import { Button } from "@/components/ui/button";
@@ -461,8 +465,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useTenants } from "../hooks/useTenants";
 ```
 
-(Keep `@/shared/auth`, `@/shared/tenant`, `lucide-react`, `react`, `react-router-dom` as-is.) Rename:
-line 14 `const TenantSelection: React.FC = () => {` → `const TenantSelectionPage: React.FC = () => {`,
+Rename: line 14 `const TenantSelection: React.FC = () => {` → `const TenantSelectionPage: React.FC = () => {`,
 and line 101 `export default TenantSelection;` → `export default TenantSelectionPage;`.
 
 - [ ] **Step 4: `useTenants.ts` + its test — no import change.** `useTenants.ts` imports
@@ -556,7 +559,7 @@ git commit -m "refactor(fe): extract TenantSelection into features/tenant + rout
 
 # Stage 3 — `settings` feature
 
-## Task 6: Scaffold + relocate Settings + components + wire the route registry
+## Task 5: Scaffold + relocate Settings + components + wire the route registry
 
 **Files:**
 - Create: `src/features/settings/README.md`, `src/features/settings/routes.tsx`, `src/features/settings/index.ts`
@@ -692,7 +695,20 @@ npx prettier --check src/features/settings/pages/SettingsPage.tsx src/features/s
 
 Expected: PASS.
 
-- [ ] **Step 12: Commit.**
+- [ ] **Step 12: Smoke build (all three features now wired).** Run from `frontend/`:
+
+```bash
+npm run build
+```
+
+Expected: PASS. This is a fast, contention-safe belt-and-suspenders check that all three features'
+route registrations resolve through the real bundler before the heavyweight gate — `verify`'s
+typecheck covers import resolution, and this catches any build-only breakage early. (Note: a *wrong
+path string* in a `routes.tsx` — syntactically valid but pointing at the wrong URL — is **not** caught
+here; that class is covered by the Playwright journeys at Task 7's preflight, deferred by the
+no-mid-flight-e2e constraint.) If `build` fails, STOP and report.
+
+- [ ] **Step 13: Commit.**
 
 ```bash
 git add src/features/settings/ src/app/routes.tsx src/App.tsx
@@ -703,7 +719,7 @@ git commit -m "refactor(fe): extract Settings into features/settings + route reg
 
 # Stage 4 — Cleanup + tech-debt register
 
-## Task 7: Fix stale path comment + record TD-FE entries
+## Task 6: Fix stale path comment + record TD-FE entries
 
 **Files:**
 - Modify: `src/lib/types/escape-hatches.ts` (comment), `docs/TECH_DEBT.md`
@@ -724,29 +740,35 @@ npx prettier --check src/lib/types/escape-hatches.ts
 
 Expected: PASS.
 
-- [ ] **Step 3: Append TD-FE entries to `docs/TECH_DEBT.md`** (provisional 47/48/49 — see Conventions;
-  do NOT run prettier on this file — it is outside the FE prettier gate and prettier corrupts its
-  markdown). Append three entries in the file's existing entry format:
+- [ ] **Step 3: Append TD-FE entries to `docs/TECH_DEBT.md`.** First re-confirm the next free numbers —
+  run from the worktree root: `grep -oE "TD-FE-[0-9]+" docs/TECH_DEBT.md | sort -t- -k3 -n | tail -1`.
+  On this branch (pre-gate-merge) the local file does not yet contain master's 47–53, so use **54/55/56**
+  (master's verified ceiling is 53; these append cleanly at the gate merge). **Do NOT run prettier on
+  `docs/TECH_DEBT.md`** — it is outside the FE prettier gate and prettier corrupts its markdown. Append
+  three entries in the file's existing entry format:
 
-  - **TD-FE-47** — `lib/jwt.ts` + `hooks/useAuth.ts` still in `lib/`/`hooks/` (consumed by
+  - **TD-FE-54** — `lib/jwt.ts` + `hooks/useAuth.ts` still in `lib/`/`hooks/` (consumed by
     mission-control + market-research); promote to `shared/` in Phase 11.
-  - **TD-FE-48** — `tenant/useTenants` serves `MOCK_TENANTS`; no "list tenants" endpoint exists (real
+  - **TD-FE-55** — `tenant/useTenants` serves `MOCK_TENANTS`; no "list tenants" endpoint exists (real
     model is one-org-per-user via `GET /org`). Product question: should a tenant-selection page exist?
-  - **TD-FE-49** — `settings/AgentProfile` ↔ `components/settings/ScoutDeployment` are near-duplicate
+  - **TD-FE-56** — `settings/AgentProfile` ↔ `components/settings/ScoutDeployment` are near-duplicate
     forms; dedup when Phase 9 extracts scout.
+
+  (If the re-confirm grep shows a ceiling ≠ 53 — e.g. another phase merged meanwhile — shift these to
+  the next three free slots and update the `tenant/README.md` TD-FE-55 reference in Task 4 Step 1 to match.)
 
 - [ ] **Step 4: Commit.**
 
 ```bash
 git add docs/TECH_DEBT.md src/lib/types/escape-hatches.ts
-git commit -m "docs(tech-debt): record Phase 10 deferrals (TD-FE-47/48/49) + fix escape-hatches paths"
+git commit -m "docs(tech-debt): record Phase 10 deferrals (TD-FE-54/55/56) + fix escape-hatches paths"
 ```
 
 ---
 
 # Stage 5 — Merge gate (controller-run)
 
-## Task 8: Full serial preflight + integrate
+## Task 7: Full serial preflight + integrate
 
 **Files:** none (verification + merge).
 
@@ -754,20 +776,30 @@ git commit -m "docs(tech-debt): record Phase 10 deferrals (TD-FE-47/48/49) + fix
 
 ```bash
 ls src/pages/Login.tsx src/pages/TenantSelection.tsx src/pages/Settings.tsx src/pages/useLogin.ts src/pages/useTenants.ts src/lib/firebase.ts src/components/settings/useCompanyProfile.ts 2>&1 | sort -u
-git grep -n "@/lib/firebase\|@/components/settings/useCompanyProfile\|from \"\./pages/Login\|from \"\./pages/Settings\|from \"\./pages/TenantSelection" -- src ':!src/features/settings' ':!src/features/auth' ':!src/features/tenant'
+git grep -n "@/lib/firebase\|@/components/settings/useCompanyProfile\|from \"\./pages/Login\|from \"\./pages/Settings\|from \"\./pages/TenantSelection" -- src
 ```
 
-Expected: the `ls` reports "No such file" for every old path; the `git grep` returns nothing.
+Expected: the `ls` reports "No such file" for every old path; the `git grep` returns nothing. (The grep
+scans all of `src` with no path exclusions — these old-path patterns must appear *nowhere* post-refactor,
+so any hit is a real straggler, including in the new feature folders or in any test mock.)
 
-- [ ] **Step 2: Refresh against `master` (if Phase 8 has merged since branch).** Run from the worktree:
+- [ ] **Step 2: Refresh against `master` (Phase 8 is already merged — this WILL bring in changes).** Run from the worktree:
 
 ```bash
 git -C <worktree> fetch origin
 git -C <worktree> merge master
 ```
 
-Resolve the expected `App.tsx` import-cluster conflict (Spec 28 §9) by keeping **all** removals
-(Phase 8's `Signals` removal + Phase 10's `Login`/`Settings`/`TenantSelection` removals). Re-run `npm run verify`.
+Expect conflicts in the shared composition files; resolve as the **union** of both phases:
+  - **`src/App.tsx`** — keep **all** removals (Phase 8's `Signals` import + route removal *and* Phase 10's
+    `Login`/`Settings`/`TenantSelection` import + route removals). Spec 28 §9.
+  - **`src/app/routes.tsx`** — keep **both** import blocks and **both** sets of array spreads: Phase 8's
+    `signalsRoutes` + `strategistRoutes` and Phase 10's `authRoutes` + `tenantRoutes` + `settingsRoutes`.
+    The correct final `featureRoutes` is the union of all five new spreads plus the pre-existing three.
+    Keep imports alphabetical for `import/order`.
+  - **`docs/TECH_DEBT.md`** — Phase 10's 54/55/56 append cleanly after master's 47–53 (no overlap); keep both.
+
+Re-run `npm run verify` after resolving.
 
 - [ ] **Step 3: Full serial preflight (NOT `preflight:par`; ensure no other session shares the box).**
   Run from `frontend/`:
@@ -777,7 +809,10 @@ npm run preflight
 ```
 
 Expected: PASS (typecheck + lint + Vitest full suite + build + Playwright journeys + VR + knip). If VR
-flakes under load, re-run on an idle box — do not accept a red merge gate.
+flakes under load, re-run on an idle box. **Cap reruns at 3:** after 3 consecutive preflight failures,
+STOP and report to the operator with the last failure output — first distinguishing a genuine
+regression from a VR flake (a regression fails deterministically; a flake moves). Do not accept a red
+merge gate, and do not re-run indefinitely.
 
 - [ ] **Step 4: Integrate** (controller, after green preflight):
 
@@ -791,10 +826,16 @@ git push origin master
 
 ## Self-review notes (author)
 
-- **Spec coverage:** §2.1 three features → Tasks 3–6; §5 firebase → Task 1; §5b useCompanyProfile →
-  Task 2; §4 route registry/App.tsx → Tasks 4/5/6 steps 7–8/9–10; §6 ScoutDeployment left → Task 6
-  step 2 note; §8 tests travel → no-change steps; §9 merge safety → Task 8; §10 TD-FE → Task 7.
-- **Divergence logged:** per-feature `App.tsx` edits vs spec's "one late commit" (Conventions).
+- **Spec coverage:** §2.1 three features → Tasks 3–5; §5 firebase → Task 1; §5b useCompanyProfile →
+  Task 2; §4 route registry/App.tsx → Tasks 3/4/5 steps 8–9/7–8/9–10; §6 ScoutDeployment left → Task 5
+  step 2 note; §8 tests travel → no-change steps; §9 merge safety → Task 7; §10 TD-FE → Task 6.
+- **Divergence logged (per-feature App.tsx):** per-feature `App.tsx` edits vs spec's "one late commit"
+  (Conventions) — neutral at merge because integration is `git merge`, not rebase.
+- **Divergence logged (test placement):** plan co-locates tests (`hooks/__tests__/`,
+  `components/__tests__/`) where Spec §3's tree sketches `features/<x>/__tests__/`; co-location matches
+  the established repo convention (e.g. `features/mission-control/pages/__tests__/`). Plan is authoritative.
+- **TD-FE numbering:** Phase 8 merged 47–53 to master, so Phase 10 uses 54/55/56 (re-confirmed at Task 6
+  Step 3), superseding the provisional 47/48/49 in Spec 28 §10.
 - **Type/name consistency:** `LoginPage`/`TenantSelectionPage`/`SettingsPage` default exports;
   `authRoutes`/`tenantRoutes`/`settingsRoutes` named exports, each re-exported from its `index.ts` and
   spread in `app/routes.tsx`.
