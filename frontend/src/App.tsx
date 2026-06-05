@@ -1,13 +1,11 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import PWAInstallPrompt from "./components/PWAInstallPrompt";
-
 import { featureRoutes } from "@/app/routes";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { NotFound, SidebarProvider } from "@/features/shell";
+import { NotFound, PWAInstallPrompt, SidebarProvider } from "@/features/shell";
 import { queryClient } from "@/shared/api/queryClient";
 import { AuthProvider } from "@/shared/auth";
 import { TenantProvider } from "@/shared/tenant";
