@@ -20,6 +20,13 @@ export function CompetitorMnaInsights({
   setLocalInsights,
   handleSaveMnaInsights,
 }: CompetitorMnaInsightsProps) {
+  // Helper: clone insights, apply patch at index, propagate.
+  const updateInsight = (index: number, patch: Partial<MnaInsight>) => {
+    const updated = [...localInsights];
+    updated[index] = { ...updated[index], ...patch };
+    setLocalInsights(updated);
+  };
+
   const insights = localInsights;
 
   if (!insights || insights.length === 0) return null;
@@ -55,24 +62,13 @@ export function CompetitorMnaInsights({
                 <div className="space-y-2">
                   <Input
                     value={insight?.label || ""}
-                    onChange={(e) => {
-                      const updated = [...localInsights];
-                      updated[index] = { ...updated[index], label: e.target.value };
-                      setLocalInsights(updated);
-                    }}
+                    onChange={(e) => updateInsight(index, { label: e.target.value })}
                     className="font-medium text-yellow-800 bg-white"
                     placeholder="Insight label"
                   />
                   <Textarea
                     value={insight?.description || ""}
-                    onChange={(e) => {
-                      const updated = [...localInsights];
-                      updated[index] = {
-                        ...updated[index],
-                        description: e.target.value,
-                      };
-                      setLocalInsights(updated);
-                    }}
+                    onChange={(e) => updateInsight(index, { description: e.target.value })}
                     className="text-yellow-700 bg-white"
                     placeholder="Insight description"
                     rows={3}
