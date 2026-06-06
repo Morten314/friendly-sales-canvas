@@ -6,7 +6,7 @@
 
 **Architecture:** Audit-execute methodology mirrored from Phase 1 (plan 16) and backend Phase L. The phase is **audit-driven**: the decomposition file set is *not* fixed by this plan — it is selected from 13a's merged scorecard at a checkpoint (Stage SELECT) and each selected file becomes its own sub-phase. The variable-cardinality work (dead-code, dedup, decomposition) is expressed as **per-finding loop sub-procedures** (the plan-16 pattern), not enumerated tasks. **13a is its own branch+merge** (it lands the scorecard on `master`); each decomposition sub-phase (13b…) is a separate branch+merge cut against that scorecard. The safety net is the existing layered suite (strict tsc + ESLint + Vitest + RTL + MSW + Playwright + 2% visual regression), plus, for dedup/decomposition, an advisory local `vitest run` + visual-regression pass before each sub-phase's final commit.
 
-**Tech Stack:** Node + TypeScript 5.5 + Vite + Vitest + Playwright + knip 5.88 + tsx. Audit tooling reuses the **`typescript` compiler API** (already a dep — same approach as the existing `scripts/scan-inline-blocks.ts`); **no `ts-morph`/`ast-grep`/`jscpd` is added** unless the raw API proves insufficient for the similarity scan, in which case `ts-morph` is added in its own commit (Spec 32 §3.1, §12 Q3 → resolved here toward raw-API-first).
+**Tech Stack:** Node + TypeScript 5.5 + Vite + Vitest + Playwright + knip 5.88 + tsx + **`ts-morph`** (added as a devDep for the similarity scan — Spec 32 §3.1 / §12 Q3's first-suggested tool). Rationale (revised after plan-review-1): building an equivalent scanner on the raw `typescript` compiler API is a meaningful from-scratch project with JSX/generics edge cases, so the purpose-built library is the lower-risk **and** higher-velocity choice; the dep cost is trivial. The existing `scripts/scan-inline-blocks.ts` stays on the raw API it already uses (no rewrite).
 
 **Spec:** `specs/32-frontend-phase-13-loc-reduction-pass-2-design.md` (round 2, post spec-review-1 / synthesis-1).
 
@@ -24,22 +24,22 @@
 
 **Per-commit gate `G` (inner loop, Spec 32 §8):** `npm run verify` (typecheck + lint + `test:changed`) **and** `npx prettier --check <touched files>` (verify omits `format:check`). Both clean before commit.
 - **Dep/manifest-removal commits additionally run `npm run build`** before committing — `verify` omits `build`, and `vite build` is the dead-dep/transitive-resolution detector. Manifest edits land in their **own** commit (Spec 32 §8).
-- **Dedup and decomposition commits additionally run, before the sub-phase's *final* commit:** `npm run test` (full `vitest run`) + `npm run test:e2e` (Playwright + visual regression). This is the Spec 32 §8 advisory; scorecard-only and manifest-only commits skip it.
+- **Dedup and decomposition commits additionally run, before the sub-phase's *final* commit:** `npm run test` (full `vitest run`) + `npm run test:e2e` (Playwright + visual regression). This is the Spec 32 §8 advisory; scorecard-only and manifest-only commits skip it. **An advisory failure is treated exactly like a gate-G failure:** do not finalize the sub-phase — fix it, or (for a dedup/decomposition that can't be made behavior-neutral) revert the change and **defer the finding** (TD-FE). Advisory failures count toward the 3-attempt abort criterion. **The visual-regression expectation here is component-level ~0% drift on the affected screenshots**, not merely "under the 2% global floor" — a perceptible change below 2% is still a behavior change and is deferred, not shipped (Spec 32 §4.4; synthesis-1 watch-item).
 
 **Merge gate (per sub-phase, controller-run, Spec 32 §8 / §5.3):** full serial `npm run preflight`. Red blocks the merge; no fix-forward.
 
 **Greenness invariant:** every commit ends with `G` clean (plus `build` for manifest commits). A "green sub-phase" (the §5.2 revert anchor) = `npm run verify` passes.
 
-**Abort criterion (Spec 32 §11 / Spec 14 §5.7):** if any single commit's gate cannot be made green within 3 distinct fix attempts, halt and surface to the operator. For decomposition: if a safe structural split is impossible without touching behavior, **defer the file** (log TD-FE) rather than force it — do not abort the phase.
+**Abort criterion (Spec 32 §11 / Spec 14 §5.7):** _Per-commit_ — if any single commit's gate (`G` **or** the advisory) cannot be made green within 3 distinct fix attempts, halt and surface to the operator. _Per-decomposition_ — if a safe structural split is impossible without touching behavior, **defer the file** (log TD-FE) rather than force it. _Phase-wide cost ceiling (Spec 14 §5.7's ≥2× trigger, made concrete)_ — the 13a-i / 13a-iv loops are open-ended in cardinality; **pause and surface to the operator for re-scope** if either (a) >50% of 13a-i candidates require full `investigate` (vs mechanical removal), or (b) the dedup loop (13a-iv) exceeds ~15 candidate groups. The point is to re-scope a runaway audit at a checkpoint, not to grind through low-value findings unbounded.
 
-**TD-FE numbering:** sequential from the current max. As of plan-write the max is `TD-FE-63`, so new deferrals start at `TD-FE-64`. Read the live max immediately before each deferral: `grep -oE 'TD-FE-[0-9]+' docs/TECH_DEBT.md | sort -t- -k3 -n | tail -1`. **`docs/TECH_DEBT.md` is never Prettier-formatted** — edit it surgically.
+**TD-FE numbering:** sequential from the current max. As of plan-write the max is `TD-FE-63`, so new deferrals start at `TD-FE-64`. Read the live max immediately before each deferral: `grep -oE 'TD-FE-[0-9]+' docs/TECH_DEBT.md | sort -t- -k3 -n | tail -1`. **Decomposition sub-phases run serially** (Phase 13 is solo per Spec 32's concurrency note), so the runtime grep is collision-free; if a future operator ever parallelizes them, pre-allocate a TD-FE block per branch first. **`docs/TECH_DEBT.md` is never Prettier-formatted** — edit it surgically.
 
 ---
 
 ## File Structure
 
 **Created (13a):**
-- `frontend/scripts/scan-similar-symbols.ts` — similarity scan (typescript-compiler-API; groups near-identical exported components/hooks by normalized structural fingerprint)
+- `frontend/scripts/scan-similar-symbols.ts` — similarity scan (`ts-morph`; groups near-identical exported components/hooks by normalized structural fingerprint)
 - `frontend/scripts/scan-inline-blocks.ts` — **extended** with an `--enumerate` flag that lists (rather than filters) outer-scope-referencing near-identical blocks (Spec 32 §3.1; Phase 1 handoff)
 - `docs/audits/<DATE>-frontend-loc-pass-2-knip.txt` + `.json` — standard knip re-run
 - `docs/audits/<DATE>-frontend-loc-pass-2-knip-ui-sweep.txt` — knip with the `components/ui/**` ignore removed (shadcn prune input)
@@ -53,7 +53,7 @@
 - `docs/audits/<DATE>-frontend-loc-pass-2-decomposition-selection.md` — the ranked decomposition file set + cut rationale (resolves Spec 32 §12 Q1)
 
 **Modified:**
-- `frontend/package.json` / `package-lock.json` — only if dead deps are found (13a-i) or `ts-morph` is added (13a-0 fallback)
+- `frontend/package.json` / `package-lock.json` — `ts-morph` added as a devDep (13a-0, its own commit); plus removals if dead deps are found (13a-i)
 - `frontend/knip.json` — only if a config hint regresses (not expected)
 - Variable source files — dead-code removal (13a-i), conservative-defer trims (13a-ii), dedup (13a-iv), decomposition (13b…13N)
 - `docs/TECH_DEBT.md` — close TD-FE-1..7; append TD-FE-64+ deferrals
@@ -112,7 +112,7 @@ Record the top 30. Confirm the spec-write anchors (useMarketResearchData / DataS
 - [ ] **Step 6: Confirm the bundle baseline + scripts exist.**
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
-ls docs/audits/2026-05-26-frontend-bundle-baseline.json
+ls docs/audits/*-frontend-bundle-baseline.json
 cd frontend && npm run | grep -E 'verify|preflight|knip|bundle:check|build|test:e2e'
 ```
 Expected: baseline JSON present; all scripts listed. The scorecard's bundle delta (13a-vii) reads this baseline via `bundle:check`.
@@ -159,18 +159,25 @@ git commit -m "chore(fe): add --enumerate to scan-inline-blocks (Phase 13 13a-0;
 
 **Files:** Create `frontend/scripts/scan-similar-symbols.ts`.
 
-- [ ] **Step 1: Implement the scan using the `typescript` compiler API** (no new dep; mirror the `scan-inline-blocks.ts` pattern). Algorithm:
-  1. Build a `ts.Program` over `tsconfig.app.json`'s file set, excluding `src/components/ui/**`, tests, and files < 40 LOC.
-  2. For each top-level exported function/const-arrow component (`*.tsx`) and each exported hook (`use*` in `*.ts`/`*.tsx`), compute a **normalized structural fingerprint**: walk the AST, emit a token stream of `SyntaxKind`s (identifiers and literals replaced by placeholders `ID`/`LIT`, JSX tag names kept), then take the multiset of 5-token shingles.
+- [ ] **Step 1a: Add `ts-morph` as a devDep in its own commit** (Spec 32 §8 manifest-in-own-commit):
+```bash
+cd frontend
+npm install -D ts-morph
+npm run build   # confirm the install didn't perturb the bundle
+```
+Commit (`frontend/package.json` + `frontend/package-lock.json` only): `chore(fe): add ts-morph devDep for the similarity scan (13a-0)`.
+- [ ] **Step 1b: Implement `scan-similar-symbols.ts` with ts-morph.** Algorithm:
+  1. `new Project({ tsConfigFilePath: 'tsconfig.app.json' })`; take source files, excluding `src/components/ui/**`, tests, and files < 40 LOC.
+  2. For each top-level exported component (`*.tsx` function/const-arrow returning JSX) and each exported hook (`use*`), compute a **normalized structural fingerprint** via `node.forEachDescendant`: emit a token stream of syntax-kind names with identifiers/literals replaced by `ID`/`LIT` (JSX tag names kept), then take the multiset of 5-token shingles.
   3. Group any pair whose shingle **Jaccard similarity ≥ 0.85** into a candidate group.
   4. Emit `{ "groups": [ { "members": [{file, symbol, loc}], "similarity": <min pairwise>, "kind": "component"|"hook" } ] }`.
-- [ ] **Step 2: Run it; sanity-check against a known near-duplicate.**
+- [ ] **Step 2: Run it; spot-check precision (bounded).**
 ```bash
 cd frontend
 npx tsx scripts/scan-similar-symbols.ts > ../docs/audits/<DATE>-frontend-loc-pass-2-similar.json 2>&1 || true
 node -e "const g=require('../docs/audits/<DATE>-frontend-loc-pass-2-similar.json').groups||[]; console.log('candidate groups:',g.length); g.slice(0,10).forEach(x=>console.log(x.kind,x.similarity.toFixed(2),x.members.map(m=>m.symbol).join(' ~ ')))"
 ```
-Expected: a small list. (If the customers ICP-card family — `SuggestedICPCards` / `SuggestedICPCard` — or any chat wrappers surface, the scan is working; they are *candidates*, judged in 13a-iv.) If the raw-API fingerprint proves too noisy/slow to be useful, **stop, add `ts-morph` in its own commit** (`chore(fe): add ts-morph devDep for similarity scan`) and reimplement using its AST helpers — record the switch in the scorecard (§12 Q3 resolution).
+Expected: a small list. (If the customers ICP-card family — `SuggestedICPCards` / `SuggestedICPCard` — or chat wrappers surface, the scan is working; they are *candidates*, judged in 13a-iv.) **Bound (no indefinite tuning):** manually spot-check the top groups; if >30% are false positives (structurally similar but not behaviorally unifiable), raise the threshold (>0.85) or the shingle size in **one** follow-up commit, then proceed. Record the final threshold + the §12 Q3 resolution (ts-morph) in the scorecard.
 - [ ] **Step 3: Gate `G`** (verify + `prettier --check scripts/scan-similar-symbols.ts`). The artifact JSON is committed with the other audit outputs in Task A3.
 - [ ] **Step 4: Commit** (script only):
 ```bash
@@ -221,7 +228,7 @@ git commit -m "chore(audit): Phase 13 13a candidate list (knip + ui-sweep + simi
 
 **Files:** variable. This is a **loop sub-procedure** (plan-16 Step 4 pattern), not a fixed step count.
 
-- [ ] **Step prep: Build the work queue** from the standard knip JSON (dead files, then dead exports, then dead deps). Order dead files in topological removal order (a file no other dead file imports goes first). Reuse the Phase-1 topo-sort script verbatim if helpful: `git show 5099110:plans/16-frontend-phase-1-loc-reduction.md` contains it (Task 4 Step 4-prep) — or order by hand for a small list.
+- [ ] **Step prep: Build the work queue** from the standard knip JSON (dead files, then dead exports, then dead deps). Order dead files in topological removal order (a file no other dead file imports goes first). Reuse the Phase-1 topo-sort script if helpful: it's in `plans/16-frontend-phase-1-loc-reduction.md` (Task 4 Step 4-prep, on `master`) — or order by hand for a small list.
 
 - [ ] **Step loop (dead files): apply the 6-check kit per file.** For each candidate `<PATH_REL>` (frontend-relative), with `BASE=$(basename "$PATH_REL" | sed 's/\.tsx\?$//')`:
 ```bash
@@ -238,6 +245,7 @@ echo "C6 tests";    rg -n "${BASE}" src/ e2e/ | grep -E "(__tests__|\.test\.|\.s
   - `shared/*`, `*/services/`, `*/lib/`, `*/hooks/` (cross-cutting infra) → conservative posture → on any uncertainty, **defer** (`TD-FE-<n>`).
   - `features/*/components|pages` → aggressive posture → **remove** unless a true inbound exists (a comment-only `C4` match is not an inbound).
   - Test-only inbound → **keep — test-only** (no TD-FE).
+  - **Generic-named files** (`index.*`, `utils.*`, `types.*`, `constants.*`, `helpers.*`): the `C4` plain-text `rg` is unreliable (the basename matches unrelated tokens), so trust knip's path-aware graph + `C1`/`C3` (import / re-export *by path*) over `C4`, and scope `C4` to the file's import neighborhood. A spurious `C4` match pushes toward **keep** (conservative) — so the failure direction is safe (dead code left, not a broken build), but it costs precision; the path-scoped checks recover it.
   For **remove**: `git rm frontend/<PATH_REL>`, run `npm run verify` (typecheck catches broken imports); if green, commit with the 6-line check-kit body:
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
@@ -251,7 +259,7 @@ EOF
 ```
   If verify fails on removal → `git checkout -- frontend/<PATH_REL>`, switch verdict to **keep** (record the failing inbound), continue to next file.
 
-- [ ] **Step loop (dead exports):** for each unused export, confirm zero inbound (C1–C4 above on the symbol), then delete the `export` keyword (or the whole declaration if otherwise unused). Gate `G`, commit `refactor(fe): drop unused export <symbol> from <file> (13a-i)`.
+- [ ] **Step loop (dead exports):** for each unused export, confirm zero inbound (C1–C4 above on the symbol), then delete the `export` keyword (or the whole declaration if otherwise unused). Gate `G`, commit `refactor(fe): drop unused export <symbol> from <file> (13a-i)`. **Recovery on G failure** (e.g. a re-export chain that C1–C4 missed): `git checkout -- frontend/<file>` to revert the in-file edit, switch the verdict to **keep** (record the surfaced inbound), continue to the next symbol.
 
 - [ ] **Step (dead deps):** if knip flags unused deps, remove them from `package.json` in one commit, `npm install`, then **`npm run build`** (the dep-resolution detector) before committing. A build failure ⇒ false-positive ⇒ add the dep back, record as `keep`. Commit `chore(fe): remove N unused deps (13a-i)` listing each in the body.
 
@@ -268,7 +276,7 @@ sed -n '/## TD-FE-3 /,/## TD-FE-7 /p' docs/TECH_DEBT.md
 ```
 Build the symbol list (the ~22 symbols across TD-FE-3/4/5/6).
 
-- [ ] **Step 2: Per symbol, re-trace under strict TS.** For each symbol at its current path, run the C1–C4 inbound checks. **Remove** the symbol only if zero inbound AND `npm run verify` stays green after removal (strict tsc + tests are the new safety Phase 1 lacked). Otherwise **keep** with the reason. One commit per file touched: `refactor(fe): drop confirmed-dead <symbol> (13a-ii; TD-FE-<n>)`.
+- [ ] **Step 2: Per symbol, re-trace under strict TS.** First **skip any symbol already removed or closed in Task B** — knip-driven dead exports (Task B) and the TD-FE-3..6 set can overlap; don't double-process. For each remaining symbol at its current path, run the C1–C4 inbound checks. **Remove** the symbol only if zero inbound AND `npm run verify` stays green after removal (strict tsc + tests are the new safety Phase 1 lacked). Otherwise **keep** with the reason. One commit per file touched: `refactor(fe): drop confirmed-dead <symbol> (13a-ii; TD-FE-<n>)`.
 
 - [ ] **Step 3: Close each TD entry** surgically in `docs/TECH_DEBT.md` (no Prettier) — append a resolution line to TD-FE-3/4/5/6: `**Resolved (Phase 13 13a-ii, <DATE>):** removed <symbols> / kept <symbols> because <reason>.` Commit `docs: close TD-FE-3..6 (Phase 13 13a-ii conservative-defer re-eval)`.
 
@@ -294,16 +302,19 @@ Zero matches → **remove** (`git rm frontend/src/components/ui/${NAME}.tsx`); a
 
 #### Task E — Process similarity-scan + inline-block candidates
 
-**Files:** variable. **Loop sub-procedure.** Every commit here gets the §8 advisory (`npm run test` + `npm run test:e2e`) before it lands, since dedup is behavior-touching.
+**Files:** variable. **Loop sub-procedure.** Every commit here gets the §8 advisory (`npm run test` + `npm run test:e2e`) before it lands, since dedup is behavior-touching. If the similarity + inline scans surface >~15 candidate groups, apply the phase-wide re-scope trigger (see Abort criterion) and surface to the operator for prioritization before grinding through them.
 
 - [ ] **Step loop (near-identical components):** for each group in `…-similar.json` with `kind: component`:
   - Read all members. Decide **mergeable** only if the behavioral delta is confined to **configurable props/literals** (Spec 32 §4.4 — *not* a tautological "identical"). If the delta is structural/logic (the Phase 9 `ScoutChatWithHistory`↔`ProfilerChatWithHistory` situation needed a shared substrate + design judgment), and unifying would change behavior, **defer** (`TD-FE-64+`) — do not force.
   - If mergeable and both members live in the **same feature**: extract a base component + thin overlays in place. If they span **two features**: this is a shared extraction → it goes to `src/shared/` only under the ≥2-feature rule, with an ADR if non-trivial (handled in 13a-v's ADR slot).
-  - After the edit: `npm run test` + `npm run test:e2e` (visual regression must stay green at 2% — **a visually-ambiguous merge is deferred, not shipped**, per synthesis-1 open question). Gate `G`. Commit `refactor(fe): dedup <names> to base+overlay (13a-iv)`.
+  - After the edit: `npm run test` + `npm run test:e2e` (component-level **~0% visual drift on the affected screenshots** — *not* merely under the 2% global floor; **a visually-perceptible merge, even sub-2%, is deferred, not shipped**, per synthesis-1 open question + Spec 32 §4.4). Gate `G`. Commit `refactor(fe): dedup <names> to base+overlay (13a-iv)`.
 
 - [ ] **Step loop (near-duplicate hooks):** same procedure; extract the shared core, parameterize the one difference. Commit `refactor(fe): extract shared core of <hooks> (13a-iv)`.
 
-- [ ] **Step loop (inline triplets / trivial wrappers):** from `…-inline-blocks.json` (enumerate) — for a `useState`+`useEffect` triplet repeated ≥3× with a unifiable outer-scope-ref set, extract a hook; for a single-use one-line wrapper component, inline it unless it adds semantic clarity (keep + note). Gate `G` + advisory, commit `refactor(fe): extract <hook> from repeated inline block (13a-iv)` / `refactor(fe): inline trivial wrapper <name> (13a-iv)`.
+- [ ] **Step loop (inline triplets / trivial wrappers):** two distinct candidate sources (Spec §3.1 bullet 5 — the similarity scan won't surface either, so identify them explicitly):
+  - *Inline triplets* — from `…-inline-blocks.json` (enumerate): a `useState`+`useEffect` triplet repeated ≥3× with a unifiable outer-scope-ref set → extract a hook.
+  - *Single-use trivial wrappers* — these are structurally unique (so absent from the similarity scan) and have one inbound (so knip keeps them). List small components and check each: `find src/features src/shared -name '*.tsx' -not -path '*/ui/*' | xargs wc -l | awk '$1<15 {print $2}'`; for each, if its body is a one-line passthrough (returns a single child element with spread props) **and** `C1` shows exactly one importer, it's a candidate — inline it unless the wrapper adds genuine semantic clarity (keep + note).
+  Gate `G` + advisory, commit `refactor(fe): extract <hook> from repeated inline block (13a-iv)` / `refactor(fe): inline trivial wrapper <name> (13a-iv)`.
 
 - [ ] **Step (codemod decision, Spec 32 §6):** if any pattern above recurs AND is mechanically transformable, stand up `frontend/scripts/codemods/<name>.ts` (typescript-API or ts-morph) with `__tests__/<name>/{input,expected}.ts` (read-apply-compare Vitest), one codemod per commit. Otherwise record "none — manual" for the scorecard. Do not build a codemod for a one-off.
 
@@ -402,7 +413,7 @@ find src -type f \( -name '*.ts' -o -name '*.tsx' \) -not -path 'src/components/
 
 **Files:** `specs/14-frontend-refactoring-master-plan-design.md`; `docs/TECH_DEBT.md` (final deferrals).
 
-- [ ] **Step 1:** On the final decomposition sub-phase's branch (or a short close branch off `master`), flip the Spec 14 §4 status row `13 — LOC reduction pass #2` to `done` with the merge date, and append a frozen-record delta block under the Phase 13 master-plan block summarizing outcomes (LOC delta, files decomposed vs deferred, ui-patterns created-or-not, codemods shipped-or-none, TD-FE-1..7 closed, new TD-FE-64+). Per the frozen-record convention, **do not rewrite** the original Phase 13 intent prose.
+- [ ] **Step 1:** Use the final decomposition sub-phase's branch if it has **not** yet merged; otherwise create a `phase-13-close` branch off `master`. Flip the Spec 14 §4 status row `13 — LOC reduction pass #2` to `done` with the merge date, and append a frozen-record delta block under the Phase 13 master-plan block summarizing outcomes (LOC delta, files decomposed vs deferred, ui-patterns created-or-not, codemods shipped-or-none, TD-FE-1..7 closed, new TD-FE-64+). Per the frozen-record convention, **do not rewrite** the original Phase 13 intent prose.
 - [ ] **Step 2:** Ensure every new deferral is in `docs/TECH_DEBT.md` (TD-FE-64+), surgically (no Prettier).
 - [ ] **Step 3:** Gate `G` + full preflight, commit `docs(fe): close Phase 13 — flip Spec 14 status, record deltas`, merge.
 
