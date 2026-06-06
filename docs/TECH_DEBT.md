@@ -33,6 +33,8 @@ considering removal.
 
 **Owner:** TBD.
 
+**Resolved (Phase 13 13a-vi, 2026-06-06):** kept — /tenant-selection relocated to src/features/tenant/routes.tsx (tenantRoutes); reached via programmatic post-login redirect and covered by e2e/journeys/01-login-tenant-mission.spec.ts (the named pull-forward trigger). Intentionally unlisted from Sidebar (auth/onboarding flow). Re-confirmed reachable.
+
 ---
 
 ## TD-FE-2 — Deferred orphan-route investigation: /scout-deployment
@@ -63,6 +65,8 @@ Confirm with Brewra devs whether `/scout-deployment` is intentionally unlisted f
 kit on `src/pages/ScoutDeployment.tsx` for full dead-file removal.
 
 **Owner:** TBD.
+
+**Resolved (Phase 13 13a-vi, 2026-06-06):** kept — /scout-deployment relocated to src/features/scout/routes.tsx; ScoutDeploymentPage wraps the live ScoutDeployment form and ScoutDeploymentDetails renders inside IntelligenceTab. Intentional direct-URL/admin surface, not dead. Re-confirmed reachable.
 
 ---
 
