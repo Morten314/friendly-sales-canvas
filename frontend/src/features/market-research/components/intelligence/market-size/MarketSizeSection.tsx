@@ -2,11 +2,12 @@ import { Bot, PieChart, X, Clock, ChevronDown, ChevronUp, Check } from "lucide-r
 import React, { useState, useEffect, useRef } from "react";
 
 import type { EditRecord } from "../../types";
+import type { KeyMetricConfig } from "../shared/KeyMetricsGrid";
+import { KeyMetricsGrid } from "../shared/KeyMetricsGrid";
 
 import { ExecutiveSummary } from "./ExecutiveSummary";
 import { ExportOptions } from "./ExportOptions";
 import { GrowthProjections } from "./GrowthProjections";
-import { KeyMetrics } from "./KeyMetrics";
 import { MarketDrivers } from "./MarketDrivers";
 import { MarketEntry } from "./MarketEntry";
 import { MarketSizeBySegment } from "./MarketSizeBySegment";
@@ -275,6 +276,42 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
     });
   };
 
+  const keyMetricsConfig: KeyMetricConfig[] = [
+    {
+      id: "tamValue",
+      label: "Total Addressable Market",
+      value: localTamValue || view.tamValue,
+      draft: localTamValue,
+      onChange: setLocalTamValue,
+      placeholder: "e.g., $4.2B",
+      displayCaption: "Growing 15% YoY",
+      cardClassName: "bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg",
+      valueClassName: "text-2xl font-bold text-blue-600",
+    },
+    {
+      id: "samValue",
+      label: "Serviceable Addressable Market",
+      value: localSamValue || view.samValue,
+      draft: localSamValue,
+      onChange: setLocalSamValue,
+      placeholder: "e.g., $2.1B",
+      displayCaption: "Mid-market focus",
+      cardClassName: "bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg",
+      valueClassName: "text-2xl font-bold text-green-600",
+    },
+    {
+      id: "GrowthRate",
+      label: "Growth Rate",
+      value: localGrowthRate || view.GrowthRate,
+      draft: localGrowthRate,
+      onChange: setLocalGrowthRate,
+      placeholder: "e.g., 25%",
+      displayCaption: "Fastest growing region",
+      cardClassName: "bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg",
+      valueClassName: "text-2xl font-bold text-purple-600",
+    },
+  ];
+
   const handleSaveStrategicRecommendations = () => {
     onStrategicRecommendationsChange(localStrategicRecommendations);
     toast({
@@ -530,18 +567,10 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
               />
 
               {/* Key Metrics Edit */}
-              <KeyMetrics
+              <KeyMetricsGrid
                 editing={isEditing}
                 deleted={deletedSections.has("key-metrics")}
-                tamValue={localTamValue || view.tamValue}
-                samValue={localSamValue || view.samValue}
-                growthRate={localGrowthRate || view.GrowthRate}
-                tamDraft={localTamValue}
-                samDraft={localSamValue}
-                growthRateDraft={localGrowthRate}
-                onTamChange={setLocalTamValue}
-                onSamChange={setLocalSamValue}
-                onGrowthRateChange={setLocalGrowthRate}
+                metrics={keyMetricsConfig}
                 onCommit={handleSaveKeyMetrics}
                 onDelete={() => onDeleteSection("key-metrics")}
               />
@@ -724,18 +753,10 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                 />
 
                 {/* Key Metrics Cards - Always Visible */}
-                <KeyMetrics
+                <KeyMetricsGrid
                   editing={isEditing}
                   deleted={deletedSections.has("key-metrics")}
-                  tamValue={localTamValue || view.tamValue}
-                  samValue={localSamValue || view.samValue}
-                  growthRate={localGrowthRate || view.GrowthRate}
-                  tamDraft={localTamValue}
-                  samDraft={localSamValue}
-                  growthRateDraft={localGrowthRate}
-                  onTamChange={setLocalTamValue}
-                  onSamChange={setLocalSamValue}
-                  onGrowthRateChange={setLocalGrowthRate}
+                  metrics={keyMetricsConfig}
                   onCommit={handleSaveKeyMetrics}
                   onDelete={() => onDeleteSection("key-metrics")}
                 />

@@ -1,11 +1,13 @@
 import { ChevronDown, ChevronUp } from "lucide-react";
 import React, { useState, useEffect } from "react";
 
+import type { KeyMetricConfig } from "../shared/KeyMetricsGrid";
+import { KeyMetricsGrid } from "../shared/KeyMetricsGrid";
+
 import { EditToolbar } from "./EditToolbar";
 import { ExecutiveSummary } from "./ExecutiveSummary";
 import { ExportFooter } from "./ExportFooter";
 import { normalizeDeletedSections, buildEditSnapshot } from "./industryTrends";
-import { KeyMetrics } from "./KeyMetrics";
 import { RegionalHotspots } from "./RegionalHotspots";
 import { RisksWatchouts } from "./RisksWatchouts";
 import { SectionHeader } from "./SectionHeader";
@@ -301,6 +303,47 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
     });
   };
 
+  const keyMetricsConfig: KeyMetricConfig[] = [
+    {
+      id: "aiAdoption",
+      label: "AI Adoption Rate",
+      value: displayData.aiAdoption,
+      draft: editAiAdoption,
+      onChange: setEditAiAdoption,
+      placeholder: "e.g., 78%",
+      displayCaption: "Enterprise pilots",
+      cardClassName: "bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg",
+      valueClassName: "text-2xl font-bold text-blue-600",
+      editInputClassName: "text-2xl font-bold text-blue-600 border-blue-200 focus:border-blue-400",
+    },
+    {
+      id: "cloudMigration",
+      label: "Cloud Migration Increase",
+      value: displayData.cloudMigration,
+      draft: editCloudMigration,
+      onChange: setEditCloudMigration,
+      placeholder: "e.g., +45%",
+      displayCaption: "Year over year",
+      cardClassName: "bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg",
+      valueClassName: "text-2xl font-bold text-green-600",
+      editInputClassName:
+        "text-2xl font-bold text-green-600 border-green-200 focus:border-green-400",
+    },
+    {
+      id: "regulatory",
+      label: "Regulatory Changes",
+      value: displayData.regulatory,
+      draft: editRegulatory,
+      onChange: setEditRegulatory,
+      placeholder: "e.g., 12 new",
+      displayCaption: "Impacting sector",
+      cardClassName: "bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg",
+      valueClassName: "text-2xl font-bold text-purple-600",
+      editInputClassName:
+        "text-2xl font-bold text-purple-600 border-purple-200 focus:border-purple-400",
+    },
+  ];
+
   const handleSaveTrendSnapshots = () => {
     if (onIndustryTrendSnapshotsChange) {
       onIndustryTrendSnapshotsChange(editTrendSnapshots);
@@ -377,20 +420,13 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
             />
 
             {/* Key Metrics Edit */}
-            <KeyMetrics
+            <KeyMetricsGrid
               editing
               deleted={normalizedDeletedSections.has("key-metrics")}
-              aiAdoption={displayData.aiAdoption}
-              cloudMigration={displayData.cloudMigration}
-              regulatory={displayData.regulatory}
-              aiAdoptionDraft={editAiAdoption}
-              cloudMigrationDraft={editCloudMigration}
-              regulatoryDraft={editRegulatory}
-              onAiAdoptionChange={setEditAiAdoption}
-              onCloudMigrationChange={setEditCloudMigration}
-              onRegulatoryChange={setEditRegulatory}
+              metrics={keyMetricsConfig}
               onCommit={handleSaveKeyMetrics}
               onDelete={() => onIndustryTrendsDeleteSection("key-metrics")}
+              deleteButtonClassName="pointer-events-auto z-50"
             />
 
             {/* Trend Snapshots Edit */}
@@ -484,20 +520,13 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
               />
 
               {/* Key Metrics Cards */}
-              <KeyMetrics
+              <KeyMetricsGrid
                 editing={false}
                 deleted={false}
-                aiAdoption={displayData.aiAdoption}
-                cloudMigration={displayData.cloudMigration}
-                regulatory={displayData.regulatory}
-                aiAdoptionDraft={editAiAdoption}
-                cloudMigrationDraft={editCloudMigration}
-                regulatoryDraft={editRegulatory}
-                onAiAdoptionChange={setEditAiAdoption}
-                onCloudMigrationChange={setEditCloudMigration}
-                onRegulatoryChange={setEditRegulatory}
+                metrics={keyMetricsConfig}
                 onCommit={handleSaveKeyMetrics}
                 onDelete={() => onIndustryTrendsDeleteSection("key-metrics")}
+                deleteButtonClassName="pointer-events-auto z-50"
               />
             </div>
 
