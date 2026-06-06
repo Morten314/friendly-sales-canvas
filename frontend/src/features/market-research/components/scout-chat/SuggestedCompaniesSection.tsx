@@ -1,5 +1,4 @@
-// HANDOFF → scout (Spec 24 §7). This component is NOT part of market-research;
-// it stays here until the scout feature phase relocates + decomposes it.
+// Suggested-companies section — part of the market-research scout-chat UI.
 
 import { Plus, Lightbulb } from "lucide-react";
 

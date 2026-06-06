@@ -1,5 +1,5 @@
-// HANDOFF → customers (Spec 24 §7). This component is NOT part of market-research;
-// it stays here until the customers feature phase relocates + decomposes it.
+// Lead-stream table — part of the market-research lead-stream cluster.
+// Relocated into features/market-research in Phase 11 (TD-FE-63).
 
 import {
   Bot,
