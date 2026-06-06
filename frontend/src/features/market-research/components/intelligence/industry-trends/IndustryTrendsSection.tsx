@@ -303,6 +303,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
     });
   };
 
+  // Depends on component state/setters — must stay in the render body (do not hoist to module scope).
   const keyMetricsConfig: KeyMetricConfig[] = [
     {
       id: "aiAdoption",
