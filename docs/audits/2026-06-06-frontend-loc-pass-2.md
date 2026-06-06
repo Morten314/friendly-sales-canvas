@@ -318,4 +318,7 @@ preflight commit and did not propagate to master.
 
 ### Preflight result
 
-_Pending — controller will append after merge gate runs._
+**GREEN** (full serial `npm run preflight`, 2026-06-06, exit 0): typecheck ✓, lint ✓, format:check ✓,
+test (672 unit tests) ✓, build ✓, bundle:check ✓ (advisory: raw +1.88% / gzip +2.13% vs the
+2026-05-26 baseline — cumulative Phase 6–12 feature growth, not 13a; CSS −15.0% reflects the shadcn
+prune), test:e2e (14/14, visual-regression snapshot-stable) ✓, knip --strict ✓.
