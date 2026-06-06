@@ -1875,3 +1875,24 @@ Each product's backend exists.
 **Owner:** TBD.
 
 _Phase 12 note: these entries were authored as provisional TD-FE-47–49 and renumbered to TD-FE-57–59 at the Phase 12 merge, since Phase 8 (47–53) and Phase 10 (54–56) had already landed those integers on master._
+
+---
+
+## TD-FE-64 — CSV smart-quote normalization is a no-op (`normalizeCsvAsciiDoubleQuotes`)
+
+**Date logged:** 2026-06-06
+**Origin:** Discovered during the Phase 13b seam-test pass (extraction of `csvHelpers.ts` from `DataSourcesManager`). Pre-existing — the code was moved verbatim; the bug predates Phase 13.
+
+**Current state:**
+`frontend/src/features/mission-control/components/data-sources/csvHelpers.ts` (the `normalizeCsvAsciiDoubleQuotes` helper, ~line 11) replaces curly/smart double-quotes with the codepoint U+201D (RIGHT DOUBLE QUOTATION MARK) instead of the ASCII straight double-quote U+0022. The function's own docstring states the intent is to convert curly quotes to ASCII `"` so RFC-4180 quote handling works. Because the replacement target is itself a curly quote, the normalization is effectively a no-op: downstream delimiter detection and quoted-field splitting (which look for U+0022) never see a straight quote, so CSVs containing curly quotes (e.g. Excel/Word exports) can have multiline quoted fields fail to merge and column counts break.
+
+**Why deferred:**
+Phase 13b is behavior-preserving structural decomposition only (Spec 32 §5.2). Fixing this is a logic change that alters CSV-parsing behavior and warrants its own deliberate change + validation, not a slip-in during a structural split. The decomposition preserved the (buggy) behavior exactly.
+
+**Fix:**
+Change the replacement string in `csvHelpers.ts` from the U+201D character to an ASCII U+0022 `"`; then un-skip the two documenting tests in `__tests__/csvHelpers.test.ts` (added in Phase 13b, commit `0e8ffec`) that already assert the corrected behavior.
+
+**Pull-forward trigger:**
+A CSV-import correctness pass, or any report of curly-quoted CSV fields mis-parsing on upload.
+
+**Owner:** TBD.
