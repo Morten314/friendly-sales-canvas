@@ -676,6 +676,13 @@ export default function ConnectorApprovals({
     });
   };
 
+  const resetGoogleAnalyticsAuthModal = () => {
+    setIsGoogleAnalyticsAuthModalOpen(false);
+    setGoogleAnalyticsEmail("");
+    setGoogleAnalyticsSourceToConnect(null);
+    setGoogleAnalyticsAuthStep("signin");
+  };
+
   const handleGoogleAnalyticsSignIn = async () => {
     if (!googleAnalyticsSourceToConnect) return;
 
@@ -728,19 +735,13 @@ export default function ConnectorApprovals({
 
     // Close modal after showing success message
     setTimeout(() => {
-      setIsGoogleAnalyticsAuthModalOpen(false);
-      setGoogleAnalyticsEmail("");
-      setGoogleAnalyticsSourceToConnect(null);
-      setGoogleAnalyticsAuthStep("signin");
+      resetGoogleAnalyticsAuthModal();
     }, 1500);
   };
 
   const handleGoogleAnalyticsDeny = () => {
     // Close modal and reset form
-    setIsGoogleAnalyticsAuthModalOpen(false);
-    setGoogleAnalyticsEmail("");
-    setGoogleAnalyticsSourceToConnect(null);
-    setGoogleAnalyticsAuthStep("signin");
+    resetGoogleAnalyticsAuthModal();
 
     toast({
       title: "Connection not authorized",
@@ -2733,10 +2734,7 @@ export default function ConnectorApprovals({
         open={isGoogleAnalyticsAuthModalOpen}
         onOpenChange={(open) => {
           if (!open) {
-            setIsGoogleAnalyticsAuthModalOpen(false);
-            setGoogleAnalyticsEmail("");
-            setGoogleAnalyticsSourceToConnect(null);
-            setGoogleAnalyticsAuthStep("signin");
+            resetGoogleAnalyticsAuthModal();
           }
         }}
       >
@@ -2802,12 +2800,7 @@ export default function ConnectorApprovals({
               <div className="flex justify-end gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    setIsGoogleAnalyticsAuthModalOpen(false);
-                    setGoogleAnalyticsEmail("");
-                    setGoogleAnalyticsSourceToConnect(null);
-                    setGoogleAnalyticsAuthStep("signin");
-                  }}
+                  onClick={resetGoogleAnalyticsAuthModal}
                   disabled={isGoogleAnalyticsSigningIn}
                 >
                   Cancel
@@ -2908,12 +2901,7 @@ export default function ConnectorApprovals({
               </div>
               <div className="flex justify-end gap-2">
                 <Button
-                  onClick={() => {
-                    setIsGoogleAnalyticsAuthModalOpen(false);
-                    setGoogleAnalyticsEmail("");
-                    setGoogleAnalyticsSourceToConnect(null);
-                    setGoogleAnalyticsAuthStep("signin");
-                  }}
+                  onClick={resetGoogleAnalyticsAuthModal}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   Done
