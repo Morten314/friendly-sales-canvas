@@ -37,7 +37,7 @@ const firstString = (...vs: unknown[]): string => {
 /** Narrow unknown array to unknown[] (or empty). */
 const asArray = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 
-export interface ProfilerAcceptedIcpDisplayMeta {
+interface ProfilerAcceptedIcpDisplayMeta {
   regions: string[];
   industry: string;
   companySize: string;
@@ -142,27 +142,6 @@ export function copyProfilerDisplayMetaToProfileId(
   } catch {
     /* ignore */
   }
-}
-
-/** True when API stored Profiler placeholders (global + unknown industry). */
-export function isProfilerPlaceholderIcp(icp: IcpRecord): boolean {
-  const pr = String(icp.primary_region ?? icp.primaryRegion ?? "")
-    .trim()
-    .toLowerCase();
-  const ind = Array.isArray(icp.industry) ? icp.industry : [];
-  const singleUnknown = ind.length === 1 && String(ind[0]).trim().toLowerCase() === "unknown";
-  return pr === "global" && singleUnknown;
-}
-
-/**
- * Legacy helper: merge only when API used the classic global + unknown placeholder shape.
- * Prefer {@link mergeProfilerAcceptedIcpDisplay} for Customer Profile / Current ICPs.
- */
-export function mergeProfilerAcceptedIcpDisplayIfPlaceholder(icp: IcpRecord): IcpRecord {
-  const hasId = icp.id ?? icp.icp_id ?? icp.customer_profile_icp_id;
-  if (!hasId) return icp;
-  if (!isProfilerPlaceholderIcp(icp)) return icp;
-  return mergeProfilerAcceptedIcpDisplay(icp);
 }
 
 /** Backend GET may return `icp_id` (or aliases) while local merge/display key on `id`. */
