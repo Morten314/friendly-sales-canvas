@@ -10,7 +10,7 @@ import type { ArtefactItem } from "../types";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Layout } from "@/features/shell";
-import { usePageTitle } from "@/hooks/usePageTitle";
+import { usePageTitle } from "@/shared/hooks/usePageTitle";
 
 const ArtifactsPage = () => {
   usePageTitle("Artefacts - Brewra");

@@ -4,7 +4,7 @@ import {
   type SuggestedIcpsResponse,
 } from "../contracts";
 
-import { apiFetch, apiFetchJson, buildApiUrl, buildIcpUrl } from "@/lib/api";
+import { apiFetch, apiFetchJson, buildApiUrl, buildIcpUrl } from "@/shared/api/transport";
 import {
   buildCustomerProfileSavePayload,
   extractIcpsArrayFromCustomerProfileResponse,

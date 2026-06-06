@@ -20,7 +20,9 @@ never a deep path. Today the surface is routes-only; exports are added lazily if
 
 ## Key files
 
-- `pages/CustomersPage.tsx` — route shell; three tabs; the `window`-event header bridge; inner legacy `<ErrorBoundary>` around tabs (relocated T2).
+- `pages/CustomersPage.tsx` — route shell; three tabs; the `window`-event header bridge; inner `<ErrorBoundary>` around tabs (now `./components/ErrorBoundary` — relocated Phase 11).
+- `components/ErrorBoundary.tsx` — local error boundary (relocated from `components/common/ErrorBoundary` Phase 11).
+- `components/icp-intelligence/EditDropdownMenu.tsx` — dropdown edit menu (relocated from `components/market-research/` Phase 11; TD-FE-63).
 - `components/icp-intelligence/SuggestedICPCards.tsx` — Profiler ICP container; reads via the service/hook layer (T11), writes via mutation hooks (T16); decomposed T12.
 - `components/icp-intelligence/{SuggestedICPCard,CurrentIcpsTable}.tsx` — extracted render units (T12).
 - `components/icp-intelligence/icpMapping.ts` — pure flexible-`/icp` mappers/normalizers (T9).
@@ -38,7 +40,7 @@ never a deep path. Today the surface is routes-only; exports are added lazily if
 
 - May import from: `@/features/customers/*` (self, relative), `@/shared/*`, `@/components/ui/*`, npm.
 - May import another feature **only** via its `index.ts` (`@/features/<other>`), never a deep path.
-- Transitional (Phases 4b–12) legacy imports retained: `@/lib/api`, `@/lib/types/escape-hatches`, `@/hooks/usePageTitle`, `@/hooks/use-toast`, `@/utils/cacheUtils`, `@/components/common/ErrorBoundary`, and `@/components/market-research/EditDropdownMenu` (legacy dir not yet migrated). The chat substrate now imports from `@/shared/chat` — a proper shared module, no longer a transitional/legacy path.
+- May import: `@/features/customers/*` (self), `@/shared/*`, `@/components/ui/*`, npm. Legacy paths updated as of Phase 11: `@/lib/api` → `@/shared/api/transport`; `@/hooks/usePageTitle` → `@/shared/hooks/usePageTitle`; `@/hooks/use-toast` → `@/components/ui/use-toast`; `@/components/common/ErrorBoundary` → `./components/ErrorBoundary` (now local); `@/components/market-research/EditDropdownMenu` → `./components/icp-intelligence/EditDropdownMenu` (now local). `@/shared/types/escape-hatches` and `@/shared/lib/cacheUtils` are already on their final paths. The chat substrate imports from `@/shared/chat`.
 - Keeps its **own** `/icp` + `customer_profile` read — does not adopt mission-control's `useICPs` (TD-FE-42).
 
 ## Pending handoffs

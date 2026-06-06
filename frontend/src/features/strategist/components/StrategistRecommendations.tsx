@@ -13,9 +13,9 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-import { heatmapLeads } from "@/components/market-research/lead-stream/leadData";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { heatmapLeads } from "@/shared/lib/leadData";
 
 interface Recommendation {
   title: string;

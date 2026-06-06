@@ -8,7 +8,7 @@ import { SuggestedICPCards } from "../SuggestedICPCards";
 import { PROFILER_DISMISSED_RECOMMENDED_IDS_KEY } from "../suggestedIcpStorage";
 
 import { Toaster } from "@/components/ui/toaster";
-import { BACKEND_BASE_URL } from "@/lib/api";
+import { BACKEND_BASE_URL } from "@/shared/api/transport";
 import { server } from "@/test/msw/server";
 
 // The container reads currentUser + orgId from @/shared/auth's useAuth — the same

@@ -10,12 +10,12 @@
  * ICPManager, or DataSourcesManager.
  *
  * Heavy infrastructure mocked:
- *  - @/hooks/useAuth — provides a stable uid + orgId without Firebase
+ *  - @/shared/auth (useAuthToken) — provides a stable uid + orgId without Firebase
  *  - @/shared/company-profile — returns no data + not loading,
  *    so no network requests fire (server.listen({ onUnhandledRequest: "error" }))
  *  - @/shared/profiler — no-op cache helpers to skip localStorage/session writes
  *  - @/features/shell Layout — renders children directly (no router/sidebar needed)
- *  - @/utils/cacheUtils (dynamic import inside page) — no-op setUserLocalStorage
+ *  - @/shared/lib/cacheUtils (dynamic import inside page) — no-op setUserLocalStorage
  *  - All four child components — stable testid stubs
  *
  * Tab-switch implementation note:
@@ -35,8 +35,8 @@ import MissionControlPage from "../MissionControlPage";
 // ---------------------------------------------------------------------------
 // Auth mock — stable uid + orgId, no Firebase calls.
 // ---------------------------------------------------------------------------
-vi.mock("@/hooks/useAuth", () => ({
-  useAuth: () => ({ currentUser: { uid: "u1" }, orgId: "brewra" }),
+vi.mock("@/shared/auth", () => ({
+  useAuthToken: () => ({ currentUser: { uid: "u1" }, orgId: "brewra" }),
 }));
 
 // ---------------------------------------------------------------------------
@@ -70,7 +70,7 @@ vi.mock("@/features/shell", () => ({
 // ---------------------------------------------------------------------------
 // cacheUtils dynamic import inside the page's read-effect.
 // ---------------------------------------------------------------------------
-vi.mock("@/utils/cacheUtils", () => ({
+vi.mock("@/shared/lib/cacheUtils", () => ({
   setUserLocalStorage: () => {},
   getUserLocalStorage: () => null,
   getUserCacheKey: () => "",

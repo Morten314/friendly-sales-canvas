@@ -8,7 +8,7 @@ import RegulatoryComplianceSection from "./intelligence/regulatory-compliance/Re
 import ScoutChatPanel from "./scout-chat/ScoutChatPanel";
 import type { EditRecord, TrendSnapshot } from "./types";
 
-import type { UntypedBackendProfile, UntypedReportState } from "@/lib/types/escape-hatches";
+import type { UntypedBackendProfile, UntypedReportState } from "@/shared/types/escape-hatches";
 
 export interface MarketIntelligenceSectionsProps {
   // General refresh state for all components

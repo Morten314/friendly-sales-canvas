@@ -1,6 +1,6 @@
 import type { NBAItem, SignalCard, SourceCitation } from "../types";
 
-import type { UntypedBackendSignal } from "@/lib/types/escape-hatches";
+import type { UntypedBackendSignal } from "@/shared/types/escape-hatches";
 
 // Helper function to generate a stable content-based ID for a signal
 export const getSignalContentHash = (signal: SignalCard): string => {

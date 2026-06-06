@@ -42,4 +42,4 @@ not rewrite.
 
 - May import from: `@/features/strategist/*` (self, relative), `@/shared/*`, `@/components/ui/*`, npm.
 - May import another feature **only** via its `index.ts` (`@/features/<other>`), never a deep path.
-- Transitional (Phases 4b–12) legacy imports retained: `@/hooks/usePageTitle`, `@/lib/api` (`BACKEND_BASE_URL`, in `StrategistWorkspace`).
+- Legacy paths updated as of Phase 11: `@/hooks/usePageTitle` → `@/shared/hooks/usePageTitle`; `@/lib/api` → `@/shared/api/transport` (`BACKEND_BASE_URL`, in `StrategistWorkspace`).

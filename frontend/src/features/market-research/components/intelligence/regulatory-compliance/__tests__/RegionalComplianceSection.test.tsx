@@ -5,7 +5,7 @@ import { RegionalComplianceSection } from "../RegionalComplianceSection";
 import type { UntypedRegionData } from "../types";
 
 const mockToast = vi.fn();
-vi.mock("@/hooks/use-toast", () => ({
+vi.mock("@/components/ui/use-toast", () => ({
   useToast: () => ({ toast: mockToast }),
 }));
 

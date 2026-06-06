@@ -15,7 +15,7 @@ import type { Agent, NBAItem, SignalCard as SignalCardType } from "../types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { sanitizeAnswerText } from "@/lib/utils";
+import { sanitizeAnswerText } from "@/shared/lib/sanitizeAnswerText";
 
 interface SignalCardProps {
   signal: SignalCardType;

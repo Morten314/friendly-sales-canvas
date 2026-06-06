@@ -17,10 +17,10 @@ import { useMarketSize } from "./useMarketSize";
 
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useToast } from "@/hooks/use-toast";
-import type { UntypedBackendProfile } from "@/lib/types/escape-hatches";
+import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/shared/auth";
-import { setUserLocalStorage } from "@/utils/cacheUtils";
+import { setUserLocalStorage } from "@/shared/lib/cacheUtils";
+import type { UntypedBackendProfile } from "@/shared/types/escape-hatches";
 
 interface MarketSizeSectionProps {
   isEditing: boolean;

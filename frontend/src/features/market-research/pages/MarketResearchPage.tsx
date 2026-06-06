@@ -12,13 +12,17 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 import IntelligenceTab from "../components/intelligence/IntelligenceTab";
+import LeadStreamTab from "../components/lead-stream/LeadStreamTab";
 import { MarketDetailDrawer } from "../components/MarketDetailDrawer";
 import { ScoutSettingsForm } from "../components/ScoutSettingsForm";
 import TrendsTab from "../components/trends/TrendsTab";
 import { useMarketResearchData } from "../hooks/useMarketResearchData";
+import {
+  buildLeadStreamChatContext,
+  LEAD_STREAM_CHAT_CONTEXT_KEY,
+} from "../lib/leadStreamChatContext";
 import type { ScoutResearchContext } from "../types";
 
-import LeadStreamTab from "@/components/market-research/lead-stream/LeadStreamTab";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,12 +31,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Layout } from "@/features/shell";
 import type { DeploymentData } from "@/features/shell";
-import { usePageTitle } from "@/hooks/usePageTitle";
-import type { UntypedLead } from "@/lib/types/escape-hatches";
-import {
-  buildLeadStreamChatContext,
-  LEAD_STREAM_CHAT_CONTEXT_KEY,
-} from "@/utils/leadStreamChatContext";
+import { usePageTitle } from "@/shared/hooks/usePageTitle";
+import type { UntypedLead } from "@/shared/types/escape-hatches";
 
 // Minimal shape the detail drawer needs for its (currently always-null) selected market.
 interface Market {

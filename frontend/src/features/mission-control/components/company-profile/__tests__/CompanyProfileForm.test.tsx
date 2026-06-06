@@ -9,10 +9,10 @@ import CompanyProfileForm from "../CompanyProfileForm";
 import { server } from "@/test/msw/server";
 
 // Mock auth so the form resolves a userId + orgId and the useCompanyProfile
-// query is enabled (auto-fetch on mount). The form imports useAuth from
-// @/hooks/useAuth.
-vi.mock("@/hooks/useAuth", () => ({
-  useAuth: () => ({ currentUser: { uid: "u1" }, orgId: "brewra" }),
+// query is enabled (auto-fetch on mount). The form imports useAuthToken from
+// @/shared/auth.
+vi.mock("@/shared/auth", () => ({
+  useAuthToken: () => ({ currentUser: { uid: "u1" }, orgId: "brewra" }),
 }));
 
 function renderForm(onSavedChange?: (saved: boolean) => void) {

@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/shared/auth";
-import { getUserLocalStorage } from "@/utils/cacheUtils";
+import { getUserLocalStorage } from "@/shared/lib/cacheUtils";
 
 interface ScoutChatPanelProps {
   showScoutChat: boolean;

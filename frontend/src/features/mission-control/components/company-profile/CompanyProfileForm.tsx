@@ -21,10 +21,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
-import type { UntypedBackendApiResponse } from "@/lib/types/escape-hatches";
+import { useToast } from "@/components/ui/use-toast";
 import { qk } from "@/shared/api/queryKeys";
+import { useAuthToken } from "@/shared/auth";
 import { useCompanyProfile } from "@/shared/company-profile";
 import {
   ensureMissionProfilerScope,
@@ -32,6 +31,7 @@ import {
   getMissionControlCompanyProfileJson,
   invalidateProfilerCache,
 } from "@/shared/profiler";
+import type { UntypedBackendApiResponse } from "@/shared/types/escape-hatches";
 
 interface CompanyProfileFormProps {
   /**
@@ -47,7 +47,7 @@ interface CompanyProfileFormProps {
 
 export default function CompanyProfileForm({ onSavedChange }: CompanyProfileFormProps) {
   const { toast } = useToast();
-  const { currentUser, orgId } = useAuth();
+  const { currentUser, orgId } = useAuthToken();
   const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
   const queryClient = useQueryClient();
 
@@ -87,7 +87,7 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
   const loadProfileFromLocalStorage = useCallback(
     async (userId: string): Promise<Record<string, unknown> | null> => {
       try {
-        const { getUserLocalStorage } = await import("@/utils/cacheUtils");
+        const { getUserLocalStorage } = await import("@/shared/lib/cacheUtils");
         const localData = getUserLocalStorage("companyProfile", userId);
         if (localData) {
           const localProfile = JSON.parse(localData) as Record<string, unknown>;
@@ -280,7 +280,7 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
 
       // Save to localStorage for offline access and refresh persistence
       try {
-        const { setUserLocalStorage } = await import("@/utils/cacheUtils");
+        const { setUserLocalStorage } = await import("@/shared/lib/cacheUtils");
         const dataToSave = {
           ...data,
           user_id: currentUser.uid,

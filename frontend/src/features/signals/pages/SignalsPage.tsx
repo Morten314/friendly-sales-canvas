@@ -17,12 +17,12 @@ import type { Agent, NBAItem, SignalCard as SignalCardType } from "../types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/toaster";
+import { useToast } from "@/components/ui/use-toast";
 import { Layout } from "@/features/shell";
-import { useToast } from "@/hooks/use-toast";
-import type { UntypedBackendSignal } from "@/lib/types/escape-hatches";
 import { useAuth } from "@/shared/auth";
 import { useSignalAction } from "@/shared/chat/useSignalAction";
 import { useSignalAsk } from "@/shared/chat/useSignalAsk";
+import type { UntypedBackendSignal } from "@/shared/types/escape-hatches";
 
 type ActionType = "accept" | "dismiss" | "save" | "ask";
 

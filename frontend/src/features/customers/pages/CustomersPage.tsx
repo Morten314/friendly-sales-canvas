@@ -3,14 +3,14 @@ import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
 import { ProfilerChatWithHistory } from "../components/chat/ProfilerChatWithHistory";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { ICPIntelligence } from "../components/icp-intelligence/ICPIntelligence";
 import { LeadStreamPanel } from "../components/lead-stream/LeadStream";
 
-import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Layout } from "@/features/shell";
-import { usePageTitle } from "@/hooks/usePageTitle";
 import type { SignalsChatContext } from "@/shared/chat";
+import { usePageTitle } from "@/shared/hooks/usePageTitle";
 
 const CustomersPage = () => {
   usePageTitle("👤 Profiler - Brewra");

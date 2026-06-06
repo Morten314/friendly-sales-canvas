@@ -8,7 +8,7 @@ import type {
   UntypedRegionData,
   UntypedVisualDataCard,
   UntypedRegulatoryUpdate,
-} from "@/lib/types/escape-hatches";
+} from "@/shared/types/escape-hatches";
 
 export type {
   UntypedBackendApiResponse,

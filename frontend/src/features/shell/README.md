@@ -20,6 +20,7 @@ Internals (`components/Header`, `components/Sidebar`, `components/ProfileDialog`
 
 - `index.ts` — public re-exports (the cross-feature surface above)
 - `components/Layout.tsx`, `components/Header.tsx`, `components/Sidebar.tsx`, `components/ProfileDialog.tsx` — the frame
+- `components/PWAInstallPrompt.tsx` — PWA install banner (relocated from legacy root Phase 11; barrel-exported via `index.ts`)
 - `ProtectedRoute.tsx` — route guard
 - `SidebarContext.tsx` — sidebar (mobile-open) state
 - `types.ts` — feature-local types

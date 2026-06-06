@@ -9,7 +9,7 @@ import {
   rejectRecommendedIcp,
 } from "../customers";
 
-import { BACKEND_BASE_URL } from "@/lib/api";
+import { BACKEND_BASE_URL } from "@/shared/api/transport";
 import { server } from "@/test/msw/server";
 
 describe("fetchSuggestedIcps", () => {

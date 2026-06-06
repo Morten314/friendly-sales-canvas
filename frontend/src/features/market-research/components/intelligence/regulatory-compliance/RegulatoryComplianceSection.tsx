@@ -12,15 +12,15 @@ import type { RegulatoryComplianceSectionProps } from "./types";
 import { useRegulatoryCompliance } from "./useRegulatoryCompliance";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { BACKEND_BASE_URL } from "@/lib/api";
+import { BACKEND_BASE_URL } from "@/shared/api/transport";
+import { useAuth } from "@/shared/auth";
+import { getUserLocalStorage, setUserLocalStorage } from "@/shared/lib/cacheUtils";
 import type {
   UntypedBackendApiResponse,
   UntypedRegulatoryUpdate,
   UntypedVisualDataCard,
   UntypedRegionData,
-} from "@/lib/types/escape-hatches";
-import { useAuth } from "@/shared/auth";
-import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
+} from "@/shared/types/escape-hatches";
 
 const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = ({
   isEditing,

@@ -11,8 +11,8 @@ import { ScoutDeploymentDetails } from "./ScoutDeploymentDetails";
 
 import { Button } from "@/components/ui/button";
 import type { DeploymentData } from "@/features/shell";
-import type { UntypedReportState } from "@/lib/types/escape-hatches";
 import { FeatureErrorBoundary } from "@/shared/components";
+import type { UntypedReportState } from "@/shared/types/escape-hatches";
 
 type MarketResearchData = ReturnType<typeof useMarketResearchData>;
 

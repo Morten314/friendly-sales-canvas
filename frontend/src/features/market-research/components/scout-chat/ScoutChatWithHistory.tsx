@@ -1,6 +1,10 @@
 import { Users } from "lucide-react";
 import { useState, useCallback } from "react";
 
+import {
+  LEAD_STREAM_CHAT_CONTEXT_KEY,
+  type LeadStreamChatContext,
+} from "../../lib/leadStreamChatContext";
 import type { EditRecord } from "../types";
 
 import { AddLeadModal } from "./AddLeadModal";
@@ -10,10 +14,6 @@ import { SuggestedCompaniesSection } from "./SuggestedCompaniesSection";
 import { Button } from "@/components/ui/button";
 import type { SignalsChatContext, ChatSession, ChatWithHistoryConfig } from "@/shared/chat";
 import { ChatWithHistory, ContextChat } from "@/shared/chat";
-import {
-  LEAD_STREAM_CHAT_CONTEXT_KEY,
-  type LeadStreamChatContext,
-} from "@/utils/leadStreamChatContext";
 
 interface ScoutSessionMeta {
   /** Full LeadStreamChatContext; its sessionTitle (when set) overrides the session's stored title in the sidebar. */

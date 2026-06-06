@@ -48,11 +48,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
-import { buildApiUrl } from "@/lib/api";
-import jwtManager from "@/lib/jwt";
-import type { UntypedBackendDocument } from "@/lib/types/escape-hatches";
+import { useToast } from "@/components/ui/use-toast";
+import { buildApiUrl } from "@/shared/api/transport";
+import { useAuthToken } from "@/shared/auth";
+import jwtManager from "@/shared/auth/jwt";
+import type { UntypedBackendDocument } from "@/shared/types/escape-hatches";
 
 interface CompanyProfile {
   companyName?: string;
@@ -61,7 +61,7 @@ interface CompanyProfile {
 
 const DataSourcesManager: React.FC = () => {
   const { toast } = useToast();
-  const { currentUser, orgId } = useAuth();
+  const { currentUser, orgId } = useAuthToken();
   const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
 
   // Read hooks (TanStack Query). The two GET reads are served by these hooks; the

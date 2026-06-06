@@ -1,7 +1,7 @@
 import type { ExistingICP, SuggestedICP, ICPAnalysis } from "../../types";
 
-import type { UntypedProfilerIcpRecord } from "@/lib/types/escape-hatches";
 import { mergeProfilerAcceptedIcpDisplay, PROFILER_ICP_DISPLAY_KEY } from "@/shared/profiler";
+import type { UntypedProfilerIcpRecord } from "@/shared/types/escape-hatches";
 
 export const analyzeICP = (icp: ExistingICP): ICPAnalysis => {
   const strengths: string[] = [];

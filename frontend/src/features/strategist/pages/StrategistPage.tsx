@@ -9,7 +9,7 @@ import type { StrategistContext } from "../types";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Layout } from "@/features/shell";
-import { usePageTitle } from "@/hooks/usePageTitle";
+import { usePageTitle } from "@/shared/hooks/usePageTitle";
 
 const StrategistPage = () => {
   usePageTitle("🧭 Strategist - Brewra");

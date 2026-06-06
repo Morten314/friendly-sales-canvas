@@ -1,7 +1,7 @@
 // Feature-local types for `customers`, extracted verbatim from
 // SuggestedICPCards.tsx (Spec 26 §3). The escape-hatch `UntypedProfilerIcpRecord`
 // retype stays deferred (TD-FE-9/10 posture; Phase 13) — import it from
-// "@/lib/types/escape-hatches" where needed.
+// "@/shared/types/escape-hatches" where needed.
 
 export interface ExistingICP {
   id: string;

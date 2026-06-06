@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { CompanyProfileResponse } from "@/shared/api/contracts";
 import { useAuth } from "@/shared/auth";
 import { useCompanyProfile, useSaveCompanyProfile } from "@/shared/company-profile";
-import { setUserLocalStorage } from "@/utils/cacheUtils";
+import { setUserLocalStorage } from "@/shared/lib/cacheUtils";
 
 interface SocialMediaUrl {
   platform: string;

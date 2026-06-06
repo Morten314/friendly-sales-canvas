@@ -2,21 +2,13 @@ import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import jwtManager from "@/lib/jwt";
 import { apiGet, authEndpointRequest } from "@/shared/api/client";
-import { rateLimiter } from "@/shared/api/rateLimiter";
+import jwtManager from "@/shared/auth/jwt";
 import { server } from "@/test/msw/server";
 
 const Health = z.object({ ok: z.boolean() });
 
 afterEach(() => vi.restoreAllMocks());
-
-describe("client.ts — single rate-limiter invariant (R3)", () => {
-  it("the lib shim's rateLimitManager IS the shared rateLimiter instance", async () => {
-    const { rateLimitManager } = await import("@/lib/rateLimitManager");
-    expect(rateLimitManager).toBe(rateLimiter);
-  });
-});
 
 describe("client.ts — normal path injects JWT", () => {
   it("apiGet routes through apiFetch, which calls getAuthHeader", async () => {

@@ -1,9 +1,10 @@
 import { BarChart3, Clock, TrendingUp, Users, X } from "lucide-react";
 
+import MiniLineChart from "../../MiniLineChart";
+import MiniPieChart from "../../MiniPieChart";
+
 import type { UntypedBackendApiResponse, UntypedVisualDataCard } from "./types";
 
-import MiniLineChart from "@/components/MiniLineChart";
-import MiniPieChart from "@/components/MiniPieChart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 

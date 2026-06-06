@@ -4,23 +4,24 @@
 // Owns the data layer only — NOT routing, the scout cross-tab pair, the analysis handlers, or signalsChatContext.
 import React, { useState, useEffect, useRef } from "react";
 
-import { useToast } from "@/hooks/use-toast";
-import { buildApiUrl } from "@/lib/api";
-import { toUTCTimestamp, isTimestampNewer, logTimestampComparison } from "@/lib/timestampUtils";
+import { logApiCallResult } from "../lib/apiUtils";
+import { toUTCTimestamp, isTimestampNewer, logTimestampComparison } from "../lib/timestampUtils";
+
+import { useToast } from "@/components/ui/use-toast";
+import { buildApiUrl } from "@/shared/api/transport";
+import { useAuth } from "@/shared/auth";
+import {
+  getUserLocalStorage,
+  setUserLocalStorage,
+  removeUserLocalStorage,
+} from "@/shared/lib/cacheUtils";
 import type {
   UntypedReportState,
   UntypedUiComponent,
   UntypedBackendApiResponse,
   UntypedCascadeContext,
   UntypedVisualDataCardRaw,
-} from "@/lib/types/escape-hatches";
-import { useAuth } from "@/shared/auth";
-import { logApiCallResult } from "@/utils/apiUtils";
-import {
-  getUserLocalStorage,
-  setUserLocalStorage,
-  removeUserLocalStorage,
-} from "@/utils/cacheUtils";
+} from "@/shared/types/escape-hatches";
 
 // Module augmentation: window-attached refresh-coordination + debug helpers.
 // These are written in this file and read elsewhere within it; declaring them

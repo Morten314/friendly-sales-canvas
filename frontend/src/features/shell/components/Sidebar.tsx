@@ -12,7 +12,6 @@
 // // } from "lucide-react";
 // // import { useState } from "react";
 // // import { Link } from "react-router-dom";
-// // import { cn } from "@/lib/utils";
 // // import { Button } from "@/components/ui/button";
 
 // // type NavItem = {
@@ -130,7 +129,6 @@
 // } from "lucide-react";
 // import { useState } from "react";
 // import { Link } from "react-router-dom";
-// import { cn } from "@/lib/utils";
 // import { Button } from "@/components/ui/button";
 // import {
 //   Collapsible,
@@ -334,11 +332,11 @@ import { ProfileDialog } from "./ProfileDialog";
 import { Button } from "@/components/ui/button";
 import { PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/components/ui/use-mobile";
+import { cn } from "@/components/ui/utils";
 import { useAuth } from "@/shared/auth";
+import { clearUserCache } from "@/shared/lib/cacheUtils";
 import { useTenant } from "@/shared/tenant";
-import { clearUserCache } from "@/utils/cacheUtils";
 
 type NavItem = {
   icon: React.ElementType;

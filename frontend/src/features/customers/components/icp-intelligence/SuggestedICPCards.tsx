@@ -42,10 +42,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ToastAction } from "@/components/ui/toast";
-import { useToast } from "@/hooks/use-toast";
-import { buildApiUrl } from "@/lib/api";
-import type { UntypedProfilerIcpRecord } from "@/lib/types/escape-hatches";
+import { useToast } from "@/components/ui/use-toast";
+import { buildApiUrl } from "@/shared/api/transport";
 import { useAuth } from "@/shared/auth";
+import { getUserLocalStorage, setUserLocalStorage } from "@/shared/lib/cacheUtils";
 import {
   ensureMissionProfilerScope,
   isProfilerCacheValid,
@@ -59,7 +59,7 @@ import {
   resolveAcceptedPersistedIcpId,
   removeProfilerAcceptedIcpDisplayMeta,
 } from "@/shared/profiler";
-import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
+import type { UntypedProfilerIcpRecord } from "@/shared/types/escape-hatches";
 
 /** Dev-only logs for verifying Refresh → GET /icp → mapped cards/reports. Strip or disable for production noise. */
 function profilerIcpDebug(...args: unknown[]) {

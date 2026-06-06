@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { useSuggestedIcps } from "../useSuggestedIcps";
 
-import { BACKEND_BASE_URL } from "@/lib/api";
+import { BACKEND_BASE_URL } from "@/shared/api/transport";
 import { server } from "@/test/msw/server";
 
 function wrapper({ children }: { children: ReactNode }) {

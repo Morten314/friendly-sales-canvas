@@ -10,7 +10,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 
 import { auth } from "./firebase";
 
-import { buildApiUrl } from "@/lib/api";
+import { buildApiUrl } from "@/shared/api/transport";
 
 interface AuthContextType {
   currentUser: User | null;
