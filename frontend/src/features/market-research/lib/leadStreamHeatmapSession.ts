@@ -2,7 +2,7 @@ import type { HeatmapLead } from "@/shared/lib/leadData";
 
 const PREFIX = "leadStreamMarketScores_v1";
 
-export function leadStreamHeatmapCacheKey(userId: string, orgId: string): string {
+function leadStreamHeatmapCacheKey(userId: string, orgId: string): string {
   return `${PREFIX}:${userId}:${orgId}`;
 }
 

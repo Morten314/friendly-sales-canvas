@@ -1,16 +1,17 @@
-import { Bot, PieChart, X, Clock, ChevronDown, ChevronUp, Check } from "lucide-react";
+import { BarChart3, Bot, PieChart, X, Clock, ChevronDown, ChevronUp, Check } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 
 import type { EditRecord } from "../../types";
+import { IntelligenceSectionHeader } from "../shared/IntelligenceSectionHeader";
+import type { KeyMetricConfig } from "../shared/KeyMetricsGrid";
+import { KeyMetricsGrid } from "../shared/KeyMetricsGrid";
 
 import { ExecutiveSummary } from "./ExecutiveSummary";
 import { ExportOptions } from "./ExportOptions";
 import { GrowthProjections } from "./GrowthProjections";
-import { KeyMetrics } from "./KeyMetrics";
 import { MarketDrivers } from "./MarketDrivers";
 import { MarketEntry } from "./MarketEntry";
 import { MarketSizeBySegment } from "./MarketSizeBySegment";
-import { MarketSizeHeader } from "./MarketSizeHeader";
 import { ErrorState, LoadingState, NoDataState } from "./states";
 import { StrategicRecommendations } from "./StrategicRecommendations";
 import { useMarketSize } from "./useMarketSize";
@@ -275,6 +276,43 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
     });
   };
 
+  // Depends on component state/setters — must stay in the render body (do not hoist to module scope).
+  const keyMetricsConfig: KeyMetricConfig[] = [
+    {
+      id: "tamValue",
+      label: "Total Addressable Market",
+      value: localTamValue || view.tamValue,
+      draft: localTamValue,
+      onChange: setLocalTamValue,
+      placeholder: "e.g., $4.2B",
+      displayCaption: "Growing 15% YoY",
+      cardClassName: "bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg",
+      valueClassName: "text-2xl font-bold text-blue-600",
+    },
+    {
+      id: "samValue",
+      label: "Serviceable Addressable Market",
+      value: localSamValue || view.samValue,
+      draft: localSamValue,
+      onChange: setLocalSamValue,
+      placeholder: "e.g., $2.1B",
+      displayCaption: "Mid-market focus",
+      cardClassName: "bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg",
+      valueClassName: "text-2xl font-bold text-green-600",
+    },
+    {
+      id: "GrowthRate",
+      label: "Growth Rate",
+      value: localGrowthRate || view.GrowthRate,
+      draft: localGrowthRate,
+      onChange: setLocalGrowthRate,
+      placeholder: "e.g., 25%",
+      displayCaption: "Fastest growing region",
+      cardClassName: "bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg",
+      valueClassName: "text-2xl font-bold text-purple-600",
+    },
+  ];
+
   const handleSaveStrategicRecommendations = () => {
     onStrategicRecommendationsChange(localStrategicRecommendations);
     toast({
@@ -493,10 +531,17 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       <div
         className={`bg-white rounded-lg border border-gray-200 p-6 ${showScoutChat ? "flex-1" : ""}`}
       >
-        <MarketSizeHeader
+        <IntelligenceSectionHeader
           onModify={handleModify}
           isSplitView={isSplitView}
           onScoutIconClick={onScoutIconClick}
+          icon={BarChart3}
+          title="Market Size & Opportunity"
+          scoutContext="market-size"
+          iconClassName="h-5 w-5 text-blue-600"
+          editButtonClassName="text-blue-800 hover:text-blue-900"
+          scoutButtonClassName="text-blue-600 hover:text-blue-700 transition-all duration-200 relative"
+          scoutGradientClassName="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"
         />
 
         {/* Loading and Error States — driven by the 5b hook */}
@@ -530,18 +575,10 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
               />
 
               {/* Key Metrics Edit */}
-              <KeyMetrics
+              <KeyMetricsGrid
                 editing={isEditing}
                 deleted={deletedSections.has("key-metrics")}
-                tamValue={localTamValue || view.tamValue}
-                samValue={localSamValue || view.samValue}
-                growthRate={localGrowthRate || view.GrowthRate}
-                tamDraft={localTamValue}
-                samDraft={localSamValue}
-                growthRateDraft={localGrowthRate}
-                onTamChange={setLocalTamValue}
-                onSamChange={setLocalSamValue}
-                onGrowthRateChange={setLocalGrowthRate}
+                metrics={keyMetricsConfig}
                 onCommit={handleSaveKeyMetrics}
                 onDelete={() => onDeleteSection("key-metrics")}
               />
@@ -724,18 +761,10 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                 />
 
                 {/* Key Metrics Cards - Always Visible */}
-                <KeyMetrics
+                <KeyMetricsGrid
                   editing={isEditing}
                   deleted={deletedSections.has("key-metrics")}
-                  tamValue={localTamValue || view.tamValue}
-                  samValue={localSamValue || view.samValue}
-                  growthRate={localGrowthRate || view.GrowthRate}
-                  tamDraft={localTamValue}
-                  samDraft={localSamValue}
-                  growthRateDraft={localGrowthRate}
-                  onTamChange={setLocalTamValue}
-                  onSamChange={setLocalSamValue}
-                  onGrowthRateChange={setLocalGrowthRate}
+                  metrics={keyMetricsConfig}
                   onCommit={handleSaveKeyMetrics}
                   onDelete={() => onDeleteSection("key-metrics")}
                 />

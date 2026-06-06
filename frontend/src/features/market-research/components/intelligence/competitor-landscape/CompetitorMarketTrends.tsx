@@ -23,6 +23,13 @@ export const CompetitorMarketTrends: React.FC<CompetitorMarketTrendsProps> = ({
   setLocalCharts,
   handleSaveMarketTrends,
 }) => {
+  // Helper: clone charts, apply patch at index, propagate.
+  const updateChart = (index: number, patch: Partial<TrendChart>) => {
+    const updated = [...localCharts];
+    updated[index] = { ...updated[index], ...patch };
+    setLocalCharts(updated);
+  };
+
   const charts = localCharts;
 
   if (!charts || charts.length === 0) return null;
@@ -59,27 +66,20 @@ export const CompetitorMarketTrends: React.FC<CompetitorMarketTrendsProps> = ({
                 <div className="space-y-3">
                   <Input
                     value={chart.name}
-                    onChange={(e) => {
-                      const updated = [...localCharts];
-                      updated[index] = { ...updated[index], name: e.target.value };
-                      setLocalCharts(updated);
-                    }}
+                    onChange={(e) => updateChart(index, { name: e.target.value })}
                     className="font-medium text-gray-900 bg-white mb-3"
                     placeholder="Chart name"
                   />
                   <Textarea
                     value={Array.isArray(chart.xAxis) ? chart.xAxis.join(", ") : chart.xAxis}
                     onChange={(e) => {
-                      const updated = [...localCharts];
                       const xAxisArray = e.target.value
                         .split(",")
                         .map((s) => s.trim())
                         .filter((s) => s);
-                      updated[index] = {
-                        ...updated[index],
+                      updateChart(index, {
                         xAxis: xAxisArray.length === 1 ? xAxisArray[0] : xAxisArray,
-                      };
-                      setLocalCharts(updated);
+                      });
                     }}
                     className="text-sm text-gray-700 bg-white"
                     placeholder="X-axis labels (comma-separated)"

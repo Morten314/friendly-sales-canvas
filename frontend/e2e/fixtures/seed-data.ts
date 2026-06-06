@@ -19,7 +19,7 @@ interface Lead {
   created_at: string;
 }
 
-export const lead = (overrides: Partial<Lead> = {}): Lead => ({
+const lead = (overrides: Partial<Lead> = {}): Lead => ({
   lead_id: TEST_LEAD_ID_1,
   user_id: TEST_USER_ID,
   org_id: TEST_ORG_ID,
@@ -46,7 +46,7 @@ export const leadList = (n = 3): Lead[] =>
  * those are missing. The page maps signal_id → id but otherwise reads fields
  * directly off the response object.
  */
-export const signal = (overrides: Record<string, unknown> = {}) => ({
+const signal = (overrides: Record<string, unknown> = {}) => ({
   signal_id: TEST_SIGNAL_ID_1,
   id: TEST_SIGNAL_ID_1,
   user_id: TEST_USER_ID,

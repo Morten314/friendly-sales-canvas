@@ -34,6 +34,13 @@ export const CompetitorKeyMetrics: React.FC<CompetitorKeyMetricsProps> = ({
   handleSaveTopPlayerShare,
   handleSaveEmergingPlayers,
 }) => {
+  // Helper: clone metrics, apply patch at index, propagate.
+  const updateMetric = (index: number, patch: Partial<Metric>) => {
+    const updated = [...localMetrics];
+    updated[index] = { ...updated[index], ...patch };
+    setLocalMetrics(updated);
+  };
+
   return (
     <div className="mb-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
@@ -61,21 +68,13 @@ export const CompetitorKeyMetrics: React.FC<CompetitorKeyMetricsProps> = ({
                       <div className="space-y-2">
                         <Input
                           value={metric.value || ""}
-                          onChange={(e) => {
-                            const updated = [...localMetrics];
-                            updated[index] = { ...updated[index], value: e.target.value };
-                            setLocalMetrics(updated);
-                          }}
+                          onChange={(e) => updateMetric(index, { value: e.target.value })}
                           className="text-2xl font-bold text-blue-600 bg-white"
                           placeholder="Value"
                         />
                         <Input
                           value={metric.label || ""}
-                          onChange={(e) => {
-                            const updated = [...localMetrics];
-                            updated[index] = { ...updated[index], label: e.target.value };
-                            setLocalMetrics(updated);
-                          }}
+                          onChange={(e) => updateMetric(index, { label: e.target.value })}
                           className="text-sm text-gray-700 bg-white"
                           placeholder="Label"
                         />

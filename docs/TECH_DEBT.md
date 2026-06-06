@@ -33,6 +33,8 @@ considering removal.
 
 **Owner:** TBD.
 
+**Resolved (Phase 13 13a-vi, 2026-06-06):** kept — /tenant-selection relocated to src/features/tenant/routes.tsx (tenantRoutes); reached via programmatic post-login redirect and covered by e2e/journeys/01-login-tenant-mission.spec.ts (the named pull-forward trigger). Intentionally unlisted from Sidebar (auth/onboarding flow). Re-confirmed reachable.
+
 ---
 
 ## TD-FE-2 — Deferred orphan-route investigation: /scout-deployment
@@ -63,6 +65,8 @@ Confirm with Brewra devs whether `/scout-deployment` is intentionally unlisted f
 kit on `src/pages/ScoutDeployment.tsx` for full dead-file removal.
 
 **Owner:** TBD.
+
+**Resolved (Phase 13 13a-vi, 2026-06-06):** kept — /scout-deployment relocated to src/features/scout/routes.tsx; ScoutDeploymentPage wraps the live ScoutDeployment form and ScoutDeploymentDetails renders inside IntelligenceTab. Intentional direct-URL/admin surface, not dead. Re-confirmed reachable.
 
 ---
 
@@ -298,6 +302,8 @@ barrier. Confirm no dynamic consumers before removal.
 
 **Owner:** TBD.
 
+**Resolved (Phase 13 13a-ii, 2026-06-06):** removed `export default app` from firebase.ts / dropped `export` from `API_BASE_URL`, `ICP_BACKEND_URL` in transport.ts (both internal-only) / kept `ApiFetchOptions` export (live consumer: `src/shared/api/client.ts`) / dropped `export` from `leadStreamHeatmapCacheKey` (internal-only) / dropped `export` from `ProfilerSessionSnapshot` (internal-only).
+
 ---
 
 ## TD-FE-4 — Deferred unused export: src/hooks/use-toast.ts
@@ -321,6 +327,8 @@ File is under `src/hooks/` — conservative posture per Spec 16 §2.3.
 Phase 13 (post-modularization LOC pass) with strict TS context.
 
 **Owner:** TBD.
+
+**Resolved (Phase 13 13a-ii, 2026-06-06):** dropped `export` from `reducer` in `src/components/ui/use-toast.ts`; symbol is internal-only (called only by `dispatch` inside the same file); shadcn-locked dir but dropping export of a non-standard-shadcn-public symbol is safe and does not alter the public surface.
 
 ---
 
@@ -349,6 +357,8 @@ barrier. Verify no remaining call sites that use a version-shadowing import patt
 
 **Owner:** TBD.
 
+**Resolved (Phase 13 13a-ii, 2026-06-06):** removed `forceFreshData`, `isDataFresh`, `marketResearchApiCallWithCacheBust`, `rateLimitedApiCall` from `src/features/market-research/lib/apiUtils.ts` (zero inbound, not called internally) / dropped `export` from `simpleApiCall` (internal-only; called by live `marketResearchApiCall`). `isDataFresh` was confirmed not imported from apiUtils anywhere — the MarketResearch.tsx shadow-var noted in TD was a local declaration, not an import.
+
 ---
 
 ## TD-FE-6 — Deferred unused exports: src/utils/profilerAcceptedIcpDisplay.ts
@@ -371,6 +381,8 @@ File is under `src/utils/` — conservative posture per Spec 16 §2.3.
 Phase 13 (post-modularization LOC pass) with strict TS context.
 
 **Owner:** TBD.
+
+**Resolved (Phase 13 13a-ii, 2026-06-06):** removed `isProfilerPlaceholderIcp` and `mergeProfilerAcceptedIcpDisplayIfPlaceholder` from `src/shared/profiler/profilerAcceptedIcpDisplay.ts` (zero external inbound; `isProfilerPlaceholderIcp` became fully dead once its only internal caller was deleted) / dropped `export` from `ProfilerAcceptedIcpDisplayMeta` (zero external named imports; used internally as a type parameter by `saveProfilerAcceptedIcpDisplayMeta` and `mergeProfilerAcceptedIcpDisplay`).
 
 ---
 
@@ -452,6 +464,8 @@ these exports can be pruned. Or if the unused sub-components remain untouched pa
 deliberate audit confirms they will never be used.
 
 **Owner:** TBD.
+
+**Resolved (Phase 13 13a-iii, 2026-06-06):** pruned breadcrumb.tsx, chart.tsx, pagination.tsx (528 LOC, zero importers confirmed via alias + relative grep across src/ and e2e/); kept all other 34 ui primitives intact including the 14 files with unused sub-exports listed above — those sub-exports were left untouched to preserve the shadcn upgrade path (re-addable via `npx shadcn add`). Note: chart.tsx was NOT imported by MiniPieChart/MiniLineChart — those import recharts directly.
 
 **2026-05-27 update — remediation mechanism:**
 The Phase 4 lock is now expressed as `"ignore": ["src/components/ui/**"]` in `frontend/knip.json`

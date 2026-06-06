@@ -707,6 +707,12 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
   // Function to validate that all components have fresh data
 
   const validateAllComponentsHaveFreshData = () => {
+    const resetValidationAndRevalidate = () => {
+      validationTimeoutRef.current = null;
+      isValidatingRef.current = false;
+      validateAllComponentsHaveFreshData();
+    };
+
     // Guard: Don't validate if not refreshing
     if (!isRefreshing) {
       // Clear any pending validation timeout
@@ -775,9 +781,7 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
       }
 
       validationTimeoutRef.current = setTimeout(() => {
-        validationTimeoutRef.current = null;
-        isValidatingRef.current = false;
-        validateAllComponentsHaveFreshData();
+        resetValidationAndRevalidate();
       }, 500);
 
       return;
@@ -952,9 +956,7 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
         }
 
         validationTimeoutRef.current = setTimeout(() => {
-          validationTimeoutRef.current = null;
-          isValidatingRef.current = false;
-          validateAllComponentsHaveFreshData();
+          resetValidationAndRevalidate();
         }, 200); // Reduced to 200ms for faster processing
 
         return;
@@ -997,9 +999,7 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
           clearTimeout(validationTimeoutRef.current);
         }
         validationTimeoutRef.current = setTimeout(() => {
-          validationTimeoutRef.current = null;
-          isValidatingRef.current = false;
-          validateAllComponentsHaveFreshData();
+          resetValidationAndRevalidate();
         }, 1000); // Check again in 1 second
         return;
       }
@@ -1050,9 +1050,7 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
             clearTimeout(validationTimeoutRef.current);
           }
           validationTimeoutRef.current = setTimeout(() => {
-            validationTimeoutRef.current = null;
-            isValidatingRef.current = false;
-            validateAllComponentsHaveFreshData();
+            resetValidationAndRevalidate();
           }, 1000); // Check again in 1 second
         } else {
           // Continue validation for remaining components
@@ -1062,9 +1060,7 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
           }
 
           validationTimeoutRef.current = setTimeout(() => {
-            validationTimeoutRef.current = null;
-            isValidatingRef.current = false;
-            validateAllComponentsHaveFreshData();
+            resetValidationAndRevalidate();
           }, 1500); // Reduced wait time (paid plan allows faster processing)
         }
       } else {
@@ -1075,9 +1071,7 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
         }
 
         validationTimeoutRef.current = setTimeout(() => {
-          validationTimeoutRef.current = null;
-          isValidatingRef.current = false;
-          validateAllComponentsHaveFreshData();
+          resetValidationAndRevalidate();
         }, 200); // Reduced to 200ms for faster processing
       }
     }
