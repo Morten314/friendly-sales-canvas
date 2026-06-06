@@ -461,6 +461,8 @@ deliberate audit confirms they will never be used.
 
 **Owner:** TBD.
 
+**Resolved (Phase 13 13a-iii, 2026-06-06):** pruned breadcrumb.tsx, chart.tsx, pagination.tsx (528 LOC, zero importers confirmed via alias + relative grep across src/ and e2e/); kept all other 34 ui primitives intact including the 14 files with unused sub-exports listed above — those sub-exports were left untouched to preserve the shadcn upgrade path (re-addable via `npx shadcn add`). Note: chart.tsx was NOT imported by MiniPieChart/MiniLineChart — those import recharts directly.
+
 **2026-05-27 update — remediation mechanism:**
 The Phase 4 lock is now expressed as `"ignore": ["src/components/ui/**"]` in `frontend/knip.json`
 rather than per-file `defer-export` annotations. Behavioral semantics are unchanged (files
