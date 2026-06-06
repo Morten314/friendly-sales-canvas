@@ -1,6 +1,7 @@
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Zap } from "lucide-react";
 import React, { useState, useEffect } from "react";
 
+import { IntelligenceSectionHeader } from "../shared/IntelligenceSectionHeader";
 import type { KeyMetricConfig } from "../shared/KeyMetricsGrid";
 import { KeyMetricsGrid } from "../shared/KeyMetricsGrid";
 
@@ -10,7 +11,6 @@ import { ExportFooter } from "./ExportFooter";
 import { normalizeDeletedSections, buildEditSnapshot } from "./industryTrends";
 import { RegionalHotspots } from "./RegionalHotspots";
 import { RisksWatchouts } from "./RisksWatchouts";
-import { SectionHeader } from "./SectionHeader";
 import { ErrorState, LoadingState, NoDataState } from "./states";
 import { StrategicRecommendations } from "./StrategicRecommendations";
 import { TrendSnapshots } from "./TrendSnapshots";
@@ -400,10 +400,17 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   return (
     <FeatureErrorBoundary>
       <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <SectionHeader
+        <IntelligenceSectionHeader
           onModify={handleModify}
           isSplitView={isSplitView}
           onScoutIconClick={onScoutIconClick}
+          icon={Zap}
+          title="Industry Trends"
+          scoutContext="industry-trends"
+          iconClassName="h-5 w-5 text-purple-600"
+          editButtonClassName="text-purple-800 hover:text-purple-900"
+          scoutButtonClassName="text-purple-600 hover:text-purple-700 transition-all duration-200 relative"
+          scoutGradientClassName="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"
         />
 
         {isIndustryTrendsEditing ? (

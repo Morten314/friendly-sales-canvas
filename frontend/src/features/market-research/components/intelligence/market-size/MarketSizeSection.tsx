@@ -1,7 +1,8 @@
-import { Bot, PieChart, X, Clock, ChevronDown, ChevronUp, Check } from "lucide-react";
+import { BarChart3, Bot, PieChart, X, Clock, ChevronDown, ChevronUp, Check } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 
 import type { EditRecord } from "../../types";
+import { IntelligenceSectionHeader } from "../shared/IntelligenceSectionHeader";
 import type { KeyMetricConfig } from "../shared/KeyMetricsGrid";
 import { KeyMetricsGrid } from "../shared/KeyMetricsGrid";
 
@@ -11,7 +12,6 @@ import { GrowthProjections } from "./GrowthProjections";
 import { MarketDrivers } from "./MarketDrivers";
 import { MarketEntry } from "./MarketEntry";
 import { MarketSizeBySegment } from "./MarketSizeBySegment";
-import { MarketSizeHeader } from "./MarketSizeHeader";
 import { ErrorState, LoadingState, NoDataState } from "./states";
 import { StrategicRecommendations } from "./StrategicRecommendations";
 import { useMarketSize } from "./useMarketSize";
@@ -530,10 +530,17 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       <div
         className={`bg-white rounded-lg border border-gray-200 p-6 ${showScoutChat ? "flex-1" : ""}`}
       >
-        <MarketSizeHeader
+        <IntelligenceSectionHeader
           onModify={handleModify}
           isSplitView={isSplitView}
           onScoutIconClick={onScoutIconClick}
+          icon={BarChart3}
+          title="Market Size & Opportunity"
+          scoutContext="market-size"
+          iconClassName="h-5 w-5 text-blue-600"
+          editButtonClassName="text-blue-800 hover:text-blue-900"
+          scoutButtonClassName="text-blue-600 hover:text-blue-700 transition-all duration-200 relative"
+          scoutGradientClassName="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"
         />
 
         {/* Loading and Error States — driven by the 5b hook */}
