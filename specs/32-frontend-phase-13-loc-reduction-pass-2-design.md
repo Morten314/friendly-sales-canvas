@@ -1,6 +1,6 @@
 # Spec 32 — Frontend Phase 13: LOC reduction pass #2 (post-modularization audit)
 
-**Status:** Design — round 1 (pre-review)
+**Status:** Design — round 2 (revised after spec-review-1; synthesis at `docs/reviews/32-frontend-phase-13-loc-reduction-pass-2-design-spec-synthesis-1.md`)
 **Date:** 2026-06-06
 **Type:** Phase spec (implements Spec 14 §4 Phase 13)
 **Paired plan:** `plans/32-frontend-phase-13-loc-reduction-pass-2.md` (written after this spec converges)
@@ -19,7 +19,7 @@ The Phase-L-proper analog for the frontend. With strict TS, the test harness, an
 1. **Tree-wide dedup + dead-code pass (13a)** — the "LOC reduction" proper: remove remaining dead code, re-evaluate Phase 1's conservative defers now that strict types + tests exist, prune unused shadcn primitives, dedup near-identical components/hooks, extract repeated UI patterns, and inline trivial wrappers.
 2. **Monster-file decomposition (13b–13N)** — behavior-preserving structural splitting of the worst remaining files (the feature phases deferred these), advancing Spec 14 §6 DoD #2 ("every monster file is decomposed").
 
-This is the last LOC pass. Phase 14 (agent affordances) follows and adds no feature-code reduction.
+This is the final *planned* LOC pass; Phase 14 (agent affordances) adds no feature-code reduction. Substantial deferrals that survive Phase 13 (§2.2, §4.4, §5.3) would require a future spec — the claim is "last planned," not a forward guarantee.
 
 ### 1.2 Resolved scope decisions (brainstorming, 2026-06-06)
 
@@ -40,7 +40,8 @@ The structural refactor is complete: `src/pages/`, `src/hooks/`, `src/lib/`, `sr
 | `features/market-research/hooks/useMarketResearchData.ts` | ~6,040 | the deferred data layer (editable-state ↔ `useQuery` coupling, TD-FE-19/21/…) — most delicate decomposition target |
 | `features/mission-control/components/data-sources/DataSourcesManager.tsx` | ~3,497 | |
 | `features/mission-control/components/company-profile/ConnectorApprovals.tsx` | ~3,060 | |
-| then a ~2,000-LOC gap to the next tier | | `SuggestedICPCards` (~1,078), `RegulatoryComplianceSection` (~1,000), `CompetitorLandscapeSection` (~981), `StrategistWorkspace` (~960), `IcpWizard` (~952) |
+
+Below the top three there is a ~2,000-LOC gap to the next tier: `SuggestedICPCards` (~1,078), `RegulatoryComplianceSection` (~1,000), `CompetitorLandscapeSection` (~981), `StrategistWorkspace` (~960), `IcpWizard` (~952). These are candidates, not commitments — the decomposition set is audit-driven (§5.1).
 
 LOC figures are spec-write-time estimates; 13a re-measures and the scorecard is authoritative.
 
@@ -99,6 +100,8 @@ Run against the full post-Phase-11 `src/` tree and combine outputs:
 - A **component/hook similarity scan** (`ts-morph` AST walk or `ast-grep`) for near-identical components (differ by props / one literal) and near-duplicate hooks (same TanStack pattern, one parameter differs).
 - Targeted `rg`/`ast-grep` queries for trivial single-use wrapper components and the inline-triplet pattern.
 
+**Tooling setup is part of 13a's first commit(s) and is budgeted in the plan:** the `scan-inline-blocks.ts` enumerate-variant is a script edit; the similarity scan needs `ts-morph` (a dev dep — confirm or add) or `ast-grep` (not in the repo — would need install); any manifest add lands in its **own** commit (§8). Exact similarity-scan tool choice is §12 Q3.
+
 Each candidate is tagged `execute` (mechanical, high tool confidence) / `investigate` (needs per-site analysis) / `defer` (→ `TD-FE-<n>`).
 
 ### 3.2 Stage 2 — Investigation
@@ -107,7 +110,7 @@ For each `investigate` finding, enumerate call sites and read each in full befor
 
 ### 3.3 Stage 3 — Execute & scorecard
 
-Apply `execute` + confirmed-safe `investigate` reductions. The scorecard (`docs/audits/<run-date>-frontend-loc-pass-2.md`) follows the Phase 1 format: §LOC delta (overall + per-area), §per-category execution log, §per-file verdict (`remove <SHA>` | `keep — <reason>` | `defer-TD-FE-<n>`), §handoff list, §supplementary (preflight result, codemod inventory). **The scorecard's monster-file ranking is the input to the §5 decomposition selection** — so the dedup pass lands first and the file set is chosen against post-dedup sizes (§7).
+Apply `execute` + confirmed-safe `investigate` reductions. The scorecard (`docs/audits/<run-date>-frontend-loc-pass-2.md`) follows the Phase 1 format: §LOC delta (overall + per-area), **§bundle delta (raw + gzip, from the advisory `check-bundle-budget.ts` comparator against the post-Phase-12 baseline — a LOC-reduction phase should record the user-facing bundle consequence)**, §per-category execution log, §per-file verdict (`remove <SHA>` | `keep — <reason>` | `defer-TD-FE-<n>`), §handoff list, §supplementary (preflight result, codemod inventory). **The scorecard's monster-file ranking is the input to the §5 decomposition selection** — so the dedup pass lands first and the file set is chosen against post-dedup sizes (§7).
 
 ---
 
@@ -123,7 +126,7 @@ Phase 1 kept ~22 symbols on a conservative posture (no strict types/tests then t
 `knip` ignores `components/ui/**`, so this is a **deliberate one-off sweep**: run the no-ignore knip variant, then re-verify each flagged primitive has zero imports (the gate won't catch a mistake here). Remove confirmed-unused primitives. The folder stays locked; this prunes dead inventory only. Record removed files in the scorecard (re-addable via `npx shadcn add`).
 
 ### 4.4 Dedup & inline
-- **Near-identical components** → base + overlay (props/variant), where behavior is provably identical.
+- **Near-identical components** → base + overlay (props/variant), where the behavioral delta is confined to configurable props/literals **and** visual regression confirms pixel-neutrality after extraction. (The bar is not tautological "identity" — the Phase 9 `ScoutChatWithHistory`↔`ProfilerChatWithHistory` dedup, ~90% similar, unified via a shared substrate, is the precedent for what "near-identical, safely mergeable" means.)
 - **Near-duplicate hooks** → extract the shared core, parameterize the difference.
 - **Inline state triplets** (same `useState`+`useEffect` ≥3×) → a shared hook.
 - **Single-use trivial wrapper components** (one-line return) → inlined, unless the wrapper adds genuine semantic clarity (kept, with a note).
@@ -131,29 +134,31 @@ Phase 1 kept ~22 symbols on a conservative posture (no strict types/tests then t
 ### 4.5 Repeated UI patterns → `src/shared/ui-patterns/` (conditional)
 Created **only if** the audit surfaces UI patterns (form-row, dialog-shell, table-wrapper) that are (a) not shadcn primitives and (b) demonstrably used by ≥2 features (the established `shared/` promotion rule). If nothing qualifies, the folder is **not** created (Spec 14 §3.1's explicit "omitted otherwise"). Any extraction here is behavior-/pixel-neutral and gets an ADR if non-trivial (next ADR is `0006`).
 
-### 4.6 Orphan routes (TD-FE-1, TD-FE-2) — investigate-and-confirm, default keep
-13a re-checks `/tenant-selection` (TD-FE-1) and `/scout-deployment` (TD-FE-2) against the router + nav. **Default disposition: keep.** A route is removed only if confirmed dead with the orchestrator (direct-URL-only reachability is a valid reason to keep). Either way the TD entry is closed with the recorded decision.
+### 4.6 Orphan routes (TD-FE-1, TD-FE-2) — formal close, default keep
+This is a **formal close, not a fresh investigation** — TD-FE-1/2 already carry Phase 1's exhaustive 6-check kits (unreachable from nav, reachable via direct URL / programmatic redirect). 13a re-confirms reachability (expected: same result as Phase 1) and closes both TD entries with the recorded decision. **Default disposition: keep** — direct-URL-only reachability is a valid reason, aligning with TD-FE-1's existing "intentionally absent from Sidebar" note. A route is removed only if confirmed dead with the orchestrator.
 
 ---
 
 ## §5 Monster-file decomposition (13b–13N)
 
 ### 5.1 Selection (audit-driven, decided at plan stage)
-This spec fixes **no file list**. The 13a scorecard ranks every file by a composite signal — **LOC + measured redundancy (similarity-scan hits) + complexity** — and the **plan author selects the decomposition set during planning**, justifying the cut against the natural LOC cliff (the ~2,000-LOC gap below the top three at spec-write time) and the post-dedup sizes. The threshold and the resulting sub-phase count are a **plan decision**, recorded in the plan with its rationale (Phase 2a precedent). Files above the cliff are the expected core; the plan may extend or contract the set based on what the audit measures.
+This spec fixes **no file list**. The 13a scorecard ranks every file by **LOC as the primary signal** (the established cliff), with **similarity-scan hit count** (§3.1) as a secondary tie-breaker and **complexity as a qualitative advisory factor** — no computed complexity metric is mandated; the plan author flags files whose internal coupling makes a split high-value or high-risk. The **plan author selects the decomposition set during planning**, justifying the cut against the natural LOC cliff (the ~2,000-LOC gap below the top three at spec-write time) and the post-dedup sizes. No weighted formula is required: LOC + the cliff is the spine; the other two inform edge cases. The threshold and the resulting sub-phase count are a **plan decision**, recorded in the plan with its rationale (Phase 2a precedent). Files above the cliff are the expected core; the plan may extend or contract the set based on what the audit measures.
 
 ### 5.2 Decomposition discipline (behavior-preserving)
 - **Structural splitting only:** move cohesive chunks into sibling sub-modules / sub-components / sub-hooks; **no logic changes, no fetch rewrites.** Public surface (`index.ts`, route entry) is unchanged.
-- One file per sub-phase; each sub-phase is a discrete commit series leaving the tree green (Spec 14 §5.7 sub-phase granularity — a failed sub-phase reverts to the last green sub-phase, not the whole phase).
+- One file per sub-phase; each sub-phase is a discrete commit series leaving the tree green — **"green" = `npm run verify` passes** (§8) — (Spec 14 §5.7 sub-phase granularity: a failed sub-phase reverts to the last green sub-phase, not the whole phase).
 - Behavioral E2E + visual regression + the feature's unit tests are the safety net (Spec 14 §R6: the structural decomposition is the agent's path through the file, not a single-shot read). Where a split would otherwise be untested at the seams, add focused unit tests for the extracted unit before finalizing the sub-phase.
 
 ### 5.3 The 6,040-LOC hook (`useMarketResearchData.ts`)
-Flagged as the most delicate target: its size is entangled with the deferred editable-state ↔ `useQuery` coupling (TD-FE-19/21/…). Phase 13 may split it into cohesive sub-hooks/modules **without** resolving that coupling — the data-layer semantics stay as-is (out of scope, §2.2). If the audit judges a safe structural split impossible without touching behavior, it is **deferred** (logged TD-FE) rather than forced. Sequenced **last** among the decomposition sub-phases so the lower-risk splits validate the discipline first.
+Flagged as the most delicate target: its size is entangled with the deferred editable-state ↔ `useQuery` coupling (TD-FE-19/21/…). Phase 13 may split it into cohesive sub-hooks/modules **without** resolving that coupling — the data-layer semantics stay as-is (out of scope, §2.2). If the plan author (during planning) or the implementing agent (during execution) judges a safe structural split impossible without touching behavior, the file is **deferred** (logged TD-FE) rather than forced. Sequenced **last** among the decomposition sub-phases so the lower-risk splits validate the discipline first.
 
 ---
 
 ## §6 Codemods (lazy / conditional)
 
 Default: **manual fixes.** A pattern earns a codemod only when it is both (a) likely to recur in future work and (b) mechanically transformable. On the first earned codemod, stand up `frontend/scripts/codemods/` with `ts-morph` + a filesystem-fixture test harness (`__tests__/<name>/{input,expected}.ts`, read-apply-compare in Vitest), one codemod per file, one codemod per commit (Spec 14 §R8). If no pattern qualifies, Phase 13 ships **zero** codemods and the framework defers to Phase 14 (whose `codemod-runner.sh` then establishes it). The scorecard records the codemod inventory (including "none — manual" with reasoning).
+
+**Handoff note for the Phase 14 spec:** Spec 14's Phase 14 block assumes Phase 13 produced codemods for `codemod-runner.sh` to run. If Phase 13 ships zero, Phase 14 must both establish the `scripts/codemods/` framework from scratch **and** decide whether it surfaces its own codemod-worthy patterns or ships none — the Phase 14 spec should account for this path (Spec 14 §5.5 amendment).
 
 ---
 
@@ -166,11 +171,11 @@ Each sub-phase merges to `master` independently behind the §8 gate. The full ph
 
 ## §8 Safety net & preflight cadence
 
-Resolves the Phase 1 handoff note (per-commit preflight was not enforced then) by documenting the cadence explicitly rather than mandating per-commit full preflight:
+Resolves the Phase 1 handoff note (per-commit preflight was not enforced then) by documenting the cadence explicitly rather than mandating per-commit full preflight. **Two formal tiers** (an earlier draft had a "middle tier" for behavior-touching sub-phases, but every code-touching sub-phase qualified — so it added no distinction and is dropped; it survives as advice below):
 
-- **Inner loop (every commit):** `npm run verify`.
-- **Behavior-touching sub-phases (decomposition, dedup):** run broader `vitest run` + Playwright visual regression locally before the sub-phase's **final** commit.
+- **Inner loop (every commit):** `npm run verify`. A sub-phase is "green" (the §5.2 revert anchor) exactly when `verify` passes.
 - **Merge gate (per sub-phase):** full serial `npm run preflight` (with e2e + visual regression), controller-run, immediately before the user-approved merge. Red blocks the merge; no fix-forward (Spec 14 §5.3).
+- **Advisory:** for decomposition/dedup sub-phases, run `vitest run` + Playwright visual regression locally before declaring the sub-phase ready, so the merge gate is not the first place a visual break surfaces. Scorecard-only and manifest-only commits skip this.
 - Manifest changes (if a scan tool needs a dep restored) land in their **own** commit, separate from script additions (Phase 1 handoff note).
 
 ## §9 TD-FE disposition
@@ -180,8 +185,10 @@ Resolves the Phase 1 handoff note (per-commit preflight was not enforced then) b
 
 ## §10 Definition of done
 
-1. 13a scorecard at `docs/audits/<run-date>-frontend-loc-pass-2.md` covers **every** file (per-file verdict), with overall + per-area LOC delta.
-2. All `execute` + confirmed-safe `investigate` findings applied; LOC delta documented.
+**The success bar is audit-completeness, not a LOC percentage.** The determinate ceiling: the scorecard triages **every** file, **all** `execute`-tagged findings are applied, and **every** `investigate` finding is resolved (applied or explicitly deferred with rationale). There is **no percentage floor** — (i) master-plan §6 #8 sets the trajectory as "no hard target," and (ii) the §5 decomposition workstream is **LOC-neutral** (splitting a file into modules does not reduce total LOC), so a percentage floor would mismeasure the phase and could pressure unsafe cuts. This deliberately deviates from Phase 1 (Spec 16 §4.1's ≥5% floor): Phase 1 swept an un-modularized tree where a floor was meaningful; Phase 13 works a tree already swept by Phases 1 + 5–12, with much of its work being LOC-neutral decomposition.
+
+1. 13a scorecard at `docs/audits/<run-date>-frontend-loc-pass-2.md` covers **every** file (per-file verdict), with overall + per-area LOC delta and bundle delta (§3.3).
+2. All `execute` findings applied; **every `investigate` finding resolved (applied or deferred with rationale)**; LOC delta documented.
 3. Unused shadcn primitives pruned (or each retained one justified); TD-FE-7 closed.
 4. Conservative defers TD-FE-3..6 re-evaluated and closed; orphan-route TD-FE-1/2 resolved (default keep) and closed.
 5. Audit-selected monster files decomposed (behavior-preserving) **or** explicitly deferred with rationale; DoD §6.2 advanced as far as the selected set.
