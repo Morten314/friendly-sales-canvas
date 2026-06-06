@@ -86,6 +86,26 @@ export default tseslint.config(
               from: "./src/shared",
               message: "src/components/ui (shadcn primitives) must not import from src/shared.",
             },
+            {
+              target: ["./src/features", "./src/shared"],
+              from: [
+                "./src/hooks",
+                "./src/lib",
+                "./src/utils",
+                "./src/contexts",
+                "./src/services",
+                "./src/pages",
+              ],
+              message:
+                "features/ and shared/ must not import legacy directories — Phase 11 drained these into shared/ and components/ui/. Import from @/shared/* or @/components/ui/* instead.",
+            },
+            {
+              target: ["./src/features", "./src/shared"],
+              from: "./src/components",
+              except: ["./ui"],
+              message:
+                "features/ and shared/ may only import @/components/ui/* — all other components were relocated into features/ or shared/ in Phase 11.",
+            },
           ],
         },
       ],
