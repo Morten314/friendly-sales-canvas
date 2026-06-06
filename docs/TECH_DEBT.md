@@ -298,6 +298,8 @@ barrier. Confirm no dynamic consumers before removal.
 
 **Owner:** TBD.
 
+**Resolved (Phase 13 13a-ii, 2026-06-06):** removed `export default app` from firebase.ts / dropped `export` from `API_BASE_URL`, `ICP_BACKEND_URL` in transport.ts (both internal-only) / kept `ApiFetchOptions` export (live consumer: `src/shared/api/client.ts`) / dropped `export` from `leadStreamHeatmapCacheKey` (internal-only) / dropped `export` from `ProfilerSessionSnapshot` (internal-only).
+
 ---
 
 ## TD-FE-4 — Deferred unused export: src/hooks/use-toast.ts
@@ -321,6 +323,8 @@ File is under `src/hooks/` — conservative posture per Spec 16 §2.3.
 Phase 13 (post-modularization LOC pass) with strict TS context.
 
 **Owner:** TBD.
+
+**Resolved (Phase 13 13a-ii, 2026-06-06):** dropped `export` from `reducer` in `src/components/ui/use-toast.ts`; symbol is internal-only (called only by `dispatch` inside the same file); shadcn-locked dir but dropping export of a non-standard-shadcn-public symbol is safe and does not alter the public surface.
 
 ---
 
@@ -349,6 +353,8 @@ barrier. Verify no remaining call sites that use a version-shadowing import patt
 
 **Owner:** TBD.
 
+**Resolved (Phase 13 13a-ii, 2026-06-06):** removed `forceFreshData`, `isDataFresh`, `marketResearchApiCallWithCacheBust`, `rateLimitedApiCall` from `src/features/market-research/lib/apiUtils.ts` (zero inbound, not called internally) / dropped `export` from `simpleApiCall` (internal-only; called by live `marketResearchApiCall`). `isDataFresh` was confirmed not imported from apiUtils anywhere — the MarketResearch.tsx shadow-var noted in TD was a local declaration, not an import.
+
 ---
 
 ## TD-FE-6 — Deferred unused exports: src/utils/profilerAcceptedIcpDisplay.ts
@@ -371,6 +377,8 @@ File is under `src/utils/` — conservative posture per Spec 16 §2.3.
 Phase 13 (post-modularization LOC pass) with strict TS context.
 
 **Owner:** TBD.
+
+**Resolved (Phase 13 13a-ii, 2026-06-06):** removed `isProfilerPlaceholderIcp` and `mergeProfilerAcceptedIcpDisplayIfPlaceholder` from `src/shared/profiler/profilerAcceptedIcpDisplay.ts` (zero external inbound; `isProfilerPlaceholderIcp` became fully dead once its only internal caller was deleted) / dropped `export` from `ProfilerAcceptedIcpDisplayMeta` (zero external named imports; used internally as a type parameter by `saveProfilerAcceptedIcpDisplayMeta` and `mergeProfilerAcceptedIcpDisplay`).
 
 ---
 
