@@ -26,5 +26,3 @@ getAnalytics(app);
 // Verify Firebase is properly initialized
 console.log("Firebase initialized:", app.name);
 console.log("Auth initialized:", auth.app.name);
-
-export default app;
