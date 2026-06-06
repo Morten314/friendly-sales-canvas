@@ -1526,6 +1526,8 @@ Phase 11 auth-infra consolidation.
 
 **Owner:** TBD.
 
+**Resolved (Phase 11):** 2026-06-05. jwt → src/shared/auth/jwt.ts; useAuth → src/shared/auth/useAuthToken.ts (renamed to resolve the name collision with the Firebase useAuth); both re-exported from shared/auth/index.ts.
+
 ---
 
 ## TD-FE-55 — `features/tenant/hooks/useTenants.ts` serves a hardcoded `MOCK_TENANTS` list; no real "list tenants" backend endpoint exists
@@ -1790,6 +1792,8 @@ Lead-stream ownership settled (likely Phase 11 shared-utility extraction or a de
 
 **Owner:** TBD.
 
+**Resolved (Phase 11):** 2026-06-05. leadStreamChatContext → src/features/market-research/lib/leadStreamChatContext.ts (sole-consumer feature; not shared).
+
 ---
 
 ## TD-FE-63 — `components/market-research/` retains 6 files after Phase 9's partial drain
@@ -1810,6 +1814,9 @@ Cross-feature coupling means these moves require coordinating with customers and
 A customers/lead-stream phase or Phase 11 shared-utility extraction.
 
 **Owner:** TBD.
+
+**Resolved (Phase 11):** 2026-06-05. components/market-research/ fully drained: leadData → shared/lib; ScoutLeadStream + lead-stream/{LeadStreamTab,LeadsTable,OpportunityDashboard} + the 3 score libs → features/market-research; EditDropdownMenu → features/customers.
+
 ---
 
 ## TD-FE-57 — Phase 12 features still import legacy `@/hooks/usePageTitle`
@@ -1824,6 +1831,8 @@ Spec 14 §4's staging rule — Phase 11 promotes shared hooks; feature phases mu
 Phase 11 (shared-hooks promotion).
 
 **Owner:** TBD.
+
+**Resolved (Phase 11):** 2026-06-05. usePageTitle → src/shared/hooks/usePageTitle.ts; all 6 feature pages repointed.
 
 ## TD-FE-58 — Artefacts cross-component coupling via untyped `window` CustomEvents
 

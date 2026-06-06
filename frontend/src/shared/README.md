@@ -11,10 +11,14 @@ Code lands here when it is genuinely shared infrastructure, not one feature's pr
 
 ## Subfolders
 
-- `api/` — fetch client, zod contracts, query client/keys, the single rate limiter (Phase 3).
-- `auth/`, `tenant/` — app-wide React context primitives (Phase 4b).
+- `api/` — fetch client (`transport.ts`), zod contracts, query client/keys, the single rate limiter (Phase 3; `transport.ts` promoted Phase 11).
+- `auth/` — app-wide React context primitives + `jwt.ts` + `useAuthToken.ts` (Phase 4b; jwt/useAuthToken promoted Phase 11).
+- `tenant/` — app-wide tenant context primitive (Phase 4b).
 - `components/` — cross-cutting components, e.g. `FeatureErrorBoundary` (Phase 4a).
-- `hooks/`, `lib/`, `types/` — populated in Phase 11 as the ≥2-feature rule is met.
+- `hooks/` — `usePageTitle.ts` (promoted Phase 11; ≥6 feature consumers).
+- `lib/` — `cacheUtils.ts`, `sanitizeAnswerText.ts`, `leadData.ts` (promoted Phase 11; each consumed by ≥2 features).
+- `types/` — `escape-hatches.ts` (promoted Phase 11; consumed by ≥2 features).
+- `styles/` — `index.css`, `scrollbar-hide.css` (promoted Phase 11; `App.css` deleted as dead).
 - `ui-patterns/` — created only if Phase 13 surfaces repeated patterns.
 
 ## Dependency rule
