@@ -211,8 +211,8 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 | 8 — Feature: signals + strategist                   | done    | 2026-06-05 |
 | 9 — Feature: scout + profiler                       | done    | 2026-06-05 |
 | 10 — Feature: settings + tenant + auth              | done    | 2026-06-05 |
-| 11 — Shared utility extraction                      | pending | —          |
-| 12 — Small-pages sweep                              | pending | —          |
+| 11 — Shared utility extraction                      | done    | 2026-06-06 |
+| 12 — Small-pages sweep                              | done    | 2026-06-05 |
 | 13 — LOC reduction pass #2                          | pending | —          |
 | 14 — Agent affordances                              | pending | —          |
 
