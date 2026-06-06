@@ -1,13 +1,4 @@
-import {
-  Plus,
-  Link as LinkIcon,
-  Upload,
-  Database,
-  Building2,
-  Users,
-  ChevronDown,
-  Plug,
-} from "lucide-react";
+import { Database, Building2, Users } from "lucide-react";
 import React, { useState, useRef, useEffect, useCallback } from "react";
 
 import { useDataSources } from "../../hooks/useDataSources";
@@ -19,6 +10,7 @@ import type {
   LeadStreamFileApiRow,
 } from "../../types";
 
+import AddDataSourceMenu from "./AddDataSourceMenu";
 import ConnectorTable from "./ConnectorTable";
 import {
   getLeadImportKind,
@@ -33,18 +25,6 @@ import { getLeadStreamRowStatus, isTerminalLeadStreamStatus } from "./leadStream
 import LeadStreamTable from "./LeadStreamTable";
 import SourceForm from "./SourceForm";
 
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/use-toast";
 import { buildApiUrl } from "@/shared/api/transport";
 import { useAuthToken } from "@/shared/auth";
@@ -2499,62 +2479,19 @@ const DataSourcesManager: React.FC = () => {
         </div>
         <div className="flex gap-2">
           {showHeaderAddDataSource && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Add Data Source
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Add Data Source</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => {
-                    handleStartAdd();
-                    setSelectedType("url");
-                  }}
-                >
-                  <LinkIcon className="mr-2 h-4 w-4" />
-                  Add URL
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    handleStartAdd();
-                    setSelectedType("file");
-                  }}
-                >
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload File
-                </DropdownMenuItem>
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <Plug className="mr-2 h-4 w-4" />
-                    Connect to Systems
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent>
-                    <DropdownMenuLabel>Connect a system</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => handleConnectToCRM("Salesforce")}>
-                      <Plug className="mr-2 h-4 w-4" />
-                      Salesforce
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleConnectToCRM("HubSpot")}>
-                      <Plug className="mr-2 h-4 w-4" />
-                      HubSpot
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleConnectToCRM("Pipedrive")}>
-                      <Plug className="mr-2 h-4 w-4" />
-                      Pipedrive
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setShowLeadUpload(true)}>
-                      <Users className="mr-2 h-4 w-4" />
-                      Lead stream
-                    </DropdownMenuItem>
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <AddDataSourceMenu
+              align="end"
+              onAddUrl={() => {
+                handleStartAdd();
+                setSelectedType("url");
+              }}
+              onAddFile={() => {
+                handleStartAdd();
+                setSelectedType("file");
+              }}
+              onConnectCRM={handleConnectToCRM}
+              onShowLeadUpload={() => setShowLeadUpload(true)}
+            />
           )}
         </div>
       </div>
@@ -2596,62 +2533,19 @@ const DataSourcesManager: React.FC = () => {
           <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
             Add sources to help agents understand your business context.
           </p>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                Add Data Source
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="center" className="w-56">
-              <DropdownMenuLabel>Add Data Source</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => {
-                  handleStartAdd();
-                  setSelectedType("url");
-                }}
-              >
-                <LinkIcon className="mr-2 h-4 w-4" />
-                Add URL
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  handleStartAdd();
-                  setSelectedType("file");
-                }}
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Upload File
-              </DropdownMenuItem>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <Plug className="mr-2 h-4 w-4" />
-                  Connect to Systems
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  <DropdownMenuLabel>Connect a system</DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => handleConnectToCRM("Salesforce")}>
-                    <Plug className="mr-2 h-4 w-4" />
-                    Salesforce
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleConnectToCRM("HubSpot")}>
-                    <Plug className="mr-2 h-4 w-4" />
-                    HubSpot
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleConnectToCRM("Pipedrive")}>
-                    <Plug className="mr-2 h-4 w-4" />
-                    Pipedrive
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowLeadUpload(true)}>
-                    <Users className="mr-2 h-4 w-4" />
-                    Lead stream
-                  </DropdownMenuItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <AddDataSourceMenu
+            align="center"
+            onAddUrl={() => {
+              handleStartAdd();
+              setSelectedType("url");
+            }}
+            onAddFile={() => {
+              handleStartAdd();
+              setSelectedType("file");
+            }}
+            onConnectCRM={handleConnectToCRM}
+            onShowLeadUpload={() => setShowLeadUpload(true)}
+          />
         </div>
       )}
 
