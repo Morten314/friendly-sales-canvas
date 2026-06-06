@@ -25,6 +25,13 @@ export function ComplianceVisualCard({
   localVisualDataCards,
   onVisualDataCardsChange,
 }: ComplianceVisualCardProps) {
+  // Helper: clone the cards array, update the card at cardIndex with the given patch, and propagate.
+  const updateCardTitle = (title: string) => {
+    const updated = [...localVisualDataCards];
+    updated[cardIndex] = { ...updated[cardIndex], title };
+    onVisualDataCardsChange(updated);
+  };
+
   if (isExpanded) {
     return (
       <div key={cardIndex} className="bg-white border border-gray-200 rounded-lg p-4">
@@ -158,14 +165,7 @@ export function ComplianceVisualCard({
         {isEditing ? (
           <Input
             value={card.title || "Compliance Adoption Rates"}
-            onChange={(e) => {
-              const updated = [...localVisualDataCards];
-              updated[cardIndex] = {
-                ...updated[cardIndex],
-                title: e.target.value,
-              };
-              onVisualDataCardsChange(updated);
-            }}
+            onChange={(e) => updateCardTitle(e.target.value)}
             className="font-medium text-gray-900 mb-3"
           />
         ) : (
@@ -292,14 +292,7 @@ export function ComplianceVisualCard({
         {isEditing ? (
           <Input
             value={card.title || "Regulatory Timeline"}
-            onChange={(e) => {
-              const updated = [...localVisualDataCards];
-              updated[cardIndex] = {
-                ...updated[cardIndex],
-                title: e.target.value,
-              };
-              onVisualDataCardsChange(updated);
-            }}
+            onChange={(e) => updateCardTitle(e.target.value)}
             className="font-medium text-gray-900 mb-3"
           />
         ) : (
@@ -404,14 +397,7 @@ export function ComplianceVisualCard({
         {isEditing ? (
           <Input
             value={card.title || "GTM Model Effectiveness"}
-            onChange={(e) => {
-              const updated = [...localVisualDataCards];
-              updated[cardIndex] = {
-                ...updated[cardIndex],
-                title: e.target.value,
-              };
-              onVisualDataCardsChange(updated);
-            }}
+            onChange={(e) => updateCardTitle(e.target.value)}
             className="font-medium text-gray-900 mb-3"
           />
         ) : (
