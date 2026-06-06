@@ -19,7 +19,7 @@
  *   npx tsx scripts/scan-similar-symbols.ts
  *   npx tsx scripts/scan-similar-symbols.ts > report.json
  */
-import { relative, resolve } from "node:path";
+import { basename, relative, resolve } from "node:path";
 
 import { Project, SyntaxKind, type Node, type SourceFile } from "ts-morph";
 
@@ -124,12 +124,13 @@ function jaccard(a: Set<string>, b: Set<string>): number {
 
 // ─── symbol extraction ───────────────────────────────────────────────────────
 
-interface Symbol {
+interface ExtractedSymbol {
   name: string;
   kind: Kind;
   loc: number;
   node: Node;
   file: string; // relative path
+  startLine: number; // for dedup by source location
 }
 
 function isJsxReturning(node: Node): boolean {
@@ -146,16 +147,35 @@ function isJsxReturning(node: Node): boolean {
   return found;
 }
 
-function extractSymbols(sf: SourceFile, relPath: string): Symbol[] {
-  const syms: Symbol[] = [];
+/**
+ * Derive an effective symbol name for a default-export node.
+ * Tries node.getName() (FunctionDeclaration / ClassDeclaration).
+ * Falls back to a PascalCase file basename.
+ */
+function effectiveNameForDefault(node: Node, relPath: string): string {
+  const named = node as Node & { getName?: () => string | undefined };
+  const nodeName = named.getName?.();
+  if (nodeName) return nodeName;
+  // Strip extension(s) from basename and PascalCase-ify as a best-effort label
+  const base = basename(relPath)
+    .replace(/\.[^.]+$/, "")
+    .replace(/\.[^.]+$/, "");
+  return base.charAt(0).toUpperCase() + base.slice(1);
+}
+
+function extractSymbols(sf: SourceFile, relPath: string): ExtractedSymbol[] {
+  const syms: ExtractedSymbol[] = [];
 
   for (const decl of sf.getExportedDeclarations()) {
-    const [name, nodes] = decl as [string, Node[]];
+    const [exportKey, nodes] = decl as [string, Node[]];
 
     for (const node of nodes) {
       const start = node.getStartLineNumber();
       const end = node.getEndLineNumber();
       const loc = end - start + 1;
+
+      // Resolve the effective name — default exports use the real function/class name or filename
+      const name = exportKey === "default" ? effectiveNameForDefault(node, relPath) : exportKey;
 
       // Hook: exported function/const named use[A-Z]...
       if (/^use[A-Z]/.test(name)) {
@@ -166,7 +186,7 @@ function extractSymbols(sf: SourceFile, relPath: string): Symbol[] {
           kind === SyntaxKind.FunctionExpression ||
           kind === SyntaxKind.VariableDeclaration
         ) {
-          syms.push({ name, kind: "hook", loc, node, file: relPath });
+          syms.push({ name, kind: "hook", loc, node, file: relPath, startLine: start });
         }
         continue;
       }
@@ -181,7 +201,7 @@ function extractSymbols(sf: SourceFile, relPath: string): Symbol[] {
           kind === SyntaxKind.VariableDeclaration
         ) {
           if (isJsxReturning(node)) {
-            syms.push({ name, kind: "component", loc, node, file: relPath });
+            syms.push({ name, kind: "component", loc, node, file: relPath, startLine: start });
           }
         }
       }
@@ -193,7 +213,7 @@ function extractSymbols(sf: SourceFile, relPath: string): Symbol[] {
 
 // ─── connected-components grouping ──────────────────────────────────────────
 
-function buildGroups(symbols: Symbol[], threshold: number, shingleSize: number): Group[] {
+function buildGroups(symbols: ExtractedSymbol[], threshold: number, shingleSize: number): Group[] {
   // Pre-compute shingles for each symbol
   const shingleSets = symbols.map((s) => shingles(tokenStream(s.node), shingleSize));
 
@@ -202,6 +222,7 @@ function buildGroups(symbols: Symbol[], threshold: number, shingleSize: number):
   for (let i = 0; i < symbols.length; i++) {
     for (let j = i + 1; j < symbols.length; j++) {
       if (symbols[i].kind !== symbols[j].kind) continue;
+      if (shingleSets[i].size === 0 || shingleSets[j].size === 0) continue;
       const sim = jaccard(shingleSets[i], shingleSets[j]);
       if (sim >= threshold) {
         if (!adjacent.has(i)) adjacent.set(i, new Set());
@@ -281,7 +302,7 @@ function main(): void {
     skipAddingFilesFromTsConfig: false,
   });
 
-  const allSymbols: Symbol[] = [];
+  const allSymbols: ExtractedSymbol[] = [];
 
   for (const sf of project.getSourceFiles()) {
     const absPath = sf.getFilePath();
@@ -295,7 +316,18 @@ function main(): void {
     allSymbols.push(...syms);
   }
 
-  const groups = buildGroups(allSymbols, SIMILARITY_THRESHOLD, SHINGLE_SIZE);
+  // Fix 2b: dedup symbols by source location — a node exported under both
+  // "default" and a named key would otherwise appear twice with identical
+  // fingerprints and form a bogus self-group at similarity 1.0.
+  const seen = new Set<string>();
+  const dedupedSymbols = allSymbols.filter((s) => {
+    const key = `${s.file}:${s.startLine}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  const groups = buildGroups(dedupedSymbols, SIMILARITY_THRESHOLD, SHINGLE_SIZE);
 
   const output: Output = { groups };
   process.stdout.write(JSON.stringify(output, null, 2) + "\n");
