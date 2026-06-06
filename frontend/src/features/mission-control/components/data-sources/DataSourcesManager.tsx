@@ -1,5 +1,5 @@
 import { Database, Building2, Users } from "lucide-react";
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 
 import { useDataSources } from "../../hooks/useDataSources";
 import { useLeadStreamStatus } from "../../hooks/useLeadStreamStatus";
@@ -24,6 +24,7 @@ import DataSourceUploader from "./DataSourceUploader";
 import { getLeadStreamRowStatus, isTerminalLeadStreamStatus } from "./leadStreamStatus";
 import LeadStreamTable from "./LeadStreamTable";
 import SourceForm from "./SourceForm";
+import { useDataSourceForm } from "./useDataSourceForm";
 
 import { useToast } from "@/components/ui/use-toast";
 import { buildApiUrl } from "@/shared/api/transport";
@@ -723,103 +724,36 @@ const DataSourcesManager: React.FC = () => {
     }
   };
 
-  // Form state
-  const [isAddingInline, setIsAddingInline] = useState(false);
-  const [selectedType, setSelectedType] = useState<DataSourceType | "">("");
-  const [sourceName, setSourceName] = useState("");
-  const [sourceUrl, setSourceUrl] = useState("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [existingFileName, setExistingFileName] = useState<string | null>(null);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [customTag, setCustomTag] = useState("");
-  const [sourceDescription, setSourceDescription] = useState("");
-
-  // Edit state
-  const [editingId, setEditingId] = useState<string | null>(null);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const formCardRef = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll to form when editing URL source
-  useEffect(() => {
-    if (isAddingInline && editingId && formCardRef.current) {
-      const source = dataSources.find((s) => s.id === editingId);
-      if (source && source.type === "url") {
-        // Use setTimeout to ensure DOM has updated
-        setTimeout(() => {
-          formCardRef.current?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
-        }, 100);
-      }
-    }
-  }, [isAddingInline, editingId, dataSources]);
-
-  const resetInlineForm = () => {
-    setIsAddingInline(false);
-    setSelectedType("");
-    setSourceName("");
-    setSourceUrl("");
-    setSelectedFile(null);
-    setExistingFileName(null);
-    setSelectedTags([]);
-    setCustomTag("");
-    setSourceDescription("");
-    setEditingId(null);
-  };
-
-  const handleStartAdd = () => {
-    resetInlineForm();
-    setIsAddingInline(true);
-  };
-
-  const handleCancelInline = () => {
-    resetInlineForm();
-  };
-
-  const handleTypeSelect = (type: DataSourceType) => {
-    setSelectedType(type);
-    // Clear URL/file when switching types
-    if (type === "url") {
-      setSelectedFile(null);
-      setExistingFileName(null);
-    } else if (type === "file") {
-      setSourceUrl("");
-    } else if (type === "system") {
-      setSelectedFile(null);
-      setExistingFileName(null);
-      setSourceUrl("");
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      setExistingFileName(null); // Clear existing filename when new file is selected
-    }
-  };
-
-  const handleTagToggle = (tag: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
-    );
-  };
-
-  const handleAddCustomTag = () => {
-    if (customTag.trim() && !selectedTags.includes(customTag.trim())) {
-      setSelectedTags((prev) => [...prev, customTag.trim()]);
-      setCustomTag("");
-    }
-  };
-
-  const handleCustomTagKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleAddCustomTag();
-    }
-  };
+  // Form concern — inline add/edit state, refs, and handlers
+  const {
+    isAddingInline,
+    selectedType,
+    sourceName,
+    sourceUrl,
+    selectedFile,
+    existingFileName,
+    selectedTags,
+    customTag,
+    sourceDescription,
+    editingId,
+    canSave,
+    fileInputRef,
+    formCardRef,
+    setSelectedType,
+    setSourceName,
+    setSourceUrl,
+    setCustomTag,
+    setSourceDescription,
+    resetInlineForm,
+    handleStartAdd,
+    handleCancelInline,
+    handleTypeSelect,
+    handleFileChange,
+    handleTagToggle,
+    handleAddCustomTag,
+    handleCustomTagKeyDown,
+    handleEditSource,
+  } = useDataSourceForm(dataSources);
 
   const handleSaveSource = async () => {
     if (!sourceName.trim()) {
@@ -1722,22 +1656,6 @@ const DataSourcesManager: React.FC = () => {
     }
   };
 
-  const handleEditSource = (source: DataSource) => {
-    setEditingId(source.id);
-    setSelectedType(source.type);
-    setSourceName(source.name);
-    setSourceUrl(source.url || "");
-    setSourceDescription(source.description || "");
-    setSelectedTags(source.tags);
-    if (source.type === "file") {
-      setExistingFileName(source.fileName || null);
-      setSelectedFile(null); // Clear selected file so existing filename shows
-    } else {
-      setExistingFileName(null);
-    }
-    setIsAddingInline(true);
-  };
-
   // API: Upload lead file batch (CSV, XLSX, XLS — matches backend)
   const uploadCsvBatch = async (file: File) => {
     const userId = currentUser?.uid || "";
@@ -2408,19 +2326,6 @@ const DataSourcesManager: React.FC = () => {
       });
     }
   };
-
-  const canSave =
-    selectedType &&
-    sourceName.trim() &&
-    (selectedType === "system"
-      ? true // System type only needs a name
-      : selectedType === "url"
-        ? editingId
-          ? true
-          : sourceUrl.trim() // When editing URL, URL is optional; when adding new, URL is required
-        : editingId
-          ? true // When editing, file is optional - can update metadata without new file
-          : selectedFile); // When adding new, file is required
 
   const showTable = dataSources.length > 0;
   const showDataSourcesEmptyState =
