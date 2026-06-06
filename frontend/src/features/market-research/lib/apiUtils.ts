@@ -18,7 +18,7 @@ interface ApiResponse<T = unknown> {
 /**
  * Simple API call function - NO RETRIES, just single attempt
  */
-export const simpleApiCall = async <T = unknown>(
+const simpleApiCall = async <T = unknown>(
   endpoint: string,
   payload: unknown,
   options: ApiCallOptions = {},
@@ -86,27 +86,6 @@ export const marketResearchApiCall = async (
 };
 
 /**
- * Market research specific API call wrapper with cache busting
- */
-export const marketResearchApiCallWithCacheBust = async (
-  componentName: string,
-  payload: Record<string, unknown>,
-  options: ApiCallOptions = {},
-): Promise<ApiResponse> => {
-  // Add cache busting parameters to payload
-  const cacheBustedPayload = {
-    ...payload,
-    _timestamp: Date.now(),
-    _cache_bust: Math.random().toString(36).substring(7),
-  };
-
-  return simpleApiCall("market-research", cacheBustedPayload, {
-    ...options,
-    componentName,
-  });
-};
-
-/**
  * Check if we should fall back to cached data
  */
 export const shouldUseCachedData = (apiResponse: ApiResponse, refresh: boolean): boolean => {
@@ -144,57 +123,4 @@ export const logApiCallResult = (componentName: string, result: ApiResponse, ref
       console.log(`🔄 ${componentName} - Will fall back to cached data`);
     }
   }
-};
-
-/**
- * Rate limiting utility to space out API calls
- */
-export const rateLimitedApiCall = async <T>(
-  apiCall: () => Promise<T>,
-  componentName: string,
-  delayMs: number = 3000,
-): Promise<T> => {
-  console.log(
-    `⏳ ${componentName} - Waiting ${delayMs}ms before API call to avoid rate limiting...`,
-  );
-  await new Promise((resolve) => setTimeout(resolve, delayMs));
-  return apiCall();
-};
-
-/**
- * Validate if data is fresh (less than 5 minutes old)
- */
-export const isDataFresh = (timestamp: string | number | Date | null | undefined): boolean => {
-  if (!timestamp) return false;
-
-  try {
-    const dataTime = new Date(timestamp).getTime();
-    const currentTime = Date.now();
-    const fiveMinutesInMs = 5 * 60 * 1000; // 5 minutes
-
-    return currentTime - dataTime < fiveMinutesInMs;
-  } catch (error) {
-    console.warn("Error validating data freshness:", error);
-    return false;
-  }
-};
-
-/**
- * Force fresh data by clearing cache and making new API call
- */
-export const forceFreshData = async <T = unknown>(
-  componentName: string,
-  apiCall: () => Promise<T>,
-  localStorageKey?: string,
-): Promise<T> => {
-  console.log(`🔄 ${componentName} - Forcing fresh data...`);
-
-  // Clear localStorage cache if key provided
-  if (localStorageKey) {
-    localStorage.removeItem(localStorageKey);
-    console.log(`🧹 ${componentName} - Cleared localStorage cache: ${localStorageKey}`);
-  }
-
-  // Make fresh API call
-  return apiCall();
 };
