@@ -6,7 +6,7 @@
  * Invalidate Profiler when Mission Control saves company or customer profile.
  */
 
-export type ProfilerSessionSnapshot = {
+type ProfilerSessionSnapshot = {
   existingICPs: unknown[];
   refinedICPs: unknown[];
   newICPs: unknown[];
