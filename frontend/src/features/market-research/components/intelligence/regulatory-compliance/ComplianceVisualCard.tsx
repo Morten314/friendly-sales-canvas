@@ -32,6 +32,13 @@ export function ComplianceVisualCard({
     onVisualDataCardsChange(updated);
   };
 
+  // Helper: shallow-clone the outer array, in-place spread-patch the data item at itemIndex.
+  const updateCardDataItem = (itemIndex: number, patch: Record<string, unknown>) => {
+    const updated = [...localVisualDataCards];
+    updated[cardIndex].data[itemIndex] = { ...updated[cardIndex].data[itemIndex], ...patch };
+    onVisualDataCardsChange(updated);
+  };
+
   if (isExpanded) {
     return (
       <div key={cardIndex} className="bg-white border border-gray-200 rounded-lg p-4">
@@ -199,13 +206,10 @@ export function ComplianceVisualCard({
                         <Input
                           value={itemName}
                           onChange={(e) => {
-                            const updated = [...localVisualDataCards];
-                            updated[cardIndex].data[index] = {
-                              ...updated[cardIndex].data[index],
+                            updateCardDataItem(index, {
                               name: e.target.value,
                               label: e.target.value,
-                            };
-                            onVisualDataCardsChange(updated);
+                            });
                           }}
                           className="flex-1 text-sm"
                           placeholder="Name"
@@ -214,12 +218,7 @@ export function ComplianceVisualCard({
                           type="number"
                           value={item.value || ""}
                           onChange={(e) => {
-                            const updated = [...localVisualDataCards];
-                            updated[cardIndex].data[index] = {
-                              ...updated[cardIndex].data[index],
-                              value: Number(e.target.value) || 0,
-                            };
-                            onVisualDataCardsChange(updated);
+                            updateCardDataItem(index, { value: Number(e.target.value) || 0 });
                           }}
                           className="w-20 text-sm"
                           placeholder="Value"
@@ -318,13 +317,10 @@ export function ComplianceVisualCard({
                       <Input
                         value={item.event || item.label || ""}
                         onChange={(e) => {
-                          const updated = [...localVisualDataCards];
-                          updated[cardIndex].data[index] = {
-                            ...updated[cardIndex].data[index],
+                          updateCardDataItem(index, {
                             event: e.target.value,
                             label: e.target.value,
-                          };
-                          onVisualDataCardsChange(updated);
+                          });
                         }}
                         className="text-sm"
                         placeholder="Event"
@@ -332,13 +328,7 @@ export function ComplianceVisualCard({
                       <Input
                         value={item.date || item.time || ""}
                         onChange={(e) => {
-                          const updated = [...localVisualDataCards];
-                          updated[cardIndex].data[index] = {
-                            ...updated[cardIndex].data[index],
-                            date: e.target.value,
-                            time: e.target.value,
-                          };
-                          onVisualDataCardsChange(updated);
+                          updateCardDataItem(index, { date: e.target.value, time: e.target.value });
                         }}
                         className="text-xs"
                         placeholder="Date"
@@ -415,13 +405,10 @@ export function ComplianceVisualCard({
                     <Input
                       value={item.metric || item.label || ""}
                       onChange={(e) => {
-                        const updated = [...localVisualDataCards];
-                        updated[cardIndex].data[index] = {
-                          ...updated[cardIndex].data[index],
+                        updateCardDataItem(index, {
                           metric: e.target.value,
                           label: e.target.value,
-                        };
-                        onVisualDataCardsChange(updated);
+                        });
                       }}
                       className="flex-1 text-sm"
                       placeholder="Metric"
@@ -430,12 +417,7 @@ export function ComplianceVisualCard({
                       type="number"
                       value={item.value || ""}
                       onChange={(e) => {
-                        const updated = [...localVisualDataCards];
-                        updated[cardIndex].data[index] = {
-                          ...updated[cardIndex].data[index],
-                          value: Number(e.target.value) || 0,
-                        };
-                        onVisualDataCardsChange(updated);
+                        updateCardDataItem(index, { value: Number(e.target.value) || 0 });
                       }}
                       className="w-20 text-sm"
                       placeholder="Value"
