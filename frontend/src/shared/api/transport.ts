@@ -12,7 +12,7 @@ const isLocalhost =
 export const BACKEND_BASE_URL = "https://brewra-gtm-intelligence.onrender.com";
 
 // Use proxy in development, Vercel, and localhost; direct URL elsewhere.
-export const API_BASE_URL = isDevelopment || isVercel || isLocalhost ? "/api" : BACKEND_BASE_URL;
+const API_BASE_URL = isDevelopment || isVercel || isLocalhost ? "/api" : BACKEND_BASE_URL;
 
 // Helper function to build API URLs
 export const buildApiUrl = (endpoint: string): string => {
@@ -26,11 +26,11 @@ export const buildApiUrl = (endpoint: string): string => {
 // Backend uses /icp only (no /customer_profile endpoint).
 // Derived from BACKEND_BASE_URL (single source of truth); the template form keeps
 // it a distinct binding so knip --strict doesn't flag it as a duplicate export.
-export const ICP_BACKEND_URL = `${BACKEND_BASE_URL}`;
+const ICP_BACKEND_URL = `${BACKEND_BASE_URL}`;
 export const buildIcpUrl = (params: string): string => `${ICP_BACKEND_URL}/icp?${params}`;
 
 // Extended options type that allows object body (will be JSON stringified)
-export interface ApiFetchOptions extends Omit<RequestInit, "body"> {
+interface ApiFetchOptions extends Omit<RequestInit, "body"> {
   body?: BodyInit | Record<string, unknown> | null;
 }
 
