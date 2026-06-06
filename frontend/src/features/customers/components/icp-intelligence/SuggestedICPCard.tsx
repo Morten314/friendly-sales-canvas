@@ -16,9 +16,9 @@ import {
 
 import type { SuggestedICP, ICPCardStatus } from "../../types";
 
+import { EditDropdownMenu } from "./EditDropdownMenu";
 import { confidenceColor, hasBackendFullReport } from "./icpMapping";
 
-import { EditDropdownMenu } from "@/components/market-research/EditDropdownMenu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";

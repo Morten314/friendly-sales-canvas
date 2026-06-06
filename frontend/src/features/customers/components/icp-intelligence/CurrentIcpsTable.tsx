@@ -14,9 +14,9 @@ import {
 
 import type { ExistingICP } from "../../types";
 
+import { EditDropdownMenu } from "./EditDropdownMenu";
 import { analyzeICP, confidenceColor } from "./icpMapping";
 
-import { EditDropdownMenu } from "@/components/market-research/EditDropdownMenu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
