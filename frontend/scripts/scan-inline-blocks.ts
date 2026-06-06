@@ -3,7 +3,16 @@
  *
  * Walks src/**\/*.{ts,tsx}, identifies candidate blocks per the spec definition,
  * normalizes whitespace, hashes with SHA-256, groups occurrences, and emits
- * a JSON report at docs/audits/2026-05-27-frontend-inline-block-scan.json.
+ * a JSON report to STDOUT as `JSON.stringify(out, null, 2)`.
+ *
+ * Usage:
+ *   npx tsx scripts/scan-inline-blocks.ts                  # default mode
+ *   npx tsx scripts/scan-inline-blocks.ts --enumerate      # enumerate mode
+ *
+ * Default mode: groups contain only self-contained blocks (no outer-scope refs).
+ * Enumerate mode (--enumerate): also includes blocks that reference outer-scope
+ *   identifiers; those groups gain an `outerScopeRefs` field listing the
+ *   referenced identifiers so a reviewer can judge unifiability.
  *
  * Block definition (Spec 16 §3 Step 6a):
  *   - Contiguous sequence of ≥3 JavaScript statements
@@ -11,26 +20,18 @@
  *   - Not interrupted by a control-flow boundary (if/for/while/switch/try/catch/finally)
  *     or a JSX return statement
  *   - Self-contained: no references to identifiers declared outside the block
- *
- * Whitespace normalization (for hashing only — fixture stores the original first
- * occurrence): collapse all runs of whitespace to a single space, drop trailing
- * whitespace before line terminators.
+ *     (relaxed in --enumerate mode)
  */
 import { createHash } from "node:crypto";
-import { readFile, readdir, writeFile, mkdir } from "node:fs/promises";
-import { join, relative, resolve, dirname } from "node:path";
+import { readFile, readdir } from "node:fs/promises";
+import { join, relative, resolve } from "node:path";
 
 import * as ts from "typescript";
 
 const FRONTEND_DIR = resolve(import.meta.dirname, "..");
 const SRC_DIR = join(FRONTEND_DIR, "src");
-const OUTPUT_FILE = resolve(
-  FRONTEND_DIR,
-  "..",
-  "docs",
-  "audits",
-  "2026-05-27-frontend-inline-block-scan.json",
-);
+
+const ENUMERATE = process.argv.includes("--enumerate");
 
 const MIN_BLOCK_STATEMENTS = 3;
 const MIN_GROUP_OCCURRENCES = 3;
@@ -45,9 +46,13 @@ interface Group {
   hash: string;
   block: string;
   occurrences: Occurrence[];
+  outerScopeRefs?: string[];
 }
 
-const groups = new Map<string, { block: string; raw: string; occurrences: Occurrence[] }>();
+const groups = new Map<
+  string,
+  { block: string; raw: string; occurrences: Occurrence[]; outerScopeRefs?: string[] }
+>();
 
 async function walk(dir: string): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -238,10 +243,17 @@ function processBlock(file: string, src: string, statements: ts.Statement[]): vo
     "React",
   ]);
 
+  // Collect identifiers that reference outer scope (neither declared in this block nor builtins)
+  const outerRefs: string[] = [];
   for (const r of referenced) {
     if (declared.has(r)) continue;
     if (builtins.has(r)) continue;
-    return;
+    if (ENUMERATE) {
+      outerRefs.push(r);
+    } else {
+      // Default mode: drop blocks with outer-scope references
+      return;
+    }
   }
 
   const start = statements[0].getStart(undefined, false);
@@ -264,7 +276,16 @@ function processBlock(file: string, src: string, statements: ts.Statement[]): vo
   if (existing) {
     existing.occurrences.push(occurrence);
   } else {
-    groups.set(hash, { block: normalized, raw, occurrences: [occurrence] });
+    const entry: {
+      block: string;
+      raw: string;
+      occurrences: Occurrence[];
+      outerScopeRefs?: string[];
+    } = { block: normalized, raw, occurrences: [occurrence] };
+    if (ENUMERATE) {
+      entry.outerScopeRefs = outerRefs;
+    }
+    groups.set(hash, entry);
   }
 }
 
@@ -326,16 +347,16 @@ async function main() {
   const out: { groups: Group[] } = { groups: [] };
   for (const [hash, g] of groups) {
     if (g.occurrences.length >= MIN_GROUP_OCCURRENCES) {
-      out.groups.push({ hash, block: g.block, occurrences: g.occurrences });
+      const group: Group = { hash, block: g.block, occurrences: g.occurrences };
+      if (ENUMERATE && g.outerScopeRefs !== undefined) {
+        group.outerScopeRefs = g.outerScopeRefs;
+      }
+      out.groups.push(group);
     }
   }
   out.groups.sort((a, b) => b.occurrences.length - a.occurrences.length);
 
-  await mkdir(dirname(OUTPUT_FILE), { recursive: true });
-  await writeFile(OUTPUT_FILE, JSON.stringify(out, null, 2) + "\n");
-  console.log(
-    `Scanned ${files.length} files; found ${out.groups.length} byte-identical group(s) with >=${MIN_GROUP_OCCURRENCES} occurrences.`,
-  );
+  process.stdout.write(JSON.stringify(out, null, 2) + "\n");
 }
 
 main().catch((err) => {
