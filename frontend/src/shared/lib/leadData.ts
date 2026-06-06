@@ -1,5 +1,5 @@
-// HANDOFF → customers (Spec 24 §7). This module is NOT part of market-research;
-// it stays here until the customers feature phase relocates + decomposes it.
+// Shared lead data + scoring logic. Lives in shared/lib because ≥2 features
+// consume it (strategist + market-research). Promoted in Phase 11 (TD-FE-63).
 
 // ─── Shared Lead Data & Scoring Logic ────────────────────────────────────────
 

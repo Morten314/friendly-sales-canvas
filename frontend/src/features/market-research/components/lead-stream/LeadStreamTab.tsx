@@ -1,7 +1,6 @@
-// HANDOFF → customers (Spec 24 §7). Extracted from MarketResearchPage in 5c; lives in
-// legacy until the customers feature (Phase 7) relocates + decomposes it and migrates its
-// data layer. Does NOT import feature-internal code (transitional boundary, one-way) —
-// cross-tab/nav/Strategist coordination is injected by the feature shell as callback props.
+// Lead-stream tab — part of the market-research lead-stream cluster (extracted from
+// MarketResearchPage in Phase 5c; relocated into features/market-research in Phase 11).
+// Cross-tab/nav/Strategist coordination is injected by the feature shell as callback props.
 import { useState } from "react";
 
 import ScoutLeadStream from "../ScoutLeadStream";

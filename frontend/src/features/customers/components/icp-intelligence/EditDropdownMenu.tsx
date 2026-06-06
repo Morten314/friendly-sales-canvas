@@ -1,5 +1,5 @@
-// HANDOFF → customers (Spec 24 §7). This component is NOT part of market-research;
-// it stays here until the customers feature phase relocates + decomposes it.
+// Lives in features/customers — its only consumers are the customers
+// icp-intelligence tables. Relocated here in Phase 11 (TD-FE-63).
 
 import { Edit, Pencil } from "lucide-react";
 import React from "react";

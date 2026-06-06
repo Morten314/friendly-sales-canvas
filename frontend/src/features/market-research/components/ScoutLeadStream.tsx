@@ -1,5 +1,5 @@
-// HANDOFF → scout (Spec 24 §7). This component is NOT part of market-research;
-// it stays here until the scout feature phase relocates + decomposes it.
+// Scout lead-stream view — part of the market-research lead-stream cluster.
+// Relocated into features/market-research in Phase 11 (TD-FE-63).
 
 import React, { useState } from "react";
 
