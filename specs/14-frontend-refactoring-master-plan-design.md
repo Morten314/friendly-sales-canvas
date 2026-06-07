@@ -213,7 +213,7 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 | 10 — Feature: settings + tenant + auth              | done    | 2026-06-05 |
 | 11 — Shared utility extraction                      | done    | 2026-06-06 |
 | 12 — Small-pages sweep                              | done    | 2026-06-05 |
-| 13 — LOC reduction pass #2                          | pending | —          |
+| 13 — LOC reduction pass #2                          | done    | 2026-06-07 |
 | 14 — Agent affordances                              | pending | —          |
 
 _Status reflects merge state to `master`. Update at merge time only. Phase descriptions below are intentionally not amended after a phase ships — they're a frozen record of intent per CLAUDE.md "Spec-driven flow."_
@@ -605,6 +605,18 @@ Phases 6–12 are **not** a strict chain. Per the per-phase "Key risks / couplin
 **Codemod test approach:** Vitest + filesystem fixtures under `frontend/scripts/codemods/__tests__/` — each codemod has an `input.ts` and `expected.ts` pair; the test reads input, applies the codemod, compares against expected. AST-based codemods don't fit the DOM-oriented Vitest+RTL pattern; this filesystem-fixture approach is lightweight enough not to need a separate harness. Phase 13's spec finalizes the exact pattern.
 
 **Done when:** scorecard at `docs/audits/<date>-frontend-loc-pass-2.md` covers every file; all `execute` and confirmed-safe `investigate` findings applied; codemods committed.
+
+**— Frozen-record delta (executed 2026-06-06..07, Spec 32; merged to local master, not pushed to origin) —**
+
+_The intent prose above is preserved verbatim per the frozen-record convention; this block records what actually happened._
+
+- **13a — tree-wide dedup + dead-code** (merged `a61b332`): src `65,295 → 64,659` LOC. Audit tooling added (`scan-similar-symbols.ts` via ts-morph — resolves Spec 32 §12 Q3; `scan-inline-blocks --enumerate`). Closed **TD-FE-1..7** (orphan routes kept; conservative-defer symbols removed/export-dropped; 3 unused shadcn primitives pruned −528 LOC). Dedup (operator chose "full grind"): `KeyMetrics→KeyMetricsGrid`, 3 intelligence headers→`IntelligenceSectionHeader`, 6 inline-idiom helpers. **ui-patterns NOT surfaced** (all merges intra-feature) → `shared/ui-patterns/` not created, no ADR-0006. **Codemods: none — manual** (extractions were per-file judgment calls, not mechanically recurring). Scorecard: `docs/audits/2026-06-06-frontend-loc-pass-2.md` (every file verdicted). impl-review-1 → synthesis-1 (no round 2).
+- **Decomposition set (Stage SELECT):** the 3 files above the post-dedup >3,000-LOC cliff.
+  - **13b — `DataSourcesManager.tsx`** (merged `f9880f6`): `3,497 → 1,589` LOC (−55%), 7 behavior-preserving seams + 65 seam tests.
+  - **13c — `ConnectorApprovals.tsx`** (merged `808ef6b`): `3,048 → 806` LOC (−73%), 7 seams + 32 seam tests (its dialog UI is pre-existing dead UI — no live open-trigger — so VR could not exercise it; static review was the safety net).
+  - **13d — `useMarketResearchData.ts` (6,034 LOC): DEFERRED** — no behavior-safe structural seam; the editable-state↔`useQuery` coupling (TD-FE-19/21) pervades every cohesive slice (the loading-phase logic reads editable data), and only ~93 LOC of pure helpers were safely extractable. Per Spec 32 §5.3, deferred rather than forced → **TD-FE-65**.
+- **New tech debt:** **TD-FE-64** (pre-existing CSV smart-quote normalization no-op found during 13b seam-testing; not fixed — behavior-preserving), **TD-FE-65** (useMarketResearchData decomposition deferred; revisit after TD-FE-19/21 data-layer separation).
+- Every sub-phase merge passed full serial `npm run preflight` (typecheck, lint, format, unit, build, bundle:check, e2e + VR, knip --strict). VR component-level drift: ~0% on all reachable surfaces.
 
 ### Phase 14 — Agent affordances
 

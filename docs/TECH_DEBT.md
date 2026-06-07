@@ -1896,3 +1896,24 @@ Change the replacement string in `csvHelpers.ts` from the U+201D character to an
 A CSV-import correctness pass, or any report of curly-quoted CSV fields mis-parsing on upload.
 
 **Owner:** TBD.
+
+---
+
+## TD-FE-65 — `useMarketResearchData.ts` decomposition deferred (6,034 LOC monster file)
+
+**Date logged:** 2026-06-07
+**Origin:** Phase 13 Stage SELECT picked this as decomposition sub-phase 13d; the 13d seam analysis found no behavior-safe structural seam (Spec 32 §5.3 / plan Task J Step 6).
+
+**Current state:**
+`frontend/src/features/market-research/hooks/useMarketResearchData.ts` is one ~6,034-LOC `export function useMarketResearchData(activeTabRef)` (~108 hook calls). A full read found that the editable-state↔`useQuery` coupling (TD-FE-19/21) pervades every cohesive slice: five parallel per-component editable-state clusters, five `fetch*` functions that write those clusters directly, and a loading-phase state machine (`validateAllComponentsHaveFreshData` / `startRenderingPhase`) that **reads the editable data states to decide phase transitions** — that read IS the coupling. Only ~93 LOC of truly pure helpers (`transformReportData`, `formatTimestamp`, `getDefaultRegulatoryData`) are independent of the coupling (~1.5% of the file); the `getInitial*` initializers (~330 LOC) and `saveX` callbacks (~120 LOC) sit on the editable-state initializer/persistence seam and are unsafe to extract.
+
+**Why deferred:**
+Phase 13 decomposition is behavior-preserving structural splitting only (Spec 32 §5.2/§5.3). Extracting the entangled clusters requires a data-layer rewrite (separating the server-cache/query layer from the editable draft state) — a logic change, out of scope. Extracting only the ~93 LOC of pure helpers would not move the needle on the monster file and adds import churn for negligible benefit, so the whole file was deferred rather than force a split (this mirrors the Phase 5/8 editable-state-blocks-`useQuery` deferrals).
+
+**Fix (prerequisite then decomposition):**
+Resolve TD-FE-19/21 first — move fetch results into a query layer and let editable drafts hydrate FROM it via an explicit reset/merge boundary so the loading-phase computation no longer reads editable data. Once decoupled, the five per-component clusters become independently extractable sub-hooks (`useMarketSizeSection`, `useCompetitorSection`, etc.), and a follow-up decomposition pass can split the file.
+
+**Pull-forward trigger:**
+A data-layer pass that resolves TD-FE-19/21, or a renewed effort to reduce this file's size after that decoupling lands.
+
+**Owner:** TBD.
