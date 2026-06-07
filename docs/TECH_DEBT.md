@@ -1917,3 +1917,19 @@ Resolve TD-FE-19/21 first — move fetch results into a query layer and let edit
 A data-layer pass that resolves TD-FE-19/21, or a renewed effort to reduce this file's size after that decoupling lands.
 
 **Owner:** TBD.
+
+## TD-FE-66 — useDocumentSync cleanup (pre-existing patterns relocated in Phase 13b)
+
+**Date logged:** 2026-06-07
+**Origin:** impl-review-2 of Phase 13 (docs/reviews/phase-13-loc-reduction-pass-2-impl-review-2.md + synthesis-2). Pre-existing code relocated verbatim during the 13b DataSourcesManager decomposition; deferred because fixing it is a logic change, out of scope for behavior-preserving decomposition.
+
+**Current state (`frontend/src/features/mission-control/components/data-sources/useDocumentSync.ts`):**
+1. `checkProcessingFilesStatus` wraps its body in `setDataSources((cur) => {...})` purely to READ current state, returns `cur` unchanged (forcing an unnecessary re-render), and fires `forEach` + `void (async () => ...)` `checkDocumentStatus` calls with NO concurrency control — N concurrent status checks can race on `setDataSources`. The idiomatic fix is a ref/query-cache read + a concurrency guard.
+2. `_isSaving` (~line 48): `const [_isSaving, setIsSaving] = useState(false)` — the value is never read anywhere in the tree (only `setIsSaving` is called by the parent's `handleSaveSource`); the isSaving mechanism is dead state.
+3. Debug `console.log` density in this module (~18 calls) — kept verbatim (removing them is a behavior change; thin them in a logging-audit pass).
+
+**Why deferred:** Phase 13 decomposition was behavior-preserving only (Spec 32 §5.2); all three are pre-existing and relocating them verbatim was correct. The hook boundary is now the natural fix site.
+
+**Pull-forward trigger:** the next change that touches `useDocumentSync` (e.g. a data-source processing-status bug, or a render-perf pass), or a TD-FE-19/21 data-layer pass.
+
+**Owner:** TBD.
