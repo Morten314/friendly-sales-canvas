@@ -29,6 +29,7 @@ import {
 import type { Connector, DataSource } from "./connectorTypes";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import GoogleAnalyticsAuthModal from "./GoogleAnalyticsAuthModal";
+import { useCredentialAuthModal } from "./useCredentialAuthModal";
 
 import {
   Accordion,
@@ -92,55 +93,167 @@ export default function ConnectorApprovals({
   const [configObjects, setConfigObjects] = useState<string[]>([]);
   const [configFilters, setConfigFilters] = useState<string[]>([]);
 
-  // Salesforce Auth Modal state
-  const [isSalesforceAuthModalOpen, setIsSalesforceAuthModalOpen] = useState(false);
-  const [salesforceSourceToConnect, setSalesforceSourceToConnect] = useState<DataSource | null>(
-    null,
-  );
-  const [salesforceEmail, setSalesforceEmail] = useState("");
-  const [salesforcePassword, setSalesforcePassword] = useState("");
-  const [isSalesforceLoggingIn, setIsSalesforceLoggingIn] = useState(false);
-  const [salesforceAuthStep, setSalesforceAuthStep] = useState<"login" | "permissions">("login");
+  // Salesforce Auth Modal — generic credential-auth hook instance.
+  // NOTE: the modal open-trigger + sourceToConnect setter are orphaned (the
+  // buttons that opened this modal were removed in an earlier refactor), so the
+  // open flag / source setter are intentionally not destructured here.
+  const {
+    isOpen: isSalesforceAuthModalOpen,
+    email: salesforceEmail,
+    setEmail: setSalesforceEmail,
+    password: salesforcePassword,
+    setPassword: setSalesforcePassword,
+    isLoggingIn: isSalesforceLoggingIn,
+    authStep: salesforceAuthStep,
+    reset: resetSalesforceAuthModal,
+    handleLogin: handleSalesforceLogin,
+    handleApprove: handleSalesforceApprove,
+    handleDeny: handleSalesforceDeny,
+  } = useCredentialAuthModal({
+    platformName: "Salesforce",
+    onDataSourcesChange,
+    toast,
+    objectsSynced: ["Contacts", "Accounts", "Opportunities"],
+    filters: ["Active records only"],
+    successTitle: "Salesforce connected successfully",
+    successDescription: "Your Salesforce account is now connected and syncing.",
+    denyDescription: "You denied access to your Salesforce account.",
+  });
 
-  // HubSpot Auth Modal state
-  const [isHubSpotAuthModalOpen, setIsHubSpotAuthModalOpen] = useState(false);
-  const [hubSpotSourceToConnect, setHubSpotSourceToConnect] = useState<DataSource | null>(null);
-  const [hubSpotEmail, setHubSpotEmail] = useState("");
-  const [hubSpotPassword, setHubSpotPassword] = useState("");
-  const [isHubSpotLoggingIn, setIsHubSpotLoggingIn] = useState(false);
-  const [hubSpotAuthStep, setHubSpotAuthStep] = useState<"login" | "permissions">("login");
+  // HubSpot Auth Modal — generic credential-auth hook instance (open-trigger
+  // orphaned; open flag / source setter intentionally not destructured)
+  const {
+    isOpen: isHubSpotAuthModalOpen,
+    email: hubSpotEmail,
+    setEmail: setHubSpotEmail,
+    password: hubSpotPassword,
+    setPassword: setHubSpotPassword,
+    isLoggingIn: isHubSpotLoggingIn,
+    authStep: hubSpotAuthStep,
+    reset: resetHubSpotAuthModal,
+    handleLogin: handleHubSpotLogin,
+    handleApprove: handleHubSpotApprove,
+    handleDeny: handleHubSpotDeny,
+  } = useCredentialAuthModal({
+    platformName: "HubSpot",
+    onDataSourcesChange,
+    toast,
+    objectsSynced: ["Contacts", "Companies", "Deals", "Tickets"],
+    filters: ["Active records only"],
+    successTitle: "HubSpot connected successfully",
+    successDescription:
+      "Your HubSpot account is now connected and syncing. Records and sync options are now available.",
+    denyDescription: "You denied access to your HubSpot account.",
+  });
 
-  // Pipedrive Auth Modal state
-  const [isPipedriveAuthModalOpen, setIsPipedriveAuthModalOpen] = useState(false);
-  const [pipedriveSourceToConnect, setPipedriveSourceToConnect] = useState<DataSource | null>(null);
-  const [pipedriveEmail, setPipedriveEmail] = useState("");
-  const [pipedrivePassword, setPipedrivePassword] = useState("");
-  const [isPipedriveLoggingIn, setIsPipedriveLoggingIn] = useState(false);
-  const [pipedriveAuthStep, setPipedriveAuthStep] = useState<"login" | "permissions">("login");
+  // Pipedrive Auth Modal — generic credential-auth hook instance (open-trigger
+  // orphaned; open flag / source setter intentionally not destructured)
+  const {
+    isOpen: isPipedriveAuthModalOpen,
+    email: pipedriveEmail,
+    setEmail: setPipedriveEmail,
+    password: pipedrivePassword,
+    setPassword: setPipedrivePassword,
+    isLoggingIn: isPipedriveLoggingIn,
+    authStep: pipedriveAuthStep,
+    reset: resetPipedriveAuthModal,
+    handleLogin: handlePipedriveLogin,
+    handleApprove: handlePipedriveApprove,
+    handleDeny: handlePipedriveDeny,
+  } = useCredentialAuthModal({
+    platformName: "Pipedrive",
+    onDataSourcesChange,
+    toast,
+    objectsSynced: ["Deals", "Persons", "Organizations", "Activities"],
+    filters: ["Active records only"],
+    successTitle: "Pipedrive connected successfully",
+    successDescription:
+      "Your Pipedrive account is now connected and syncing. Records and sync options are now available.",
+    denyDescription: "You denied access to your Pipedrive account.",
+  });
 
-  // Zoho Auth Modal state
-  const [isZohoAuthModalOpen, setIsZohoAuthModalOpen] = useState(false);
-  const [zohoSourceToConnect, setZohoSourceToConnect] = useState<DataSource | null>(null);
-  const [zohoEmail, setZohoEmail] = useState("");
-  const [zohoPassword, setZohoPassword] = useState("");
-  const [isZohoLoggingIn, setIsZohoLoggingIn] = useState(false);
-  const [zohoAuthStep, setZohoAuthStep] = useState<"login" | "permissions">("login");
+  // Zoho Auth Modal — generic credential-auth hook instance (open-trigger
+  // orphaned; open flag / source setter intentionally not destructured)
+  const {
+    isOpen: isZohoAuthModalOpen,
+    email: zohoEmail,
+    setEmail: setZohoEmail,
+    password: zohoPassword,
+    setPassword: setZohoPassword,
+    isLoggingIn: isZohoLoggingIn,
+    authStep: zohoAuthStep,
+    reset: resetZohoAuthModal,
+    handleLogin: handleZohoLogin,
+    handleApprove: handleZohoApprove,
+    handleDeny: handleZohoDeny,
+  } = useCredentialAuthModal({
+    platformName: "Zoho CRM",
+    onDataSourcesChange,
+    toast,
+    objectsSynced: ["Contacts", "Accounts", "Deals", "Leads"],
+    filters: ["Active records only"],
+    successTitle: "Zoho CRM connected successfully",
+    successDescription:
+      "Your Zoho CRM account is now connected and syncing. Records and sync options are now available.",
+    denyDescription: "You denied access to your Zoho CRM account.",
+  });
 
-  // LinkedIn Auth Modal state
-  const [isLinkedInAuthModalOpen, setIsLinkedInAuthModalOpen] = useState(false);
-  const [linkedInSourceToConnect, setLinkedInSourceToConnect] = useState<DataSource | null>(null);
-  const [linkedInEmail, setLinkedInEmail] = useState("");
-  const [linkedInPassword, setLinkedInPassword] = useState("");
-  const [isLinkedInLoggingIn, setIsLinkedInLoggingIn] = useState(false);
-  const [linkedInAuthStep, setLinkedInAuthStep] = useState<"login" | "permissions">("login");
+  // LinkedIn Auth Modal — generic credential-auth hook instance.
+  // `objectsSynced` is a resolver so the Company-vs-Sales-Navigator branch and
+  // the dynamic success-toast title are reproduced exactly.
+  const {
+    isOpen: isLinkedInAuthModalOpen,
+    sourceToConnect: linkedInSourceToConnect,
+    email: linkedInEmail,
+    setEmail: setLinkedInEmail,
+    password: linkedInPassword,
+    setPassword: setLinkedInPassword,
+    isLoggingIn: isLinkedInLoggingIn,
+    authStep: linkedInAuthStep,
+    reset: resetLinkedInAuthModal,
+    handleLogin: handleLinkedInLogin,
+    handleApprove: handleLinkedInApprove,
+    handleDeny: handleLinkedInDeny,
+  } = useCredentialAuthModal({
+    platformName: "LinkedIn",
+    onDataSourcesChange,
+    toast,
+    objectsSynced: (source) =>
+      source.name === "LinkedIn Company"
+        ? ["Company Page", "Posts", "Followers"]
+        : ["Company Pages", "Profiles", "Messages"],
+    filters: ["Active profiles only"],
+    successTitle: (source) => `${source.name} connected successfully`,
+    successDescription:
+      "Your LinkedIn account is now connected and syncing. Records and sync options are now available.",
+    denyDescription: "You denied access to your LinkedIn account.",
+  });
 
-  // X (Twitter) Auth Modal state
-  const [isXAuthModalOpen, setIsXAuthModalOpen] = useState(false);
-  const [xSourceToConnect, setXSourceToConnect] = useState<DataSource | null>(null);
-  const [xEmail, setXEmail] = useState("");
-  const [xPassword, setXPassword] = useState("");
-  const [isXLoggingIn, setIsXLoggingIn] = useState(false);
-  const [xAuthStep, setXAuthStep] = useState<"login" | "permissions">("login");
+  // X (Twitter) Auth Modal — generic credential-auth hook instance (open-trigger
+  // orphaned; open flag / source setter intentionally not destructured)
+  const {
+    isOpen: isXAuthModalOpen,
+    email: xEmail,
+    setEmail: setXEmail,
+    password: xPassword,
+    setPassword: setXPassword,
+    isLoggingIn: isXLoggingIn,
+    authStep: xAuthStep,
+    reset: resetXAuthModal,
+    handleLogin: handleXLogin,
+    handleApprove: handleXApprove,
+    handleDeny: handleXDeny,
+  } = useCredentialAuthModal({
+    platformName: "X",
+    onDataSourcesChange,
+    toast,
+    objectsSynced: ["Profiles", "Tweets", "Engagements"],
+    filters: ["Active profiles only"],
+    successTitle: "X connected successfully",
+    successDescription:
+      "Your X account is now connected and syncing. Records and sync options are now available.",
+    denyDescription: "You denied access to your X account.",
+  });
 
   // Google Analytics Auth Modal state (open flag + source owned here; the
   // 3-step internal flow now lives in GoogleAnalyticsAuthModal)
@@ -207,470 +320,6 @@ export default function ConnectorApprovals({
 
     setConfigDialogOpen(false);
     setSourceToConfigure(null);
-  };
-
-  const handleSalesforceLogin = async () => {
-    if (!salesforceSourceToConnect) return;
-
-    if (!salesforceEmail || !salesforcePassword) {
-      toast({
-        title: "Missing credentials",
-        description: "Please enter both email and password.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsSalesforceLoggingIn(true);
-
-    // Simulate login process, then show permissions screen
-    setTimeout(() => {
-      setIsSalesforceLoggingIn(false);
-      setSalesforceAuthStep("permissions");
-    }, 1500);
-  };
-
-  const handleSalesforceApprove = () => {
-    if (!salesforceSourceToConnect) return;
-
-    // Update data source to connected
-    onDataSourcesChange((prev) =>
-      prev.map((s) => {
-        if (s.id === salesforceSourceToConnect.id) {
-          const mockData = {
-            status: "connected" as const,
-            account: salesforceEmail,
-            connectedDate: new Date().toISOString().split("T")[0],
-            lastSyncTime: "Just now",
-            lastSyncStatus: "success" as const,
-            totalRecords: Math.floor(Math.random() * 5000) + 100,
-            newRecordsThisWeek: Math.floor(Math.random() * 100),
-            updatedRecords: Math.floor(Math.random() * 50),
-            dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
-            objectsSynced: ["Contacts", "Accounts", "Opportunities"],
-            fieldsMapped: Math.floor(Math.random() * 50) + 20,
-            filters: ["Active records only"],
-          };
-          return { ...s, ...mockData };
-        }
-        return s;
-      }),
-    );
-
-    // Close modal and reset form
-    setIsSalesforceAuthModalOpen(false);
-    setSalesforceEmail("");
-    setSalesforcePassword("");
-    setSalesforceSourceToConnect(null);
-    setSalesforceAuthStep("login");
-
-    toast({
-      title: "Salesforce connected successfully",
-      description: "Your Salesforce account is now connected and syncing.",
-    });
-  };
-
-  const handleSalesforceDeny = () => {
-    // Close modal and reset form
-    setIsSalesforceAuthModalOpen(false);
-    setSalesforceEmail("");
-    setSalesforcePassword("");
-    setSalesforceSourceToConnect(null);
-    setSalesforceAuthStep("login");
-
-    toast({
-      title: "Connection not authorized",
-      description: "You denied access to your Salesforce account.",
-      variant: "default",
-    });
-  };
-
-  const handleHubSpotLogin = async () => {
-    if (!hubSpotSourceToConnect) return;
-
-    if (!hubSpotEmail || !hubSpotPassword) {
-      toast({
-        title: "Missing credentials",
-        description: "Please enter both email and password.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsHubSpotLoggingIn(true);
-
-    // Simulate login process, then show permissions screen
-    setTimeout(() => {
-      setIsHubSpotLoggingIn(false);
-      setHubSpotAuthStep("permissions");
-    }, 1500);
-  };
-
-  const handleHubSpotApprove = () => {
-    if (!hubSpotSourceToConnect) return;
-
-    // Update data source to connected
-    onDataSourcesChange((prev) =>
-      prev.map((s) => {
-        if (s.id === hubSpotSourceToConnect.id) {
-          const mockData = {
-            status: "connected" as const,
-            account: hubSpotEmail,
-            connectedDate: new Date().toISOString().split("T")[0],
-            lastSyncTime: "Just now",
-            lastSyncStatus: "success" as const,
-            totalRecords: Math.floor(Math.random() * 5000) + 100,
-            newRecordsThisWeek: Math.floor(Math.random() * 100),
-            updatedRecords: Math.floor(Math.random() * 50),
-            dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
-            objectsSynced: ["Contacts", "Companies", "Deals", "Tickets"],
-            fieldsMapped: Math.floor(Math.random() * 50) + 20,
-            filters: ["Active records only"],
-          };
-          return { ...s, ...mockData };
-        }
-        return s;
-      }),
-    );
-
-    // Close modal and reset form
-    setIsHubSpotAuthModalOpen(false);
-    setHubSpotEmail("");
-    setHubSpotPassword("");
-    setHubSpotSourceToConnect(null);
-    setHubSpotAuthStep("login");
-
-    toast({
-      title: "HubSpot connected successfully",
-      description:
-        "Your HubSpot account is now connected and syncing. Records and sync options are now available.",
-    });
-  };
-
-  const handleHubSpotDeny = () => {
-    // Close modal and reset form
-    setIsHubSpotAuthModalOpen(false);
-    setHubSpotEmail("");
-    setHubSpotPassword("");
-    setHubSpotSourceToConnect(null);
-    setHubSpotAuthStep("login");
-
-    toast({
-      title: "Connection not authorized",
-      description: "You denied access to your HubSpot account.",
-      variant: "default",
-    });
-  };
-
-  const handlePipedriveLogin = async () => {
-    if (!pipedriveSourceToConnect) return;
-
-    if (!pipedriveEmail || !pipedrivePassword) {
-      toast({
-        title: "Missing credentials",
-        description: "Please enter both email and password.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsPipedriveLoggingIn(true);
-
-    // Simulate login process, then show permissions screen
-    setTimeout(() => {
-      setIsPipedriveLoggingIn(false);
-      setPipedriveAuthStep("permissions");
-    }, 1500);
-  };
-
-  const handlePipedriveApprove = () => {
-    if (!pipedriveSourceToConnect) return;
-
-    // Update data source to connected
-    onDataSourcesChange((prev) =>
-      prev.map((s) => {
-        if (s.id === pipedriveSourceToConnect.id) {
-          const mockData = {
-            status: "connected" as const,
-            account: pipedriveEmail,
-            connectedDate: new Date().toISOString().split("T")[0],
-            lastSyncTime: "Just now",
-            lastSyncStatus: "success" as const,
-            totalRecords: Math.floor(Math.random() * 5000) + 100,
-            newRecordsThisWeek: Math.floor(Math.random() * 100),
-            updatedRecords: Math.floor(Math.random() * 50),
-            dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
-            objectsSynced: ["Deals", "Persons", "Organizations", "Activities"],
-            fieldsMapped: Math.floor(Math.random() * 50) + 20,
-            filters: ["Active records only"],
-          };
-          return { ...s, ...mockData };
-        }
-        return s;
-      }),
-    );
-
-    // Close modal and reset form
-    setIsPipedriveAuthModalOpen(false);
-    setPipedriveEmail("");
-    setPipedrivePassword("");
-    setPipedriveSourceToConnect(null);
-    setPipedriveAuthStep("login");
-
-    toast({
-      title: "Pipedrive connected successfully",
-      description:
-        "Your Pipedrive account is now connected and syncing. Records and sync options are now available.",
-    });
-  };
-
-  const handlePipedriveDeny = () => {
-    // Close modal and reset form
-    setIsPipedriveAuthModalOpen(false);
-    setPipedriveEmail("");
-    setPipedrivePassword("");
-    setPipedriveSourceToConnect(null);
-    setPipedriveAuthStep("login");
-
-    toast({
-      title: "Connection not authorized",
-      description: "You denied access to your Pipedrive account.",
-      variant: "default",
-    });
-  };
-
-  const handleZohoLogin = async () => {
-    if (!zohoSourceToConnect) return;
-
-    if (!zohoEmail || !zohoPassword) {
-      toast({
-        title: "Missing credentials",
-        description: "Please enter both email and password.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsZohoLoggingIn(true);
-
-    // Simulate login process, then show permissions screen
-    setTimeout(() => {
-      setIsZohoLoggingIn(false);
-      setZohoAuthStep("permissions");
-    }, 1500);
-  };
-
-  const handleZohoApprove = () => {
-    if (!zohoSourceToConnect) return;
-
-    // Update data source to connected
-    onDataSourcesChange((prev) =>
-      prev.map((s) => {
-        if (s.id === zohoSourceToConnect.id) {
-          const mockData = {
-            status: "connected" as const,
-            account: zohoEmail,
-            connectedDate: new Date().toISOString().split("T")[0],
-            lastSyncTime: "Just now",
-            lastSyncStatus: "success" as const,
-            totalRecords: Math.floor(Math.random() * 5000) + 100,
-            newRecordsThisWeek: Math.floor(Math.random() * 100),
-            updatedRecords: Math.floor(Math.random() * 50),
-            dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
-            objectsSynced: ["Contacts", "Accounts", "Deals", "Leads"],
-            fieldsMapped: Math.floor(Math.random() * 50) + 20,
-            filters: ["Active records only"],
-          };
-          return { ...s, ...mockData };
-        }
-        return s;
-      }),
-    );
-
-    // Close modal and reset form
-    setIsZohoAuthModalOpen(false);
-    setZohoEmail("");
-    setZohoPassword("");
-    setZohoSourceToConnect(null);
-    setZohoAuthStep("login");
-
-    toast({
-      title: "Zoho CRM connected successfully",
-      description:
-        "Your Zoho CRM account is now connected and syncing. Records and sync options are now available.",
-    });
-  };
-
-  const handleZohoDeny = () => {
-    // Close modal and reset form
-    setIsZohoAuthModalOpen(false);
-    setZohoEmail("");
-    setZohoPassword("");
-    setZohoSourceToConnect(null);
-    setZohoAuthStep("login");
-
-    toast({
-      title: "Connection not authorized",
-      description: "You denied access to your Zoho CRM account.",
-      variant: "default",
-    });
-  };
-
-  const handleLinkedInLogin = async () => {
-    if (!linkedInSourceToConnect) return;
-
-    if (!linkedInEmail || !linkedInPassword) {
-      toast({
-        title: "Missing credentials",
-        description: "Please enter both email and password.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsLinkedInLoggingIn(true);
-
-    // Simulate login process, then show permissions screen
-    setTimeout(() => {
-      setIsLinkedInLoggingIn(false);
-      setLinkedInAuthStep("permissions");
-    }, 1500);
-  };
-
-  const handleLinkedInApprove = () => {
-    if (!linkedInSourceToConnect) return;
-
-    // Update data source to connected
-    onDataSourcesChange((prev) =>
-      prev.map((s) => {
-        if (s.id === linkedInSourceToConnect.id) {
-          const mockData = {
-            status: "connected" as const,
-            account: linkedInEmail,
-            connectedDate: new Date().toISOString().split("T")[0],
-            lastSyncTime: "Just now",
-            lastSyncStatus: "success" as const,
-            totalRecords: Math.floor(Math.random() * 5000) + 100,
-            newRecordsThisWeek: Math.floor(Math.random() * 100),
-            updatedRecords: Math.floor(Math.random() * 50),
-            dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
-            objectsSynced:
-              linkedInSourceToConnect.name === "LinkedIn Company"
-                ? ["Company Page", "Posts", "Followers"]
-                : ["Company Pages", "Profiles", "Messages"],
-            fieldsMapped: Math.floor(Math.random() * 50) + 20,
-            filters: ["Active profiles only"],
-          };
-          return { ...s, ...mockData };
-        }
-        return s;
-      }),
-    );
-
-    // Close modal and reset form
-    setIsLinkedInAuthModalOpen(false);
-    setLinkedInEmail("");
-    setLinkedInPassword("");
-    setLinkedInSourceToConnect(null);
-    setLinkedInAuthStep("login");
-
-    toast({
-      title: `${linkedInSourceToConnect.name} connected successfully`,
-      description:
-        "Your LinkedIn account is now connected and syncing. Records and sync options are now available.",
-    });
-  };
-
-  const handleLinkedInDeny = () => {
-    // Close modal and reset form
-    setIsLinkedInAuthModalOpen(false);
-    setLinkedInEmail("");
-    setLinkedInPassword("");
-    setLinkedInSourceToConnect(null);
-    setLinkedInAuthStep("login");
-
-    toast({
-      title: "Connection not authorized",
-      description: "You denied access to your LinkedIn account.",
-      variant: "default",
-    });
-  };
-
-  const handleXLogin = async () => {
-    if (!xSourceToConnect) return;
-
-    if (!xEmail || !xPassword) {
-      toast({
-        title: "Missing credentials",
-        description: "Please enter both email and password.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsXLoggingIn(true);
-
-    // Simulate login process, then show permissions screen
-    setTimeout(() => {
-      setIsXLoggingIn(false);
-      setXAuthStep("permissions");
-    }, 1500);
-  };
-
-  const handleXApprove = () => {
-    if (!xSourceToConnect) return;
-
-    // Update data source to connected
-    onDataSourcesChange((prev) =>
-      prev.map((s) => {
-        if (s.id === xSourceToConnect.id) {
-          const mockData = {
-            status: "connected" as const,
-            account: xEmail,
-            connectedDate: new Date().toISOString().split("T")[0],
-            lastSyncTime: "Just now",
-            lastSyncStatus: "success" as const,
-            totalRecords: Math.floor(Math.random() * 5000) + 100,
-            newRecordsThisWeek: Math.floor(Math.random() * 100),
-            updatedRecords: Math.floor(Math.random() * 50),
-            dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
-            objectsSynced: ["Profiles", "Tweets", "Engagements"],
-            fieldsMapped: Math.floor(Math.random() * 50) + 20,
-            filters: ["Active profiles only"],
-          };
-          return { ...s, ...mockData };
-        }
-        return s;
-      }),
-    );
-
-    // Close modal and reset form
-    setIsXAuthModalOpen(false);
-    setXEmail("");
-    setXPassword("");
-    setXSourceToConnect(null);
-    setXAuthStep("login");
-
-    toast({
-      title: "X connected successfully",
-      description:
-        "Your X account is now connected and syncing. Records and sync options are now available.",
-    });
-  };
-
-  const handleXDeny = () => {
-    // Close modal and reset form
-    setIsXAuthModalOpen(false);
-    setXEmail("");
-    setXPassword("");
-    setXSourceToConnect(null);
-    setXAuthStep("login");
-
-    toast({
-      title: "Connection not authorized",
-      description: "You denied access to your X account.",
-      variant: "default",
-    });
   };
 
   const handleGoogleAnalyticsConnected = (source: DataSource, account: string) => {
@@ -1550,11 +1199,7 @@ export default function ConnectorApprovals({
         open={isSalesforceAuthModalOpen}
         onOpenChange={(open) => {
           if (!open) {
-            setIsSalesforceAuthModalOpen(false);
-            setSalesforceEmail("");
-            setSalesforcePassword("");
-            setSalesforceSourceToConnect(null);
-            setSalesforceAuthStep("login");
+            resetSalesforceAuthModal();
           }
         }}
       >
@@ -1603,13 +1248,7 @@ export default function ConnectorApprovals({
               <div className="flex justify-end gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    setIsSalesforceAuthModalOpen(false);
-                    setSalesforceEmail("");
-                    setSalesforcePassword("");
-                    setSalesforceSourceToConnect(null);
-                    setSalesforceAuthStep("login");
-                  }}
+                  onClick={resetSalesforceAuthModal}
                   disabled={isSalesforceLoggingIn}
                 >
                   Cancel
@@ -1688,11 +1327,7 @@ export default function ConnectorApprovals({
         open={isHubSpotAuthModalOpen}
         onOpenChange={(open) => {
           if (!open) {
-            setIsHubSpotAuthModalOpen(false);
-            setHubSpotEmail("");
-            setHubSpotPassword("");
-            setHubSpotSourceToConnect(null);
-            setHubSpotAuthStep("login");
+            resetHubSpotAuthModal();
           }
         }}
       >
@@ -1739,13 +1374,7 @@ export default function ConnectorApprovals({
               <div className="flex justify-end gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    setIsHubSpotAuthModalOpen(false);
-                    setHubSpotEmail("");
-                    setHubSpotPassword("");
-                    setHubSpotSourceToConnect(null);
-                    setHubSpotAuthStep("login");
-                  }}
+                  onClick={resetHubSpotAuthModal}
                   disabled={isHubSpotLoggingIn}
                 >
                   Cancel
@@ -1827,11 +1456,7 @@ export default function ConnectorApprovals({
         open={isPipedriveAuthModalOpen}
         onOpenChange={(open) => {
           if (!open) {
-            setIsPipedriveAuthModalOpen(false);
-            setPipedriveEmail("");
-            setPipedrivePassword("");
-            setPipedriveSourceToConnect(null);
-            setPipedriveAuthStep("login");
+            resetPipedriveAuthModal();
           }
         }}
       >
@@ -1878,13 +1503,7 @@ export default function ConnectorApprovals({
               <div className="flex justify-end gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    setIsPipedriveAuthModalOpen(false);
-                    setPipedriveEmail("");
-                    setPipedrivePassword("");
-                    setPipedriveSourceToConnect(null);
-                    setPipedriveAuthStep("login");
-                  }}
+                  onClick={resetPipedriveAuthModal}
                   disabled={isPipedriveLoggingIn}
                 >
                   Cancel
@@ -1970,11 +1589,7 @@ export default function ConnectorApprovals({
         open={isZohoAuthModalOpen}
         onOpenChange={(open) => {
           if (!open) {
-            setIsZohoAuthModalOpen(false);
-            setZohoEmail("");
-            setZohoPassword("");
-            setZohoSourceToConnect(null);
-            setZohoAuthStep("login");
+            resetZohoAuthModal();
           }
         }}
       >
@@ -2019,17 +1634,7 @@ export default function ConnectorApprovals({
                 </div>
               </div>
               <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsZohoAuthModalOpen(false);
-                    setZohoEmail("");
-                    setZohoPassword("");
-                    setZohoSourceToConnect(null);
-                    setZohoAuthStep("login");
-                  }}
-                  disabled={isZohoLoggingIn}
-                >
+                <Button variant="outline" onClick={resetZohoAuthModal} disabled={isZohoLoggingIn}>
                   Cancel
                 </Button>
                 <Button
@@ -2109,11 +1714,7 @@ export default function ConnectorApprovals({
         open={isLinkedInAuthModalOpen}
         onOpenChange={(open) => {
           if (!open) {
-            setIsLinkedInAuthModalOpen(false);
-            setLinkedInEmail("");
-            setLinkedInPassword("");
-            setLinkedInSourceToConnect(null);
-            setLinkedInAuthStep("login");
+            resetLinkedInAuthModal();
           }
         }}
       >
@@ -2160,13 +1761,7 @@ export default function ConnectorApprovals({
               <div className="flex justify-end gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    setIsLinkedInAuthModalOpen(false);
-                    setLinkedInEmail("");
-                    setLinkedInPassword("");
-                    setLinkedInSourceToConnect(null);
-                    setLinkedInAuthStep("login");
-                  }}
+                  onClick={resetLinkedInAuthModal}
                   disabled={isLinkedInLoggingIn}
                 >
                   Cancel
@@ -2269,11 +1864,7 @@ export default function ConnectorApprovals({
         open={isXAuthModalOpen}
         onOpenChange={(open) => {
           if (!open) {
-            setIsXAuthModalOpen(false);
-            setXEmail("");
-            setXPassword("");
-            setXSourceToConnect(null);
-            setXAuthStep("login");
+            resetXAuthModal();
           }
         }}
       >
@@ -2318,17 +1909,7 @@ export default function ConnectorApprovals({
                 </div>
               </div>
               <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsXAuthModalOpen(false);
-                    setXEmail("");
-                    setXPassword("");
-                    setXSourceToConnect(null);
-                    setXAuthStep("login");
-                  }}
-                  disabled={isXLoggingIn}
-                >
+                <Button variant="outline" onClick={resetXAuthModal} disabled={isXLoggingIn}>
                   Cancel
                 </Button>
                 <Button onClick={handleXLogin} disabled={isXLoggingIn || !xEmail || !xPassword}>
