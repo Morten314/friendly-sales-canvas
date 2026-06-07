@@ -27,6 +27,7 @@ import {
   buildTwitterConnector,
 } from "./connectorFactory";
 import type { Connector, DataSource } from "./connectorTypes";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
 
 import {
   Accordion,
@@ -34,16 +35,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -1572,43 +1563,25 @@ export default function ConnectorApprovals({
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Data Source</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete <strong>{sourceToDelete?.name}</strong>? This action
-              cannot be undone and all associated data will be removed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => {
-                setDeleteDialogOpen(false);
-                setSourceToDelete(null);
-              }}
-            >
-              No, Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (sourceToDelete) {
-                  onDataSourcesChange((prev) => prev.filter((s) => s.id !== sourceToDelete.id));
-                  toast({
-                    title: "Data source deleted",
-                    description: `${sourceToDelete.name} has been removed.`,
-                  });
-                  setDeleteDialogOpen(false);
-                  setSourceToDelete(null);
-                }
-              }}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Yes, Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        sourceToDelete={sourceToDelete}
+        onConfirm={() => {
+          if (sourceToDelete) {
+            onDataSourcesChange((prev) => prev.filter((s) => s.id !== sourceToDelete.id));
+            toast({
+              title: "Data source deleted",
+              description: `${sourceToDelete.name} has been removed.`,
+            });
+            setDeleteDialogOpen(false);
+            setSourceToDelete(null);
+          }
+        }}
+        onCancel={() => {
+          setDeleteDialogOpen(false);
+          setSourceToDelete(null);
+        }}
+      />
 
       {/* Configuration Dialog */}
       <Dialog open={configDialogOpen} onOpenChange={setConfigDialogOpen}>
