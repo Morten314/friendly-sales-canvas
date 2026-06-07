@@ -1,6 +1,5 @@
 import {
   Database,
-  CheckCircle,
   Upload as UploadIcon,
   FileText,
   Users,
@@ -8,7 +7,6 @@ import {
   BarChart3,
   Linkedin,
   Twitter,
-  RefreshCw,
   XCircle,
   Plus,
   Slack,
@@ -27,6 +25,7 @@ import {
   buildTwitterConnector,
 } from "./connectorFactory";
 import type { Connector, DataSource } from "./connectorTypes";
+import CredentialAuthModal from "./CredentialAuthModal";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import GoogleAnalyticsAuthModal from "./GoogleAnalyticsAuthModal";
 import { useCredentialAuthModal } from "./useCredentialAuthModal";
@@ -1195,784 +1194,198 @@ export default function ConnectorApprovals({
       />
 
       {/* Salesforce Auth Modal */}
-      <Dialog
+      <CredentialAuthModal
         open={isSalesforceAuthModalOpen}
         onOpenChange={(open) => {
           if (!open) {
             resetSalesforceAuthModal();
           }
         }}
-      >
-        <DialogContent className="max-w-md">
-          {salesforceAuthStep === "login" ? (
-            <>
-              <DialogHeader>
-                <DialogTitle>Sign in to Salesforce</DialogTitle>
-                <DialogDescription>
-                  Enter your Salesforce credentials to continue.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="salesforce-email">Email</Label>
-                  <Input
-                    id="salesforce-email"
-                    type="email"
-                    placeholder="your.email@company.com"
-                    value={salesforceEmail}
-                    onChange={(e) => setSalesforceEmail(e.target.value)}
-                    disabled={isSalesforceLoggingIn}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="salesforce-password">Password</Label>
-                  <Input
-                    id="salesforce-password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={salesforcePassword}
-                    onChange={(e) => setSalesforcePassword(e.target.value)}
-                    disabled={isSalesforceLoggingIn}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !isSalesforceLoggingIn) {
-                        void handleSalesforceLogin();
-                      }
-                    }}
-                  />
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Database className="h-4 w-4" />
-                  <span>This is a demo. Any credentials will work.</span>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={resetSalesforceAuthModal}
-                  disabled={isSalesforceLoggingIn}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleSalesforceLogin}
-                  disabled={isSalesforceLoggingIn || !salesforceEmail || !salesforcePassword}
-                >
-                  {isSalesforceLoggingIn ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    "Sign In"
-                  )}
-                </Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <DialogHeader>
-                <DialogTitle>Authorize Access</DialogTitle>
-                <DialogDescription>
-                  This application would like to access the following data from your Salesforce
-                  account:
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="border rounded-lg p-4 space-y-3">
-                  <p className="text-sm font-semibold">Requested Permissions:</p>
-                  <ul className="space-y-2 text-sm">
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>
-                        <strong>Contacts</strong> - Read contact information and details
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>
-                        <strong>Accounts</strong> - Read account information and company data
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>
-                        <strong>Opportunities</strong> - Read sales opportunities and pipeline data
-                      </span>
-                    </li>
-                  </ul>
-                </div>
-                <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
-                  <p className="font-medium mb-1">Account:</p>
-                  <p>{salesforceEmail}</p>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={handleSalesforceDeny}>
-                  Deny
-                </Button>
-                <Button
-                  onClick={handleSalesforceApprove}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  Approve
-                </Button>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+        platformName="Salesforce"
+        platformIcon={Database}
+        idPrefix="salesforce"
+        email={salesforceEmail}
+        password={salesforcePassword}
+        isLoggingIn={isSalesforceLoggingIn}
+        authStep={salesforceAuthStep}
+        permissions={[
+          { label: "Contacts", description: "Read contact information and details" },
+          { label: "Accounts", description: "Read account information and company data" },
+          { label: "Opportunities", description: "Read sales opportunities and pipeline data" },
+        ]}
+        accountDisplay={salesforceEmail}
+        onEmailChange={setSalesforceEmail}
+        onPasswordChange={setSalesforcePassword}
+        onLogin={() => void handleSalesforceLogin()}
+        onCancel={resetSalesforceAuthModal}
+        onApprove={handleSalesforceApprove}
+        onDeny={handleSalesforceDeny}
+      />
 
       {/* HubSpot Auth Modal */}
-      <Dialog
+      <CredentialAuthModal
         open={isHubSpotAuthModalOpen}
         onOpenChange={(open) => {
           if (!open) {
             resetHubSpotAuthModal();
           }
         }}
-      >
-        <DialogContent className="max-w-md">
-          {hubSpotAuthStep === "login" ? (
-            <>
-              <DialogHeader>
-                <DialogTitle>Sign in to HubSpot</DialogTitle>
-                <DialogDescription>Enter your HubSpot credentials to continue.</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="hubspot-email">Email</Label>
-                  <Input
-                    id="hubspot-email"
-                    type="email"
-                    placeholder="your.email@company.com"
-                    value={hubSpotEmail}
-                    onChange={(e) => setHubSpotEmail(e.target.value)}
-                    disabled={isHubSpotLoggingIn}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="hubspot-password">Password</Label>
-                  <Input
-                    id="hubspot-password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={hubSpotPassword}
-                    onChange={(e) => setHubSpotPassword(e.target.value)}
-                    disabled={isHubSpotLoggingIn}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !isHubSpotLoggingIn) {
-                        void handleHubSpotLogin();
-                      }
-                    }}
-                  />
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <BarChart3 className="h-4 w-4" />
-                  <span>This is a demo. Any credentials will work.</span>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={resetHubSpotAuthModal}
-                  disabled={isHubSpotLoggingIn}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleHubSpotLogin}
-                  disabled={isHubSpotLoggingIn || !hubSpotEmail || !hubSpotPassword}
-                >
-                  {isHubSpotLoggingIn ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    "Sign In"
-                  )}
-                </Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <DialogHeader>
-                <DialogTitle>Authorize Access</DialogTitle>
-                <DialogDescription>
-                  This application would like to access the following data from your HubSpot
-                  account:
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="border rounded-lg p-4 space-y-3">
-                  <p className="text-sm font-semibold">Requested Permissions:</p>
-                  <ul className="space-y-2 text-sm">
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>
-                        <strong>Contacts</strong> - Read contact information and details
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>
-                        <strong>Companies</strong> - Read company information and organization data
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>
-                        <strong>Deals</strong> - Read deal information and pipeline data
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>
-                        <strong>Tickets</strong> - Read support ticket information
-                      </span>
-                    </li>
-                  </ul>
-                </div>
-                <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
-                  <p className="font-medium mb-1">Account:</p>
-                  <p>{hubSpotEmail}</p>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={handleHubSpotDeny}>
-                  Deny
-                </Button>
-                <Button onClick={handleHubSpotApprove} className="bg-green-600 hover:bg-green-700">
-                  Approve
-                </Button>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+        platformName="HubSpot"
+        platformIcon={BarChart3}
+        idPrefix="hubspot"
+        email={hubSpotEmail}
+        password={hubSpotPassword}
+        isLoggingIn={isHubSpotLoggingIn}
+        authStep={hubSpotAuthStep}
+        permissions={[
+          { label: "Contacts", description: "Read contact information and details" },
+          { label: "Companies", description: "Read company information and organization data" },
+          { label: "Deals", description: "Read deal information and pipeline data" },
+          { label: "Tickets", description: "Read support ticket information" },
+        ]}
+        accountDisplay={hubSpotEmail}
+        onEmailChange={setHubSpotEmail}
+        onPasswordChange={setHubSpotPassword}
+        onLogin={() => void handleHubSpotLogin()}
+        onCancel={resetHubSpotAuthModal}
+        onApprove={handleHubSpotApprove}
+        onDeny={handleHubSpotDeny}
+      />
 
       {/* Pipedrive Auth Modal */}
-      <Dialog
+      <CredentialAuthModal
         open={isPipedriveAuthModalOpen}
         onOpenChange={(open) => {
           if (!open) {
             resetPipedriveAuthModal();
           }
         }}
-      >
-        <DialogContent className="max-w-md">
-          {pipedriveAuthStep === "login" ? (
-            <>
-              <DialogHeader>
-                <DialogTitle>Sign in to Pipedrive</DialogTitle>
-                <DialogDescription>Enter your Pipedrive credentials to continue.</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="pipedrive-email">Email</Label>
-                  <Input
-                    id="pipedrive-email"
-                    type="email"
-                    placeholder="your.email@company.com"
-                    value={pipedriveEmail}
-                    onChange={(e) => setPipedriveEmail(e.target.value)}
-                    disabled={isPipedriveLoggingIn}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="pipedrive-password">Password</Label>
-                  <Input
-                    id="pipedrive-password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={pipedrivePassword}
-                    onChange={(e) => setPipedrivePassword(e.target.value)}
-                    disabled={isPipedriveLoggingIn}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !isPipedriveLoggingIn) {
-                        void handlePipedriveLogin();
-                      }
-                    }}
-                  />
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Database className="h-4 w-4" />
-                  <span>This is a demo. Any credentials will work.</span>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={resetPipedriveAuthModal}
-                  disabled={isPipedriveLoggingIn}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handlePipedriveLogin}
-                  disabled={isPipedriveLoggingIn || !pipedriveEmail || !pipedrivePassword}
-                >
-                  {isPipedriveLoggingIn ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    "Sign In"
-                  )}
-                </Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <DialogHeader>
-                <DialogTitle>Authorize Access</DialogTitle>
-                <DialogDescription>
-                  This application would like to access the following data from your Pipedrive
-                  account:
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="border rounded-lg p-4 space-y-3">
-                  <p className="text-sm font-semibold">Requested Permissions:</p>
-                  <ul className="space-y-2 text-sm">
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>
-                        <strong>Deals</strong> - Read deal information and pipeline data
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>
-                        <strong>Persons</strong> - Read contact information and details
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>
-                        <strong>Organizations</strong> - Read company information and organization
-                        data
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>
-                        <strong>Activities</strong> - Read activity information and timeline data
-                      </span>
-                    </li>
-                  </ul>
-                </div>
-                <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
-                  <p className="font-medium mb-1">Account:</p>
-                  <p>{pipedriveEmail}</p>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={handlePipedriveDeny}>
-                  Deny
-                </Button>
-                <Button
-                  onClick={handlePipedriveApprove}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  Approve
-                </Button>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+        platformName="Pipedrive"
+        platformIcon={Database}
+        idPrefix="pipedrive"
+        email={pipedriveEmail}
+        password={pipedrivePassword}
+        isLoggingIn={isPipedriveLoggingIn}
+        authStep={pipedriveAuthStep}
+        permissions={[
+          { label: "Deals", description: "Read deal information and pipeline data" },
+          { label: "Persons", description: "Read contact information and details" },
+          {
+            label: "Organizations",
+            description: "Read company information and organization data",
+          },
+          { label: "Activities", description: "Read activity information and timeline data" },
+        ]}
+        accountDisplay={pipedriveEmail}
+        onEmailChange={setPipedriveEmail}
+        onPasswordChange={setPipedrivePassword}
+        onLogin={() => void handlePipedriveLogin()}
+        onCancel={resetPipedriveAuthModal}
+        onApprove={handlePipedriveApprove}
+        onDeny={handlePipedriveDeny}
+      />
 
       {/* Zoho Auth Modal */}
-      <Dialog
+      <CredentialAuthModal
         open={isZohoAuthModalOpen}
         onOpenChange={(open) => {
           if (!open) {
             resetZohoAuthModal();
           }
         }}
-      >
-        <DialogContent className="max-w-md">
-          {zohoAuthStep === "login" ? (
-            <>
-              <DialogHeader>
-                <DialogTitle>Sign in to Zoho CRM</DialogTitle>
-                <DialogDescription>Enter your Zoho CRM credentials to continue.</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="zoho-email">Email</Label>
-                  <Input
-                    id="zoho-email"
-                    type="email"
-                    placeholder="your.email@company.com"
-                    value={zohoEmail}
-                    onChange={(e) => setZohoEmail(e.target.value)}
-                    disabled={isZohoLoggingIn}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="zoho-password">Password</Label>
-                  <Input
-                    id="zoho-password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={zohoPassword}
-                    onChange={(e) => setZohoPassword(e.target.value)}
-                    disabled={isZohoLoggingIn}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !isZohoLoggingIn) {
-                        void handleZohoLogin();
-                      }
-                    }}
-                  />
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Database className="h-4 w-4" />
-                  <span>This is a demo. Any credentials will work.</span>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={resetZohoAuthModal} disabled={isZohoLoggingIn}>
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleZohoLogin}
-                  disabled={isZohoLoggingIn || !zohoEmail || !zohoPassword}
-                >
-                  {isZohoLoggingIn ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    "Sign In"
-                  )}
-                </Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <DialogHeader>
-                <DialogTitle>Authorize Access</DialogTitle>
-                <DialogDescription>
-                  This application would like to access the following data from your Zoho CRM
-                  account:
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="border rounded-lg p-4 space-y-3">
-                  <p className="text-sm font-semibold">Requested Permissions:</p>
-                  <ul className="space-y-2 text-sm">
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>
-                        <strong>Contacts</strong> - Read contact information and details
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>
-                        <strong>Accounts</strong> - Read account information and company data
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>
-                        <strong>Deals</strong> - Read deal information and pipeline data
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>
-                        <strong>Leads</strong> - Read lead information and conversion data
-                      </span>
-                    </li>
-                  </ul>
-                </div>
-                <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
-                  <p className="font-medium mb-1">Account:</p>
-                  <p>{zohoEmail}</p>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={handleZohoDeny}>
-                  Deny
-                </Button>
-                <Button onClick={handleZohoApprove} className="bg-green-600 hover:bg-green-700">
-                  Approve
-                </Button>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+        platformName="Zoho CRM"
+        platformIcon={Database}
+        idPrefix="zoho"
+        email={zohoEmail}
+        password={zohoPassword}
+        isLoggingIn={isZohoLoggingIn}
+        authStep={zohoAuthStep}
+        permissions={[
+          { label: "Contacts", description: "Read contact information and details" },
+          { label: "Accounts", description: "Read account information and company data" },
+          { label: "Deals", description: "Read deal information and pipeline data" },
+          { label: "Leads", description: "Read lead information and conversion data" },
+        ]}
+        accountDisplay={zohoEmail}
+        onEmailChange={setZohoEmail}
+        onPasswordChange={setZohoPassword}
+        onLogin={() => void handleZohoLogin()}
+        onCancel={resetZohoAuthModal}
+        onApprove={handleZohoApprove}
+        onDeny={handleZohoDeny}
+      />
 
       {/* LinkedIn Auth Modal */}
-      <Dialog
+      <CredentialAuthModal
         open={isLinkedInAuthModalOpen}
         onOpenChange={(open) => {
           if (!open) {
             resetLinkedInAuthModal();
           }
         }}
-      >
-        <DialogContent className="max-w-md">
-          {linkedInAuthStep === "login" ? (
-            <>
-              <DialogHeader>
-                <DialogTitle>Sign in to LinkedIn</DialogTitle>
-                <DialogDescription>Enter your LinkedIn credentials to continue.</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="linkedin-email">Email</Label>
-                  <Input
-                    id="linkedin-email"
-                    type="email"
-                    placeholder="your.email@company.com"
-                    value={linkedInEmail}
-                    onChange={(e) => setLinkedInEmail(e.target.value)}
-                    disabled={isLinkedInLoggingIn}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="linkedin-password">Password</Label>
-                  <Input
-                    id="linkedin-password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={linkedInPassword}
-                    onChange={(e) => setLinkedInPassword(e.target.value)}
-                    disabled={isLinkedInLoggingIn}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !isLinkedInLoggingIn) {
-                        void handleLinkedInLogin();
-                      }
-                    }}
-                  />
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Linkedin className="h-4 w-4" />
-                  <span>This is a demo. Any credentials will work.</span>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={resetLinkedInAuthModal}
-                  disabled={isLinkedInLoggingIn}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleLinkedInLogin}
-                  disabled={isLinkedInLoggingIn || !linkedInEmail || !linkedInPassword}
-                >
-                  {isLinkedInLoggingIn ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    "Sign In"
-                  )}
-                </Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <DialogHeader>
-                <DialogTitle>Authorize Access</DialogTitle>
-                <DialogDescription>
-                  This application would like to access the following data from your LinkedIn
-                  account:
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="border rounded-lg p-4 space-y-3">
-                  <p className="text-sm font-semibold">Requested Permissions:</p>
-                  <ul className="space-y-2 text-sm">
-                    {linkedInSourceToConnect?.name === "LinkedIn Company" ? (
-                      <>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                          <span>
-                            <strong>Company Page</strong> - Read company page information and
-                            details
-                          </span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                          <span>
-                            <strong>Posts</strong> - Read company posts and engagement data
-                          </span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                          <span>
-                            <strong>Followers</strong> - Read follower information and analytics
-                          </span>
-                        </li>
-                      </>
-                    ) : (
-                      <>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                          <span>
-                            <strong>Company Pages</strong> - Read company page information and
-                            details
-                          </span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                          <span>
-                            <strong>Profiles</strong> - Read profile information and contact details
-                          </span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                          <span>
-                            <strong>Messages</strong> - Read messages and conversation data
-                          </span>
-                        </li>
-                      </>
-                    )}
-                  </ul>
-                </div>
-                <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
-                  <p className="font-medium mb-1">Account:</p>
-                  <p>{linkedInEmail}</p>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={handleLinkedInDeny}>
-                  Deny
-                </Button>
-                <Button onClick={handleLinkedInApprove} className="bg-green-600 hover:bg-green-700">
-                  Approve
-                </Button>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+        platformName="LinkedIn"
+        platformIcon={Linkedin}
+        idPrefix="linkedin"
+        email={linkedInEmail}
+        password={linkedInPassword}
+        isLoggingIn={isLinkedInLoggingIn}
+        authStep={linkedInAuthStep}
+        permissions={
+          linkedInSourceToConnect?.name === "LinkedIn Company"
+            ? [
+                {
+                  label: "Company Page",
+                  description: "Read company page information and details",
+                },
+                { label: "Posts", description: "Read company posts and engagement data" },
+                { label: "Followers", description: "Read follower information and analytics" },
+              ]
+            : [
+                {
+                  label: "Company Pages",
+                  description: "Read company page information and details",
+                },
+                { label: "Profiles", description: "Read profile information and contact details" },
+                { label: "Messages", description: "Read messages and conversation data" },
+              ]
+        }
+        accountDisplay={linkedInEmail}
+        onEmailChange={setLinkedInEmail}
+        onPasswordChange={setLinkedInPassword}
+        onLogin={() => void handleLinkedInLogin()}
+        onCancel={resetLinkedInAuthModal}
+        onApprove={handleLinkedInApprove}
+        onDeny={handleLinkedInDeny}
+      />
 
       {/* X (Twitter) Auth Modal */}
-      <Dialog
+      <CredentialAuthModal
         open={isXAuthModalOpen}
         onOpenChange={(open) => {
           if (!open) {
             resetXAuthModal();
           }
         }}
-      >
-        <DialogContent className="max-w-md">
-          {xAuthStep === "login" ? (
-            <>
-              <DialogHeader>
-                <DialogTitle>Sign in to X</DialogTitle>
-                <DialogDescription>Enter your X credentials to continue.</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="x-email">Email</Label>
-                  <Input
-                    id="x-email"
-                    type="email"
-                    placeholder="your.email@company.com"
-                    value={xEmail}
-                    onChange={(e) => setXEmail(e.target.value)}
-                    disabled={isXLoggingIn}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="x-password">Password</Label>
-                  <Input
-                    id="x-password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={xPassword}
-                    onChange={(e) => setXPassword(e.target.value)}
-                    disabled={isXLoggingIn}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !isXLoggingIn) {
-                        void handleXLogin();
-                      }
-                    }}
-                  />
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Twitter className="h-4 w-4" />
-                  <span>This is a demo. Any credentials will work.</span>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={resetXAuthModal} disabled={isXLoggingIn}>
-                  Cancel
-                </Button>
-                <Button onClick={handleXLogin} disabled={isXLoggingIn || !xEmail || !xPassword}>
-                  {isXLoggingIn ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    "Sign In"
-                  )}
-                </Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <DialogHeader>
-                <DialogTitle>Authorize Access</DialogTitle>
-                <DialogDescription>
-                  This application would like to access the following data from your X account:
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="border rounded-lg p-4 space-y-3">
-                  <p className="text-sm font-semibold">Requested Permissions:</p>
-                  <ul className="space-y-2 text-sm">
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>
-                        <strong>Profiles</strong> - Read profile information and user data
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>
-                        <strong>Tweets</strong> - Read tweets and post information
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>
-                        <strong>Engagements</strong> - Read likes, retweets, and engagement metrics
-                      </span>
-                    </li>
-                  </ul>
-                </div>
-                <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
-                  <p className="font-medium mb-1">Account:</p>
-                  <p>{xEmail}</p>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={handleXDeny}>
-                  Deny
-                </Button>
-                <Button onClick={handleXApprove} className="bg-green-600 hover:bg-green-700">
-                  Approve
-                </Button>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+        platformName="X"
+        platformIcon={Twitter}
+        idPrefix="x"
+        email={xEmail}
+        password={xPassword}
+        isLoggingIn={isXLoggingIn}
+        authStep={xAuthStep}
+        permissions={[
+          { label: "Profiles", description: "Read profile information and user data" },
+          { label: "Tweets", description: "Read tweets and post information" },
+          { label: "Engagements", description: "Read likes, retweets, and engagement metrics" },
+        ]}
+        accountDisplay={xEmail}
+        onEmailChange={setXEmail}
+        onPasswordChange={setXPassword}
+        onLogin={() => void handleXLogin()}
+        onCancel={resetXAuthModal}
+        onApprove={handleXApprove}
+        onDeny={handleXDeny}
+      />
 
       {/* Google Analytics Auth Modal */}
       <GoogleAnalyticsAuthModal
@@ -1986,7 +1399,7 @@ export default function ConnectorApprovals({
       />
 
       {/* Mixpanel Auth Modal */}
-      <Dialog
+      <CredentialAuthModal
         open={isMixpanelAuthModalOpen}
         onOpenChange={(open) => {
           if (!open) {
@@ -1997,125 +1410,47 @@ export default function ConnectorApprovals({
             setMixpanelAuthStep("login");
           }
         }}
-      >
-        <DialogContent className="max-w-md">
-          {mixpanelAuthStep === "login" ? (
-            <>
-              <DialogHeader>
-                <DialogTitle>Sign in to Mixpanel</DialogTitle>
-                <DialogDescription>Enter your Mixpanel credentials to continue.</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="mixpanel-email">Email</Label>
-                  <Input
-                    id="mixpanel-email"
-                    type="email"
-                    placeholder="your.email@company.com"
-                    value={mixpanelEmail}
-                    onChange={(e) => setMixpanelEmail(e.target.value)}
-                    disabled={isMixpanelLoggingIn}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="mixpanel-password">Password</Label>
-                  <Input
-                    id="mixpanel-password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={mixpanelPassword}
-                    onChange={(e) => setMixpanelPassword(e.target.value)}
-                    disabled={isMixpanelLoggingIn}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !isMixpanelLoggingIn) {
-                        void handleMixpanelLogin();
-                      }
-                    }}
-                  />
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <BarChart3 className="h-4 w-4" />
-                  <span>This is a demo. Any credentials will work.</span>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsMixpanelAuthModalOpen(false);
-                    setMixpanelEmail("");
-                    setMixpanelPassword("");
-                    setMixpanelSourceToConnect(null);
-                    setMixpanelAuthStep("login");
-                  }}
-                  disabled={isMixpanelLoggingIn}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleMixpanelLogin}
-                  disabled={isMixpanelLoggingIn || !mixpanelEmail || !mixpanelPassword}
-                >
-                  {isMixpanelLoggingIn ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    "Continue"
-                  )}
-                </Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <DialogHeader>
-                <DialogTitle>Authorize Mixpanel Access</DialogTitle>
-                <DialogDescription>This app will be able to:</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="border rounded-lg p-4 space-y-3">
-                  <ul className="space-y-2 text-sm">
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>
-                        <strong>Track user events</strong> - Record and track user interactions and
-                        events
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>
-                        <strong>Analyze funnels & retention</strong> - Access funnel analysis and
-                        user retention metrics
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>
-                        <strong>View engagement metrics</strong> - Read engagement data and
-                        analytics reports
-                      </span>
-                    </li>
-                  </ul>
-                </div>
-                <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
-                  <p className="font-medium mb-1">Account:</p>
-                  <p>{mixpanelEmail}</p>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={handleMixpanelDeny}>
-                  Cancel
-                </Button>
-                <Button onClick={handleMixpanelApprove} className="bg-green-600 hover:bg-green-700">
-                  Allow Access
-                </Button>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+        platformName="Mixpanel"
+        platformIcon={BarChart3}
+        idPrefix="mixpanel"
+        email={mixpanelEmail}
+        password={mixpanelPassword}
+        isLoggingIn={isMixpanelLoggingIn}
+        authStep={mixpanelAuthStep}
+        permissions={[
+          {
+            label: "Track user events",
+            description: "Record and track user interactions and events",
+          },
+          {
+            label: "Analyze funnels & retention",
+            description: "Access funnel analysis and user retention metrics",
+          },
+          {
+            label: "View engagement metrics",
+            description: "Read engagement data and analytics reports",
+          },
+        ]}
+        accountDisplay={mixpanelEmail}
+        onEmailChange={setMixpanelEmail}
+        onPasswordChange={setMixpanelPassword}
+        onLogin={() => void handleMixpanelLogin()}
+        onCancel={() => {
+          setIsMixpanelAuthModalOpen(false);
+          setMixpanelEmail("");
+          setMixpanelPassword("");
+          setMixpanelSourceToConnect(null);
+          setMixpanelAuthStep("login");
+        }}
+        onApprove={handleMixpanelApprove}
+        onDeny={handleMixpanelDeny}
+        loginLabel="Continue"
+        permissionsTitle="Authorize Mixpanel Access"
+        permissionsDescription="This app will be able to:"
+        showRequestedPermissionsHeader={false}
+        denyLabel="Cancel"
+        approveLabel="Allow Access"
+      />
     </>
   );
 }
