@@ -37,7 +37,6 @@ function makeArgs(
   } = {},
 ) {
   return {
-    platformName: "Salesforce",
     onDataSourcesChange: overrides.onDataSourcesChange ?? vi.fn(),
     toast: overrides.toast ?? vi.fn(),
     objectsSynced: overrides.objectsSynced ?? ["Contacts", "Leads"],
