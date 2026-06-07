@@ -17,6 +17,55 @@ import { getLeadStreamRowStatus, isTerminalLeadStreamStatus } from "./leadStream
 import type { toast as toastFnRef } from "@/components/ui/use-toast";
 import { buildApiUrl } from "@/shared/api/transport";
 
+/** Convert an arbitrary-encoding CSV file to a UTF-8 File object. */
+const convertToUtf8 = (file: File): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      try {
+        const arrayBuffer = e.target?.result as ArrayBuffer;
+        const encodings = ["windows-1252", "iso-8859-1", "utf-8"];
+        let text = "";
+        let decoded = false;
+
+        for (const encoding of encodings) {
+          try {
+            const decoder = new TextDecoder(encoding, { fatal: false });
+            text = decoder.decode(arrayBuffer);
+            decoded = true;
+            break;
+          } catch {
+            continue;
+          }
+        }
+
+        if (!decoded || !text) {
+          text = new TextDecoder("utf-8", { fatal: false }).decode(arrayBuffer);
+        }
+
+        text = normalizeCsv(text);
+        const utf8Blob = new Blob([text], { type: "text/csv;charset=utf-8" });
+        const utf8File = new File([utf8Blob], file.name, {
+          type: "text/csv",
+          lastModified: file.lastModified,
+        });
+
+        resolve(utf8File);
+      } catch (error) {
+        reject(
+          new Error(
+            `Failed to convert file encoding: ${error instanceof Error ? error.message : "Unknown error"}`,
+          ),
+        );
+      }
+    };
+
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsArrayBuffer(file);
+  });
+};
+
 export interface LeadStreamApi {
   // State values
   leadStreamFiles: LeadStreamFileApiRow[];
@@ -250,54 +299,6 @@ export function useLeadStream({
     if (!userId) {
       throw new Error("User ID is required");
     }
-
-    const convertToUtf8 = (file: File): Promise<File> => {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-
-        reader.onload = (e) => {
-          try {
-            const arrayBuffer = e.target?.result as ArrayBuffer;
-            const encodings = ["windows-1252", "iso-8859-1", "utf-8"];
-            let text = "";
-            let decoded = false;
-
-            for (const encoding of encodings) {
-              try {
-                const decoder = new TextDecoder(encoding, { fatal: false });
-                text = decoder.decode(arrayBuffer);
-                decoded = true;
-                break;
-              } catch {
-                continue;
-              }
-            }
-
-            if (!decoded || !text) {
-              text = new TextDecoder("utf-8", { fatal: false }).decode(arrayBuffer);
-            }
-
-            text = normalizeCsv(text);
-            const utf8Blob = new Blob([text], { type: "text/csv;charset=utf-8" });
-            const utf8File = new File([utf8Blob], file.name, {
-              type: "text/csv",
-              lastModified: file.lastModified,
-            });
-
-            resolve(utf8File);
-          } catch (error) {
-            reject(
-              new Error(
-                `Failed to convert file encoding: ${error instanceof Error ? error.message : "Unknown error"}`,
-              ),
-            );
-          }
-        };
-
-        reader.onerror = () => reject(new Error("Failed to read file"));
-        reader.readAsArrayBuffer(file);
-      });
-    };
 
     let uploadFile: File;
     if (getLeadImportKind(file) === "excel" || (await sniffExcelBinarySignature(file))) {

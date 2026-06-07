@@ -65,7 +65,6 @@ export default function ConnectorApprovals({
     handleApprove: handleSalesforceApprove,
     handleDeny: handleSalesforceDeny,
   } = useCredentialAuthModal({
-    platformName: "Salesforce",
     onDataSourcesChange,
     toast,
     objectsSynced: ["Contacts", "Accounts", "Opportunities"],
@@ -90,7 +89,6 @@ export default function ConnectorApprovals({
     handleApprove: handleHubSpotApprove,
     handleDeny: handleHubSpotDeny,
   } = useCredentialAuthModal({
-    platformName: "HubSpot",
     onDataSourcesChange,
     toast,
     objectsSynced: ["Contacts", "Companies", "Deals", "Tickets"],
@@ -116,7 +114,6 @@ export default function ConnectorApprovals({
     handleApprove: handlePipedriveApprove,
     handleDeny: handlePipedriveDeny,
   } = useCredentialAuthModal({
-    platformName: "Pipedrive",
     onDataSourcesChange,
     toast,
     objectsSynced: ["Deals", "Persons", "Organizations", "Activities"],
@@ -142,7 +139,6 @@ export default function ConnectorApprovals({
     handleApprove: handleZohoApprove,
     handleDeny: handleZohoDeny,
   } = useCredentialAuthModal({
-    platformName: "Zoho CRM",
     onDataSourcesChange,
     toast,
     objectsSynced: ["Contacts", "Accounts", "Deals", "Leads"],
@@ -170,7 +166,6 @@ export default function ConnectorApprovals({
     handleApprove: handleLinkedInApprove,
     handleDeny: handleLinkedInDeny,
   } = useCredentialAuthModal({
-    platformName: "LinkedIn",
     onDataSourcesChange,
     toast,
     objectsSynced: (source) =>
@@ -199,7 +194,6 @@ export default function ConnectorApprovals({
     handleApprove: handleXApprove,
     handleDeny: handleXDeny,
   } = useCredentialAuthModal({
-    platformName: "X",
     onDataSourcesChange,
     toast,
     objectsSynced: ["Profiles", "Tweets", "Engagements"],

@@ -23,8 +23,6 @@ type ToastFn = ReturnType<typeof useToast>["toast"];
  * random ranges), so it remains a bespoke handler-triplet in the parent.
  */
 interface UseCredentialAuthModalArgs {
-  /** Display name of the platform (e.g. "Salesforce"). */
-  platformName: string;
   onDataSourcesChange: React.Dispatch<React.SetStateAction<DataSource[]>>;
   toast: ToastFn;
   /** Per-platform object list, or a resolver for source-dependent lists. */
@@ -58,7 +56,6 @@ interface UseCredentialAuthModalResult {
 }
 
 export function useCredentialAuthModal({
-  platformName: _platformName,
   onDataSourcesChange,
   toast,
   objectsSynced,
