@@ -16,6 +16,16 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import {
+  buildAnalyticsConnector,
+  buildCompetitorConnector,
+  buildCrmConnector,
+  buildLinkedInConnector,
+  buildOtherFileConnector,
+  buildProductDocConnector,
+  buildSlackConnector,
+  buildTwitterConnector,
+} from "./connectorFactory";
 import type { Connector, DataSource } from "./connectorTypes";
 
 import {
@@ -1012,24 +1022,10 @@ export default function ConnectorApprovals({
                     {selectedCrm && (
                       <Button
                         onClick={() => {
-                          const crmNames: Record<string, string> = {
-                            salesforce: "Salesforce",
-                            hubspot: "HubSpot",
-                            pipedrive: "Pipedrive",
-                            zoho: "Zoho CRM",
-                          };
-                          const connector: Connector = {
-                            id: `conn-${selectedCrm}`,
-                            name: crmNames[selectedCrm],
-                            type: "crm",
-                            icon: Database,
-                            platform: crmNames[selectedCrm],
-                            description: `Connect your ${crmNames[selectedCrm]} CRM`,
-                            category: "CRM",
-                          };
+                          const connector = buildCrmConnector(selectedCrm);
                           handleConnectSource(connector);
                           toast({
-                            title: `${crmNames[selectedCrm]} added`,
+                            title: `${connector.name} added`,
                             description: "Click 'Connect' in the table to set up the integration.",
                           });
                           setIsConnectorDialogOpen(false);
@@ -1096,15 +1092,7 @@ export default function ConnectorApprovals({
                       {linkedInUrls.some((url) => url.trim() !== "") && (
                         <Button
                           onClick={() => {
-                            const connector: Connector = {
-                              id: "conn-linkedin",
-                              name: "LinkedIn Sales Navigator",
-                              type: "social",
-                              icon: Linkedin,
-                              platform: "LinkedIn",
-                              description: `LinkedIn URLs: ${linkedInUrls.filter((u) => u.trim()).join(", ")}`,
-                              category: "Social",
-                            };
+                            const connector = buildLinkedInConnector(linkedInUrls);
                             handleConnectSource(connector);
                             toast({
                               title: "LinkedIn Sales Navigator added",
@@ -1126,15 +1114,7 @@ export default function ConnectorApprovals({
                       <Label>X</Label>
                       <Button
                         onClick={() => {
-                          const connector: Connector = {
-                            id: "conn-twitter",
-                            name: "X",
-                            type: "social",
-                            icon: Twitter,
-                            platform: "Twitter",
-                            description: "Connect X account",
-                            category: "Social",
-                          };
+                          const connector = buildTwitterConnector();
                           handleConnectSource(connector);
                           toast({
                             title: "X added",
@@ -1176,22 +1156,10 @@ export default function ConnectorApprovals({
                     {selectedAnalytics && (
                       <Button
                         onClick={() => {
-                          const analyticsNames: Record<string, string> = {
-                            "google-analytics": "Google Analytics",
-                            mixpanel: "Mixpanel",
-                          };
-                          const connector: Connector = {
-                            id: `conn-${selectedAnalytics}`,
-                            name: analyticsNames[selectedAnalytics],
-                            type: "analytics",
-                            icon: selectedAnalytics === "google-analytics" ? Globe : BarChart3,
-                            platform: analyticsNames[selectedAnalytics],
-                            description: `Connect ${analyticsNames[selectedAnalytics]}`,
-                            category: "Analytics",
-                          };
+                          const connector = buildAnalyticsConnector(selectedAnalytics);
                           handleConnectSource(connector);
                           toast({
-                            title: `${analyticsNames[selectedAnalytics]} added`,
+                            title: `${connector.name} added`,
                             description: "Click 'Connect' in the table to set up the integration.",
                           });
                           setIsConnectorDialogOpen(false);
@@ -1270,16 +1238,7 @@ export default function ConnectorApprovals({
                             (c) => c.name.trim() !== "" && c.url.trim() !== "",
                           );
                           validCompetitors.forEach((competitor, index) => {
-                            const connector: Connector = {
-                              id: `conn-competitor-${index}`,
-                              name: `Competitor: ${competitor.name}`,
-                              type: "custom",
-                              icon: Users,
-                              platform: "Competitor",
-                              description: `Competitor: ${competitor.name} - ${competitor.url}`,
-                              category: "Competitors",
-                            };
-                            handleConnectSource(connector);
+                            handleConnectSource(buildCompetitorConnector(competitor, index));
                           });
                           toast({
                             title: `${validCompetitors.length} competitor(s) added`,
@@ -1370,16 +1329,7 @@ export default function ConnectorApprovals({
                             (c) => c.workspace.trim() !== "",
                           );
                           validConfigs.forEach((config, index) => {
-                            const connector: Connector = {
-                              id: `conn-slack-${index}`,
-                              name: `Slack: ${config.workspace}`,
-                              type: "communication",
-                              icon: Slack,
-                              platform: "Slack",
-                              description: `Slack: ${config.workspace} - ${config.channel || "All channels"}`,
-                              category: "Communication",
-                            };
-                            handleConnectSource(connector);
+                            handleConnectSource(buildSlackConnector(config, index));
                           });
                           toast({
                             title: `${validConfigs.length} Slack workspace(s) added`,
@@ -1496,16 +1446,9 @@ export default function ConnectorApprovals({
                               (f) => f.file || f.destinationUrl.trim() !== "",
                             );
                             validFiles.forEach((fileData, index) => {
-                              const connector: Connector = {
-                                id: `file-product-doc-${index}`,
-                                name: `Product Documentation${validFiles.length > 1 ? ` (${index + 1})` : ""}`,
-                                type: "file",
-                                icon: FileText,
-                                platform: "File Upload",
-                                description: `Docs, API guides, release notes, and specs${fileData.file ? ` - ${fileData.file.name}` : ""}`,
-                                category: "File Sources",
-                              };
-                              handleConnectSource(connector);
+                              handleConnectSource(
+                                buildProductDocConnector(fileData, index, validFiles.length),
+                              );
                             });
                             toast({
                               title: `${validFiles.length} Product Documentation file(s) added`,
@@ -1604,16 +1547,7 @@ export default function ConnectorApprovals({
                           {(fileData.file || fileData.destinationUrl.trim() !== "") && (
                             <Button
                               onClick={() => {
-                                const connector: Connector = {
-                                  id: `file-${fileSource.name.toLowerCase().replace(/\s+/g, "-")}`,
-                                  name: fileSource.name,
-                                  type: "file",
-                                  icon: fileSource.icon,
-                                  platform: "File Upload",
-                                  description: fileSource.description,
-                                  category: "File Sources",
-                                };
-                                handleConnectSource(connector);
+                                handleConnectSource(buildOtherFileConnector(fileSource));
                                 toast({
                                   title: `${fileSource.name} added`,
                                   description:
