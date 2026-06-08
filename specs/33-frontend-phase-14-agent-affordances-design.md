@@ -1,7 +1,7 @@
 # Spec 33 — Frontend Phase 14: Agent Affordances + Documentation Reconciliation
 
-**Status:** Design — round 1
-**Date:** 2026-06-07
+**Status:** Design — round 2 (round 1 review synthesized at `docs/reviews/33-frontend-phase-14-agent-affordances-design-spec-synthesis-1.md`)
+**Date:** 2026-06-07 (round 1), 2026-06-08 (round 2 revisions)
 **Type:** Phase design (implements Phase 14 of the master plan, Spec 14 §4)
 **Master plan:** `specs/14-frontend-refactoring-master-plan-design.md` §4 "Phase 14 — Agent affordances", §6 "Definition of done"
 **Paired plan:** _none yet — written next, `plans/33-frontend-phase-14-agent-affordances.md`_
@@ -16,7 +16,7 @@ Finalize the agent-readiness layer and close the master plan. Phase 14 is the ca
 
 ### 1.2 Reframe from the master-plan text
 
-The master plan's Phase 14 block (Spec 14 §4) was written in round 4 on 2026-05-26, before Phases 5–13 ran. Measuring its nominal deliverables against `master` as of 2026-06-07 shows most are already satisfied, moot, or in tension with the project's established posture. This spec records that reconciliation explicitly (master-plan §5.5 "out-of-scope discoveries / amendments at merge" — the Phase 14 frozen-record delta in W8 carries these back into Spec 14):
+The master plan's Phase 14 block (Spec 14 §4) was written in round 4 on 2026-05-26, before Phases 5–13 ran. Measuring its nominal deliverables against `master` as of 2026-06-07 shows most are already satisfied, moot, or in tension with the project's established posture. This spec records that reconciliation explicitly (master-plan §5.5 "out-of-scope discoveries / amendments at merge" — the Phase 14 frozen-record delta in W8 carries these back into Spec 14). Workstream labels (W1 through W8) are defined in §3:
 
 | Master-plan §4 deliverable | State on `master` (2026-06-07) | Phase 14 disposition |
 | --- | --- | --- |
@@ -95,7 +95,7 @@ Eight workstreams, executed as logically-grouped commits on one branch (§4). Ea
 
 **Method:**
 
-1. Enumerate candidates: `grep -rInE "\b[Pp]hase[- ]?[0-9]" frontend/src/` plus the in-scope doc set. The 2026-06-07 baseline is 146 hits in `src/`.
+1. Enumerate candidates: `grep -rInE "\b[Pp]hase[- ]?[0-9]" frontend/src/` plus the in-scope doc set (the §2.1 blast-radius paths). The 2026-06-07 baseline is 146 hits in `src/`.
 2. Classify each hit:
    - **Stale forward-promise** (e.g. `TODO(phase-13)`, "Phase N tightens/re-validates/will…", "deferred to Phase N" where N ≤ 14): **verify against reality, then fix.** If the promised work happened, rephrase to neutral/past ("validated against the real endpoint"); if it did not, rephrase to describe the accepted current state and cross-reference the governing `TD-FE-<n>`. The `TODO(phase-13)` markers become plain `TODO:` with the actionable remainder preserved.
    - **Provenance worth keeping the substance of** (e.g. "Memory-only for Phase 3", "promoted Phase 11; ≥2-feature rule"): rephrase to keep the *why*, drop the phase number — "Memory-only by design", "shared — ≥2 features consume it". The rule/rationale is the durable part.
@@ -104,7 +104,7 @@ Eight workstreams, executed as logically-grouped commits on one branch (§4). Ea
 
 **Quality bar:** an edit that would make a sentence vaguer or lose a real "why" is not made — the phase reference stays. "Without reducing quality" is the governing constraint; completeness of removal is secondary.
 
-**Done when:** the stale forward-promises are all resolved; remaining phase-references in `src/` are either genuine traceability citations or provenance whose phase number could not be dropped without quality loss (the plan records the residual count + rationale).
+**Done when:** the stale forward-promises are all resolved; remaining phase-references are either genuine traceability citations or provenance whose phase number could not be dropped without quality loss. The plan/impl records a **classification ledger**: the baseline hit count (146 in `src/` per §1.3, plus the doc-set count), the number assigned to each of the three buckets (forward-promise-fixed / provenance-rephrased / kept), and the residual kept-count with per-item rationale — so completeness is auditable rather than reviewer-judgment-only.
 
 ### W2 — `CLAUDE.md` / `AGENTS.md` reconciliation
 
@@ -114,6 +114,7 @@ Eight workstreams, executed as logically-grouped commits on one branch (§4). Ea
 - **`AGENTS.md` delta only:** the "Tool Usage Pitfalls / Glob patterns are NOT regex" section (a non-Claude-IDE concern). Stays AGENTS-only.
 - **Fix** the `AGENTS.md` H1 (`# CLAUDE.md` → `# AGENTS.md`).
 - **Cross-reference:** a one-line note in each pointing to the other for its tool-specific delta.
+- **Drift prevention:** the shared base carries a one-line maintenance convention — edits to shared sections must be applied to both files — so the duplication this workstream removes does not silently recur.
 
 The stale "temp week" branch-model section in both is handled by W7 (same edit lands the steady-state model in both).
 
@@ -121,7 +122,7 @@ The stale "temp week" branch-model section in both is handled by W7 (same edit l
 
 ### W3 — README enrichment + verification
 
-- Enrich the 6 stub feature READMEs (`auth`, `settings`, `tenant`, `calendar`, `insights`, `reports`) to the `src/features/README.md` template (Purpose / Public surface / Key files / Dependency notes).
+- Enrich the 6 stub feature READMEs (`auth`, `settings`, `tenant`, `calendar`, `insights`, `reports`) to the `src/features/README.md` template (Purpose / Public surface / Key files / Dependency notes). **Discovery method:** derive *Public surface* from the feature's `index.ts` exports, *Key files* from the folder's `pages/`/`components/`/`hooks/`, *Purpose* from the routed page + surrounding context. Where the surface is non-obvious (e.g. `auth`), judgment is required and the reviewer is the quality gate.
 - Verify the substantive feature READMEs (e.g. `mission-control` 91 LOC, `customers` 56) are still accurate after Phases 8–13 moved/renamed things; correct drift.
 - Confirm the `src/features/README.md` naming map matches the actual 14 feature folders (coordinates with W5's `NAMING_MAP` sync and TD-FE-32).
 - Add sensible cross-links: `features/README.md` ↔ `shared/README.md` ↔ the new ADR index (W6).
@@ -132,7 +133,7 @@ The stale "temp week" branch-model section in both is handled by W7 (same edit l
 ### W4 — `docs/TECH_DEBT.md` archive + numeric index
 
 - Create `docs/TECH_DEBT_ARCHIVE.md` with a short preamble pointing back to the main register.
-- Classify each `TD-FE-<n>`: **fully resolved** vs **open / carried-forward**. Carried-forward entries (e.g. TD-FE-21/27/30/31 "NOT retired, carried forward"; TD-FE-45 "resolved for the relocation part only") stay in the main file — only *fully* resolved entries move.
+- Classify each `TD-FE-<n>`: **fully resolved** vs **open / carried-forward**. **Triage rule:** an entry moves to the archive only if its *entire* scope is resolved with no sub-clause, follow-on, or pull-forward trigger remaining; if any sub-clause is still open, or it was *superseded / obsoleted by a different approach* rather than completed, it **stays in the main file**. Carried-forward entries (e.g. TD-FE-21/27/30/31 "NOT retired, carried forward"; TD-FE-45 "resolved for the relocation part only") stay. The plan records a per-entry disposition for every borderline case.
 - Move fully-resolved entries verbatim to the archive (preserve their original text and numbering — IDs are never reused, per the register's existing convention).
 - Add a **numeric index table** at the top of `TECH_DEBT.md`: every `TD-FE-<n>` → status (open / resolved-archived) → link to its section (main file) or to the archive. This is the single lookup point that keeps inter-entry cross-references (e.g. "mirror TD-FE-19/21") resolvable after the move.
 - **Backend `TD-*` entries: untouched.** Only the FE half is reorganized.
@@ -153,7 +154,7 @@ The stale "temp week" branch-model section in both is handled by W7 (same edit l
 
 - Add `docs/adr/README.md`: an index of ADRs 0001–0005 with one-line summaries and status, plus the slim-template convention and numbering rule.
 - **Targeted backfill** — write ADRs only for genuinely-architectural, cross-phase decisions not already captured as an ADR. Working shortlist (refinable during spec review):
-  1. **Scout/Profiler kept distributed, no `features/profiler/`** (the §3.1 join-point resolution; TD-FE-60).
+  1. **Scout/Profiler kept distributed, no `features/profiler/`** (the **Spec 14 §3.1** join-point resolution, recorded in the Phase 9 outcome annotation; TD-FE-60).
   2. **Advisory-over-hard-fail gate posture** (bundle advisory, NFR gating dropped, stale-doc gate not built — the standing posture across Phases 2c–14).
   3. **Data-layer migration deferred for editable-state features** (the TD-FE-19/21/53/65 family — why several features kept imperative fetch + local cache rather than going TanStack-native).
 - Cross-link the new ADRs from the relevant feature READMEs and from `CLAUDE.md`'s "Technical Debt Register" / architecture sections where sensible.
@@ -162,16 +163,20 @@ The stale "temp week" branch-model section in both is handled by W7 (same edit l
 
 ### W7 — Root-doc branch-model rewrite
 
-- Replace the "Monorepo Branch Model (during temp week ending ~2026-05-22)" sections and the "sync Brewra-dev work from old repos (temp week only)" commands in `CLAUDE.md`, `AGENTS.md`, `README.md`, and `BRANCHES.md` with the **steady-state model**:
-  - `master` is trunk; phase/feature work on short-lived `phase-N-*` / feature branches off `master`, merged `--no-ff` after a green local `preflight` (master-plan §5.1/§5.3).
-  - The monorepo cutover is **complete**. The legacy branches (PWA `develop`/`production`/`refactor`, `pwa-*`, and equivalents) are **retained dormant for a few months** for possible issue triage / rollback and other business reasons, then pruned. They are not active development targets.
-- Exact wording confirmed with the operator at impl time (branch-model docs are sensitive).
+- Replace the "Monorepo Branch Model (during temp week ending ~2026-05-22)" sections and the "sync Brewra-dev work from old repos (temp week only)" commands in `CLAUDE.md`, `AGENTS.md`, `README.md`, and `BRANCHES.md` with the **steady-state model**.
+- **The replacement text must convey (semantic checklist — the same facts across all four files):**
+  1. `master` is the trunk / single integration branch.
+  2. Phase/feature work happens on short-lived branches named `phase-N-*` (or feature-named), cut off `master`.
+  3. Branches merge back via `--no-ff` after a green local `npm run preflight` (master-plan §5.1/§5.3); direct commits to `master` are for trivial typo fixes only.
+  4. The monorepo cutover is **complete** — not in-progress; the "temp week" is historical.
+  5. The legacy branches (PWA `develop`/`production`/`refactor`, `pwa-*`, and equivalents) are **retained dormant for a few months** for issue triage / rollback and other business reasons, then pruned — they are **not** active development targets.
+- Exact prose is drafted in the plan and confirmed with the operator before the impl commit (branch-model docs are sensitive).
 
 **Done when:** no root doc describes the cutover as in-progress or references the temp week as current; the steady-state model + the dormant-legacy-branch retention note are present and consistent across all four files.
 
 ### W8 — Master-plan close
 
-- Walk Spec 14 §6's ten done-criteria against `master`; for each, confirm it holds or log the gap as `TD-FE-<n>` (do not silently pass).
+- Walk Spec 14 §6's ten done-criteria against `master`; for each, confirm it holds or log the gap as `TD-FE-<n>` (do not silently pass). **Known likely gaps (from the TD-FE register — to be confirmed during the walk, not discovered fresh):** §6.9 (data layer — "TanStack Query is the single source of server-state truth; three caching layers collapsed into one") is only partially met, since several features retain imperative fetch + `localStorage`/`sessionStorage` by deliberate deferral (TD-FE-19/21/41/43/49/53/65); §6.3 (escape-hatches re-evaluated) carries surviving entries (TD-FE-9/10/38). W8 records each as a confirmed, accepted gap rather than asserting blanket completion.
 - Flip the Spec 14 §4 status table row: Phase 14 → `done` with the merge date.
 - Append the Phase 14 frozen-record delta to Spec 14 (per the frozen-record convention — intent prose preserved; the delta records the reframe in §1.2, the W1 no-gate decision, and the moot-deliverable dispositions). Update master-plan §8 Q3 to note the bundle/NFR reconsideration remains deferred (still pre-launch).
 - This is the final act: the master plan is "done" when Phase 14 merges (Spec 14 §6 closing sentence).
@@ -194,7 +199,7 @@ The stale "temp week" branch-model section in both is handled by W7 (same edit l
 6. W4 TECH_DEBT archive + index (surgical, no prettier).
 7. W8 master-plan close (Spec 14 status + delta) — last.
 
-**Dependencies:** W3's naming-map check coordinates with W5's `NAMING_MAP` sync. W2 and W7 edit the same root files → land together. W8 is last (it asserts everything else is done). Otherwise the groups are independent.
+**Dependencies:** W3 (the `src/features/README.md` naming map) and W5 (the `scaffold-feature.ts` `NAMING_MAP`) both reconcile to the **same ground truth — the actual 14 feature folders** — so neither strictly blocks the other; the only requirement is that both maps end consistent with the folders and with each other within this phase (the §4 ordering of W5 before W3 is convenience, not a hard gate). W2 and W7 edit the same root files → land together. W8 is last (it asserts everything else is done). Otherwise the groups are independent. **These commit groups are not sub-phases** — it stays one branch, one `preflight`, one `--no-ff` merge (per the §4 opening); the grouping only orders the commits.
 
 ---
 
@@ -202,7 +207,7 @@ The stale "temp week" branch-model section in both is handled by W7 (same edit l
 
 - **No new gate.** The existing `preflight` chain (typecheck → lint → format:check → test → build → bundle:check → test:e2e → knip) is unchanged. W5 adds a test *to the existing Vitest suite*, not a new chain step.
 - **`docs/TECH_DEBT.md` and `docs/TECH_DEBT_ARCHIVE.md` are exempt from prettier** (outside the frontend prettier root; prettier corrupts the unfenced markdown). The plan verifies via `git diff` that W4 introduced no reflow.
-- **Merge gate:** serial `npm run preflight` green immediately before the user-approved `--no-ff` merge (master-plan §5.3/§5.6). W1/W2/W3/W4/W6/W7/W8 are comments/markdown and do not affect typecheck/lint/build/test/e2e; W5 must keep Vitest green.
+- **Merge gate:** serial `npm run preflight` green immediately before the user-approved `--no-ff` merge (master-plan §5.3/§5.6). W1/W2/W3/W4/W6/W7/W8 touch comments/markdown only and *should* not affect typecheck/lint/build/test/e2e — but the `preflight` run is the actual guarantee, not the design intent (a sloppy comment edit adjacent to code is caught there); W5 must keep Vitest green.
 
 ---
 
@@ -217,7 +222,7 @@ The stale "temp week" branch-model section in both is handled by W7 (same edit l
 ## §7 Risks
 
 - **R1 — W1 over-strips provenance.** Mitigation: the explicit quality bar (§W1) — drop the phase number only when the sentence keeps its meaning; keep it otherwise. Reviewer checks a sample of W1 edits for lost "why".
-- **R2 — W4 corrupts `TECH_DEBT.md` via prettier or a botched surgical move.** Mitigation: no-prettier rule enforced; `git diff` reviewed for reflow; the numeric index keeps cross-references resolvable; only fully-resolved entries move (carried-forward stay).
+- **R2 — W4 corrupts `TECH_DEBT.md` via prettier or a botched surgical move.** Mitigation: no-prettier rule enforced; `git diff` reviewed for reflow; the numeric index keeps cross-references resolvable; only fully-resolved entries move (carried-forward stay, per the W4 triage rule). **Rollback:** W4 is its own isolated commit (§4 group 6), so a broken split — moved-too-much, or a broken cross-reference — reverts independently without disturbing the other workstreams.
 - **R3 — W2/W7 lose content during the CLAUDE/AGENTS reconciliation.** Mitigation: the shared base is the union of both files' current substance; reviewer diffs old-vs-new to confirm nothing real was dropped (only the wrong H1 and stale temp-week content change; the AGENTS-only section is preserved).
 - **R4 — W8 declares the plan done while a §6 criterion silently fails.** Mitigation: W8 walks all ten criteria explicitly and logs gaps as TD-FE; "done" is allowed to coexist with logged, accepted debt (pre-launch posture), but never with an *unexamined* gap.
 - **R5 — Scope creep into backend docs / monorepo-era files.** Mitigation: §2.1 blast radius is explicit; stale backend/monorepo docs are logged as TD-FE, not edited.
