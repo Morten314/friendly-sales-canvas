@@ -8,7 +8,9 @@
 
 **Tech Stack:** TypeScript, React, Zod, TanStack Query, Vitest + MSW (unit), Playwright (e2e). Spec: `specs/34-frontend-v1-v2-api-migration-design.md`. Branch: `feature/fe-v1-v2-api-migration`.
 
-**Conventions for every task:** commit only the files listed (by path — never `git add -A`); commit messages carry **no** `Co-Authored-By` footer. Run targeted Vitest per task; the full `npm run preflight` (serial) is the final gate in Task 6.
+**Conventions for every task:** commit only the files listed (by path — never `git add -A`); commit messages carry **no** `Co-Authored-By` footer. Run targeted Vitest per task; the full `npm run preflight` (serial) is the final gate in Task 6. **Red-path / abort:** if a step cannot be made green without editing a file outside that task's **Files** list, stop and report to the operator — do not expand scope to force green (spec §10). **Line numbers** in steps are approximate navigation aids — match on the shown code snippet, not the line number.
+
+**Parallelization (subagent-driven):** after Task 1 is committed, Task 2 is fully independent of Tasks 3 & 4. Tasks 3 and 4 both edit `src/test/msw/handlers.ts` (different handlers — the fetch-signals default vs the icp default), so if dispatched in parallel they must be merged on that file (or just serialize the two handler edits); everything else across 2/3/4 is disjoint.
 
 ---
 
@@ -209,6 +211,7 @@ Expected: PASS.
 Run: `cd frontend && grep -rn "DataSourceListSchema" src`
 - If the **only** remaining hit is its definition in `src/features/mission-control/contracts.ts` (and its `export type DataSourceListResponse = z.infer<...>` line), delete both the `DataSourceListSchema` const and the `DataSourceListResponse` type. Then run `grep -rn "UserDocumentSchema" src` — if `UserDocumentSchema` is now unreferenced too, delete it as well; if it is still used elsewhere, leave it.
 - If `DataSourceListSchema` is referenced anywhere else, leave it (Spec 34 §4.5).
+- Safety net: the Step 6 `npx tsc --noEmit` catches a wrong deletion — a dangling-import error means the export was still referenced (incl. via a path the grep missed), so restore it.
 
 - [ ] **Step 6: Verify typecheck + the mission-control suite are green**
 
@@ -220,12 +223,10 @@ Expected: PASS, no type errors.
 ```bash
 cd frontend && git add src/features/mission-control/services/missionControl.ts \
   src/features/mission-control/services/__tests__/missionControl.test.ts \
-  src/features/mission-control/hooks/__tests__/useDataSources.test.tsx \
-  src/features/mission-control/contracts.ts
+  src/features/mission-control/hooks/__tests__/useDataSources.test.tsx
+# include src/features/mission-control/contracts.ts in the add ONLY if Step 5 deleted the schema
 git commit -m "feat(fe): migrate fetchDataSources to /api/v2/user-documents (Spec 34 Task 2)"
 ```
-
-(If `contracts.ts` was not modified in Step 5, omit it from the `git add`.)
 
 ---
 
@@ -343,7 +344,9 @@ import {
 } from "../contracts";
 ```
 
-(`FetchSignalsResponse` is `z.object({}).passthrough()` → type `{}`; `{ signals: env.items }` is assignable, no cast needed. Then run `grep -rn "FetchSignalsResponseSchema" src` — if it is now unreferenced everywhere, delete the `export const FetchSignalsResponseSchema = ...` line from `src/features/signals/contracts.ts`; if still referenced, leave it.)
+(`FetchSignalsResponse` is `z.object({}).passthrough()` → type `{}`; `{ signals: env.items }` is assignable, no cast needed. Then run `grep -rn "FetchSignalsResponseSchema" src` — if it is now unreferenced everywhere, delete the `export const FetchSignalsResponseSchema = ...` line from `src/features/signals/contracts.ts`; if still referenced, leave it. After deleting, the Step 5 `npx tsc --noEmit` is the guard — a dangling-import error means it was still referenced, so restore it.)
+
+**Transport note (do not "fix"):** `fetchSignals` stays a raw `fetch` to `/api/v2/...` — it is intentionally NOT routed through `buildApiUrl` like Task 4's `fetchSuggestedIcps`. The asymmetry is deliberate (spec N9: transport unification is out of scope).
 
 - [ ] **Step 4: Flip the shared MSW default handler**
 
