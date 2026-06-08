@@ -8,15 +8,24 @@ import { server } from "@/test/msw/server";
 describe("fetchDataSources", () => {
   it("unwraps the documents envelope", async () => {
     server.use(
-      http.get("/api/user-documents", () =>
-        HttpResponse.json({ documents: [{ file_id: "d1" }, { file_id: "d2" }] }),
+      http.get("/api/v2/user-documents", () =>
+        HttpResponse.json({
+          items: [{ file_id: "d1" }, { file_id: "d2" }],
+          total: 2,
+          limit: 500,
+          offset: 0,
+        }),
       ),
     );
     expect(await fetchDataSources("org1")).toHaveLength(2);
   });
 
-  it("returns a bare array as-is", async () => {
-    server.use(http.get("/api/user-documents", () => HttpResponse.json([{ file_id: "d1" }])));
+  it("returns env.items for a single-item envelope", async () => {
+    server.use(
+      http.get("/api/v2/user-documents", () =>
+        HttpResponse.json({ items: [{ file_id: "d1" }], total: 1, limit: 500, offset: 0 }),
+      ),
+    );
     expect(await fetchDataSources("org1")).toHaveLength(1);
   });
 });

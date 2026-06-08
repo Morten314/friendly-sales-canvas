@@ -1,10 +1,13 @@
+import { z } from "zod";
+
 import {
   CustomerProfileResponseSchema,
   SuggestedIcpsResponseSchema,
   type SuggestedIcpsResponse,
 } from "../contracts";
 
-import { apiFetch, apiFetchJson, buildApiUrl, buildIcpUrl } from "@/shared/api/transport";
+import { firstPageParams, paginatedSchema } from "@/shared/api/pagination";
+import { apiFetch, apiFetchJson, buildApiUrl } from "@/shared/api/transport";
 import {
   buildCustomerProfileSavePayload,
   extractIcpsArrayFromCustomerProfileResponse,
@@ -24,10 +27,11 @@ export function fetchCustomerProfileIcps(userId: string, orgId: string): Promise
 }
 
 /**
- * Recommended ICPs read — GET /icp. Parity-critical: `buildIcpUrl` resolves to
- * the DIRECT backend host (not the `/api` proxy), so we raw-`fetch` that exact
- * URL. The permissive schema `.parse`s the body at the boundary; the consumer
- * normalizes (`normalizeIcpGetResponse`) + maps (`mapApiICPToSuggested`).
+ * Recommended ICPs read — GET /api/v2/icp (Spec 34 Task 4). Routes through
+ * `buildApiUrl` → `/api` proxy (no longer direct-host). Decodes the v2
+ * paginated envelope and re-wraps to `{ suggestedICPs: items }` before the
+ * schema parse; the consumer normalizes (`normalizeIcpGetResponse`) + maps
+ * (`mapApiICPToSuggested`).
  */
 export async function fetchSuggestedIcps(
   userId: string,
@@ -35,15 +39,15 @@ export async function fetchSuggestedIcps(
 ): Promise<SuggestedIcpsResponse> {
   const params = new URLSearchParams({ user_id: userId });
   if (opts.refresh) params.set("refresh", "true");
-  const res = await fetch(buildIcpUrl(params.toString()), {
+  const res = await fetch(buildApiUrl(`v2/icp?${params.toString()}&${firstPageParams(500)}`), {
     method: "GET",
     headers: { "Content-Type": "application/json" },
   });
   if (!res.ok) {
     throw new Error(`GET /icp failed: ${res.status} ${res.statusText}`);
   }
-  const json = await res.json();
-  return SuggestedIcpsResponseSchema.parse(json);
+  const env = paginatedSchema(z.unknown()).parse(await res.json());
+  return SuggestedIcpsResponseSchema.parse({ suggestedICPs: env.items });
 }
 
 /** POST /api/customer_profile/from_suggested_icp — persist an accepted ICP. */

@@ -8,36 +8,37 @@ import { server } from "@/test/msw/server";
 describe("fetchSignals", () => {
   it("parses and returns the signals envelope", async () => {
     server.use(
-      http.get("/api/fetch-signals", () =>
-        HttpResponse.json({ signals: [{ id: "s1" }, { id: "s2" }] }),
+      http.get("/api/v2/fetch-signals", () =>
+        HttpResponse.json({ items: [{ id: "s1" }, { id: "s2" }], total: 2, limit: 10, offset: 0 }),
       ),
     );
     const res = await fetchSignals("u1");
     expect(res).toMatchObject({ signals: [{ id: "s1" }, { id: "s2" }] });
   });
 
-  it("requests user_id and limit=10", async () => {
+  it("requests user_id, limit=10 and offset=0", async () => {
     let seenUrl = "";
     server.use(
-      http.get("/api/fetch-signals", ({ request }) => {
+      http.get("/api/v2/fetch-signals", ({ request }) => {
         seenUrl = request.url;
-        return HttpResponse.json({ signals: [] });
+        return HttpResponse.json({ items: [], total: 0, limit: 10, offset: 0 });
       }),
     );
     await fetchSignals("u1");
     expect(seenUrl).toContain("user_id=u1");
     expect(seenUrl).toContain("limit=10");
+    expect(seenUrl).toContain("offset=0");
   });
 
   it("throws on a non-ok response", async () => {
-    server.use(http.get("/api/fetch-signals", () => new HttpResponse(null, { status: 500 })));
+    server.use(http.get("/api/v2/fetch-signals", () => new HttpResponse(null, { status: 500 })));
     await expect(fetchSignals("u1")).rejects.toThrow(/Failed to fetch signals: 500/);
   });
 
   it("throws when the response is not JSON", async () => {
     server.use(
       http.get(
-        "/api/fetch-signals",
+        "/api/v2/fetch-signals",
         () => new HttpResponse("plain text", { headers: { "content-type": "text/plain" } }),
       ),
     );

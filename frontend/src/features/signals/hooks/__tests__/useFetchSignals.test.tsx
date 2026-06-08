@@ -16,7 +16,9 @@ function wrapper({ children }: { children: ReactNode }) {
 describe("useFetchSignals", () => {
   it("returns the parsed feed data", async () => {
     server.use(
-      http.get("/api/fetch-signals", () => HttpResponse.json({ signals: [{ id: "s1" }] })),
+      http.get("/api/v2/fetch-signals", () =>
+        HttpResponse.json({ items: [{ id: "s1" }], total: 1, limit: 10, offset: 0 }),
+      ),
     );
     const { result } = renderHook(() => useFetchSignals("u1"), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5000 });

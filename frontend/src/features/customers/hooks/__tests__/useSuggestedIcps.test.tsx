@@ -6,7 +6,6 @@ import { describe, expect, it } from "vitest";
 
 import { useSuggestedIcps } from "../useSuggestedIcps";
 
-import { BACKEND_BASE_URL } from "@/shared/api/transport";
 import { server } from "@/test/msw/server";
 
 function wrapper({ children }: { children: ReactNode }) {
@@ -17,11 +16,13 @@ function wrapper({ children }: { children: ReactNode }) {
 describe("useSuggestedIcps", () => {
   it("returns the parsed /icp envelope", async () => {
     server.use(
-      http.get(`${BACKEND_BASE_URL}/icp`, () => HttpResponse.json({ icps: [{ id: "r1" }] })),
+      http.get("/api/v2/icp", () =>
+        HttpResponse.json({ items: [{ id: "r1" }], total: 1, limit: 500, offset: 0 }),
+      ),
     );
     const { result } = renderHook(() => useSuggestedIcps("u1"), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5000 });
-    expect(result.current.data).toMatchObject({ icps: [{ id: "r1" }] });
+    expect(result.current.data).toMatchObject({ suggestedICPs: [{ id: "r1" }] });
   });
 
   it("is disabled without userId", () => {

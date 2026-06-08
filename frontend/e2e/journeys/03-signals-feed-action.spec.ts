@@ -12,7 +12,7 @@ test("signals feed loads, accept persists, snapshot stable", async ({ page }) =>
   const actionRequest = page.waitForRequest("**/api/signal_action");
 
   await installApiMocks(page, {
-    "/api/fetch-signals": { signals: signalList(5) },
+    "/api/v2/fetch-signals": { items: signalList(5), total: 5, limit: 10, offset: 0 },
     "/api/signal_action": { status: "success", signal_id: "sig_00000000" },
   });
   await installCatchAllApiMock(page);

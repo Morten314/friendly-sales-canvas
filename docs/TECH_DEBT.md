@@ -76,6 +76,7 @@ Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases
 | TD-FE-64 | open | [below](#td-fe-64--csv-smart-quote-normalization-is-a-no-op-normalizecsvasciidoublequotes) |
 | TD-FE-65 | open | [below](#td-fe-65--usemarketresearchdatats-decomposition-deferred-6034-loc-monster-file) |
 | TD-FE-66 | open | [below](#td-fe-66--usedocumentsync-cleanup-pre-existing-patterns-relocated-in-phase-13b) |
+| TD-FE-67 | open | [below](#td-fe-67--single-page-v2-reads-still-cap-items-at-500-total-not-surfaced) |
 
 ---
 
@@ -1456,5 +1457,29 @@ A data-layer pass that resolves TD-FE-19/21, or a renewed effort to reduce this 
 **Why deferred:** Phase 13 decomposition was behavior-preserving only (Spec 32 §5.2); all three are pre-existing and relocating them verbatim was correct. The hook boundary is now the natural fix site.
 
 **Pull-forward trigger:** the next change that touches `useDocumentSync` (e.g. a data-source processing-status bug, or a render-perf pass), or a TD-FE-19/21 data-layer pass.
+
+## TD-FE-67 — single-page v2 reads still cap items at 500; `total` not surfaced
+
+**Date logged:** 2026-06-08
+**Origin:** Spec 34 (frontend v1→v2 API migration). The three migrated reads
+(`fetchDataSources`, `fetchSignals`, `fetchSuggestedIcps`) request a single page
+(`limit=500`/`10`, `offset=0`) and consume only `items`.
+
+**Current state:** items are still capped at the page `limit`; `total` is present
+on the v2 wire but is not extracted, typed, or rendered (no consumer renders a
+count). The v1 `count` lie is gone (the FE no longer reads it), but the >500
+truncation is exposed-not-eliminated.
+
+**What it should be:** when a count display or a list exceeding 500 rows is
+needed, widen the service return types to carry `total` and add either fetch-all
+looping or real pagination UX (page controls / infinite scroll), keyed on the
+v2 `limit`/`offset`.
+
+**Why deferred:** 0 users; nothing renders a count today; threading an unused
+`total` would either break the bare-array consumer or add untyped dead surface
+(Spec 34 §2, review synthesis round 1).
+
+**Pull-forward trigger:** a count needs rendering, or an org approaches 500
+documents / signals / ICPs.
 
 **Owner:** TBD.

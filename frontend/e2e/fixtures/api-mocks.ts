@@ -11,9 +11,14 @@ const apiMocks: Record<string, unknown> = {
   "/api/leads/by-file": { leads: leadList(3) },
   "/api/leads/stream/status": { uploads: [] },
   "/api/leads/market-scores/status": { status: "idle", leads_processed: 0 },
-  "/api/fetch-signals": { signals: signalList(5) },
+  "/api/v2/fetch-signals": { items: signalList(5), total: 5, limit: 10, offset: 0 },
   "/api/customer_profile": { profiles: [icp(), icp({ icp_id: "icp_002", name: "Fintech CFOs" })] },
-  "/api/icp": { suggested: [{ icp_id: "sug_1", name: "Suggested", match_score: 0.8 }] },
+  "/api/v2/icp": {
+    items: [{ icp_id: "sug_1", name: "Suggested", match_score: 0.8 }],
+    total: 1,
+    limit: 500,
+    offset: 0,
+  },
   "/api/market-research": {
     status: "success",
     data: {
@@ -23,7 +28,7 @@ const apiMocks: Record<string, unknown> = {
       key_findings: [],
     },
   },
-  "/api/user-documents": { documents: [] },
+  "/api/v2/user-documents": { items: [], total: 0, limit: 500, offset: 0 },
 };
 
 /**

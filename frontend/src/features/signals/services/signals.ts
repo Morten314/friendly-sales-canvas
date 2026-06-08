@@ -1,17 +1,20 @@
+import { z } from "zod";
+
 import {
-  FetchSignalsResponseSchema,
   GenerateSignalsBatchResponseSchema,
   type FetchSignalsResponse,
   type GenerateSignalsBatchResponse,
 } from "../contracts";
 
+import { firstPageParams, paginatedSchema } from "@/shared/api/pagination";
+
 /**
- * GET /api/fetch-signals?user_id=&limit=10 — page-only read. Lifted verbatim
- * from SignalsPage; the permissive schema `.parse`s the body at the boundary.
+ * GET /api/v2/fetch-signals?user_id=&limit=10&offset=0 — page-only read.
+ * Parses the v2 paginated envelope and re-wraps to { signals } for consumers.
  * The consumer (Task 12) normalizes via `buildSignalCardsFromFetchData`.
  */
 export async function fetchSignals(userId: string): Promise<FetchSignalsResponse> {
-  const response = await fetch(`/api/fetch-signals?user_id=${userId}&limit=10`);
+  const response = await fetch(`/api/v2/fetch-signals?user_id=${userId}&${firstPageParams(10)}`);
   if (!response.ok) {
     throw new Error(`Failed to fetch signals: ${response.status} ${response.statusText}`);
   }
@@ -19,7 +22,8 @@ export async function fetchSignals(userId: string): Promise<FetchSignalsResponse
   if (!contentType || !contentType.includes("application/json")) {
     throw new Error("Server returned non-JSON response");
   }
-  return FetchSignalsResponseSchema.parse(await response.json());
+  const env = paginatedSchema(z.unknown()).parse(await response.json());
+  return { signals: env.items };
 }
 
 /**

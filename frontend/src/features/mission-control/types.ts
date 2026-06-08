@@ -18,7 +18,7 @@ export interface ICP {
   createdAt: Date;
 }
 
-/** Data-source read-list view-model (from GET /api/user-documents). NOTE: this
+/** Data-source read-list view-model (from GET /api/v2/user-documents). NOTE: this
  *  is the simple shape used by the data-sources tab. MissionControl's
  *  connector-catalog uses a separate, richer `DataSource` shape — do NOT unify
  *  them here; the connector/write surface is deferred. */
