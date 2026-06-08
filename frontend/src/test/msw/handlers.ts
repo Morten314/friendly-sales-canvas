@@ -14,8 +14,6 @@
 // adds handlers. Spec §3.2 last paragraph.
 import { http, HttpResponse } from "msw";
 
-import { BACKEND_BASE_URL } from "@/shared/api/transport";
-
 export const handlers = [
   // 1. Proof-of-pipeline
   http.get("/api/_health", () => HttpResponse.json({ ok: true })),
@@ -212,8 +210,8 @@ export const handlers = [
   }),
 
   // ── customers ────────────────────────────────────────────────────────────────
-  // Profiler reads/writes. /icp is on the direct backend host (not /api).
-  http.get(`${BACKEND_BASE_URL}/icp`, () => HttpResponse.json({ icps: [] })),
+  // Profiler recommended-ICP read — now /api/v2/icp (Spec 34; was direct-host /icp).
+  http.get("/api/v2/icp", () => HttpResponse.json({ items: [], total: 0, limit: 500, offset: 0 })),
   http.get("/api/customer_profile", () => HttpResponse.json({ icps: [] })),
   http.get("/api/profile/company", () => HttpResponse.json({})),
   http.post("/api/customer_profile", () => HttpResponse.json({ success: true })),

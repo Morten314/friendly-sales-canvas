@@ -9,32 +9,35 @@ import {
   rejectRecommendedIcp,
 } from "../customers";
 
-import { BACKEND_BASE_URL } from "@/shared/api/transport";
 import { server } from "@/test/msw/server";
 
 describe("fetchSuggestedIcps", () => {
-  it("parses the wrapped { icps: [...] } envelope", async () => {
+  it("parses the v2 envelope into { suggestedICPs }", async () => {
     server.use(
-      http.get(`${BACKEND_BASE_URL}/icp`, () =>
-        HttpResponse.json({ icps: [{ id: "r1" }, { id: "r2" }] }),
+      http.get("/api/v2/icp", () =>
+        HttpResponse.json({ items: [{ id: "r1" }, { id: "r2" }], total: 2, limit: 500, offset: 0 }),
       ),
     );
     const res = await fetchSuggestedIcps("u1");
-    expect(res).toMatchObject({ icps: [{ id: "r1" }, { id: "r2" }] });
+    expect(res).toMatchObject({ suggestedICPs: [{ id: "r1" }, { id: "r2" }] });
   });
 
-  it("parses a bare array response", async () => {
-    server.use(http.get(`${BACKEND_BASE_URL}/icp`, () => HttpResponse.json([{ id: "r1" }])));
+  it("returns { suggestedICPs: [] } for an empty envelope", async () => {
+    server.use(
+      http.get("/api/v2/icp", () =>
+        HttpResponse.json({ items: [], total: 0, limit: 500, offset: 0 }),
+      ),
+    );
     const res = await fetchSuggestedIcps("u1");
-    expect(Array.isArray(res)).toBe(true);
+    expect(res).toMatchObject({ suggestedICPs: [] });
   });
 
-  it("sends refresh=true when requested", async () => {
+  it("sends refresh=true and user_id when requested", async () => {
     let seenUrl = "";
     server.use(
-      http.get(`${BACKEND_BASE_URL}/icp`, ({ request }) => {
+      http.get("/api/v2/icp", ({ request }) => {
         seenUrl = request.url;
-        return HttpResponse.json([]);
+        return HttpResponse.json({ items: [], total: 0, limit: 500, offset: 0 });
       }),
     );
     await fetchSuggestedIcps("u1", { refresh: true });
@@ -43,7 +46,7 @@ describe("fetchSuggestedIcps", () => {
   });
 
   it("throws on a non-ok response", async () => {
-    server.use(http.get(`${BACKEND_BASE_URL}/icp`, () => new HttpResponse(null, { status: 500 })));
+    server.use(http.get("/api/v2/icp", () => new HttpResponse(null, { status: 500 })));
     await expect(fetchSuggestedIcps("u1")).rejects.toThrow(/GET \/icp failed: 500/);
   });
 });

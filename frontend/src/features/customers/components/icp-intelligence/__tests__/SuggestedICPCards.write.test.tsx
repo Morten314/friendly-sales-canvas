@@ -8,7 +8,6 @@ import { SuggestedICPCards } from "../SuggestedICPCards";
 import { PROFILER_DISMISSED_RECOMMENDED_IDS_KEY } from "../suggestedIcpStorage";
 
 import { Toaster } from "@/components/ui/toaster";
-import { BACKEND_BASE_URL } from "@/shared/api/transport";
 import { server } from "@/test/msw/server";
 
 // The container reads currentUser + orgId from @/shared/auth's useAuth — the same
@@ -43,9 +42,12 @@ describe("SuggestedICPCards writes", () => {
       // Current ICPs read — empty before AND after accept (keeps the optimistic
       // path deterministic; the accepted card transition is what we assert).
       http.get("/api/customer_profile", () => HttpResponse.json({ icps: [] })),
-      http.get(`${BACKEND_BASE_URL}/icp`, () =>
+      http.get("/api/v2/icp", () =>
         HttpResponse.json({
-          icps: [{ id: "rec-1", title: "FinTech ICP", industry: "Financial Services" }],
+          items: [{ id: "rec-1", title: "FinTech ICP", industry: "Financial Services" }],
+          total: 1,
+          limit: 500,
+          offset: 0,
         }),
       ),
       // useAcceptSuggestedIcp.mutateAsync(icpId) — POST from_suggested_icp.
@@ -85,8 +87,13 @@ describe("SuggestedICPCards writes", () => {
     server.use(
       http.get("/api/profile/company", () => HttpResponse.json({})),
       http.get("/api/customer_profile", () => HttpResponse.json({ icps: [] })),
-      http.get(`${BACKEND_BASE_URL}/icp`, () =>
-        HttpResponse.json({ icps: [{ id: "rec-1", title: "FinTech ICP" }] }),
+      http.get("/api/v2/icp", () =>
+        HttpResponse.json({
+          items: [{ id: "rec-1", title: "FinTech ICP" }],
+          total: 1,
+          limit: 500,
+          offset: 0,
+        }),
       ),
       // useRejectSuggestedIcp.mutateAsync(icpId) — DELETE recommended.
       http.delete("/api/icp/recommended/:id", () => HttpResponse.json({ success: true })),

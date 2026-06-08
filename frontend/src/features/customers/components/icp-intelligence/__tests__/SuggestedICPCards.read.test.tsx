@@ -6,7 +6,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import { SuggestedICPCards } from "../SuggestedICPCards";
 
-import { BACKEND_BASE_URL } from "@/shared/api/transport";
 import { server } from "@/test/msw/server";
 
 // The container reads currentUser + orgId from @/shared/auth's useAuth.
@@ -27,19 +26,27 @@ describe("SuggestedICPCards reads", () => {
     server.use(
       http.get("/api/profile/company", () => HttpResponse.json({})),
       http.get("/api/customer_profile", () => HttpResponse.json({ icps: [] })),
-      http.get(`${BACKEND_BASE_URL}/icp`, () =>
+      http.get("/api/v2/icp", () =>
         HttpResponse.json({
-          icps: [{ id: "rec-1", title: "Enterprise FinTech", industry: "Financial Services" }],
+          items: [
+            { id: "rec-1", title: "V2 Migrated Recommended ICP", industry: "Financial Services" },
+          ],
+          total: 1,
+          limit: 500,
+          offset: 0,
         }),
       ),
     );
     renderCards();
     // The recommended card renders the ICP title (mapApiICPToSuggested.name) as
-    // its CardTitle, proving the GET /icp item flowed through the real
+    // its CardTitle, proving the GET /api/v2/icp item flowed through the real
     // fetchSuggestedIcps → normalizeIcpGetResponse → mapApiICPToSuggested pipeline.
-    await waitFor(() => expect(screen.getByText(/Enterprise FinTech/i)).toBeInTheDocument(), {
-      timeout: 5000,
-    });
+    await waitFor(
+      () => expect(screen.getByText(/V2 Migrated Recommended ICP/i)).toBeInTheDocument(),
+      {
+        timeout: 5000,
+      },
+    );
     // Loading modal closes after the reads settle.
     expect(screen.queryByText(/Generating ICPs/i)).not.toBeInTheDocument();
   });
