@@ -1,6 +1,6 @@
 # `src/features/` — feature modules
 
-Each user-facing capability lives in its own folder here. Phases 5–12 of the frontend refactor (master Spec 14) extract the legacy `src/pages` / `src/components` code into these folders one feature at a time. Phase 4b populates the first one (`shell/`).
+Each user-facing capability lives in its own folder here. The frontend refactor (master Spec 14) extracted the legacy `src/pages` / `src/components` code into these folders one feature at a time.
 
 ## Per-feature template
 
@@ -19,26 +19,26 @@ src/features/<feature>/
 
 Add a feature's name here **before** scaffolding it. Backend uses snake_case; the frontend uses kebab-case per JS convention.
 
-| Feature           | Phase                                                      |
-| ----------------- | ---------------------------------------------------------- |
-| `artifacts`       | 12                                                         |
-| `auth`            | 10 (UI) — primitive lives in `shared/auth` from Phase 4b   |
-| `calendar`        | 12                                                         |
-| `customers`       | 7                                                          |
-| `insights`        | 12                                                         |
-| `market-research` | 5                                                          |
-| `mission-control` | 6                                                          |
-| `reports`         | 12                                                         |
-| `scout`           | 9                                                          |
-| `settings`        | 10                                                         |
-| `shell`           | 4b                                                         |
-| `signals`         | 8                                                          |
-| `strategist`      | 8                                                          |
-| `tenant`          | 10 (UI) — primitive lives in `shared/tenant` from Phase 4b |
+| Feature           | Phase                                        |
+| ----------------- | -------------------------------------------- |
+| `artifacts`       | 12                                           |
+| `auth`            | 10 (UI) — primitive lives in `shared/auth`   |
+| `calendar`        | 12                                           |
+| `customers`       | 7                                            |
+| `insights`        | 12                                           |
+| `market-research` | 5                                            |
+| `mission-control` | 6                                            |
+| `reports`         | 12                                           |
+| `scout`           | 9                                            |
+| `settings`        | 10                                           |
+| `shell`           | 4b                                           |
+| `signals`         | 8                                            |
+| `strategist`      | 8                                            |
+| `tenant`          | 10 (UI) — primitive lives in `shared/tenant` |
 
-There is intentionally **no `features/profiler/`** — Phase 9 resolved Spec 14 §8 Q10 by distributing Profiler across `customers` + `mission-control` + `shared/profiler`. The ICP-merge algorithm lives in `@/shared/profiler`; the inline view-model mapper in `ICPManager.tsx` is a container data-transform upheld by Plan-25 T21. `features/scout/` is intentionally thin (Spec 30 §1.1): it holds only the Scout deployment surface; Scout chat and shared infrastructure live in `shared/`. Both decisions are recorded as TD-FE-60. Phase 12's small-page names (`calendar`, `insights`, `reports`, `artifacts`) were appended **by Phase 12** (rows above). The scaffolder only _warns_ (does not block) on a name that is not yet on this map.
+There is intentionally **no `features/profiler/`** — Spec 14 §8 Q10 was resolved by distributing Profiler across `customers` + `mission-control` + `shared/profiler`. The ICP-merge algorithm lives in `@/shared/profiler`; the inline view-model mapper in `ICPManager.tsx` is a container data-transform upheld by Plan-25 T21. `features/scout/` is intentionally thin (Spec 30 §1.1): it holds only the Scout deployment surface; Scout chat and shared infrastructure live in `shared/`. Both decisions are recorded as TD-FE-60. The small-page names (`calendar`, `insights`, `reports`, `artifacts`) were appended later (rows above). The scaffolder only _warns_ (does not block) on a name that is not yet on this map.
 
-> **`deals` is NOT a feature.** `src/pages/Deals.tsx` _was_ the Strategist page; in Phase 8 it became `features/strategist/pages/StrategistPage.tsx`. The `/deals` URL is retained only as a redirect to `/your-ai-team/strategist/workspace`. Spec 14 §12's listing of `Deals.tsx` as a Phase-12 small-page is therefore stale — it's Phase-8 strategist territory (TD-FE-48).
+> **`deals` is NOT a feature.** `src/pages/Deals.tsx` _was_ the Strategist page; it became `features/strategist/pages/StrategistPage.tsx`. The `/deals` URL is retained only as a redirect to `/your-ai-team/strategist/workspace`. Spec 14 §12's listing of `Deals.tsx` as a small-page is therefore stale — it's strategist territory (TD-FE-48).
 
 ## Dependency rules (enforced by `eslint.config.js`, Spec 14 §3.3)
 
@@ -58,3 +58,7 @@ Each feature that owns routes exposes them from `<feature>/routes.tsx` as an arr
 ## Intra-feature imports are relative
 
 Within a feature, import your own modules with **relative paths** (`./`, `../`). Reserve the `@/features/<X>/…` alias for **cross-feature** imports — which must target the index only (`@/features/<X>`), enforced by `import-x/no-internal-modules` (see Dependency rules). This keeps "self imports" out of the cross-feature lint's scope.
+
+## Architecture decisions
+
+Architecture decisions affecting this layer are recorded as ADRs — see [docs/adr/](../../../docs/adr/README.md).

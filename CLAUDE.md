@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository. AGENTS.md mirrors this file for other agentic IDEs and adds a "Tool Usage Pitfalls" section.
 
 ## Repository Layout
 
@@ -11,7 +11,7 @@ brewra-gtm-intelligence/
 ├── frontend/                # React/Vite/TypeScript PWA (subtree from PWA-multi-tenancy)
 ├── backend/                 # FastAPI Python service (subtree from backend repo)
 ├── scripts/
-│   ├── sync.sh              # pull Brewra-dev work from old repos (temp week only)
+│   ├── sync.sh              # (retired) cutover-era sync tool
 │   └── safety_net/          # verification snapshots + verify.sh
 ├── specs/                   # design intent (output of brainstorming)
 ├── plans/                   # execution intent (output of plan-writing)
@@ -21,7 +21,7 @@ brewra-gtm-intelligence/
 │   │   └── claude-analysis/     # shorter, CTO-oriented Claude-authored set
 │   └── dry-run-merge/       # PWA develop-vs-production canvas drift report (Plan 05 prep)
 ├── CLAUDE.md, AGENTS.md     # agent context (this file is one of them)
-├── BRANCHES.md              # branch model + sync workflow quick-ref
+├── BRANCHES.md              # branch model quick-ref
 ├── README.md
 └── .gitignore
 ```
@@ -30,41 +30,23 @@ The two stacks share only an HTTP contract. They live in one repo so cross-cutti
 
 The frontend was subtree-imported from `PWA-multi-tenancy/develop` (which is a `git subtree split` of PWA's `development/friendly-sales-canvas/` folder). The backend was imported from `backend@main`. Full git history is preserved (no `--squash`).
 
-## Monorepo Branch Model (during temp week ending ~2026-05-22)
+## Branch Model
 
-This repo is in a temporary parallel-branch state during the fork transition. After Plan 05 reconciliation and Brewra-dev migration, this section gets rewritten for the future `master`/`dev`(/`stage`) model.
+The monorepo cutover is **complete**. `master` is the single integration trunk; all work happens on short-lived branches that merge back.
 
 | Branch | Role | Policy |
 |---|---|---|
-| `master` | Stable trunk. Feature work merges in from short-lived branches. | No direct feature commits — branch off `master`, get review when warranted, merge back. Direct commits reserved for `sync.sh` merges and trivial doc/typo fixes. |
-| `develop` | Tracker mirror of PWA `master`'s `development/` folder + backend's `main`. | **Only `sync.sh`'s commits land here.** No hand-typed commits. |
-| `production` | Tracker mirror of PWA `master`'s `production/` folder + backend's `main`. | Same: only `sync.sh` writes. |
-| `pwa-master-history` | Read-only archive of PWA's `master` at fork moment (canvas-nested layout preserved). | Never write. |
+| `master` | Stable trunk / single integration branch. | No direct feature commits — branch off `master`, review when warranted, merge back with `--no-ff`. Direct commits reserved for trivial doc/typo fixes. |
+| legacy (`develop`, `production`, `refactor`, `pwa-*`, `pwa-master-history`) | Dormant pre-cutover history. | **Read-only — do not commit.** Retained a few months for issue triage / rollback and business reasons, then pruned. Not active development targets. |
 
 **Discipline rules:**
-- **Feature work happens on a branch off `master`** and merges back after review. Use judgment for when a change warrants review — plan execution, multi-commit refactors, and non-trivial logic generally do; trivial fixes don't. Direct commits to `master` are reserved for `sync.sh`/`git merge develop` and trivial doc/typo fixes. Branch naming is author's judgment; delete after merge.
-- `sync.sh` updates `develop`/`production` automatically; manual commits to tracker branches will conflict with the next sync.
-
-**Brewra-dev workflow during temp week:** the old repos (`/projects/Brewra/PWA-multi-tenancy/`, `/projects/Brewra/backend/`) remain the Brewra devs' workspaces and the deploy sources. They push to `PWA master` and `backend main` as usual. The CTO syncs into the monorepo via `sync.sh`.
-
-**Sync workflow (Brewra devs → CTO):**
-```bash
-bash scripts/sync.sh                         # pulls latest from old PWA + backend repos
-git checkout master && git merge develop     # absorb FE updates into master (manual, when ready)
-```
-
-`sync.sh` is robust (preflight checks, dry-run mode, restores caller's branch, reports per-pull diffs). Read its head comment for usage.
-
-**Backend changes during temp week:**
-- Originating in old `backend` repo (Brewra dev pushes to `main`): `sync.sh` propagates to all three monorepo branches automatically.
-- Originating on monorepo's `master` (CTO's branch work merged in): do NOT propagate to tracker branches. They ship via cutover. Per spec, this is intentional.
+- Feature/phase work happens on a short-lived branch named `phase-N-*` (or feature-named), cut off `master`, merged back via `--no-ff` after a green local `npm run preflight` (see "AI-Native Development"). Review depth is judgment: plan execution, multi-commit refactors, and non-trivial logic warrant it; trivial fixes don't. Delete branches after merge.
+- The legacy branches are a frozen safety net from the fork/cutover, not sync or commit targets.
 
 **Recovery anchors:**
-- Tag `pre-monorepo-fork-2026-05-08` on PWA origin and backend origin (state at fork moment).
-- Tag `fork-point-2026-05-08` on monorepo `master` (initial post-import state).
-- `pwa-master-history` branch (full PWA pre-fork history with original SHAs).
-
-**Future state (post-cutover):** `master` + `dev` (+ optional `stage`). Tracker branches deleted. `pwa-master-history` retained as long-term archive.
+- Tag `pre-monorepo-fork-2026-05-08` (PWA + backend origins at fork moment).
+- Tag `fork-point-2026-05-08` (monorepo `master` initial post-import state).
+- `pwa-master-history` (full PWA pre-fork history with original SHAs).
 
 ## Polyglot Repo Practices
 
@@ -73,8 +55,8 @@ This is a polyglot setup: a Python/FastAPI service in `/backend/` and a TypeScri
 - **Never share utility files between frontend and backend.** No symlinks, no copy-pasted helpers, no relative imports across the boundary. The languages, runtimes, and dependency graphs are different. If the same logic is genuinely needed on both sides, implement it twice — duplication is the lesser evil.
 - **When adding a feature, update the backend first, verify the response shape with a live call, then implement the frontend.** There is **no auto-generated OpenAPI client** wired up — and a handful of endpoints across `app/routers/` and `app/routers/v2/` still lack `response_model` annotations — so static schema inference will mislead you. Use FastAPI's `/docs` or `curl` against a running backend to confirm the actual JSON shape before writing FE code against it.
 - **Run tooling from the correct subdir.** `npm` / `vite` / `eslint` only inside `/frontend/`; `pip` / `uvicorn` / `python` only inside `/backend/`. There is no root-level `package.json` or `pyproject.toml` — running package commands at the monorepo root will fail or silently no-op.
-- **Types do not cross the boundary.** Backend has per-domain Pydantic models in `app/models/`; frontend types live in `frontend/src/types/`. When an API shape changes, update both sides explicitly — don't try to generate one from the other.
-- **The `/api/*` proxy in `frontend/vite.config.ts` is the contract surface.** Path changes in the backend routers (`app/routers/` + `app/routers/v2/`) require matching FE updates at `enhancedApi` / `apiFetch` callsites. The proxy target is hardcoded to the Render URL (`backend-11kr.onrender.com`); local-backend dev requires editing `frontend/vite.config.ts`.
+- **Types do not cross the boundary.** Backend has per-domain Pydantic models in `app/models/`; frontend types live in `frontend/src/features/*/types.ts` + `src/shared/types/`. When an API shape changes, update both sides explicitly — don't try to generate one from the other.
+- **The `/api/*` proxy in `frontend/vite.config.ts` is the contract surface.** Path changes in the backend routers (`app/routers/` + `app/routers/v2/`) require matching FE updates at `src/shared/api` callsites. The proxy target is hardcoded to the Render URL (`brewra-gtm-intelligence.onrender.com`); local-backend dev requires editing `frontend/vite.config.ts`.
 - **Don't mix dependency manifests in one commit *unless the change is genuinely coordinated*.** `backend/requirements.txt` and `frontend/package.json` changes belong in separate commits unless paired by intent (e.g., a new endpoint plus its FE consumer). For coordinated cross-stack work, a single atomic commit is preferred — that's the monorepo benefit. The rule is: don't mix them *accidentally*.
 - **Environment config doesn't cross.** Backend secrets live in `app/core/config.py` (with hardcoded fallbacks — see Gotchas). Frontend env vars are Vite-scoped (`VITE_*`), but the API base is currently hardcoded in `frontend/vite.config.ts` and `frontend/vercel.json`. There is no shared `.env` and there shouldn't be one.
 - **Lint/test commands differ — pick a side before running them.** FE: `npm run lint` (eslint), no test framework. BE: no linter wired up, and `test_*.py` files are **live integration probes against production** (see Gotchas). "Run the tests" is not a meaningful instruction here without first picking a side.
@@ -88,7 +70,7 @@ Brewra is at MVP stage with **0 live users**. The cost of brief breakage is near
 ## Architecture: Big Picture
 
 ### What the product is
-Brewra is a B2B GTM/sales-intelligence PWA. Three customer-facing "agents" — **Scout** (research), **Profiler** (ICP/personas), **Strategist** (orchestration) — plus a unified `/signals` feed. **Scout and Profiler share most of their backend logic** in `app/services/signals/` (search/LLM/parsing — the unified `search_signals` core in `app/services/signals/search.py`), differentiated by prompt persona resolved through the prompt loader (`app/core/prompts.py` + `prompts/signals/`, e.g. `signals_scout_search` vs `signals_profiler_search`). **Strategist has no backend at all** — it's a frontend sequence builder (`frontend/src/components/strategist/StrategistWorkspace.tsx`) that hydrates from `sessionStorage.strategistContext`.
+Brewra is a B2B GTM/sales-intelligence PWA. Three customer-facing "agents" — **Scout** (research), **Profiler** (ICP/personas), **Strategist** (orchestration) — plus a unified `/signals` feed. **Scout and Profiler share most of their backend logic** in `app/services/signals/` (search/LLM/parsing — the unified `search_signals` core in `app/services/signals/search.py`), differentiated by prompt persona resolved through the prompt loader (`app/core/prompts.py` + `prompts/signals/`, e.g. `signals_scout_search` vs `signals_profiler_search`). **Strategist has no backend at all** — it's a frontend sequence builder in `frontend/src/features/strategist/` (StrategistWorkspace renders on the Strategist page; hydrates from `sessionStorage.strategistContext`).
 
 ### Backend topology
 - Single FastAPI process, now **layered** (not the old flat `api.py`/`services.py` monolith): `app/core/` (cross-cutting infra — `clients`, `config`, `dependencies`, `exceptions`, `llm_config`, `logging`, `prompts`), `app/models/` (per-domain Pydantic models + `pagination.py`), `app/routers/` (per-domain routers, with versioned successors in `app/routers/v2/`), and `app/services/<domain>/` (business logic, split into per-domain sub-modules). `backend/main.py` is a thin shim (`from app.main import app`); `app/main.py` is the application factory and owns the `lifespan` startup (build_clients → init_registry → build_llm_config → guarded Neo4j `refresh_schema()` → guarded Mongo index creation). **Full map: `docs/architecture/BACKEND.md`.**
@@ -105,10 +87,12 @@ Brewra is a B2B GTM/sales-intelligence PWA. Three customer-facing "agents" — *
 
 ### Frontend topology
 - React 18 + Vite + Tailwind + shadcn-ui (Radix). Firebase email/password auth. PWA via `vite-plugin-pwa` (Workbox).
-- State: `AuthContext`, `TenantContext`, plus three caching layers (`localStorage`, `enhancedApi` 5-min in-memory map, `sessionStorage`). **TanStack Query is in `package.json` but unused** — don't assume `useQuery` is available; the existing pattern is manual `fetch` via the clients in `frontend/src/lib/`.
-- API clients are layered: `apiFetch` (`frontend/src/lib/api.ts`) → `enhancedApi` (rate-limit + cache) → `authenticatedApi` (JWT injection). The `rateLimitManager` enforces 4 req/min on the FE to stay under provider limits.
-- Routing milestones: `/` → login → `/tenant-selection` → protected. Scout lives at `/your-ai-team/scout/:tab`, Strategist at `/your-ai-team/strategist/:tab`, Profiler is split between `/mission-control` and `/customers`.
-- This project was originally generated by **Lovable** (`lovable-tagger` in `frontend/vite.config.ts`). The Lovable URL in `frontend/README.md` and the markdown integration guides at the frontend root reflect that lineage.
+- **Per-feature structure** (post-refactor): product surfaces live under `src/features/<feature>/` (pages/components/hooks/services/types.ts/index.ts/README.md). Cross-cutting code lives in `src/shared/` (`api/`, `auth/`, `tenant/`, `chat/`, `company-profile/`, `profiler/`, `components/`, `hooks/`, `lib/`, `types/`, `styles/`). shadcn primitives are locked in `src/components/ui/`. Cross-feature imports go through a feature's `index.ts` only (enforced by `import-x` lint). Full conventions: `frontend/src/features/README.md`.
+- **Data layer:** TanStack Query is the server-state layer, configured in `src/shared/api/` with hand-authored zod contracts and a single rate limiter (**30 req/min**). Transport is `src/shared/api/transport.ts` (`apiFetch`). Some editable-state features still retain `localStorage`/`sessionStorage` by deliberate deferral — see `docs/TECH_DEBT.md` (TD-FE-19 family).
+- **App-wide state:** `AuthContext` + `TenantContext` live in `src/shared/auth/` and `src/shared/tenant/`.
+- Routing: `/` → login → `/tenant-selection` → protected. Scout at `/your-ai-team/scout/:tab`, Strategist at `/your-ai-team/strategist/:tab` (Deals.tsx is the Strategist page); Profiler is distributed across `/mission-control` and `/customers` (no separate `features/profiler/` — see ADR-0006 / TD-FE-60).
+- Tooling/quality gates: `npm run preflight` (typecheck, lint, format:check, vitest, build, advisory bundle:check, Playwright + visual regression, knip --strict). See "AI-Native Development".
+- Originally Lovable-generated; the `lovable-tagger` build plugin has since been removed. The Lovable URL in `frontend/README.md` and the markdown integration guides at the frontend root reflect that lineage.
 
 ### Auth reality check
 The frontend looks like it does JWT auth: `JWTManager` posts to `/api/auth/token` and `/api/auth/refresh`, attaches `Authorization: Bearer …` to every call, gracefully handles 404. **The backend does not validate this token.** Every endpoint reads `user_id` / `org_id` from query/body params and trusts them. Multi-tenancy is enforced by `WHERE l.org_id = $org_id` in Cypher and `{"org_id": ...}` in Mongo, nothing more. When you add an endpoint, do not assume an auth context exists.
@@ -133,7 +117,7 @@ This repo is structured for AI-native development: cross-cutting tasks (changes 
 - **No CI; preflight is local.** There is no `.github/workflows/` or external runner. The `npm run preflight` chain in `frontend/package.json` is the only pre-merge gate, and it runs on the controller's machine before the merge commit. Each later phase appends one more check to the chain. Two companions exist for iteration speed: `npm run verify` runs the fast inner-loop subset (typecheck + lint + change-scoped tests via `vitest run --changed` — only the tests whose dependency graph touches your uncommitted changes; the full Vitest suite, ~10 min at 89 files, is skipped here and runs **only** in the `preflight` merge gate) and `npm run preflight:par` runs the full gate in parallel via `scripts/preflight.mjs` (faster on an idle box, but it spikes CPU load and can flake the e2e visual tests when another session shares the machine — prefer the serial `npm run preflight` for the actual merge gate, especially during concurrent worktree development).
 - **NN numbering.** New specs and plans take the next NN after the highest existing N in `/plans/`, counting both prefix and suffix forms (e.g., `modularization-plan-9.md` counts as N=9, so the next slot is `10-`). The spec and plan for the same feature share the NN — `/specs/10-feature-X-design.md` pairs with `/plans/10-feature-X.md`.
 - **Specs and plans are a frozen record of intent, not current truth.** Once a plan merges, treat its contents as a historical snapshot of what was intended at that moment — not a representation of what the code does now. Don't update specs/plans to reflect post-merge drift; the code is authoritative for current behavior.
-- **Sync workflow** (during temp week only): `bash scripts/sync.sh` pulls Brewra-dev changes from old repos. `git merge develop` on master absorbs FE updates. After cutover (Plan 05 + Plan 06), this section is removed.
+- **CLAUDE.md ↔ AGENTS.md are kept in sync.** They share an identical base; AGENTS.md additionally carries the "Tool Usage Pitfalls" section for non-Claude IDEs. **Any edit to a shared section must be applied to both files.**
 
 ## Testing
 
@@ -150,9 +134,7 @@ Backend test conventions live in `backend/TESTING.md` — patch-where-used is th
 - **Embeddings are TogetherAI, not OpenAI.** `langchain_openai.OpenAIEmbeddings` in `app/services/_retrieval.py` is pointed at TogetherAI (`intfloat/multilingual-e5-large-instruct`, 1024-dim) — the class name is misleading.
 - **Neo4j CRM-graph schema is hard-coded in the Cypher-generation prompt** (`prompts/llm_config/cypher_gen.md.j2`, composing `prompts/_shared/cypher_base.md.j2`), not in code. Edit the prompt, not a constant, to change the schema the LLM reasons over.
 - **Multiple admin tools live in the backend** (`backend/admin_panel.html`, `backend/registration_admin_panel.html`, `backend/cleanup_company_profile.py`, still at the `backend/` root). They are served by FastAPI but not part of the API surface.
-- **Frontend has unused/duplicate cruft**: `frontend/src/components/SafeChatWithScout copy.tsx`, `frontend/src/pages/MarketResearch_clean.tsx`, `_restore_test.txt`, ~150 lines of commented-out code in `frontend/src/components/ICPManager.tsx`. Three `Safe*` wrappers exist; only `SafeMarketIntelligenceTab` is imported in active paths.
-- **Frontend duplicates the Scout/Profiler split**: `ScoutChatWithHistory` and `ProfilerChatWithHistory` are 90% the same component.
-- **Tracker branch hygiene.** `develop` and `production` are sync targets, not commit targets. If `git status` ever shows you on one of those with staged changes, you're on the wrong branch — `git stash`, switch to your feature branch (creating one off `master` if needed), then re-apply.
+- **Scout/Profiler chat share a `ChatWithHistory` shell** in `src/shared/chat/`; both wrappers delegate to it (deduped in the refactor).
 
 ## Pre-existing Analyses
 
@@ -167,7 +149,7 @@ If asked to reason about architecture, product scope, or design system, **read t
 
 ## Technical Debt Register
 
-`/docs/TECH_DEBT.md` is the living register of debt the team has consciously accepted. Each entry names the current state, what it should be, why deferred, and the trigger that should pull it forward. Consult before starting work that might be affected by a tracked item; add a new entry whenever you accept a quality compromise future agents/devs need to know about.
+`/docs/TECH_DEBT.md` is the living register of debt the team has consciously accepted. Each entry names the current state, what it should be, why deferred, and the trigger that should pull it forward. Consult before starting work that might be affected by a tracked item; add a new entry whenever you accept a quality compromise future agents/devs need to know about. Architecture decisions are recorded as ADRs in `docs/adr/` (index: `docs/adr/README.md`).
 
 ## Plans / Specs Reference
 

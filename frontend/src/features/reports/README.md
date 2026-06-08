@@ -1,15 +1,21 @@
 # `reports` feature
 
-The Presenter surface (route `/reports`). Presentational / local-state only — no data layer.
+## Purpose
+
+Reporting and data-export surface.
 
 ## Public surface
 
-- `reportsRoutes` — registry entry (`/reports`, `ProtectedRoute requireTenant` + `FeatureErrorBoundary`), composed by `src/app/routes.tsx`.
+Re-exported from `index.ts`:
+
+- `reportsRoutes` — feature routes (`/reports`, protected, requires tenant).
 
 ## Key files
 
-- `pages/ReportsPage.tsx` — the page (relocated from `src/pages/Reports.tsx`).
+- `pages/ReportsPage.tsx` — reports UI
+- `routes.tsx`, `index.ts`
 
 ## Dependency notes
 
-- Imports `Layout` from `@/features/shell`, `FeatureErrorBoundary` from `@/shared/components`, and `usePageTitle` from `@/shared/hooks/usePageTitle` (promoted Phase 11 — TD-FE-57).
+- Presentational/mock surface (no backend yet — see TECH_DEBT TD-FE-59).
+- May import another feature only via its `index.ts`.

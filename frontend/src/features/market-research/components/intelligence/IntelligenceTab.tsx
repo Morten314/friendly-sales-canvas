@@ -363,7 +363,7 @@ const IntelligenceTab: React.FC<IntelligenceTabProps> = ({
     deletedSections,
     editHistory,
     // Market-size read-path data fields removed — MarketSizeSection now sources its
-    // data via useMarketSize (Phase 5h). The marketData state + fetchMarketSizeData
+    // data via useMarketSize. The marketData state + fetchMarketSizeData
     // cascade producer in useMarketResearchData are retained — see TD-FE entry.
     // Market Size specific props
 
@@ -379,9 +379,9 @@ const IntelligenceTab: React.FC<IntelligenceTabProps> = ({
     industryTrendsDeletedSections,
     industryTrendsEditHistory,
     // Industry-trends data slices are no longer threaded by the shell — the section
-    // sources its data via useIndustryTrends (Phase 5g task 8 step 6a). The page-level
+    // sources its data via useIndustryTrends. The page-level
     // industryTrendsData fetch/cache slice in useMarketResearchData is retained
-    // (cascade producer for 5h) — see TD-FE entry.
+    // (cascade producer for market-size) — see TD-FE entry.
     industryTrendsLastEditedField,
     // Competitor Landscape props - pass structured data
 

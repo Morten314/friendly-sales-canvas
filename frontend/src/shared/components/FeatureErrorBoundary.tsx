@@ -18,7 +18,7 @@ interface FeatureErrorBoundaryState {
 /**
  * Class error boundary that scopes a thrown render error to one feature.
  * A crash in the wrapped subtree renders a local fallback instead of
- * blanking the whole app. Used from Phase 5 to wrap each feature's
+ * blanking the whole app. Used to wrap each feature's
  * top-level routed component.
  */
 export class FeatureErrorBoundary extends Component<

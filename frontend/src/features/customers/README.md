@@ -5,14 +5,14 @@
 The `/customers` surface — the **Profiler agent** UI (page title `👤 Profiler - Brewra`):
 three tabs (ICP Intelligence / Lead Stream / Chat with Profiler). Extracted from
 `src/pages/Customers.tsx` + `src/components/customers/*` and the relocated
-`ProfilerChatWithHistory` in Phase 7 (master Spec 14 §4; Spec 26 / plan 26). Spec 14's
+`ProfilerChatWithHistory` (master Spec 14 §4; Spec 26 / plan 26). Spec 14's
 Phase 7 source list (`ICPSummaryOpportunity`, `SuggestedICPsGallery`) was stale — both were
-dead-deleted in Phase 1; Spec 26 is the authority for what moved.
+dead code already deleted; Spec 26 is the authority for what moved.
 
 ## Public surface
 
 Locked in T18 (`index.ts`). Cross-feature consumers import only via `@/features/customers`,
-never a deep path. Today the surface is routes-only; exports are added lazily if Phase 9 needs them.
+never a deep path. Today the surface is routes-only; exports are added lazily if a consumer needs them.
 
 | Export            | Kind   | Source       | Description                                                                                       |
 | ----------------- | ------ | ------------ | ------------------------------------------------------------------------------------------------- |
@@ -20,16 +20,16 @@ never a deep path. Today the surface is routes-only; exports are added lazily if
 
 ## Key files
 
-- `pages/CustomersPage.tsx` — route shell; three tabs; the `window`-event header bridge; inner `<ErrorBoundary>` around tabs (now `./components/ErrorBoundary` — relocated Phase 11).
-- `components/ErrorBoundary.tsx` — local error boundary (relocated from `components/common/ErrorBoundary` Phase 11).
-- `components/icp-intelligence/EditDropdownMenu.tsx` — dropdown edit menu (relocated from `components/market-research/` Phase 11; TD-FE-63).
+- `pages/CustomersPage.tsx` — route shell; three tabs; the `window`-event header bridge; inner `<ErrorBoundary>` around tabs (now `./components/ErrorBoundary` — relocated).
+- `components/ErrorBoundary.tsx` — local error boundary (relocated from `components/common/ErrorBoundary`).
+- `components/icp-intelligence/EditDropdownMenu.tsx` — dropdown edit menu (relocated from `components/market-research/`; TD-FE-63).
 - `components/icp-intelligence/SuggestedICPCards.tsx` — Profiler ICP container; reads via the service/hook layer (T11), writes via mutation hooks (T16); decomposed T12.
 - `components/icp-intelligence/{SuggestedICPCard,CurrentIcpsTable}.tsx` — extracted render units (T12).
 - `components/icp-intelligence/icpMapping.ts` — pure flexible-`/icp` mappers/normalizers (T9).
 - `components/icp-intelligence/suggestedIcpStorage.ts` — pure optimistic-`localStorage` helpers (T10).
 - `components/icp-intelligence/ICPIntelligence.tsx` — thin wrapper; `profilerRefresh` header-event handler.
 - `components/lead-stream/LeadStream.tsx` — pure mock panel; exports `LeadStreamPanel` + `getLeadCountForICP`.
-- `components/chat/ProfilerChatWithHistory.tsx` — relocated Profiler chat shell; imports the `ContextChat` substrate from `@/shared/chat` (relocated Phase 8; renamed Phase 9; TD-FE-45 resolved).
+- `components/chat/ProfilerChatWithHistory.tsx` — relocated Profiler chat shell; imports the `ContextChat` substrate from `@/shared/chat` (relocated then renamed; TD-FE-45 resolved).
 - `contracts.ts` — permissive zod for `/icp` + `customer_profile` (T4).
 - `types.ts` — feature-local types (`ExistingICP`, `SuggestedICP`, `ICPCardStatus`, `ICPAnalysis`, …) (T8).
 - `hooks/*` — TanStack read (`useCustomerProfile`, `useSuggestedIcps`) + write (`useSaveCustomerProfile`, `useAcceptSuggestedIcp`, `useRejectSuggestedIcp` / `useDeleteCurrentIcp`) hooks.
@@ -40,7 +40,7 @@ never a deep path. Today the surface is routes-only; exports are added lazily if
 
 - May import from: `@/features/customers/*` (self, relative), `@/shared/*`, `@/components/ui/*`, npm.
 - May import another feature **only** via its `index.ts` (`@/features/<other>`), never a deep path.
-- May import: `@/features/customers/*` (self), `@/shared/*`, `@/components/ui/*`, npm. Legacy paths updated as of Phase 11: `@/lib/api` → `@/shared/api/transport`; `@/hooks/usePageTitle` → `@/shared/hooks/usePageTitle`; `@/hooks/use-toast` → `@/components/ui/use-toast`; `@/components/common/ErrorBoundary` → `./components/ErrorBoundary` (now local); `@/components/market-research/EditDropdownMenu` → `./components/icp-intelligence/EditDropdownMenu` (now local). `@/shared/types/escape-hatches` and `@/shared/lib/cacheUtils` are already on their final paths. The chat substrate imports from `@/shared/chat`.
+- May import: `@/features/customers/*` (self), `@/shared/*`, `@/components/ui/*`, npm. Legacy paths have been updated: `@/lib/api` → `@/shared/api/transport`; `@/hooks/usePageTitle` → `@/shared/hooks/usePageTitle`; `@/hooks/use-toast` → `@/components/ui/use-toast`; `@/components/common/ErrorBoundary` → `./components/ErrorBoundary` (now local); `@/components/market-research/EditDropdownMenu` → `./components/icp-intelligence/EditDropdownMenu` (now local). `@/shared/types/escape-hatches` and `@/shared/lib/cacheUtils` are already on their final paths. The chat substrate imports from `@/shared/chat`.
 - Keeps its **own** `/icp` + `customer_profile` read — does not adopt mission-control's `useICPs` (TD-FE-42).
 
 ## Pending handoffs

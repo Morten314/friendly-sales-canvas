@@ -1,4 +1,4 @@
-// Scout-chat entry surface within features/market-research (relocated from components/ — Phase 9).
+// Scout-chat entry surface within features/market-research (relocated from components/).
 
 import { MessageSquare, Send, ArrowRight, Loader2 } from "lucide-react";
 import React, { useState, useRef, useEffect } from "react";

@@ -5,7 +5,7 @@ import { auth } from "@/shared/auth/firebase";
 import { useTenant } from "@/shared/tenant";
 
 // Wraps the existing Login.tsx post-login sequence verbatim. AuthContext is NOT
-// restructured (Phase 4/10 owns that); this just gives the component isPending /
+// restructured (tracked separately); this just gives the component isPending /
 // error ergonomics and a relocatable hook (spec 20 §3.8).
 export function useLogin() {
   const { login, fetchOrgId } = useAuth();

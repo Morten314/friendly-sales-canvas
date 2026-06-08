@@ -1,5 +1,5 @@
 // Lives in features/customers — its only consumers are the customers
-// icp-intelligence tables. Relocated here in Phase 11 (TD-FE-63).
+// icp-intelligence tables. Relocated here (TD-FE-63).
 
 import { Edit, Pencil } from "lucide-react";
 import React from "react";
