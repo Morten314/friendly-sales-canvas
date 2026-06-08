@@ -60,7 +60,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
 |---|---|---|---|---|---|
 | 1 | `fetchDataSources` | `features/mission-control/services/missionControl.ts` | `apiGet("user-documents?org_id=…", DataSourceListSchema)` → `.documents ?? .files ?? .data ?? []` | `apiGet("v2/user-documents?org_id=…&limit=500&offset=0", paginatedSchema)` → `.items` | **500** |
 | 2 | `fetchSignals` | `features/signals/services/signals.ts` | `fetch("/api/fetch-signals?user_id=…&limit=10")` → `.signals` | `fetch("/api/v2/fetch-signals?user_id=…&limit=10&offset=0")` → `.items` | **10** |
-| 3 | `fetchSuggestedIcps` | `features/customers/services/customers.ts` | `fetch(buildIcpUrl("user_id=…[&refresh=true]"))` → `{suggestedICPs}` | `fetch(buildApiUrl("v2/icp?user_id=…[&refresh=true]&limit=500&offset=0"))` → `.items` | **500** |
+| 3 | `fetchSuggestedIcps` | `features/customers/services/customers.ts` | `fetch(buildIcpUrl("user_id=…[&refresh=true]"))` → passthrough envelope (backend `{icps}`) | `fetch(buildApiUrl("v2/icp?user_id=…[&refresh=true]&limit=500&offset=0"))` → `.items`, re-wrapped to `{suggestedICPs}` (R3) | **500** |
 
 `limit` rationale: v2 defaults (`user-documents`/`icp` = 50, `fetch-signals` = 10) are smaller than v1's effective cap, so an explicit `limit` is required to preserve today's result-set size. v1 `user-documents` and v1 `/icp` are **both** hard-capped at 500 by their shared services (`/icp` typically returns 5–10 items — `backend/app/routers/icp.py:28`); signals keeps its existing feed size of 10. (The actual v1 `user-documents` wire is `{status,count,files}`; the FE's `?? .files ?? .data` chain in the table is defensive, falling through to `.files`.)
 
