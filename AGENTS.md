@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to AI coding agents (Claude Code, Kilo Code, and similar) working in this repository. It mirrors CLAUDE.md, plus the "Tool Usage Pitfalls" section below (which applies to non-Claude IDEs).
 
 ## Repository Layout
 
@@ -11,7 +11,7 @@ brewra-gtm-intelligence/
 ├── frontend/                # React/Vite/TypeScript PWA (subtree from PWA-multi-tenancy)
 ├── backend/                 # FastAPI Python service (subtree from backend repo)
 ├── scripts/
-│   ├── sync.sh              # pull Brewra-dev work from old repos (temp week only)
+│   ├── sync.sh              # (retired) cutover-era sync tool
 │   └── safety_net/          # verification snapshots + verify.sh
 ├── specs/                   # design intent (output of brainstorming)
 ├── plans/                   # execution intent (output of plan-writing)
@@ -21,7 +21,7 @@ brewra-gtm-intelligence/
 │   │   └── claude-analysis/     # shorter, CTO-oriented Claude-authored set
 │   └── dry-run-merge/       # PWA develop-vs-production canvas drift report (Plan 05 prep)
 ├── CLAUDE.md, AGENTS.md     # agent context (this file is one of them)
-├── BRANCHES.md              # branch model + sync workflow quick-ref
+├── BRANCHES.md              # branch model quick-ref
 ├── README.md
 └── .gitignore
 ```
@@ -30,41 +30,23 @@ The two stacks share only an HTTP contract. They live in one repo so cross-cutti
 
 The frontend was subtree-imported from `PWA-multi-tenancy/develop` (which is a `git subtree split` of PWA's `development/friendly-sales-canvas/` folder). The backend was imported from `backend@main`. Full git history is preserved (no `--squash`).
 
-## Monorepo Branch Model (during temp week ending ~2026-05-22)
+## Branch Model
 
-This repo is in a temporary parallel-branch state during the fork transition. After Plan 05 reconciliation and Brewra-dev migration, this section gets rewritten for the future `master`/`dev`(/`stage`) model.
+The monorepo cutover is **complete**. `master` is the single integration trunk; all work happens on short-lived branches that merge back.
 
 | Branch | Role | Policy |
 |---|---|---|
-| `master` | Stable trunk. Feature work merges in from short-lived branches. | No direct feature commits — branch off `master`, get review when warranted, merge back. Direct commits reserved for `sync.sh` merges and trivial doc/typo fixes. |
-| `develop` | Tracker mirror of PWA `master`'s `development/` folder + backend's `main`. | **Only `sync.sh`'s commits land here.** No hand-typed commits. |
-| `production` | Tracker mirror of PWA `master`'s `production/` folder + backend's `main`. | Same: only `sync.sh` writes. |
-| `pwa-master-history` | Read-only archive of PWA's `master` at fork moment (canvas-nested layout preserved). | Never write. |
+| `master` | Stable trunk / single integration branch. | No direct feature commits — branch off `master`, review when warranted, merge back with `--no-ff`. Direct commits reserved for trivial doc/typo fixes. |
+| legacy (`develop`, `production`, `refactor`, `pwa-*`, `pwa-master-history`) | Dormant pre-cutover history. | **Read-only — do not commit.** Retained a few months for issue triage / rollback and business reasons, then pruned. Not active development targets. |
 
 **Discipline rules:**
-- **Feature work happens on a branch off `master`** and merges back after review. Use judgment for when a change warrants review — plan execution, multi-commit refactors, and non-trivial logic generally do; trivial fixes don't. Direct commits to `master` are reserved for `sync.sh`/`git merge develop` and trivial doc/typo fixes. Branch naming is author's judgment; delete after merge.
-- `sync.sh` updates `develop`/`production` automatically; manual commits to tracker branches will conflict with the next sync.
-
-**Brewra-dev workflow during temp week:** the old repos (`/projects/Brewra/PWA-multi-tenancy/`, `/projects/Brewra/backend/`) remain the Brewra devs' workspaces and the deploy sources. They push to `PWA master` and `backend main` as usual. The CTO syncs into the monorepo via `sync.sh`.
-
-**Sync workflow (Brewra devs → CTO):**
-```bash
-bash scripts/sync.sh                         # pulls latest from old PWA + backend repos
-git checkout master && git merge develop     # absorb FE updates into master (manual, when ready)
-```
-
-`sync.sh` is robust (preflight checks, dry-run mode, restores caller's branch, reports per-pull diffs). Read its head comment for usage.
-
-**Backend changes during temp week:**
-- Originating in old `backend` repo (Brewra dev pushes to `main`): `sync.sh` propagates to all three monorepo branches automatically.
-- Originating on monorepo's `master` (CTO's branch work merged in): do NOT propagate to tracker branches. They ship via cutover. Per spec, this is intentional.
+- Feature/phase work happens on a short-lived branch named `phase-N-*` (or feature-named), cut off `master`, merged back via `--no-ff` after a green local `npm run preflight` (see "AI-Native Development"). Review depth is judgment: plan execution, multi-commit refactors, and non-trivial logic warrant it; trivial fixes don't. Delete branches after merge.
+- The legacy branches are a frozen safety net from the fork/cutover, not sync or commit targets.
 
 **Recovery anchors:**
-- Tag `pre-monorepo-fork-2026-05-08` on PWA origin and backend origin (state at fork moment).
-- Tag `fork-point-2026-05-08` on monorepo `master` (initial post-import state).
-- `pwa-master-history` branch (full PWA pre-fork history with original SHAs).
-
-**Future state (post-cutover):** `master` + `dev` (+ optional `stage`). Tracker branches deleted. `pwa-master-history` retained as long-term archive.
+- Tag `pre-monorepo-fork-2026-05-08` (PWA + backend origins at fork moment).
+- Tag `fork-point-2026-05-08` (monorepo `master` initial post-import state).
+- `pwa-master-history` (full PWA pre-fork history with original SHAs).
 
 ## Polyglot Repo Practices
 
@@ -120,13 +102,20 @@ This repo is structured for AI-native development: cross-cutting tasks (changes 
 - **Cross-stack atomicity.** A feature touching both `/frontend/` and `/backend/` ships as one commit (or one PR), reviewable as one diff. Don't split FE/BE changes across separate commits "because the codebases are different" — that's the polyrepo habit, not the monorepo rule.
 - **Commit granularity: prefer small, frequent commits.** Within a multi-step task (a plan with N tasks, a refactor with several discrete pieces, a feature built in stages), ship one commit per logical step rather than batching. A single plan task = a single commit. A single fixture file or test module = its own commit. A bug fix and the test that catches it = one commit (they're one logical step), but if the same bug fix touches three unrelated call sites, those can be three commits. The bias is toward more, smaller commits — easier to review, easier to bisect, easier to revert. This rule sits beside cross-stack atomicity, not against it: a coordinated FE+BE change for one feature is still one commit, because that *is* the logical step.
 - **Commit message style.** Subjects use `type(scope):` format (`refactor(be):`, `feat(fe):`, `docs(plans):`, `chore(be):`) and describe the code change itself — not the plan slot, not the meta-activity. Skip `[N/M]` numbering suffixes. Plan-reference trailers (`Refs: plan-9`) are author's judgment; default off, use only when a commit would otherwise be hard to trace back to its context. Body is optional and author's judgment — include one when the *why* isn't obvious from the diff.
-- **Spec-driven flow.**
+- **Spec-driven flow.** Each artifact transition runs an adversarial review cycle (fresh-eyes reviewer + same-agent synthesis), looped until findings are nit-or-below before moving on.
   1. Idea → brainstorm → `/specs/NN-feature-X-design.md` (design intent)
+     - `/review-spec` → `/synthesize-spec-review` (loop until clean)
   2. Spec → plan-write → `/plans/NN-feature-X.md` (execution intent, ordered steps)
-  3. Plan → atomic commits on a feature branch → review → merge to `master`
+     - `/review-plan` → `/synthesize-plan-review` (loop until clean)
+  3. Plan → atomic commits on a feature branch (impl)
+     - `/review-impl` → `/synthesize-impl-review` (loop until clean)
+  4. Human-approved merge:
+     - Controller runs `npm run preflight` in `frontend/` (typecheck + lint + build + Playwright; later phases extend with vitest, knip --strict, bundle-budget — see spec 14 §5.3)
+     - Green → `git checkout master && git merge <branch> && git push origin master`. Red → report which check failed; user decides fix vs abort.
+- **No CI; preflight is local.** There is no `.github/workflows/` or external runner. The `npm run preflight` chain in `frontend/package.json` is the only pre-merge gate, and it runs on the controller's machine before the merge commit. Each later phase appends one more check to the chain. Two companions exist for iteration speed: `npm run verify` runs the fast inner-loop subset (typecheck + lint + change-scoped tests via `vitest run --changed` — only the tests whose dependency graph touches your uncommitted changes; the full Vitest suite, ~10 min at 89 files, is skipped here and runs **only** in the `preflight` merge gate) and `npm run preflight:par` runs the full gate in parallel via `scripts/preflight.mjs` (faster on an idle box, but it spikes CPU load and can flake the e2e visual tests when another session shares the machine — prefer the serial `npm run preflight` for the actual merge gate, especially during concurrent worktree development).
 - **NN numbering.** New specs and plans take the next NN after the highest existing N in `/plans/`, counting both prefix and suffix forms (e.g., `modularization-plan-9.md` counts as N=9, so the next slot is `10-`). The spec and plan for the same feature share the NN — `/specs/10-feature-X-design.md` pairs with `/plans/10-feature-X.md`.
 - **Specs and plans are a frozen record of intent, not current truth.** Once a plan merges, treat its contents as a historical snapshot of what was intended at that moment — not a representation of what the code does now. Don't update specs/plans to reflect post-merge drift; the code is authoritative for current behavior.
-- **Sync workflow** (during temp week only): `bash scripts/sync.sh` pulls Brewra-dev changes from old repos. `git merge develop` on master absorbs FE updates. After cutover (Plan 05 + Plan 06), this section is removed.
+- **CLAUDE.md ↔ AGENTS.md are kept in sync.** They share an identical base; AGENTS.md additionally carries the "Tool Usage Pitfalls" section for non-Claude IDEs. **Any edit to a shared section must be applied to both files.**
 
 ## Testing
 
@@ -145,7 +134,6 @@ Backend test conventions live in `backend/TESTING.md` — patch-where-used is th
 - **Multiple admin tools live in the backend** (`backend/admin_panel.html`, `backend/registration_admin_panel.html`, `backend/cleanup_company_profile.py`, still at the `backend/` root). They are served by FastAPI but not part of the API surface.
 - **Frontend has unused/duplicate cruft**: `frontend/src/components/SafeChatWithScout copy.tsx`, `frontend/src/pages/MarketResearch_clean.tsx`, `_restore_test.txt`, ~150 lines of commented-out code in `frontend/src/components/ICPManager.tsx`. Three `Safe*` wrappers exist; only `SafeMarketIntelligenceTab` is imported in active paths.
 - **Frontend duplicates the Scout/Profiler split**: `ScoutChatWithHistory` and `ProfilerChatWithHistory` are 90% the same component.
-- **Tracker branch hygiene.** `develop` and `production` are sync targets, not commit targets. If `git status` ever shows you on one of those with staged changes, you're on the wrong branch — `git stash`, switch to your feature branch (creating one off `master` if needed), then re-apply.
 
 ## Tool Usage Pitfalls
 

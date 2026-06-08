@@ -11,11 +11,11 @@ B2B GTM/sales-intelligence PWA. Frontend (React/Vite/TypeScript) + backend (Fast
 - `/docs/` — analyses and reference docs
 - `/scripts/` — automation (`sync.sh`, `safety_net/`)
 - `/CLAUDE.md`, `/AGENTS.md` — agent context
-- `/BRANCHES.md` — branch model + sync workflow
+- `/BRANCHES.md` — branch model
 
 ## Branches
 
-This repo is in a **temporary parallel-branch state** during fork transition. Forked from old repos on 2026-05-08; cutover scheduled when Plan 05 reconciliation is complete (~1–2 weeks from 2026-05-08). See `BRANCHES.md` for the temp model and `scripts/sync.sh` for syncing Brewra-dev work from old repos.
+Monorepo cutover is complete. `master` is the trunk; work happens on short-lived `phase-N-*`/feature branches merged back via `--no-ff`. Legacy branches (`develop`/`production`/`refactor`/`pwa-*`) are retained dormant for a few months for rollback/triage, then pruned. See `BRANCHES.md`.
 
 ## Common commands
 
@@ -25,9 +25,6 @@ cd frontend && npm install && npm run dev
 
 # backend
 cd backend && pip install -r requirements.txt && python main.py
-
-# sync Brewra-dev work from old repos (temp week only)
-bash scripts/sync.sh
 ```
 
 See `CLAUDE.md` for full agent guidance.

@@ -1,34 +1,23 @@
 # Branches
 
-This repo is in a **temporary parallel-branch state** during the fork transition. After Plan 05 reconciliation and Brewra-dev migration, this file gets rewritten for the future `master`/`dev`(/`stage`) model.
-
-## Current branches (temp week)
+The monorepo cutover is **complete**. `master` is the single integration trunk; all work happens on short-lived branches that merge back.
 
 | Branch | Role | Policy |
 |---|---|---|
-| `master` | Stable trunk. Feature work merges in from short-lived branches. | No direct feature commits — branch off `master`, get review when warranted, merge back. Direct commits reserved for `sync.sh` merges and trivial doc/typo fixes. |
-| `develop` | Tracker mirror of PWA `master`'s `development/` folder + backend's `main`. | **Only `sync.sh`'s commits land here.** No hand-typed commits. |
-| `production` | Tracker mirror of PWA `master`'s `production/` folder + backend's `main`. | **Only `sync.sh`'s commits land here.** No hand-typed commits. |
-| `pwa-master-history` | Read-only archive of PWA's `master` (pre-Plan-01 history with original SHAs). | Never write. |
+| `master` | Stable trunk / single integration branch. | No direct feature commits — branch off `master`, review when warranted, merge back with `--no-ff`. Direct commits reserved for trivial doc/typo fixes. |
+| legacy (`develop`, `production`, `refactor`, `pwa-*`, `pwa-master-history`) | Dormant pre-cutover history. | **Read-only — do not commit.** Retained a few months for issue triage / rollback and business reasons, then pruned. Not active development targets. |
 
 ## Discipline rules
 
-- **Feature work happens on a branch off `master`** and merges back after review. Use judgment for when a change warrants review — plan execution, multi-commit refactors, and non-trivial logic generally do; trivial fixes don't. Direct commits to `master` are reserved for `sync.sh`/`git merge develop` and trivial doc/typo fixes. Branch naming is author's judgment; delete after merge.
-- `sync.sh` updates `develop`/`production` automatically; if you commit there manually, the next sync may conflict.
+- Feature/phase work happens on a short-lived branch named `phase-N-*` (or feature-named), cut off `master`, merged back via `--no-ff` after a green local `npm run preflight` (see "AI-Native Development" in CLAUDE.md). Review depth is judgment: plan execution, multi-commit refactors, and non-trivial logic warrant it; trivial fixes don't. Delete branches after merge.
+- The legacy branches are a frozen safety net from the fork/cutover, not sync or commit targets.
 
-## Workflows
+## Legacy branches (retained dormant)
 
-**Sync from Brewra devs:** `bash scripts/sync.sh` — pulls latest from old PWA + backend repos onto tracker branches.
+`develop`, `production`, `refactor`, `pwa-*`, and `pwa-master-history` are pre-cutover history, kept read-only for a few months for issue triage, rollback, and business reasons, then pruned. They are not sync or active-development targets.
 
-**Absorb FE updates into master:** `git checkout master && git merge develop`.
+## Recovery anchors
 
-**Backend changes:** if originated in old `backend` repo (Brewra dev pushes to `main`), `sync.sh` propagates to all three monorepo branches automatically. If originated on monorepo's `master` (CTO's branch work merged in), they don't propagate to trackers — they ship via cutover (this is intentional per spec).
-
-## Future state (post-cutover)
-
-After cutover, this file gets rewritten. Tracker branches deleted. Future model:
-- `master` — main branch
-- `dev` — integration
-- (optional) `stage` — pre-production
-
-`pwa-master-history` is retained indefinitely as the long-term archive.
+- Tag `pre-monorepo-fork-2026-05-08` (PWA + backend origins at fork moment).
+- Tag `fork-point-2026-05-08` (monorepo `master` initial post-import state).
+- `pwa-master-history` (full PWA pre-fork history with original SHAs).
