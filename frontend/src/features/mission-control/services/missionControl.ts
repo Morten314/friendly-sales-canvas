@@ -16,7 +16,7 @@ export async function fetchDataSources(orgId: string): Promise<unknown[]> {
     `v2/user-documents?org_id=${encodeURIComponent(orgId)}&${firstPageParams(500)}`,
     paginatedSchema(z.unknown()),
   );
-  return env.items;
+  return env.items ?? [];
 }
 
 /** GET /api/leads/stream/status — uploaded lead-stream files + processing stats. */

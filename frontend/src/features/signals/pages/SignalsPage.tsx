@@ -57,7 +57,7 @@ const SignalsPage = () => {
       setAnswerExpandedKeys(new Set());
     }
   }, [expandedRecommendation]);
-  /** True when current signals (and recommendations) came from GET /api/fetch-signals; false when using sample fallback */
+  /** True when current signals (and recommendations) came from GET /api/v2/fetch-signals; false when using sample fallback */
   const [, setSignalsFromApi] = useState(false);
   const [savedInsightsFilter] = useState("all");
   const [acceptedSignals, setAcceptedSignals] = useState<Set<string>>(new Set());

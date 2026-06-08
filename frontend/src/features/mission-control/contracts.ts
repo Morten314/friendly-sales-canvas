@@ -33,7 +33,9 @@ export type LeadStreamStatusResponse = z.infer<typeof LeadStreamStatusSchema>;
  *  data-sources component maps them to `DataSource[]` (stage 5). */
 export const UserDocumentSchema = z.object({}).passthrough();
 
-/** GET /api/user-documents returns a bare array or `{ documents|files|data }`. */
+/** GET /api/user-documents returns a bare array or `{ documents|files|data }`.
+ *  Legacy v1 shape — the active `fetchDataSources` now reads the v2 paginated
+ *  envelope (Spec 34); this schema is retained only for its contract test. */
 export const DataSourceListSchema = z.union([
   z.array(UserDocumentSchema),
   z

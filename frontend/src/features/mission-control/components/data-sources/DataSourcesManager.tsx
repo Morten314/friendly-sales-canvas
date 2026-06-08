@@ -147,7 +147,7 @@ const DataSourcesManager: React.FC = () => {
     }
 
     console.log("✅ DataSourcesManager - Upload success");
-    // Upload successful - file_key will be retrieved from /user-documents
+    // Upload successful - file_key will be retrieved from /api/v2/user-documents
     return;
   };
 
@@ -212,7 +212,7 @@ const DataSourcesManager: React.FC = () => {
     }
 
     console.log("✅ DataSourcesManager - URL upload success");
-    // Upload successful - will be retrieved from /user-documents
+    // Upload successful - will be retrieved from /api/v2/user-documents
     return;
   };
 

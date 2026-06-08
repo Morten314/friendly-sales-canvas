@@ -5,7 +5,7 @@ import { fetchSignals } from "../services/signals";
 import { qk } from "@/shared/api/queryKeys";
 
 /**
- * GET /api/fetch-signals — page-only signals feed read. `retry: false` mirrors
+ * GET /api/v2/fetch-signals — page-only signals feed read. `retry: false` mirrors
  * the single-attempt raw fetch this lifted from (Phase 8, Task 12 consumer).
  */
 export function useFetchSignals(userId: string, enabled = true) {
