@@ -149,7 +149,7 @@ If asked to reason about architecture, product scope, or design system, **read t
 
 ## Technical Debt Register
 
-`/docs/TECH_DEBT.md` is the living register of debt the team has consciously accepted. Each entry names the current state, what it should be, why deferred, and the trigger that should pull it forward. Consult before starting work that might be affected by a tracked item; add a new entry whenever you accept a quality compromise future agents/devs need to know about.
+`/docs/TECH_DEBT.md` is the living register of debt the team has consciously accepted. Each entry names the current state, what it should be, why deferred, and the trigger that should pull it forward. Consult before starting work that might be affected by a tracked item; add a new entry whenever you accept a quality compromise future agents/devs need to know about. Architecture decisions are recorded as ADRs in `docs/adr/` (index: `docs/adr/README.md`).
 
 ## Plans / Specs Reference
 
