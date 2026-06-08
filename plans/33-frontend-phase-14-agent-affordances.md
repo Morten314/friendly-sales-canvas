@@ -10,7 +10,7 @@
 
 **Authority:** `specs/33-frontend-phase-14-agent-affordances-design.md` (round 2). Master plan: `specs/14-frontend-refactoring-master-plan-design.md` §4 (Phase 14) + §6 (definition of done).
 
-**⚠️ Scope note for the operator (confirm before Task 4b):** Reading the actual `CLAUDE.md` during planning surfaced that its **Frontend topology + several FE gotchas describe the pre-refactor frontend**. Spec 33 W2 scoped only dedup; **Task 4b extends it** under the master-plan "amend root docs where the new structure makes existing guidance stale" mandate (§2.1) + your doc-org directive. If you'd rather keep Phase 14 to literal-spec scope and defer the FE-topology refresh, drop Task 4b (and log it as a new TD-FE). Otherwise it proceeds as written.
+**Scope note (operator-confirmed 2026-06-08):** Reading the actual `CLAUDE.md` during planning surfaced that its **Frontend topology + several FE gotchas describe the pre-refactor frontend**. Spec 33 W2 scoped only dedup; **Task 4b extends it** under the master-plan "amend root docs where the new structure makes existing guidance stale" mandate (§2.1) + the doc-org directive. The operator confirmed Task 4b stays in scope — it proceeds as written.
 
 ---
 
@@ -674,7 +674,7 @@ git commit -m "docs: reconcile CLAUDE.md/AGENTS.md dedup + rewrite branch model 
 
 ## Task 4b: W2b — Refresh stale frontend topology in CLAUDE.md/AGENTS.md
 
-**⚠️ Operator-gated (see plan header).** Extends Spec 33 W2 under the master-plan "amend root docs where the new structure makes guidance stale" mandate. The FE sections describe the pre-refactor frontend.
+**Operator-confirmed (2026-06-08) — in scope.** Extends Spec 33 W2 under the master-plan "amend root docs where the new structure makes guidance stale" mandate. The FE sections describe the pre-refactor frontend.
 
 **Files:** `CLAUDE.md`, `AGENTS.md` (apply identical edits to both — they share this base).
 
@@ -925,4 +925,4 @@ Stop here for the §5 adversarial impl-review cycle (`review-impl` → `synthesi
 - **Spec coverage:** W1→Task 2; W2→Task 4a; W2b (FE-topology, plan-added)→Task 4b; W3→Task 3; W4→Task 6; W5→Task 1; W6→Task 5; W7→Tasks 4a (CLAUDE/AGENTS) + 4a Step 6 (README/BRANCHES); W8→Task 7. All eight workstreams covered.
 - **Type consistency:** the W5 exports (`NAMING_MAP`, `validateName`, `scaffoldFeature`, `ScaffoldOptions`) match between `scaffold-feature.ts` and `scaffold-feature.test.ts`.
 - **No-prettier guard** repeated at every `docs/TECH_DEBT*` touchpoint (Tasks 6, 8).
-- **Open for operator:** Task 4b scope (FE-topology refresh) — confirm or drop per the header note.
+- **Operator-confirmed:** Task 4b (FE-topology refresh) is kept in scope (confirmed 2026-06-08).
