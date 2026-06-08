@@ -5,13 +5,13 @@
 The `/signals` surface — the unified signal feed (page title `📡 Signals - Brewra`):
 a card stream of scout/profiler signals with accept/reject decisions, per-signal
 next-best-actions, and a context-chat handoff to the shared chat substrate. Extracted
-from `src/pages/Signals.tsx` (1,544 LOC) + `src/components/signals/*` in Phase 8
+from `src/pages/Signals.tsx` (1,544 LOC) + `src/components/signals/*`
 (master Spec 14 §4; Spec 27). The `/agent-hub` URL aliases the same page.
 
 ## Public surface
 
 Locked in T18 (`index.ts`). Cross-feature consumers import only via `@/features/signals`,
-never a deep path. Today the surface is routes-only; exports are added lazily if Phase 9 needs them.
+never a deep path. Today the surface is routes-only; exports are added lazily if a consumer needs them.
 
 | Export          | Kind   | Source       | Description                                                                                                    |
 | --------------- | ------ | ------------ | -------------------------------------------------------------------------------------------------------------- |
@@ -42,4 +42,4 @@ never a deep path. Today the surface is routes-only; exports are added lazily if
 
 - May import from: `@/features/signals/*` (self, relative), `@/shared/*`, `@/components/ui/*`, npm.
 - May import another feature **only** via its `index.ts` (`@/features/<other>`), never a deep path.
-- Legacy paths updated as of Phase 11: `@/hooks/use-toast` → `@/components/ui/use-toast`; `@/lib/api` → `@/shared/api/transport`. `@/shared/types/escape-hatches` (`UntypedBackendSignal`) is already on its final path.
+- Legacy paths have been updated: `@/hooks/use-toast` → `@/components/ui/use-toast`; `@/lib/api` → `@/shared/api/transport`. `@/shared/types/escape-hatches` (`UntypedBackendSignal`) is already on its final path.

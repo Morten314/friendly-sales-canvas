@@ -58,3 +58,7 @@ Each feature that owns routes exposes them from `<feature>/routes.tsx` as an arr
 ## Intra-feature imports are relative
 
 Within a feature, import your own modules with **relative paths** (`./`, `../`). Reserve the `@/features/<X>/…` alias for **cross-feature** imports — which must target the index only (`@/features/<X>`), enforced by `import-x/no-internal-modules` (see Dependency rules). This keeps "self imports" out of the cross-feature lint's scope.
+
+## Architecture decisions
+
+Architecture decisions affecting this layer are recorded as ADRs — see [docs/adr/](../../../docs/adr/README.md).

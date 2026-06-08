@@ -1,15 +1,21 @@
 # `insights` feature
 
-The Insights dashboard surface (route `/insights`). Presentational / local-state only — no data layer.
+## Purpose
+
+Analytics / business-intelligence insights dashboard.
 
 ## Public surface
 
-- `insightsRoutes` — registry entry (`/insights`, `ProtectedRoute requireTenant` + `FeatureErrorBoundary`), composed by `src/app/routes.tsx`.
+Re-exported from `index.ts`:
+
+- `insightsRoutes` — feature routes (`/insights`, protected, requires tenant).
 
 ## Key files
 
-- `pages/InsightsPage.tsx` — the page (relocated from `src/pages/Insights.tsx`). Note: its top heading is the literal text "Reports" (pre-existing copy, frozen).
+- `pages/InsightsPage.tsx` — insights dashboard
+- `routes.tsx`, `index.ts`
 
 ## Dependency notes
 
-- Imports `Layout` from `@/features/shell` and `FeatureErrorBoundary` from `@/shared/components`. No `usePageTitle`.
+- Presentational/mock surface (no backend yet — see TECH_DEBT TD-FE-59).
+- May import another feature only via its `index.ts`.

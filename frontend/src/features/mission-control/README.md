@@ -4,13 +4,13 @@
 
 The mission-control surface: the routed Mission Control page — company-profile setup, ICP definition,
 and data-source/connector management — plus the Profiler's ICP/persona surface. Extracted from
-`src/pages/MissionControl.tsx` + `src/components/mission-control/*` in Phase 6 (master Spec 14 §4;
+`src/pages/MissionControl.tsx` + `src/components/mission-control/*` (master Spec 14 §4;
 Spec 25).
 
 ## Public surface
 
 Locked in T22 (`index.ts`). Cross-feature consumers import only via `@/features/mission-control`
-(the barrel), never a deep path. Anticipated primary consumer: `customers` (Phase 7).
+(the barrel), never a deep path. Anticipated primary consumer: `customers`.
 
 | Export                 | Kind   | Source             | Description                                                                                                |
 | ---------------------- | ------ | ------------------ | ---------------------------------------------------------------------------------------------------------- |
@@ -52,7 +52,7 @@ These belong to **other** features and are NOT part of mission-control long-term
 
 ## Profiler disposition
 
-Authoritative Phase 6 record (Spec 25 §6); input for Phases 7 and 9.
+Authoritative record (Spec 25 §6); input for Phases 7 and 9.
 
 | Artefact                                                                                    | Disposition                                                                                                                                                                              | Phase resolved |
 | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
@@ -62,11 +62,11 @@ Authoritative Phase 6 record (Spec 25 §6); input for Phases 7 and 9.
 
 ### Phase-7 resolution (customers side — amended 2026-06-04)
 
-Phase 7 resolved the customers side of the above table. The `@/shared/profiler` cluster stays **shared** (unchanged by Phase 7). Customers reads ICPs via its own `useCustomerProfile`/`useSuggestedIcps` hooks — it does **not** use mission-control's `useICPs` (the divergence is tracked as TD-FE-42). `ProfilerChatWithHistory` has been relocated to `features/customers/components/chat/`. `ContextChat` (was `SignalsContextChat`) was relocated to `src/shared/chat/` in Phase 8 and renamed in Phase 9 (TD-FE-61). The profiler-merge display logic (`mergeProfilerAcceptedIcpDisplay`) and the `UntypedProfilerIcpRecord` escape-hatch are both unchanged — tracked under TD-FE-42 and the escape-hatch backlog.
+The customers side of the above table was resolved. The `@/shared/profiler` cluster stays **shared** (unchanged). Customers reads ICPs via its own `useCustomerProfile`/`useSuggestedIcps` hooks — it does **not** use mission-control's `useICPs` (the divergence is tracked as TD-FE-42). `ProfilerChatWithHistory` has been relocated to `features/customers/components/chat/`. `ContextChat` (was `SignalsContextChat`) was relocated to `src/shared/chat/` and later renamed (TD-FE-61). The profiler-merge display logic (`mergeProfilerAcceptedIcpDisplay`) and the `UntypedProfilerIcpRecord` escape-hatch are both unchanged — tracked under TD-FE-42 and the escape-hatch backlog.
 
 ### Phase-9 resolution (ICP-merge disposition — 2026-06-05)
 
-Phase 9 closed the Spec 25 §6 "Phase 9 resolves" open item by **confirm-and-document, no extraction**.
+Closed the Spec 25 §6 "Phase 9 resolves" open item by **confirm-and-document, no extraction**.
 
 Verified facts:
 
@@ -79,7 +79,7 @@ Verified facts:
 - The ICP decomposition remains: `ICPManager` (container) + `IcpWizard` (add/edit form) + `IcpList`
   (presentational table/empty-state). No `ProfilerMergeView` was created; none is needed.
 
-No code was changed in Phase 9 for this item.
+No code was changed for this item.
 
 ## Decisions
 

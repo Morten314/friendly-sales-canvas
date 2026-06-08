@@ -24,3 +24,7 @@ Code lands here when it is genuinely shared infrastructure, not one feature's pr
 ## Dependency rule
 
 `shared/` must **not** import from `features/` (enforced by `import-x/no-restricted-paths`). Shared code is consumed by features, never the reverse.
+
+## Architecture decisions
+
+Architecture decisions affecting this layer are recorded as ADRs — see [docs/adr/](../../../docs/adr/README.md).
