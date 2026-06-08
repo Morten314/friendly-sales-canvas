@@ -8,7 +8,7 @@ import { maskDynamic } from "../helpers/mask-dynamic";
 test("agent-hub route currently renders Signals (bug-as-feature lock)", async ({ page }) => {
   await loginAsTestUser(page);
   await installApiMocks(page, {
-    "/api/fetch-signals": { signals: signalList(3) },
+    "/api/v2/fetch-signals": { items: signalList(3), total: 3, limit: 10, offset: 0 },
   });
   await installCatchAllApiMock(page);
 
