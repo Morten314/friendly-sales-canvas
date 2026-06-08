@@ -230,6 +230,8 @@ export const handlers = [
   http.post("/api/signal_Ask", () => HttpResponse.json({ answer: "ok" })),
   http.post("/api/signal_action", () => HttpResponse.json({ success: true })),
   // Page-only signals service (Task 9): read + batch-generate.
-  http.get("/api/fetch-signals", () => HttpResponse.json({ signals: [] })),
+  http.get("/api/v2/fetch-signals", () =>
+    HttpResponse.json({ items: [], total: 0, limit: 10, offset: 0 }),
+  ),
   http.post("/api/generate-signals-batch", () => HttpResponse.json({ signals: [] })),
 ];
