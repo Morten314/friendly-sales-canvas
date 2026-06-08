@@ -5,17 +5,22 @@
 import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const FRONTEND_DIR = resolve(import.meta.dirname, "..");
 const FEATURES_DIR = join(FRONTEND_DIR, "src", "features");
 
-// Living naming map — keep in sync with src/features/README.md.
-// `profiler` is reserved (Phase 9). Phase 12 appends its small-page names.
-const NAMING_MAP = [
+// Living naming map — keep in sync with src/features/README.md and the
+// actual src/features/ folders.
+export const NAMING_MAP = [
+  "artifacts",
   "auth",
+  "calendar",
   "customers",
+  "insights",
   "market-research",
   "mission-control",
+  "reports",
   "scout",
   "settings",
   "shell",
@@ -25,6 +30,14 @@ const NAMING_MAP = [
 ];
 
 const KEBAB_RE = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+
+export function validateName(name: string): { ok: boolean; error?: string } {
+  if (!name) return { ok: false, error: "missing feature name" };
+  if (!KEBAB_RE.test(name)) {
+    return { ok: false, error: `must be kebab-case, e.g. market-research` };
+  }
+  return { ok: true };
+}
 
 function typesStub(name: string): string {
   return (
@@ -66,26 +79,68 @@ _The cross-feature API, re-exported from \`index.ts\`. Other features import onl
 
 - May import from: \`@/features/${name}/*\` (self), \`@/shared/*\`, \`@/components/ui/*\`, npm packages.
 - May import another feature **only** via its \`index.ts\` (\`@/features/<other>\`), never a deep path.
-- Transitional (Phases 4b–12): may import not-yet-migrated legacy dirs (\`@/contexts\`, \`@/hooks\`, \`@/lib\`, \`@/utils\`, \`@/pages\`).
 `;
 }
 
-async function main(): Promise<void> {
-  const name = process.argv[2];
+export interface ScaffoldOptions {
+  featuresDir?: string;
+  dryRun?: boolean;
+}
 
-  if (!name) {
-    console.error("usage: npm run scaffold:feature -- <kebab-name>");
-    process.exit(1);
+export async function scaffoldFeature(
+  name: string,
+  opts: ScaffoldOptions = {},
+): Promise<{ created: string[]; dryRun: boolean; dir: string }> {
+  const valid = validateName(name);
+  if (!valid.ok) {
+    throw new Error(`invalid feature name "${name}": ${valid.error}`);
   }
 
-  if (!KEBAB_RE.test(name)) {
-    console.error(`invalid feature name "${name}": must be kebab-case, e.g. market-research`);
-    process.exit(1);
-  }
+  const featuresDir = opts.featuresDir ?? FEATURES_DIR;
+  const dryRun = opts.dryRun ?? false;
+  const featureDir = join(featuresDir, name);
 
-  const featureDir = join(FEATURES_DIR, name);
   if (existsSync(featureDir)) {
-    console.error(`feature "${name}" already exists at ${featureDir}; refusing to overwrite`);
+    throw new Error(`feature "${name}" already exists at ${featureDir}; refusing to overwrite`);
+  }
+
+  const files: Array<[string, string]> = [
+    ["types.ts", typesStub(name)],
+    ["index.ts", indexStub(name)],
+    ["README.md", readmeStub(name)],
+  ];
+
+  if (!dryRun) {
+    await mkdir(featureDir, { recursive: true });
+    for (const [file, content] of files) {
+      await writeFile(join(featureDir, file), content, "utf8");
+    }
+  }
+
+  return { created: files.map(([f]) => f), dryRun, dir: featureDir };
+}
+
+const HELP = `usage: npm run scaffold:feature -- <kebab-name> [--dry-run]
+
+Scaffolds src/features/<kebab-name>/ with types.ts, index.ts, README.md.
+Subfolders (pages/components/hooks/services) are created on demand — never here.
+
+  --dry-run   print what would be created, write nothing
+  --help      show this message
+`;
+
+async function main(): Promise<void> {
+  const args = process.argv.slice(2);
+  if (args.includes("--help") || args.length === 0) {
+    console.log(HELP);
+    process.exit(args.length === 0 ? 1 : 0);
+  }
+  const dryRun = args.includes("--dry-run");
+  const name = args.find((a) => !a.startsWith("--")) ?? "";
+
+  const valid = validateName(name);
+  if (!valid.ok) {
+    console.error(`invalid feature name "${name}": ${valid.error}`);
     process.exit(1);
   }
 
@@ -96,16 +151,23 @@ async function main(): Promise<void> {
     );
   }
 
-  await mkdir(featureDir, { recursive: true });
-  await writeFile(join(featureDir, "types.ts"), typesStub(name), "utf8");
-  await writeFile(join(featureDir, "index.ts"), indexStub(name), "utf8");
-  await writeFile(join(featureDir, "README.md"), readmeStub(name), "utf8");
-
-  console.log(`scaffolded src/features/${name}/ (types.ts, index.ts, README.md)`);
+  const res = await scaffoldFeature(name, { dryRun });
+  if (dryRun) {
+    console.log(`[dry-run] would scaffold src/features/${name}/ (${res.created.join(", ")})`);
+    return;
+  }
+  console.log(`scaffolded src/features/${name}/ (${res.created.join(", ")})`);
   console.log("next: add pages/components/hooks/services/ on demand — no empty dirs.");
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+// Only execute the CLI when run directly (`tsx scripts/scaffold-feature.ts`),
+// not when imported by the test.
+const invokedDirectly =
+  process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (invokedDirectly) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
