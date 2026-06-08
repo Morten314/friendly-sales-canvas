@@ -4,8 +4,8 @@ import { z } from "zod";
 // (`z.object({}).passthrough()`) on purpose: the backend is suspended/variable
 // and the existing callers (SignalsPage + the ContextChat substrate) read
 // the JSON loosely (e.g. `data.answer`). `.parse` validates the envelope is an
-// object without rejecting real responses or extra fields. Phase 10 tightens
-// these against a live capture.
+// object without rejecting real responses or extra fields. Tighten these
+// against a live capture once the backend stabilizes (TD-FE-53).
 export const SignalAskResponseSchema = z.object({}).passthrough();
 export type SignalAskResponse = z.infer<typeof SignalAskResponseSchema>;
 

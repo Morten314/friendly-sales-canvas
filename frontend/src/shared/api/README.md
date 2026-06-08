@@ -1,9 +1,9 @@
 # `src/shared/api/` — the shared data layer
 
-Introduced in Phase 3 (spec 20). Everything a feature needs to talk to the backend
+Introduced by spec 20. Everything a feature needs to talk to the backend
 through one rate-limited, JWT-injecting, zod-validated path lives here. The
-dependency-rule lint that will enforce `shared/` boundaries arrives in Phase 4;
-placement here is by convention until then.
+dependency-rule lint that enforces `shared/` boundaries is in place; placement
+here follows that boundary.
 
 ## The fetch path
 
@@ -42,7 +42,7 @@ construct a second instance for production use.
 endpoints this phase touches. Static types come from `z.infer`. Schemas are
 authored from captured live responses and default permissive
 (`.nullish()`/`.passthrough()`); a drifted response surfaces as a `ZodError` in
-the query's `error` state. Extend per endpoint as feature phases (5–10) migrate.
+the query's `error` state. Extend per endpoint as feature surfaces migrate.
 
 ## Query keys
 
@@ -53,4 +53,4 @@ the query's `error` state. Extend per endpoint as feature phases (5–10) migrat
 ## QueryClient
 
 `queryClient.ts` is the configured client `App.tsx` mounts. Memory-only (no
-persister) for Phase 3; the repo-wide persistence policy is deferred to an ADR.
+persister); the repo-wide persistence policy is deferred to an ADR.

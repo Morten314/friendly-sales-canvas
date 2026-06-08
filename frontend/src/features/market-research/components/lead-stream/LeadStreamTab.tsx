@@ -1,5 +1,5 @@
 // Lead-stream tab — part of the market-research lead-stream cluster (extracted from
-// MarketResearchPage in Phase 5c; relocated into features/market-research in Phase 11).
+// MarketResearchPage; relocated into features/market-research).
 // Cross-tab/nav/Strategist coordination is injected by the feature shell as callback props.
 import { useState } from "react";
 

@@ -10,8 +10,8 @@
 //   5. JWT refresh POST /api/auth/refresh.
 //
 // Per-feature handlers (market-research, mission-control, customers, signals,
-// scout, settings) are NOT shipped here. They grow per feature in Phases 5–10
-// as unit tests need them. Spec §3.2 last paragraph.
+// scout, settings) are NOT shipped here. They grow per feature as each surface
+// adds handlers. Spec §3.2 last paragraph.
 import { http, HttpResponse } from "msw";
 
 import { BACKEND_BASE_URL } from "@/shared/api/transport";
@@ -58,13 +58,13 @@ export const handlers = [
     HttpResponse.json({ access_token: "mock_jwt_token", expires_in: 3600 }),
   ),
 
-  // 6. Market research — Phase 5b (generic) + Phase 5d (market-entry) + Phase 5e (regulatory) + Phase 5g (industry-trends).
+  // 6. Market research — generic + market-entry + regulatory + industry-trends.
   http.post("/api/market-research", async ({ request }) => {
     const body = (await request.json()) as { component_name?: string; user_id?: string };
     const name = body.component_name ?? "market size & opportunity";
     const lower = name.toLowerCase();
 
-    // Phase 5f: error-path probe. A specific user_id on the competitor component
+    // Error-path probe. A specific user_id on the competitor component
     // forces a 500 so the useCompetitorLandscape hook test can assert isError
     // propagation. Scoped to `competitor` so it can't intercept other sections'
     // tests that might reuse the same user_id.
@@ -72,7 +72,7 @@ export const handlers = [
       return new HttpResponse(null, { status: 500 });
     }
 
-    // Phase 5d: market-entry section needs a realistically-shaped payload so
+    // Market-entry section needs a realistically-shaped payload so
     // useMarketEntry can parse a non-trivial view-model. Match the
     // "market entry & growth strategy" component case-insensitively.
     if (lower === "market entry & growth strategy" || lower.includes("market entry")) {
@@ -97,7 +97,7 @@ export const handlers = [
       });
     }
 
-    // Phase 5g: industry-trends section needs a realistically-shaped payload so
+    // Industry-trends section needs a realistically-shaped payload so
     // useIndustryTrends can parse a non-trivial view-model. Match the
     // "industry trends report" component case-insensitively.
     if (lower === "industry trends report" || lower.includes("industry trends")) {
@@ -134,7 +134,7 @@ export const handlers = [
       });
     }
 
-    // Phase 5e: regulatory-compliance section needs a realistically-shaped payload.
+    // Regulatory-compliance section needs a realistically-shaped payload.
     // Match the "regulatory & compliance highlights" component case-insensitively.
     if (lower === "regulatory & compliance highlights" || lower.includes("regulatory")) {
       return HttpResponse.json({
@@ -158,7 +158,7 @@ export const handlers = [
       });
     }
 
-    // Phase 5f: competitor-landscape section needs a realistically-shaped
+    // Competitor-landscape section needs a realistically-shaped
     // payload (4 scalars + a uiComponents array) so useCompetitorLandscape and
     // the container auto-hydrate test resolve a non-trivial view-model.
     if (lower === "competitor landscape" || lower.includes("competitor")) {
@@ -177,7 +177,7 @@ export const handlers = [
       });
     }
 
-    // Phase 5h: market-size section needs a realistically-shaped payload so
+    // Market-size section needs a realistically-shaped payload so
     // useMarketSize can parse a non-trivial 9-field view-model. Match the
     // "market size & opportunity" component case-insensitively.
     if (lower === "market size & opportunity" || lower.includes("market size")) {
@@ -211,7 +211,7 @@ export const handlers = [
     });
   }),
 
-  // ── customers (Phase 7) ──────────────────────────────────────────────────────
+  // ── customers ────────────────────────────────────────────────────────────────
   // Profiler reads/writes. /icp is on the direct backend host (not /api).
   http.get(`${BACKEND_BASE_URL}/icp`, () => HttpResponse.json({ icps: [] })),
   http.get("/api/customer_profile", () => HttpResponse.json({ icps: [] })),
@@ -225,7 +225,7 @@ export const handlers = [
   ),
   http.delete("/api/icp/recommended/:icpId", () => HttpResponse.json({ success: true })),
 
-  // ── signals (Phase 8) ────────────────────────────────────────────────────────
+  // ── signals ──────────────────────────────────────────────────────────────────
   // Shared by useSignalAsk / useSignalAction and the ContextChat substrate.
   http.post("/api/signal_Ask", () => HttpResponse.json({ answer: "ok" })),
   http.post("/api/signal_action", () => HttpResponse.json({ success: true })),

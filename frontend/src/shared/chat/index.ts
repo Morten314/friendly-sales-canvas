@@ -4,12 +4,12 @@
 export { ContextChat } from "./ContextChat";
 export type { SignalsChatContext, ChatMessage } from "./ContextChat";
 
-// Shared signal_Ask/signal_action TanStack hooks (Phase 8). Consumed by the
+// Shared signal_Ask/signal_action TanStack hooks. Consumed by the
 // signals page + the substrate; live in shared/ because `shared ↛ features`.
 export { useSignalAsk, type SignalAskBody } from "./useSignalAsk";
 export { useSignalAction, type SignalActionVars } from "./useSignalAction";
 
-// Persona-agnostic history shell (Phase 9). Owns session/sidebar/persistence
+// Persona-agnostic history shell. Owns session/sidebar/persistence
 // machinery; consumed by ScoutChatWithHistory + ProfilerChatWithHistory via
 // render props. Briefly an unused export until those wrappers collapse onto it.
 export { ChatWithHistory } from "./ChatWithHistory";

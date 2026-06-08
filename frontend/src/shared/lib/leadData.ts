@@ -1,5 +1,5 @@
 // Shared lead data + scoring logic. Lives in shared/lib because ≥2 features
-// consume it (strategist + market-research). Promoted in Phase 11 (TD-FE-63).
+// consume it (strategist + market-research) (TD-FE-63).
 
 // ─── Shared Lead Data & Scoring Logic ────────────────────────────────────────
 

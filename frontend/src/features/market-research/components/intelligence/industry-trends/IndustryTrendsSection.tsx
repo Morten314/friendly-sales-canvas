@@ -52,7 +52,7 @@ interface IndustryTrendsSectionProps {
   // cloudMigration, regulatory, trendSnapshots, recommendations, risks,
   // regionalHotspots, visualCharts) and the section's companyProfile prop were
   // removed here — the section now sources its server data exclusively from the
-  // useIndustryTrends hook (Phase 5g task 8). Orchestration + per-field change
+  // useIndustryTrends hook. Orchestration + per-field change
   // callbacks below are kept (the 5d upward-commit pattern).
   // Add individual field update functions
   onIndustryTrendsExecutiveSummaryChange?: (value: string) => void;

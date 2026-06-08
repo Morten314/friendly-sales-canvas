@@ -16,8 +16,8 @@ const TenantSelectionPage: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-  // Tenant list comes from useTenants (over the mock); Phase 10 swaps in a real
-  // endpoint by editing only that hook's queryFn (spec 20 §3.7). TenantSelection
+  // Tenant list comes from useTenants (over the mock); a real endpoint swaps in
+  // by editing only that hook's queryFn (spec 20 §3.7; TD-FE-55). TenantSelection
   // is the only reader of the old `availableTenants` context state (verified).
   const { data: availableTenants = [] } = useTenants(currentUser?.uid);
 

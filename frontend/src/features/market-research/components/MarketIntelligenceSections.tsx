@@ -28,7 +28,7 @@ export interface MarketIntelligenceSectionsProps {
   // NOTE: Market-size read-path data fields (executiveSummary, tamValue, samValue,
   // GrowthRate, strategicRecommendations, marketEntry, marketDrivers,
   // marketSizeBySegment, growthProjections) were removed here — that data is now
-  // sourced via the useMarketSize hook inside MarketSizeSection (Phase 5h). The
+  // sourced via the useMarketSize hook inside MarketSizeSection. The
   // orchestration + per-field change callbacks below stay (same as the other sections).
   marketSizeDeletedSections: Set<string>;
   isMarketSizeLoading?: boolean;
@@ -44,7 +44,7 @@ export interface MarketIntelligenceSectionsProps {
   // NOTE: Industry-trends read-path data fields (executiveSummary, aiAdoption,
   // cloudMigration, regulatory, trendSnapshots, recommendations, risks,
   // regionalHotspots, visualCharts) were removed here — that data is now sourced
-  // via the useIndustryTrends hook inside IndustryTrendsSection (Phase 5g task 8).
+  // via the useIndustryTrends hook inside IndustryTrendsSection.
   // The orchestration + per-field change callbacks below stay (same as market-entry).
   industryTrendsLastEditedField: string;
 
@@ -362,7 +362,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
             onGenerateShareableLink={props.onGenerateShareableLink}
             isRefreshing={props.isRefreshing}
             // Industry-trends data props removed — the section now sources its data
-            // via useIndustryTrends (Phase 5g task 8). Pass individual field update functions
+            // via useIndustryTrends. Pass individual field update functions
 
             onIndustryTrendsExecutiveSummaryChange={props.onIndustryTrendsExecutiveSummaryChange}
             onIndustryTrendsAiAdoptionChange={props.onIndustryTrendsAiAdoptionChange}

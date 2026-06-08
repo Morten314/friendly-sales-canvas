@@ -5,7 +5,7 @@
 // Mirrors ChatWithScout's ChatWithScoutResearchContext (legacy/leaving) intentionally —
 // the feature owns its own type rather than import from a leaving component; structural
 // typing lets a ScoutResearchContext value pass into ChatWithScout's researchContext prop
-// with no cast. Remove the duplication when ChatWithScout is retired (Phase 7+).
+// with no cast. Remove the duplication when ChatWithScout is retired.
 export interface ScoutResearchContext {
   leads: { name: string; company: string; jobTitle: string }[];
   opportunity?: string;

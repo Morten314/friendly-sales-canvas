@@ -1,5 +1,5 @@
 // Lead-stream table — part of the market-research lead-stream cluster.
-// Relocated into features/market-research in Phase 11 (TD-FE-63).
+// Relocated into features/market-research (TD-FE-63).
 
 import {
   Bot,

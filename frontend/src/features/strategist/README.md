@@ -35,8 +35,8 @@ annotation was stripped). It is **live and reachable** — it renders on `Strate
 default `workspace` tab whenever a lead context is hydrated. It is, however, a large
 component making a raw direct-backend `GET ${BACKEND_BASE_URL}/chat/` fetch that bypasses
 the `/api` proxy. Both the component decomposition and moving that fetch into a
-service/hook are **deferred to Phase 13** (TD-FE-47) — Phase 8's scope was relocation,
-not rewrite.
+service/hook **remain deferred** (TD-FE-47) — the relocation kept scope to moving,
+not rewriting.
 
 ## Dependency notes
 

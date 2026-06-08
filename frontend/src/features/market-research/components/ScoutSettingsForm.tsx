@@ -1,4 +1,4 @@
-// Scout settings dialog — lives in features/market-research/components (Phase 9 relocation).
+// Scout settings dialog — lives in features/market-research/components (relocated).
 
 import { useState } from "react";
 

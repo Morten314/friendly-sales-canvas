@@ -3,8 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { TenantListSchema, type TenantContract } from "@/shared/api/contracts";
 import { qk } from "@/shared/api/queryKeys";
 
-// Mock tenant list (no backend endpoint exists). Phase 10 replaces only this
-// queryFn body with a real fetch through the shared client.
+// Mock tenant list (no backend endpoint exists). Replace only this queryFn body
+// with a real fetch through the shared client once an endpoint exists (TD-FE-55).
 const MOCK_TENANTS: TenantContract[] = [
   { id: "1", name: "Acme Corporation", domain: "acme.com", logo: "🏢" },
   { id: "2", name: "TechStart Inc", domain: "techstart.io", logo: "🚀" },
