@@ -11,11 +11,13 @@ round: 1
 
 no
 
-Reason: No Critical/High findings. All three Mediums are fact-disproved (F1: `frontend/package.json` `engines` requires Node ≥21.2.0; F4: the W1 ledger is in commit `b5f372c`'s body) or reviewer-conceded non-issues (F2 "a stronger check … better than the plan's version"; F3 "Not a bug"). Every Low/Nit is self-resolved, verified-accurate, or one deferrable doc enrichment (F9). The branch needs no code changes and stays merge-ready.
+Reason: No Critical/High findings. All three Mediums are fact-disproved (F1: `frontend/package.json` `engines` requires Node ≥21.2.0; F4: the W1 ledger is in commit `b5f372c`'s body) or reviewer-conceded non-issues (F2 "a stronger check … better than the plan's version"; F3 "Not a bug"). Every Low/Nit is self-resolved, verified-accurate, or one optional doc enrichment (F9, applied post-synthesis per operator instruction — `settings/README.md` only). No further review round is warranted; the branch stays merge-ready.
 
 ## Agreed Findings
 
-None. Each finding was checked against the code, `frontend/package.json`, the ADR files, and commit `b5f372c`'s body; none survived as an actionable correctness or accuracy fix. See Disagreed (fact-disproved or reviewer-self-resolved) and Deferred (one optional documentation enrichment).
+At synthesis time, none — each finding was checked against the code, `frontend/package.json`, the ADR files, and commit `b5f372c`'s body, and none survived as an actionable correctness fix (see Disagreed: fact-disproved or reviewer-self-resolved).
+
+- **[Low] F9 — applied post-synthesis (operator instruction, 2026-06-08).** `settings/README.md` Dependency notes now cross-reference the `UntypedBackendProfile` escape hatch (`@/shared/types/escape-hatches`; open TD-FE-10) and the orphaned company-profile fetch seam (open TD-FE-11). The operator elected to fold this enrichment in now rather than defer it; the original defer analysis is retained under Deferred below for the record.
 
 ## Disagreed Findings
 
@@ -43,7 +45,7 @@ None. Each finding was checked against the code, `frontend/package.json`, the AD
 
 ## Deferred Findings
 
-- **[Low] F9 — settings/README "primary write surface" lacks an escape-hatch / TD-FE cross-reference.** Fair and accurate: the settings profile props are escape-hatch-typed (`UntypedBackendProfile`, used in `SettingsPage.tsx:24`, `AgentProfile.tsx:20`, `UserProfile.tsx:25`; catalogued under open **TD-FE-10**), and open **TD-FE-11** governs the orphaned company-profile fetch on this surface. But the README is "accurate for its scope" (the reviewer's own words) — it makes no type-tightness claim the cross-ref would correct — so this is an optional enrichment, not a correctness fix. Adding TD cross-refs to one README without a matching pass over the other 13 would be inconsistent, and the W3 "Done when" did not mandate exhaustive TD citations. **Trigger:** fold the cross-ref in when the settings/company-profile escape-hatch typing (TD-FE-9/10) or TD-FE-11 is next touched, or as part of any dedicated README TD-cross-reference pass. Recorded here (this synthesis is a committed artifact); not worth a new TD entry for a one-line doc nicety.
+- **[Low] F9 — settings/README "primary write surface" lacks an escape-hatch / TD-FE cross-reference.** Fair and accurate: the settings profile props are escape-hatch-typed (`UntypedBackendProfile`, used in `SettingsPage.tsx:24`, `AgentProfile.tsx:20`, `UserProfile.tsx:25`; catalogued under open **TD-FE-10**), and open **TD-FE-11** governs the orphaned company-profile fetch on this surface. But the README is "accurate for its scope" (the reviewer's own words) — it makes no type-tightness claim the cross-ref would correct — so this is an optional enrichment, not a correctness fix. Adding TD cross-refs to one README without a matching pass over the other 13 would be inconsistent, and the W3 "Done when" did not mandate exhaustive TD citations. Original disposition was to defer (fold the cross-ref in when the settings/company-profile escape-hatch typing (TD-FE-9/10) or TD-FE-11 is next touched). **Update (operator instruction, 2026-06-08): applied now rather than deferred** — see Agreed Findings above; `settings/README.md` Dependency notes carry the cross-ref. No new TD entry was warranted for a one-line doc nicety.
 
 ## Severity Disagreements
 

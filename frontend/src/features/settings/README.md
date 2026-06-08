@@ -19,4 +19,5 @@ Re-exported from `index.ts`:
 ## Dependency notes
 
 - Company-profile data hooks (`useCompanyProfile`/`useSaveCompanyProfile`) come from `@/shared/company-profile`; contract types from `@/shared/api`.
+- Profile props (`UserProfile`/`AgentProfile`/`CompanyProfile`) use the `UntypedBackendProfile` escape hatch (`@/shared/types/escape-hatches`) — the backend profile contract is not yet tightened (TD-FE-10); the company-profile read also carries a known orphaned-fetch seam (TD-FE-11).
 - May import another feature only via its `index.ts`.
