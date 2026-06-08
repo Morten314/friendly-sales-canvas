@@ -214,7 +214,7 @@ Resolved in Phase 4 spec, but the master plan target uses **kebab-case** through
 | 11 — Shared utility extraction                      | done    | 2026-06-06 |
 | 12 — Small-pages sweep                              | done    | 2026-06-05 |
 | 13 — LOC reduction pass #2                          | done    | 2026-06-07 |
-| 14 — Agent affordances                              | pending | —          |
+| 14 — Agent affordances                              | done    | 2026-06-08 |
 
 _Status reflects merge state to `master`. Update at merge time only. Phase descriptions below are intentionally not amended after a phase ships — they're a frozen record of intent per CLAUDE.md "Spec-driven flow."_
 
@@ -636,6 +636,17 @@ _The intent prose above is preserved verbatim per the frozen-record convention; 
 
 **Done when:** every feature has a `README.md`; ADR set is complete; scripts are working; preflight watchers (bundle, dead-code, stale-doc) gate merges via `npm run preflight`.
 
+> **Phase 14 deltas (recorded 2026-06-08, frozen-record convention — the bullets above are the original intent; this note records what actually shipped).** Phase 14 was reframed in Spec 33 §1.2 (some original deliverables turned out moot, already-done, or deliberately deferred):
+>
+> - **READMEs (W3)** — done: the 6 stub feature READMEs were enriched; all 14 features now have a `README.md`; `features/README.md` documents the conventions.
+> - **ADRs (W6)** — done: backfilled ADR-0006 (Scout/Profiler kept distributed; no `features/profiler/`), ADR-0007 (advisory-over-hard-fail gate posture, pre-launch), and ADR-0008 (editable-state features defer full TanStack migration); added a `docs/adr/README.md` index.
+> - **Scaffolder (W5)** — `scaffold-feature.ts` hardened (synced `NAMING_MAP`, `--help`/`--dry-run` flags, exported and Vitest-tested). The originally-listed `codemod-runner.sh` was **not** built — no recurring mechanically-transformable pattern from Phase 13 warranted a committed codemod (moot/deferred, per Spec 33 §1.2).
+> - **Preflight watchers** — the dead-code watcher (`knip --strict`) and the bundle watcher (`bundle:check`, advisory) were already in the chain from earlier phases. The **stale-doc grep gate was deliberately not built**: it was replaced by a one-time `src/` phase-reference cleanup (W1) — rationale in ADR-0007 (advisory-over-hard-fail at pre-launch; a one-time cleanup beats maintaining a large allowlist for a gate that mostly false-positives on legitimate phase citations).
+> - **Root docs (W2/W2b/W7)** — reconciled `CLAUDE.md`/`AGENTS.md` (deduped + synced), rewrote the branch model to its steady state (cutover complete), and refreshed the stale frontend-topology and gotchas that still described the pre-refactor FE.
+> - **TECH_DEBT (W4)** — archived 18 resolved `TD-FE-*` entries into `docs/TECH_DEBT_ARCHIVE.md` and added a 66-row numeric index to `docs/TECH_DEBT.md`.
+>
+> **§6 definition-of-done walk (2026-06-08).** §6.1–§6.8 are met. Structure: the legacy `pages/hooks/lib/services/utils/contexts` dirs are gone; `src/` holds only `app components features shared test`. Decomposition: two LOC passes (Phases 1 and 13), with Phase 14 deliberately choosing **not** to codify hard LOC caps (consistent with ADR-0007). Strict TS with documented escape hatches in `src/shared/types/escape-hatches.ts` (surviving entries tracked TD-FE-9/10/38). Tests, lints, and preflight green: preflight = typecheck + lint + format:check + Vitest + build + Playwright + VR + `knip --strict`, with `bundle:check` advisory, and `import-x/no-internal-modules` landed (resolving TD-FE-15). Per-feature docs completed by this phase. **§6.9 (data layer) is partially met** — TanStack Query was adopted and the rate-limit boundary centralized, but it is **not** the single source of server-state truth: editable-state features retain `localStorage`/`sessionStorage` by deliberate deferral (ADR-0008; tracked TD-FE-19/21/41/43/49/53/65). **§6.10 (agent affordances) is partial** — the scaffolder plus dead-code and bundle watchers shipped, but the stale-doc gate was intentionally replaced by a one-time cleanup (ADR-0007) and codemods are moot (no warranting pattern). These two are **accepted gaps, not blockers** — the master plan closes with them tracked rather than open.
+
 ---
 
 ## §5 Per-phase workflow (anti-slop machinery)
@@ -785,7 +796,7 @@ These don't block the master plan — each becomes the appropriate phase's spec 
 
 1. **Vitest test methodology for stable utilities** — behavior-only assertions vs DOM snapshots vs both? → Phase 0 spec
 2. **Visual regression exact threshold — RESOLVED (Phase 2c, 2026-05-28).** Phase 0 settled at 1% (top of the original 0.5–1.0% range). Phase 2c widened to **2%** (`maxDiffPixelRatio: 0.02`) to reduce sub-pixel false positives — a deliberate deviation past the original range. Re-baseline workflow is local-only via `npm run test:e2e:update-snapshots`, documented in `frontend/scripts/README.md`.
-3. **Bundle-size and NFR budget values — PARTIALLY RESOLVED (Phase 2c, 2026-05-28).** Bundle comparator landed in advisory mode (no hard-fail threshold; prints deltas and exits 0). NFR wall-time enforcement dropped from Phase 2c scope — for a pre-launch MVP, machine-dependent wall-time gates erode trust faster than they catch regressions. Phase 14's watcher reconsiders both gates with post-launch data.
+3. **Bundle-size and NFR budget values — PARTIALLY RESOLVED (Phase 2c, 2026-05-28).** Bundle comparator landed in advisory mode (no hard-fail threshold; prints deltas and exits 0). NFR wall-time enforcement dropped from Phase 2c scope — for a pre-launch MVP, machine-dependent wall-time gates erode trust faster than they catch regressions. Phase 14 (2026-06-08) left both gates deferred while pre-launch: `bundle:check` stays advisory and NFR wall-time gating stays dropped (ADR-0007 — advisory-over-hard-fail); revisit post-launch with real usage data.
 4. **API contract types source — RESOLVED (Phase 3, 2026-05-29):** hand-authored **zod** schemas (source of truth; static types via `z.infer`; `.parse` at the fetch boundary). No OpenAPI codegen. See spec 20 §1.3.1.
 5. **`src/shared/` promotion criteria — RESOLVED (Phase 4a, 2026-05-29):** the **≥2-feature rule** — a hook/util/type graduates to `shared/` only once two or more features import it; no speculative promotion (the later phase that introduces the second consumer does the move). `shared/api/` is shared by definition. Documented in `src/shared/README.md`.
 6. **Feature naming canonicalization — RESOLVED (Phase 4a, 2026-05-29):** kebab-case map (living, authoritative) in `src/features/README.md`. `profiler` is **reserved** pending Q10; Phase 12 appends its small-page names.
