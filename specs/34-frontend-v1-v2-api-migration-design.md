@@ -25,7 +25,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
     offset: int  = Field(ge=0)
 ```
 
-**Goal:** move the FE's three consumed v1 reads onto their v2 successors, **behavior-preserving**, so reads carry the honest `total`. MVP / 0-users / velocity posture: single-page reads, advisory gate, no new UI.
+**Goal:** move the FE's three consumed v1 reads onto their v2 successors, **behavior-preserving**, so the FE stops consuming the v1 `count` (the lie) and reads `items` from the uniform envelope. MVP / 0-users / velocity posture: single-page reads, advisory gate, no new UI; surfacing the true `total` is deferred (TD-FE-67).
 
 ---
 
@@ -35,19 +35,20 @@ class PaginatedResponse(BaseModel, Generic[T]):
 - **G1** — Migrate the 3 consumed v1 reads to their `/v2/*` successors with an explicit `limit` that preserves today's effective page size.
 - **G2** — Introduce one shared FE paginated-envelope contract so the three services decode `{items,total,limit,offset}` from a single definition site.
 - **G3** — Fold the bespoke `buildIcpUrl` (direct-host, bypasses the dev `/api` proxy) into the standard `buildApiUrl` stack and delete it.
-- **G4** — Thread the true `total` through each service return (available + honest); **no new UI**.
+- **G4** — Decode `items` from the v2 envelope and stop consuming the v1 `count`. This spec does **not** surface or type `total` (no consumer renders a count today — §4.4); exposing `total` + any count UI / pagination is deferred to TD-FE-67. **No new UI.**
 - **G5** — Preserve every consumer's existing behavior verbatim (error/empty/fallback paths, downstream item shapes, optimistic state). Only URL + envelope-decode change.
 - **G6** — Flip MSW handlers, unit tests, and any e2e route mocks to the v2 path + shape; add a focused test for the shared decoder.
 
 **Non-goals**
 - **N1** — Pagination UX (page controls / infinite scroll). Single page only.
-- **N2** — Fetch-all looping. The >500 item truncation becomes *visible* via `total` but is **not eliminated** (residual → TD-FE-67).
+- **N2** — Fetch-all looping. The >500 item truncation is **not eliminated** (single page); `total` is present on the wire but not surfaced this spec (residual → TD-FE-67).
 - **N3** — `leads`, `leads/by-file`, `registration` v2 endpoints — they have no FE consumer (see §3.3).
 - **N4** — Any mutation (`POST /leads`, `POST /generate-signals-batch`, `GET /ask` writes, connector/ICP/profile writes).
 - **N5** — Tightening the loose item schemas / escape-hatch item types (TD-FE-38/53).
 - **N6** — Unifying the `/icp` read with the `/profile/company` + `/customer_profile` read (TD-FE-42).
 - **N7** — Migrating the imperative signals/customers loaders to TanStack Query (TD-FE-19/53).
 - **N8** — Any backend change. v1 stays deprecated-but-live.
+- **N9** — Unifying per-service transport. `fetchDataSources` uses `apiGet`; `fetchSignals`/`fetchSuggestedIcps` use raw `fetch`. Each is preserved as-is; transport unification is out of scope.
 
 ---
 
@@ -61,7 +62,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
 | 2 | `fetchSignals` | `features/signals/services/signals.ts` | `fetch("/api/fetch-signals?user_id=…&limit=10")` → `.signals` | `fetch("/api/v2/fetch-signals?user_id=…&limit=10&offset=0")` → `.items` | **10** |
 | 3 | `fetchSuggestedIcps` | `features/customers/services/customers.ts` | `fetch(buildIcpUrl("user_id=…[&refresh=true]"))` → `{suggestedICPs}` | `fetch(buildApiUrl("v2/icp?user_id=…[&refresh=true]&limit=500&offset=0"))` → `.items` | **500** |
 
-`limit` rationale: v2 defaults (`user-documents`/`icp` = 50, `fetch-signals` = 10) are smaller than v1's effective cap, so an explicit `limit` is required to preserve today's result-set size. v1 `user-documents` capped at 500; v1 `/icp` was unbounded (recommended-ICP counts are small — 500 is a safe ceiling); signals keeps its existing feed size of 10.
+`limit` rationale: v2 defaults (`user-documents`/`icp` = 50, `fetch-signals` = 10) are smaller than v1's effective cap, so an explicit `limit` is required to preserve today's result-set size. v1 `user-documents` and v1 `/icp` are **both** hard-capped at 500 by their shared services (`/icp` typically returns 5–10 items — `backend/app/routers/icp.py:28`); signals keeps its existing feed size of 10. (The actual v1 `user-documents` wire is `{status,count,files}`; the FE's `?? .files ?? .data` chain in the table is defensive, falling through to `.files`.)
 
 ### 3.2 Explicitly OUT — the `/icp` "second reader" is a different resource
 
@@ -89,15 +90,12 @@ export interface PaginatedResponse<T> {
   offset: number;
 }
 
-/** Zod schema for the v2 envelope, parameterised by item schema. Items default
- *  to `z.unknown()` — this spec does NOT tighten item shapes (TD-FE-38/53). */
-export const paginatedSchema = <T extends z.ZodTypeAny>(item: T = z.unknown() as unknown as T) =>
-  z.object({
-    items: z.array(item).default([]),
-    total: z.number().default(0),
-    limit: z.number().default(0),
-    offset: z.number().default(0),
-  });
+/** Zod schema for the v2 envelope. The item schema is explicit at each call site
+ *  (this spec does NOT tighten item shapes — TD-FE-38/53; pass `z.unknown()` for
+ *  the loose case). Only `items` is consumed; `total/limit/offset` pass through
+ *  untyped (the FE surfaces no count this spec — see §2 / TD-FE-67). */
+export const paginatedSchema = <T extends z.ZodTypeAny>(item: T) =>
+  z.object({ items: z.array(item).default([]) }).passthrough();
 
 /** `limit=<n>&offset=0` — first/only page. */
 export const firstPageParams = (limit: number) => `limit=${limit}&offset=0`;
@@ -107,24 +105,24 @@ export const firstPageParams = (limit: number) => `limit=${limit}&offset=0`;
 
 **Each service adapts the v2 envelope back into the exact return shape its consumer already expects, so no consumer code changes.**
 
-- **`fetchDataSources`** — `apiGet`-based. Pass `paginatedSchema()` (items `unknown`) to `apiGet`, then `return env.items` (bare `unknown[]`, as today). The old `DataSourceListSchema` is no longer used by this path (§4.5).
-- **`fetchSignals`** — raw `fetch`. Parse the body with `paginatedSchema().parse(...)` (preserves the current throw-on-gross-mismatch of `FetchSignalsResponseSchema.parse`), then **re-wrap as `{ signals: env.items }`** and return through the existing `FetchSignalsResponse` typing so `buildSignalCardsFromFetchData` is untouched. The non-2xx / non-JSON `throw`s are preserved unchanged.
-- **`fetchSuggestedIcps`** — raw `fetch`. Parse the body with `paginatedSchema().parse(...)`, then **re-wrap as `{ suggestedICPs: env.items }`** and return through the existing `SuggestedIcpsResponseSchema` typing so `normalizeIcpGetResponse` + `mapApiICPToSuggested` downstream are untouched. The `!res.ok` `throw` is preserved.
+- **`fetchDataSources`** — `apiGet`-based. Pass `paginatedSchema(z.unknown())` to `apiGet`, then `return env.items` (bare `unknown[]`, as today). The old `DataSourceListSchema` is no longer used by this path (§4.5).
+- **`fetchSignals`** — raw `fetch`. Parse the body with `paginatedSchema(z.unknown()).parse(...)` (preserves the current throw-on-gross-mismatch of `FetchSignalsResponseSchema.parse`), then **re-wrap as `{ signals: env.items }`** and return through the existing `FetchSignalsResponse` typing so `buildSignalCardsFromFetchData` is untouched. The non-2xx / non-JSON `throw`s are preserved unchanged.
+- **`fetchSuggestedIcps`** — raw `fetch`. Parse the body with `paginatedSchema(z.unknown()).parse(...)`, then **re-wrap as `{ suggestedICPs: env.items }`** and return through the existing `SuggestedIcpsResponseSchema` typing so `normalizeIcpGetResponse` + `mapApiICPToSuggested` downstream are untouched. The `!res.ok` `throw` is preserved.
 
-`total` is carried alongside where the return type allows (additive), but nothing renders it (§4.4).
+This spec consumes only `items`; the envelope's `total/limit/offset` are ignored (`.passthrough()`) and no service promises a typed `total` (§2; surfacing it is deferred to TD-FE-67).
 
 ### 4.3 `buildIcpUrl` fold (G3)
 
-`fetchSuggestedIcps` is the only `buildIcpUrl` caller. Replace `buildIcpUrl(params)` with `buildApiUrl("v2/icp?" + params + "&" + firstPageParams(500))`, and **delete** `buildIcpUrl` and the `ICP_BACKEND_URL` binding from `src/shared/api/transport.ts`. Effect: the `/icp` read now flows through the standard `/api` path — proxied in dev (no more cross-origin call to the backend host), identical in prod (prod already resolves `/api/*` to `BACKEND_BASE_URL`).
+`fetchSuggestedIcps` is the only `buildIcpUrl` caller. Replace `buildIcpUrl(params)` with `buildApiUrl("v2/icp?" + params + "&" + firstPageParams(500))`, and **delete** `buildIcpUrl` and the `ICP_BACKEND_URL` binding from `src/shared/api/transport.ts`. Effect: the `/icp` read now flows through the standard `/api` path — proxied in dev (no more cross-origin call to the backend host), and routed via the prod `/api` rewrite. **Verified path-safe:** `/api/v2/icp` is matched by the `/api` prefix-rewrite in `vite.config.ts` (dev + preview) and the `/api/(.*)` rewrite in `frontend/vercel.json` (prod) — both prefix-based, so the deeper `/v2/*` path is covered.
 
 ### 4.4 Behavior invariant
 
 Only **URL + envelope-decode** change per read. Preserved verbatim:
-- customers' downstream normalize/map + the `!res.ok` throw; **no UI renders `total`** (nothing renders a count today — the v1 `count` was parsed-and-discarded).
+- customers' downstream normalize/map + the `!res.ok` throw; **the v1 `count` is no longer consumed** (nothing rendered it; no `total` is surfaced — §2).
 - signals' `[]`/throw-on-error/non-JSON guards and the `buildSignalCardsFromFetchData` consumer.
 - the user-documents empty fallback (now via `paginatedSchema`'s `items` default `[]`; v2 always returns the envelope, so the old bare-array branch is dropped as dead).
 - every downstream item shape and all optimistic/editable state.
-- Repoint the **pre-positioned-but-unused** `useFetchSignals` hook to the v2 path so no v1 `fetch-signals` reference survives; it stays unused (wiring it is TD-FE-53).
+- The **pre-positioned-but-unused** `useFetchSignals` hook code is unchanged (it delegates to `fetchSignals`, holding no URL); update its test's MSW handler `/api/fetch-signals` → `/api/v2/fetch-signals`. It stays unused (wiring it is TD-FE-53).
 
 ### 4.5 Schema bookkeeping
 
@@ -135,7 +133,7 @@ The legacy per-endpoint wire schemas (`DataSourceListSchema`, `FetchSignalsRespo
 ## 5. Tests
 
 - **MSW** (`src/test/msw/handlers.ts` + per-feature handlers): change matched **path** to `/api/v2/user-documents`, `/api/v2/fetch-signals`, `/api/v2/icp` (the icp handler stops matching the direct backend host and matches the relative `/api/v2/icp` now that the call is proxied), and change response **shape** to `{ items, total, limit, offset }`.
-- **Unit**: each of the 3 service tests asserts the v2 decode and that the consumer-facing return shape is unchanged. One new test file for `pagination.ts` (`paginatedSchema`: happy parse / missing scalar fields default / non-array `items` rejected; `firstPageParams` formatting).
+- **Unit**: each of the 3 service tests asserts the v2 decode and that the consumer-facing return shape is unchanged. One new test file for `pagination.ts` (`paginatedSchema`: happy parse / missing `items` defaults to `[]` / non-array `items` rejected / extra envelope keys pass through; `firstPageParams` formatting).
 - **e2e**: update any Playwright `page.route` mocks for these endpoints to the v2 path + shape (journeys touching data-sources, signals, ICP/customers). Verify no journey still intercepts the old paths.
 
 ---
@@ -150,9 +148,9 @@ The legacy per-endpoint wire schemas (`DataSourceListSchema`, `FetchSignalsRespo
 
 ## 7. Register impact
 
-- **TD-005 (FE side):** resolved for the three consumed endpoints — reads now carry the true `total` instead of the capped `count`. The backend-side TD-005 record (v1 `count` semantics, v1 deletion) stays open.
+- **TD-005 (FE side):** addressed for the three consumed endpoints — the FE no longer consumes the capped/lying `count` (it reads `items` from the v2 envelope; the true `total` is on the wire, surfacing deferred to TD-FE-67). The backend-side TD-005 record (v1 `count` semantics, v1 deletion) stays open.
 - **`buildIcpUrl` proxy-bypass:** resolved (deleted).
-- **New TD-FE-67 (residual):** single-page reads still cap items at 500; the cap is now *visible* via `total` but not eliminated. Fetch-all / pagination deferred until an org approaches 500 rows.
+- **New TD-FE-67 (residual):** single-page reads still cap items at 500 (the FE reads `items`; `total` is on the wire but not surfaced/typed). Surfacing `total`, count UI, and fetch-all / pagination are deferred until an org approaches 500 rows. (Confirmed next free id; register max is TD-FE-66.)
 - **TD-FE-42:** untouched / still open (the `/profile/company` + `/customer_profile` overlap; see §3.2).
 - **TD-FE-53:** the unused `useFetchSignals` hook is repointed to v2 but remains unused — its wiring stays deferred.
 
@@ -165,7 +163,7 @@ The legacy per-endpoint wire schemas (`DataSourceListSchema`, `FetchSignalsRespo
 - **R3** — Each service's consumer-facing return shape is behaviorally identical to today (`fetchDataSources` → `unknown[]`; `fetchSignals` → `{ signals }` (`FetchSignalsResponse`); `fetchSuggestedIcps` → `{ suggestedICPs }`).
 - **R4** — `buildIcpUrl` and `ICP_BACKEND_URL` are deleted from `transport.ts`; no caller remains; the icp read flows through `buildApiUrl`.
 - **R5** — Each consumer's error/empty/fallback behavior is unchanged (verified by the existing tests still passing after the shape flip).
-- **R6** — `total` is available on each service return; no component renders a count that wasn't rendered before (no new UI).
+- **R6** — No service return type promises `total`, and no component renders a count that wasn't rendered before (no new UI); the v1 `count` is no longer consumed. (Surfacing `total` is deferred to TD-FE-67.)
 - **R7** — MSW + unit + e2e mocks reference only v2 paths/shapes for these three endpoints; `pagination.ts` has unit coverage.
 - **R8** — `npm run preflight` (serial) is green.
 
@@ -174,7 +172,7 @@ The legacy per-endpoint wire schemas (`DataSourceListSchema`, `FetchSignalsRespo
 ## 9. Done-when
 
 1. R1–R8 hold.
-2. `grep` shows zero FE references to v1 `/user-documents`, `/fetch-signals`, `/icp` reads (mutations and `/leads/*`, `/customer_profile`, `/profile/company` excluded — out of scope).
+2. The three migrated GET reads are gone, checked by **anchored** strings, not bare substrings (a bare `grep /icp` would falsely match out-of-scope mutations `icp/recommended`, `customer_profile/icp`, `from_suggested_icp`): no `fetch(\`/api/fetch-signals`, no `buildIcpUrl(` and no GET to `/icp?`, no GET to the v1 `user-documents?` path. Note `/api/generate-signals-batch` does **not** contain `fetch-signals` and is out of scope (N4); `/leads/*`, `/customer_profile`, `/profile/company` are also out of scope. Stale comments referencing v1 paths (`DataSourcesManager.tsx:150,215`) are updated, not counted as live reads.
 3. The register is updated per §7 (TD-005 FE-side note, TD-FE-67 added, `buildIcpUrl` quirk closed).
 
 ---
@@ -183,4 +181,5 @@ The legacy per-endpoint wire schemas (`DataSourceListSchema`, `FetchSignalsRespo
 
 - **Item shape under `items`** differs from the v1 array element shape (e.g., v2 wraps/renames). Mitigation: item shapes are loose (`unknown`) and consumers normalize; if a real divergence appears, that's an item-schema concern (TD-FE-38/53), not this spec — flag and stop rather than tightening here.
 - **`apiGet` schema coupling** (`fetchDataSources`): if passing `paginatedSchema` to `apiGet` fights its current signature, adjust at the call site only — do not change `apiGet`'s contract for other callers.
+- **Proxy-path change (icp):** the `buildIcpUrl` fold moves the icp read from a direct-backend call to the proxied `/api/v2/icp`. Verified safe today (prefix-match rules in `vite.config.ts` + `vercel.json`); if a future change makes those proxy rules path-specific, the icp read would break — keep them prefix-based.
 - **Abort criterion:** if migrating a read forces a consumer-code change (i.e., §4.2 adaptation can't keep the consumer untouched), stop and re-scope — that read's consumer is more coupled than this envelope-only spec assumes.
