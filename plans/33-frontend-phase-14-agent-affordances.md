@@ -12,6 +12,10 @@
 
 **Scope note (operator-confirmed 2026-06-08):** Reading the actual `CLAUDE.md` during planning surfaced that its **Frontend topology + several FE gotchas describe the pre-refactor frontend**. Spec 33 W2 scoped only dedup; **Task 4b extends it** under the master-plan "amend root docs where the new structure makes existing guidance stale" mandate (§2.1) + the doc-org directive. The operator confirmed Task 4b stays in scope — it proceeds as written.
 
+**Recovery & abort (plan-wide):** The default on any unexpected failure is **stop and report to the operator** — do not fix-forward (Spec 14 §5.3). Each task is its own commit for independent `git revert`, so a bad task can be undone without disturbing the others. **Abort the plan** (don't partially merge) if either: (a) `npm run preflight` cannot be made green within a reasonable effort window, or (b) the W1 cleanup (Task 2) or W4 archive split (Task 6) produces a diff far larger than the planned counts (25 forward-promises / 18 archived entries below) — an unexpectedly large diff signals scope creep or mis-classification and warrants re-planning, not pushing through.
+
+**Execution notes:** Tasks are written serially but are not all interdependent. Tasks 1 (scaffolder) and 6 (TECH_DEBT) touch files disjoint from each other and from the rest — they can run independently. Tasks 2 (`src/` comments) and 3 (feature READMEs) **overlap on the feature READMEs** — keep them ordered 2→3. **Tasks 4a → 4b → 5 (Step 3) all edit `CLAUDE.md`/`AGENTS.md` and MUST stay serial in that order** (they share the dedup base; a parallel run collides and breaks the `diff CLAUDE.md AGENTS.md` invariant). All line numbers below are advisory — find sections by heading, not by line number (line numbers drift as edits land).
+
 ---
 
 ## File map
@@ -44,6 +48,10 @@
 - Create: `frontend/scripts/scaffold-feature.test.ts`
 
 The current script does all work inside `main()` with `process.argv` side-effects — untestable. Refactor to export pure functions (mirroring `check-bundle-budget.ts`, which exports `baseName`/`computeDelta`/… and is tested by `check-bundle-budget.test.ts`), then test them.
+
+The independent verification layer for this task is the **test itself**: Step 2 confirms it fails before the implementation exists, Step 4 confirms it passes after, and Task 8's `preflight` re-runs it in the full suite. The code below is the TDD-mandated full implementation (`writing-plans` requires complete code in code-changing steps) — treat it as the contract, but if a step fails, **fix the code to satisfy the test** rather than pasting blindly.
+
+**NAMING_MAP / test drift:** the 14-name list in Step 1's test and `NAMING_MAP` must equal the actual `src/features/` folders **at execution time**. If a feature was added or removed since this plan was written, update both lists to match reality (Task 3 Step 3 is the cross-check) before relying on the membership test.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -381,6 +389,19 @@ Sweep the remaining `grep -rInE "\b[Pp]hase[- ]?[0-9]" src/` hits (the ~91 prove
 - **Keep** test filename/subject refs like `src/app/__tests__/phase12-routes.test.ts` (the number is the test's subject).
 - If dropping a number would make a README provenance line vaguer, leave it — completeness is secondary to quality.
 
+Exemplar drop/keep decisions — apply the same reasoning across the ~91-item bucket:
+
+| Reference | Decision | Why |
+|---|---|---|
+| `// Promoted in Phase 11 (TD-FE-63)` | **drop number** → `// Shared by strategist + market-research (TD-FE-63)` | The phase number adds nothing the TD-FE citation doesn't; the sentence keeps its meaning. |
+| `// Phase 10 tightens these later` (forward promise) | **rephrase** (already handled in Steps 3–4) | Forward promise — state reality + cite the governing TD-FE. |
+| `(TD-FE-19)`, `Spec 14 §6.9`, `ADR-0008`, `plan 29` | **keep verbatim** | Traceability citation (bucket c) — the lookup key, not transient provenance. |
+| `// EU AI Act Phase 1` (mock data content) | **keep** | Real-world regulatory phase, not a refactor marker. |
+| `phase12-routes.test.ts` (filename / test subject) | **keep** | The number is the test's subject, not provenance. |
+| `// Extracted in Phase 8 from the old SignalsPage monolith` | **drop number** → `// Extracted from the old SignalsPage monolith` | History reads fine without the phase ordinal; no citation lost. |
+
+Every **kept** item is logged in the Step 6 ledger with its one-line reason, so the residual count is auditable.
+
 The bulk of bucket b lives in `src/shared/README.md`, `src/test/msw/handlers.ts` (handler-section labels), and the feature READMEs (handled per-file in Task 3 where overlapping).
 
 - [ ] **Step 6: Record the classification ledger**
@@ -410,7 +431,7 @@ Each stub gets the full template: `## Purpose` / `## Public surface` / `## Key f
 
 - [ ] **Step 1: Write the 6 READMEs**
 
-Each feature's public surface is its `<feature>Routes` export. Use this content (adjust Key files to the actual folder listing you see):
+Each feature's public surface is its `<feature>Routes` export (verified during planning). **Before writing each file, confirm against the feature's actual `index.ts` exports and folder listing** — if a feature exports more than `<feature>Routes`, or its Key files differ from the template below, adjust the content to match reality rather than relying on Step 2 as a correction pass. Use this content as the template:
 
 **`auth/README.md`:**
 ```markdown
@@ -602,6 +623,8 @@ In `CLAUDE.md` line 3, add the reciprocal cross-ref: append ` AGENTS.md mirrors 
 - [ ] **Step 2: Sync the AI-Native Development section into AGENTS.md**
 
 `AGENTS.md`'s "## AI-Native Development" (the abbreviated 3-bullet Spec-driven-flow at lines ~123–129) is stale relative to `CLAUDE.md`'s full version. Per the operator's decision, the slash-command flow belongs in **both** files. Replace `AGENTS.md`'s "Spec-driven flow" + "NN numbering" region with `CLAUDE.md`'s fuller "Spec-driven flow" (the 4-step cycle with `/review-spec`…`/synthesize-impl-review`, the human-approved-merge step) + "No CI; preflight is local" paragraph + "NN numbering" + "Specs and plans are a frozen record" bullets, verbatim, so the two files' AI-Native sections are identical.
+
+**Dependency:** Task 4a must fully complete (and commit) **before** Task 4b begins — both edit `CLAUDE.md`/`AGENTS.md`. The "verbatim" source for this sync is the **`CLAUDE.md` on disk at execution time**, not the prose quoted in this plan; if `CLAUDE.md` has drifted since plan-writing, copy what's actually there. The `diff CLAUDE.md AGENTS.md` invariant (Step 7) is the backstop that catches a stale or partial copy.
 
 - [ ] **Step 3: Add the drift-prevention convention to BOTH files**
 
@@ -849,8 +872,12 @@ git diff --stat docs/TECH_DEBT.md docs/TECH_DEBT_ARCHIVE.md
 # Confirm the main file shows deletions (moved entries) + the index addition, NOT a whole-file reflow.
 grep -cE "^## TD-FE-" docs/TECH_DEBT.md        # expect 48 (66 - 18 moved)
 grep -cE "^## TD-FE-" docs/TECH_DEBT_ARCHIVE.md # expect 18
+# Cross-reference resolution: list every TD-FE-N mentioned across both files. Each ID a
+# surviving entry references (e.g. "mirror TD-FE-19/21", "TD-FE-51↔63") must be locatable
+# via the index — confirm none became an orphan after the move.
+grep -rohE "TD-FE-[0-9]+" docs/TECH_DEBT.md docs/TECH_DEBT_ARCHIVE.md | sort -t- -k3 -n | uniq -c
 ```
-Spot-check that every `resolved → archive` index link's anchor exists in the archive, and that backend `TD-NNN` entries are untouched.
+Spot-check that every `resolved → archive` index link's anchor exists in the archive, that each moved entry's `## TD-FE-<n>` header is present in the archive (so its anchor resolves), and that backend `TD-NNN` entries are untouched.
 
 - [ ] **Step 5: Commit**
 
@@ -926,3 +953,4 @@ Stop here for the §5 adversarial impl-review cycle (`review-impl` → `synthesi
 - **Type consistency:** the W5 exports (`NAMING_MAP`, `validateName`, `scaffoldFeature`, `ScaffoldOptions`) match between `scaffold-feature.ts` and `scaffold-feature.test.ts`.
 - **No-prettier guard** repeated at every `docs/TECH_DEBT*` touchpoint (Tasks 6, 8).
 - **Operator-confirmed:** Task 4b (FE-topology refresh) is kept in scope (confirmed 2026-06-08).
+- **Plan-review-1 synthesis (round 1, 2026-06-08) applied:** added a header "Recovery & abort" + "Execution notes" block (abort triggers, per-commit revert, task-collision map); a drop/keep exemplar table to Task 2 Step 5; a 4a→4b dependency note (verbatim source = CLAUDE.md on disk); a cross-reference-resolution grep to Task 6 Step 4; verify-before-write wording to Task 3 Step 1; a NAMING_MAP/test-drift note + test-as-verification-layer note to Task 1. Disagreed: Task 1 full-code inlining (writing-plans mandates it; TDD is the verification layer) and the Task-4b gate-check finding (stale — gate removed at `cf41024`). Round recommendation: no.
