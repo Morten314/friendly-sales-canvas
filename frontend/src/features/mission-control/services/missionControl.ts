@@ -1,21 +1,22 @@
-import { DataSourceListSchema, LeadStreamStatusSchema } from "../contracts";
+import { z } from "zod";
+
+import { LeadStreamStatusSchema } from "../contracts";
 import type { LeadStreamFileApiRow } from "../types";
 
 import { apiGet } from "@/shared/api/client";
+import { firstPageParams, paginatedSchema } from "@/shared/api/pagination";
 
 /**
- * GET /api/user-documents — the org's uploaded data-source documents. Backend
- * returns a bare array or `{ documents|files|data }`. Returns the raw document
- * objects; DataSourcesManager maps them to `DataSource[]` (mapping stays in the
- * component this phase — stage 5).
+ * GET /api/v2/user-documents — the org's uploaded data-source documents.
+ * Returns the raw document objects; DataSourcesManager maps them to
+ * `DataSource[]` (mapping stays in the component this phase — stage 5).
  */
 export async function fetchDataSources(orgId: string): Promise<unknown[]> {
-  const json = await apiGet(
-    `user-documents?org_id=${encodeURIComponent(orgId)}`,
-    DataSourceListSchema,
+  const env = await apiGet(
+    `v2/user-documents?org_id=${encodeURIComponent(orgId)}&${firstPageParams(500)}`,
+    paginatedSchema(z.unknown()),
   );
-  if (Array.isArray(json)) return json;
-  return json.documents ?? json.files ?? json.data ?? [];
+  return env.items;
 }
 
 /** GET /api/leads/stream/status — uploaded lead-stream files + processing stats. */

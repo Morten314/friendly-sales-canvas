@@ -16,7 +16,9 @@ function wrapper({ children }: { children: ReactNode }) {
 describe("useDataSources", () => {
   it("returns the documents array", async () => {
     server.use(
-      http.get("/api/user-documents", () => HttpResponse.json({ documents: [{ file_id: "d1" }] })),
+      http.get("/api/v2/user-documents", () =>
+        HttpResponse.json({ items: [{ file_id: "d1" }], total: 1, limit: 500, offset: 0 }),
+      ),
     );
     const { result } = renderHook(() => useDataSources("org1"), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5000 });
