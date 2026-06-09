@@ -10,7 +10,7 @@ import { QueryClient } from "@tanstack/react-query";
 import {
   fetchResearchComponent,
   RESEARCH_COMPONENTS,
-  syncMarketSizeToQueryCache,
+  syncResearchComponentToQueryCache,
 } from "../marketResearch";
 
 import { qk } from "@/shared/api/queryKeys";
@@ -20,18 +20,25 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("syncMarketSizeToQueryCache", () => {
-  it("writes the legacy fetch response into the TanStack market-size cache key", () => {
+describe("syncResearchComponentToQueryCache", () => {
+  it("writes the legacy fetch response into the TanStack cache for each component", () => {
     const queryClient = new QueryClient();
     const response = {
       status: "success",
-      data: { tamValue: "$23.05B", growthProjections: { "2023": 1 } },
+      data: { executiveSummary: "Competitor overview", topPlayerShare: "35%" },
     };
 
-    syncMarketSizeToQueryCache(queryClient, "org-1", response);
+    syncResearchComponentToQueryCache(
+      queryClient,
+      "org-1",
+      RESEARCH_COMPONENTS.competitor,
+      response,
+    );
 
     expect(
-      queryClient.getQueryData(qk.marketResearchComponent("org-1", RESEARCH_COMPONENTS.marketSize)),
+      queryClient.getQueryData(
+        qk.marketResearchComponent("org-1", RESEARCH_COMPONENTS.competitor),
+      ),
     ).toEqual(response);
   });
 });

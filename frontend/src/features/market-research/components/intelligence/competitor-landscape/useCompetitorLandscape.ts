@@ -1,6 +1,9 @@
+import { useMemo } from "react";
+
 import { useRegenerateResearch, useResearchComponent } from "../../../hooks/useMarketResearch";
 import { RESEARCH_COMPONENTS } from "../../../services/marketResearch";
 
+import { normalizeCompetitorLandscapeData } from "./competitorUiComponents";
 import type { UntypedBackendApiResponse } from "./types";
 
 export interface UseCompetitorLandscape {
@@ -23,8 +26,15 @@ export function useCompetitorLandscape(userId: string, orgId: string): UseCompet
     !!userId && !!orgId,
   );
   const regenerate = useRegenerateResearch(userId, orgId);
+  const data = useMemo(
+    () =>
+      normalizeCompetitorLandscapeData(
+        query.data?.data as unknown as UntypedBackendApiResponse | undefined,
+      ),
+    [query.data],
+  );
   return {
-    data: query.data?.data as unknown as UntypedBackendApiResponse | undefined,
+    data,
     isLoading: query.isLoading,
     isError: query.isError,
     refresh: () => regenerate.mutate(RESEARCH_COMPONENTS.competitor),

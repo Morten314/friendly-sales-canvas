@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+
 import { useRegenerateResearch, useResearchComponent } from "../../../hooks/useMarketResearch";
 import { RESEARCH_COMPONENTS } from "../../../services/marketResearch";
 
@@ -20,8 +22,12 @@ export function useRegulatoryCompliance(
 ): UseRegulatoryComplianceResult {
   const query = useResearchComponent(userId, orgId, RESEARCH_COMPONENTS.regulatory);
   const regenerate = useRegenerateResearch(userId, orgId);
+  const regulatoryData = useMemo(
+    () => query.data?.data as unknown as UntypedBackendApiResponse | undefined,
+    [query.data],
+  );
   return {
-    regulatoryData: query.data?.data as unknown as UntypedBackendApiResponse | undefined,
+    regulatoryData,
     isLoading: query.isLoading,
     isError: query.isError,
     refresh: () => regenerate.mutate(RESEARCH_COMPONENTS.regulatory),

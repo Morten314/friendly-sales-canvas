@@ -15,14 +15,25 @@ export const RESEARCH_COMPONENTS = {
 } as const;
 export type ResearchComponentName = (typeof RESEARCH_COMPONENTS)[keyof typeof RESEARCH_COMPONENTS];
 
-/** Keep the 5b section hook (useMarketSize) in sync when the legacy page fetcher
- *  (fetchMarketSizeData in useMarketResearchData) receives a fresh response. */
+/** Keep 5b section hooks in sync when legacy page fetchers in useMarketResearchData
+ *  receive a fresh response. Without this, the console/API layer and the TanStack
+ *  cache the sections render from can diverge. */
+export function syncResearchComponentToQueryCache(
+  queryClient: QueryClient,
+  orgId: string,
+  componentName: ResearchComponentName,
+  response: ResearchComponentResponse,
+): void {
+  queryClient.setQueryData(qk.marketResearchComponent(orgId, componentName), response);
+}
+
+/** @deprecated Use {@link syncResearchComponentToQueryCache} */
 export function syncMarketSizeToQueryCache(
   queryClient: QueryClient,
   orgId: string,
   response: ResearchComponentResponse,
 ): void {
-  queryClient.setQueryData(qk.marketResearchComponent(orgId, RESEARCH_COMPONENTS.marketSize), response);
+  syncResearchComponentToQueryCache(queryClient, orgId, RESEARCH_COMPONENTS.marketSize, response);
 }
 
 /** Fetch one research component (POST `/market-research`). The backend `MarketRequest`

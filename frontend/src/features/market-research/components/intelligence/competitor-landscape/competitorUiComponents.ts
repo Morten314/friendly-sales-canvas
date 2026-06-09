@@ -178,6 +178,66 @@ export function extractMetrics(components: UntypedBackendApiResponse[]): Metric[
   return sectionComponent?.metrics || [];
 }
 
+// ── normalizeCompetitorLandscapeData ─────────────────────────────────────────
+
+/**
+ * Flatten the heterogeneous competitor-landscape API envelope into the scalar
+ * fields the section reads. Mirrors the extraction chain in fetchCompetitorData
+ * (useMarketResearchData.ts) so hook-first rendering matches the legacy fetcher.
+ */
+export function normalizeCompetitorLandscapeData(
+  apiData: UntypedBackendApiResponse | undefined,
+): UntypedBackendApiResponse | undefined {
+  if (!apiData) return undefined;
+
+  const competitorLandscapeData = (apiData.competitorLandscape ?? {}) as UntypedBackendApiResponse;
+
+  let uiComponentsData: UntypedBackendApiResponse = {};
+  if (Array.isArray(apiData.uiComponents)) {
+    const reportComponent = apiData.uiComponents.find(
+      (comp: UntypedBackendApiResponse) => comp?.type === "report",
+    );
+    if (reportComponent) {
+      uiComponentsData = reportComponent;
+    }
+  }
+
+  const executiveSummary =
+    competitorLandscapeData.executiveSummary ||
+    uiComponentsData.executiveSummary ||
+    apiData.executiveSummary ||
+    "";
+
+  const topPlayerShare =
+    competitorLandscapeData.topPlayers ||
+    competitorLandscapeData.topPlayerShare ||
+    uiComponentsData.topPlayerShare ||
+    apiData.topPlayerShare ||
+    "";
+
+  const emergingPlayers =
+    competitorLandscapeData.emergingPlayers ||
+    uiComponentsData.emergingPlayers ||
+    apiData.emergingPlayers ||
+    "";
+
+  const fundingNewsRaw =
+    competitorLandscapeData.recentMoves ||
+    competitorLandscapeData.fundingNews ||
+    uiComponentsData.fundingNews ||
+    apiData.fundingNews ||
+    [];
+
+  return {
+    ...apiData,
+    executiveSummary,
+    topPlayerShare,
+    emergingPlayers,
+    fundingNews: Array.isArray(fundingNewsRaw) ? fundingNewsRaw : [],
+    uiComponents: apiData.uiComponents || [],
+  };
+}
+
 // ── generateTrendData ────────────────────────────────────────────────────────
 
 /**

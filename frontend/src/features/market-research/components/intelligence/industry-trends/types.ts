@@ -28,7 +28,7 @@ export const IndustryTrendsRecommendationsSchema = z
 export const IndustryTrendsVisualChartsSchema = z
   .object({
     aiAdoptionTrends: z.array(z.string()).nullish(),
-    technologyBudgetAllocation: z.record(z.string()).nullish(),
+    technologyBudgetAllocation: z.record(z.coerce.string()).nullish(),
   })
   .passthrough();
 
@@ -42,7 +42,7 @@ export const IndustryTrendsResultSchema = z
     trendSnapshots: z.array(IndustryTrendsTrendSnapshotSchema).nullish(),
     recommendations: IndustryTrendsRecommendationsSchema.nullish(),
     strategicRecommendations: IndustryTrendsRecommendationsSchema.nullish(),
-    regionalHotspots: z.record(z.string()).nullish(),
+    regionalHotspots: z.record(z.coerce.string()).nullish(),
     visualCharts: IndustryTrendsVisualChartsSchema.nullish(),
     timestamp: z.union([z.string(), z.number()]).nullish(),
   })

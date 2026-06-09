@@ -13,6 +13,7 @@ import {
   extractTrendCharts,
   extractMetrics,
   generateTrendData,
+  normalizeCompetitorLandscapeData,
 } from "../competitorUiComponents";
 
 describe("competitorUiComponents", () => {
@@ -258,5 +259,27 @@ describe("competitorUiComponents", () => {
       const decimalPart = str.includes(".") ? str.split(".")[1] : "";
       expect(decimalPart.length).toBeLessThanOrEqual(1);
     }
+  });
+
+  // ── normalizeCompetitorLandscapeData ───────────────────────────────────────
+
+  it("normalizeCompetitorLandscapeData: lifts executiveSummary from competitorLandscape nest", () => {
+    const normalized = normalizeCompetitorLandscapeData({
+      competitorLandscape: { executiveSummary: "Nested summary" },
+      uiComponents: [{ type: "section", tags: ["Acme"] }],
+    });
+
+    expect(normalized?.executiveSummary).toBe("Nested summary");
+  });
+
+  it("normalizeCompetitorLandscapeData: falls back to report uiComponent fields", () => {
+    const normalized = normalizeCompetitorLandscapeData({
+      uiComponents: [
+        { type: "report", executiveSummary: "From report component", topPlayerShare: "51%" },
+      ],
+    });
+
+    expect(normalized?.executiveSummary).toBe("From report component");
+    expect(normalized?.topPlayerShare).toBe("51%");
   });
 });

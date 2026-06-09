@@ -8,7 +8,11 @@ import React, { useState, useEffect, useRef } from "react";
 import type { ResearchComponentResponse } from "../contracts";
 import { logApiCallResult } from "../lib/apiUtils";
 import { toUTCTimestamp, isTimestampNewer, logTimestampComparison } from "../lib/timestampUtils";
-import { syncMarketSizeToQueryCache } from "../services/marketResearch";
+import {
+  RESEARCH_COMPONENTS,
+  syncResearchComponentToQueryCache,
+  type ResearchComponentName,
+} from "../services/marketResearch";
 
 import { useToast } from "@/components/ui/use-toast";
 import { buildApiUrl } from "@/shared/api/transport";
@@ -331,6 +335,26 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
   const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
   const previousUserIdRef = useRef<string | null | undefined>(currentUser?.uid);
   const queryClient = useQueryClient();
+
+  /** Push a validated legacy-fetch envelope into the TanStack cache the 5b section hooks read. */
+  const pushResearchResponseToSectionCache = (
+    response: unknown,
+    componentName: ResearchComponentName,
+  ) => {
+    if (
+      response &&
+      typeof response === "object" &&
+      (response as ResearchComponentResponse).status === "success" &&
+      (response as ResearchComponentResponse).data
+    ) {
+      syncResearchComponentToQueryCache(
+        queryClient,
+        orgIdToUse,
+        componentName,
+        response as ResearchComponentResponse,
+      );
+    }
+  };
 
   const { toast } = useToast();
 
@@ -2807,15 +2831,7 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
         return;
       }
 
-      // MarketSizeSection reads via useMarketSize (TanStack cache), not marketIntelligenceData.
-      // Always push a validated response into that cache so the UI matches what we fetched.
-      if (apiResponse.status === "success" && apiResponse.data) {
-        syncMarketSizeToQueryCache(
-          queryClient,
-          orgIdToUse,
-          apiResponse as ResearchComponentResponse,
-        );
-      }
+      pushResearchResponseToSectionCache(apiResponse, RESEARCH_COMPONENTS.marketSize);
 
       // Extract timestamps for comparison - convert to UTC
 
@@ -3068,6 +3084,8 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
         return;
       }
 
+      pushResearchResponseToSectionCache(result, RESEARCH_COMPONENTS.industryTrends);
+
       if (!refresh) logApiCallResult("Industry Trends", result, refresh);
 
       if (result.status === "success" && result.data) {
@@ -3296,6 +3314,8 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
         setIsRefreshing(false);
         return;
       }
+
+      pushResearchResponseToSectionCache(result, RESEARCH_COMPONENTS.regulatory);
 
       if (result.status === "success" && result.data) {
         const apiData = result.data;
@@ -3615,6 +3635,8 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
         console.log(JSON.stringify(result, null, 2));
       }
 
+      pushResearchResponseToSectionCache(result, RESEARCH_COMPONENTS.competitor);
+
       if (result.status === "success" && result.data) {
         const apiData = result.data;
 
@@ -3898,6 +3920,8 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
         setIsRefreshing(false);
         return;
       }
+
+      pushResearchResponseToSectionCache(result, RESEARCH_COMPONENTS.marketEntry);
 
       if (refresh) {
         console.log(`📥 [RESPONSE] Market Entry & Growth Strategy:`);

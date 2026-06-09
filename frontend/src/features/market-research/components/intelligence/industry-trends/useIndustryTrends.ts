@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+
 import { useRegenerateResearch, useResearchComponent } from "../../../hooks/useMarketResearch";
 import { RESEARCH_COMPONENTS } from "../../../services/marketResearch";
 
@@ -18,8 +20,9 @@ export interface UseIndustryTrends {
 export function useIndustryTrends(userId: string, orgId: string): UseIndustryTrends {
   const query = useResearchComponent(userId, orgId, RESEARCH_COMPONENTS.industryTrends, !!orgId);
   const regen = useRegenerateResearch(userId, orgId);
+  const data = useMemo(() => parseIndustryTrends(query.data), [query.data]);
   return {
-    data: parseIndustryTrends(query.data),
+    data,
     isLoading: query.isLoading,
     isError: query.isError,
     error: query.error,
