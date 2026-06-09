@@ -1,5 +1,6 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 
 import { useICPs } from "../../hooks/useICPs";
 import type { ICP, FitConfidence } from "../../types";
@@ -9,20 +10,45 @@ import IcpWizard from "./IcpWizard";
 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import { qk } from "@/shared/api/queryKeys";
 import { apiFetch } from "@/shared/api/transport";
 import { useAuthToken } from "@/shared/auth";
 import { setUserLocalStorage, removeUserLocalStorage } from "@/shared/lib/cacheUtils";
 import {
+  buildCustomerProfileSavePayload,
+  invalidateMissionControlCache,
+  invalidateProfilerCache,
   mergeProfilerAcceptedIcpDisplay,
   removeProfilerAcceptedIcpDisplayMeta,
 } from "@/shared/profiler";
 import type { UntypedProfilerIcpRecord } from "@/shared/types/escape-hatches";
 
+/** Map the local ICP view-model into the shared POST payload builder input. */
+function icpsToApiRows(icps: ICP[]) {
+  return icps.map((icp) => ({
+    id: icp.id,
+    primaryRegion: icp.primaryRegion,
+    location: icp.location,
+    industry: icp.industry,
+    companySize: icp.companySize,
+    buyerRole: icp.buyerRole,
+    accountsOnWatchlist: icp.accountsOnWatchlist,
+    accountsToAvoid: icp.accountsToAvoid,
+    fitConfidence: icp.fitConfidence,
+    additionalContext: icp.additionalContext,
+    status: icp.status,
+    createdAt: icp.createdAt,
+  }));
+}
+
 const ICPManager: React.FC = () => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { currentUser, orgId } = useAuthToken();
   const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
   const [icps, setIcps] = useState<ICP[]>([]);
+  // While a local add/edit/delete is in flight, skip syncing from stale TanStack rows.
+  const skipServerSyncRef = useRef(false);
 
   // ICP read: org's ICP rows via TanStack Query (raw rows; mapped below). The
   // query cache replaces the legacy imperative localStorage-fallback-on-error
@@ -31,6 +57,7 @@ const ICPManager: React.FC = () => {
   const {
     data: icpRows,
     isLoading,
+    isFetching,
     isError,
     isSuccess,
   } = useICPs(currentUser?.uid ?? "", orgIdToUse);
@@ -40,58 +67,34 @@ const ICPManager: React.FC = () => {
   const [isAddingInline, setIsAddingInline] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  const refreshIcpsFromServer = async () => {
+    if (!currentUser?.uid) return;
+    invalidateMissionControlCache(currentUser.uid, orgIdToUse);
+    invalidateProfilerCache(currentUser.uid, orgIdToUse);
+    await queryClient.refetchQueries({ queryKey: qk.icps(orgIdToUse) });
+  };
+
   // Save customer profile (ICPs) to backend with retry logic
   const saveCustomerProfileToBackend = async (icpsToSave: ICP[], retryCount = 0) => {
     if (!currentUser?.uid) {
       console.warn("Cannot save customer profile: User not authenticated");
-      // Save to localStorage as fallback
-      try {
-        setUserLocalStorage("customerProfile", JSON.stringify(icpsToSave), currentUser?.uid);
-      } catch (e) {
-        console.error("Failed to save to localStorage:", e);
-      }
-      return;
+      return false;
+    }
+
+    if (icpsToSave.length === 0) {
+      console.log("[ICPManager] Skipping POST customer_profile — no ICPs to persist");
+      return true;
     }
 
     try {
-      // Prepare payload with customer profile data
-      const payload = {
-        org_id: orgIdToUse,
-        icps: icpsToSave.map((icp) => ({
-          id: icp.id,
-          primary_region: icp.primaryRegion,
-          location: Array.isArray(icp.location) ? icp.location : [],
-          industry: Array.isArray(icp.industry) ? icp.industry : [],
-          company_size: Array.isArray(icp.companySize) ? icp.companySize : [],
-          buyer_role: Array.isArray(icp.buyerRole) ? icp.buyerRole : [],
-          accounts_on_watchlist: Array.isArray(icp.accountsOnWatchlist)
-            ? icp.accountsOnWatchlist
-            : [],
-          accounts_to_avoid: Array.isArray(icp.accountsToAvoid) ? icp.accountsToAvoid : [],
-          fit_confidence: icp.fitConfidence || "medium",
-          additional_context: icp.additionalContext || "",
-          status: icp.status || "saved",
-          created_at: icp.createdAt instanceof Date ? icp.createdAt.toISOString() : icp.createdAt,
-        })),
-      };
+      const payload = buildCustomerProfileSavePayload(icpsToApiRows(icpsToSave), orgIdToUse);
 
       console.log("=== ICP MANAGER: Saving customer profile to backend ===");
       console.log("User ID:", currentUser.uid);
+      console.log("Org ID:", orgIdToUse);
       console.log("ICPs to save:", icpsToSave);
       console.log("Payload:", JSON.stringify(payload, null, 2));
-      // Debug: Check location field specifically
-      payload.icps.forEach((icp, index) => {
-        console.log(
-          `ICP ${index} location field:`,
-          icp.location,
-          "Type:",
-          typeof icp.location,
-          "IsArray:",
-          Array.isArray(icp.location),
-        );
-      });
 
-      // Always save to localStorage first as backup
       try {
         setUserLocalStorage("customerProfile", JSON.stringify(icpsToSave), currentUser.uid);
         setUserLocalStorage("customerProfile_pending", JSON.stringify(payload), currentUser.uid);
@@ -99,53 +102,36 @@ const ICPManager: React.FC = () => {
         console.warn("Failed to save to localStorage:", e);
       }
 
-      const apiUrl = `/api/customer_profile?org_id=${orgIdToUse}`;
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("API Error:", response.status, errorText);
-
-        // Retry for 500 errors (server/database issues) up to 2 times
-        if (response.status === 500 && retryCount < 2) {
-          console.log(`Retrying save (attempt ${retryCount + 1}/2)...`);
-          await new Promise((resolve) => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
-          return saveCustomerProfileToBackend(icpsToSave, retryCount + 1);
-        }
-
-        throw new Error(`Failed to save customer profile: ${response.status} - ${errorText}`);
-      }
+      const response = await apiFetch(
+        `customer_profile?org_id=${encodeURIComponent(orgIdToUse)}`,
+        { method: "POST", body: payload },
+      );
 
       const data = await response.json();
       console.log("✅ Customer profile saved successfully to backend");
       console.log("Response data:", JSON.stringify(data, null, 2));
 
-      // Save to localStorage for offline access and refresh persistence
       try {
         setUserLocalStorage("customerProfile", JSON.stringify(icpsToSave), currentUser.uid);
-        console.log("ICPManager: Saved customer profile to localStorage");
-      } catch (e) {
-        console.warn("Failed to save to localStorage:", e);
-      }
-
-      // Clear pending flag on success
-      try {
         removeUserLocalStorage("customerProfile_pending", currentUser.uid);
       } catch (e) {
-        console.warn("Failed to clear pending flag:", e);
+        console.warn("Failed to update localStorage after save:", e);
       }
+
+      await refreshIcpsFromServer();
+      return true;
     } catch (error) {
+      const isServerError =
+        error instanceof Error &&
+        (error.message.includes("500") || error.message.includes("502"));
+      if (isServerError && retryCount < 2) {
+        console.log(`Retrying save (attempt ${retryCount + 1}/2)...`);
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (retryCount + 1)));
+        return saveCustomerProfileToBackend(icpsToSave, retryCount + 1);
+      }
       console.error("Error saving customer profile:", error);
 
-      // Determine error message based on error type
       const isNetworkError = error instanceof TypeError && error.message.includes("fetch");
-      const isServerError = error instanceof Error && error.message.includes("500");
 
       if (isServerError || isNetworkError) {
         toast({
@@ -162,6 +148,7 @@ const ICPManager: React.FC = () => {
           variant: "destructive",
         });
       }
+      return false;
     }
   };
 
@@ -177,6 +164,7 @@ const ICPManager: React.FC = () => {
   // extractable render region (it shapes rows, it does not render UI). See the
   // mission-control feature README.
   useEffect(() => {
+    if (skipServerSyncRef.current) return;
     if (!Array.isArray(icpRows)) return;
     if (icpRows.length === 0) {
       setIcps([]);
@@ -236,16 +224,15 @@ const ICPManager: React.FC = () => {
     setIcps(dedupedICPs);
   }, [icpRows]);
 
-  // Signal MissionControl that the ICP read has settled so it can clear its
-  // "syncing customer profile" spinner. The legacy loader fired this in its
-  // `finally` (and on the no-user early return); the query's settled state is
-  // the replacement. Fires once the query resolves (success or error) or when
-  // it is disabled (no authenticated user / org).
+  // Signal MissionControl that the ICP read has settled (backup for flows that
+  // do not await refetchQueries in the page shell). Wait for an in-flight fetch
+  // to finish — not merely cached isSuccess — so the loading dialog stays up.
   useEffect(() => {
+    if (isFetching) return;
     if (isSuccess || isError || !currentUser?.uid) {
       window.dispatchEvent(new CustomEvent("icpManagerCustomerProfileLoadFinished"));
     }
-  }, [isSuccess, isError, currentUser?.uid]);
+  }, [isFetching, isSuccess, isError, currentUser?.uid]);
 
   // Stable `initial` reference for the wizard: only changes identity when the
   // selected ICP (or the underlying row set) changes, so the wizard's
@@ -266,30 +253,39 @@ const ICPManager: React.FC = () => {
   // the container owns the optimistic list update, backend save, toast, and the
   // `customerProfileSaved` dispatch — byte-faithful to the legacy handleSaveICP.
   const handleWizardSaved = async (newICP: ICP, isEdit: boolean) => {
+    console.log("[ICPManager] handleWizardSaved", { id: newICP.id, isEdit });
     let updatedICPs: ICP[];
     if (isEdit) {
       updatedICPs = icps.map((icp) => (icp.id === newICP.id ? newICP : icp));
-      setIcps(updatedICPs);
       toast({
         title: "ICP updated",
         description: "Your ICP has been updated successfully.",
       });
     } else {
       updatedICPs = [...icps, newICP];
-      setIcps(updatedICPs);
       toast({
         title: "ICP saved",
         description: "Your ICP hypothesis has been saved.",
       });
     }
 
-    // Save to backend
-    await saveCustomerProfileToBackend(updatedICPs);
-
-    // Dispatch event to notify MissionControl that customer profile is saved
-    window.dispatchEvent(new CustomEvent("customerProfileSaved"));
-
-    handleCloseWizard();
+    skipServerSyncRef.current = true;
+    setIcps(updatedICPs);
+    try {
+      const ok = await saveCustomerProfileToBackend(updatedICPs);
+      if (!ok) {
+        toast({
+          title: "Save failed",
+          description: "Could not persist your ICP to the server. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      window.dispatchEvent(new CustomEvent("customerProfileSaved"));
+      handleCloseWizard();
+    } finally {
+      skipServerSyncRef.current = false;
+    }
   };
 
   const handleEditICP = (icp: ICP) => {
@@ -303,6 +299,8 @@ const ICPManager: React.FC = () => {
       org_id: orgIdToUse,
     });
     const updatedICPs = icps.filter((icp) => icp.id !== id);
+
+    skipServerSyncRef.current = true;
     setIcps(updatedICPs);
     removeProfilerAcceptedIcpDisplayMeta(id);
 
@@ -321,27 +319,35 @@ const ICPManager: React.FC = () => {
           deleteBody.data.remaining_count,
         );
       }
+
+      if (updatedICPs.length > 0) {
+        await saveCustomerProfileToBackend(updatedICPs);
+      } else {
+        await refreshIcpsFromServer();
+      }
+
+      window.dispatchEvent(new CustomEvent("customerProfileSaved"));
+      toast({
+        title: "ICP deleted",
+        description: "The ICP has been removed.",
+      });
     } catch (e) {
-      console.warn(
-        "[ICPManager] DELETE customer_profile/icp: failed (local state already updated)",
-        e,
-      );
+      console.warn("[ICPManager] DELETE customer_profile/icp: failed", e);
+      toast({
+        title: "Delete failed",
+        description: "Could not remove the ICP on the server. Refresh and try again.",
+        variant: "destructive",
+      });
+      await refreshIcpsFromServer();
+    } finally {
+      skipServerSyncRef.current = false;
     }
-
-    await saveCustomerProfileToBackend(updatedICPs);
-
-    window.dispatchEvent(new CustomEvent("customerProfileSaved"));
-
-    toast({
-      title: "ICP deleted",
-      description: "The ICP has been removed.",
-    });
   };
 
   return (
     <div className="space-y-6 relative">
       {/* Loading Overlay */}
-      {isLoading && (
+      {(isLoading || isFetching) && (
         <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="flex gap-2">
             <div

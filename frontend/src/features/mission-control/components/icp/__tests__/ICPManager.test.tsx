@@ -1,8 +1,17 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ICP } from "../../../types";
 import ICPManager from "../ICPManager";
+
+function renderWithQueryClient(ui: ReactNode) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>{ui}</QueryClientProvider>,
+  );
+}
 
 // Auth so the read hook is enabled and the settle effect has a uid.
 vi.mock("@/shared/auth", () => ({
@@ -50,6 +59,9 @@ vi.mock("../../../hooks/useICPs", () => ({
 vi.mock("@/shared/profiler", () => ({
   mergeProfilerAcceptedIcpDisplay: (r: Record<string, unknown>) => r,
   removeProfilerAcceptedIcpDisplayMeta: vi.fn(),
+  buildCustomerProfileSavePayload: vi.fn(),
+  invalidateMissionControlCache: vi.fn(),
+  invalidateProfilerCache: vi.fn(),
 }));
 
 // Mock the two children so we can assert wiring without their internal DOM.
@@ -76,18 +88,18 @@ afterEach(() => {
 
 describe("ICPManager (container)", () => {
   it("maps the raw ICP rows from useICPs and passes them to IcpList", async () => {
-    render(<ICPManager />);
+    renderWithQueryClient(<ICPManager />);
     const list = await screen.findByTestId("icp-list");
     expect(list).toHaveTextContent("icps:1");
   });
 
   it("gates the wizard off in the default (non-adding) state", () => {
-    render(<ICPManager />);
+    renderWithQueryClient(<ICPManager />);
     expect(screen.queryByTestId("icp-wizard")).not.toBeInTheDocument();
   });
 
   it("opens the wizard in add mode when the header Add ICP button is clicked", async () => {
-    render(<ICPManager />);
+    renderWithQueryClient(<ICPManager />);
     await screen.findByTestId("icp-list");
     // The header Add button is shown because there is at least one ICP.
     fireEvent.click(screen.getByRole("button", { name: /Add ICP/i }));
@@ -99,7 +111,7 @@ describe("ICPManager (container)", () => {
   it("fires the load-finished settle event once the read has settled", () => {
     const handler = vi.fn();
     window.addEventListener("icpManagerCustomerProfileLoadFinished", handler);
-    render(<ICPManager />);
+    renderWithQueryClient(<ICPManager />);
     expect(handler).toHaveBeenCalled();
     window.removeEventListener("icpManagerCustomerProfileLoadFinished", handler);
   });

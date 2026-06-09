@@ -1,5 +1,6 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { Building2, Database, Users } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 import CompanyProfileForm from "../components/company-profile/CompanyProfileForm";
 import { mapApiDataToCompanyProfileFields } from "../components/company-profile/companyProfileMapping";
@@ -13,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Layout } from "@/features/shell";
+import { qk } from "@/shared/api/queryKeys";
 import { useAuthToken } from "@/shared/auth";
 import { useCompanyProfile } from "@/shared/company-profile";
 import {
@@ -28,9 +30,12 @@ import type { UntypedBackendApiResponse } from "@/shared/types/escape-hatches";
 
 const MissionControlPage = () => {
   const [activeTab, setActiveTab] = useState("profile");
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
   const [isCompanyProfileSaved, setIsCompanyProfileSaved] = useState(false);
   const [isCustomerProfileSaved, setIsCustomerProfileSaved] = useState(false);
   const [hasDataSources, setHasDataSources] = useState(false);
+  const queryClient = useQueryClient();
 
   // Tab locking logic - check if data exists in backend, not just session state
   // Customer profile is unlocked if company profile exists in backend
@@ -48,8 +53,13 @@ const MissionControlPage = () => {
 
   const { currentUser, orgId } = useAuthToken();
   const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
-  /** Profiler accept/delete set missionControlIcpsNeedRefetch — show loading until ICPManager GET finishes. */
-  const [syncingProfilerCustomerProfile, setSyncingProfilerCustomerProfile] = useState(false);
+  /** Fresh GET of ICP rows whenever the Customer Profile tab is opened or Profiler mutates ICPs.
+   *  Loading UI is the inline three-dot overlay inside ICPManager (same as Data Sources). */
+  const refreshCustomerProfileIcps = useCallback(async () => {
+    if (!currentUser?.uid) return;
+    invalidateMissionControlCache(currentUser.uid, orgIdToUse);
+    await queryClient.refetchQueries({ queryKey: qk.icps(orgIdToUse) });
+  }, [currentUser?.uid, orgIdToUse, queryClient]);
 
   // Company-profile READ — the page shares ONE TanStack cache entry with
   // CompanyProfileForm's own useCompanyProfile(orgIdToUse) call (a single GET
@@ -127,19 +137,13 @@ const MissionControlPage = () => {
     setIsCustomerProfileSaved(Array.isArray(icpsData) && icpsData.length > 0);
   };
 
-  useEffect(() => {
-    const onIcpLoadFinished = () => setSyncingProfilerCustomerProfile(false);
-    window.addEventListener("icpManagerCustomerProfileLoadFinished", onIcpLoadFinished);
-    return () =>
-      window.removeEventListener("icpManagerCustomerProfileLoadFinished", onIcpLoadFinished);
-  }, []);
-
   // Check URL params for tab after profile loads
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tabParam = urlParams.get("tab");
     if (tabParam === "customer-profile" && !isCustomerProfileLocked) {
       setActiveTab("customer-profile");
+      void refreshCustomerProfileIcps();
       // Clean up URL param after setting tab
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
@@ -154,7 +158,7 @@ const MissionControlPage = () => {
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
     }
-  }, [isCustomerProfileLocked, isDataSourcesLocked]); // Run after locks are determined
+  }, [isCustomerProfileLocked, isDataSourcesLocked, refreshCustomerProfileIcps]); // Run after locks are determined
 
   // Mount: ensure the profiler scope exists, and seed the page's read-driven
   // state from the profiler cache when valid (the data-sources branch +
@@ -255,6 +259,10 @@ const MissionControlPage = () => {
       if (fromProfiler) {
         invalidateMissionControlCache(uid, orgIdToUse);
         invalidateProfilerCache(uid, orgIdToUse);
+        void queryClient.invalidateQueries({ queryKey: qk.icps(orgIdToUse) });
+        if (activeTabRef.current === "customer-profile") {
+          void refreshCustomerProfileIcps();
+        }
       } else {
         invalidateProfilerCache(uid, orgIdToUse);
       }
@@ -265,7 +273,7 @@ const MissionControlPage = () => {
     return () => {
       window.removeEventListener("customerProfileSaved", handleCustomerProfileSaved);
     };
-  }, [currentUser?.uid, orgIdToUse]);
+  }, [currentUser?.uid, orgIdToUse, queryClient, refreshCustomerProfileIcps]);
 
   // Listen for data source added events from DataSourcesManager
   useEffect(() => {
@@ -300,17 +308,11 @@ const MissionControlPage = () => {
   return (
     <Layout>
       {/* Loading Modal */}
-      <Dialog open={isLoadingProfile || syncingProfilerCustomerProfile} onOpenChange={() => {}}>
+      <Dialog open={isLoadingProfile} onOpenChange={() => {}}>
         <DialogContent className="sm:max-w-md border-0 bg-transparent shadow-none p-0">
-          <DialogTitle className="sr-only">
-            {syncingProfilerCustomerProfile && !isLoadingProfile
-              ? "Syncing customer profile"
-              : "Loading company profile"}
-          </DialogTitle>
+          <DialogTitle className="sr-only">Loading company profile</DialogTitle>
           <DialogDescription className="sr-only">
-            {syncingProfilerCustomerProfile && !isLoadingProfile
-              ? "Fetching ICPs from the server after Profiler updates."
-              : "Please wait while we fetch your company profile data."}
+            Please wait while we fetch your company profile data.
           </DialogDescription>
           <div className="flex flex-col items-center justify-center gap-6 p-8 bg-background rounded-lg border border-border shadow-2xl">
             {/* Animated Brewra Logo */}
@@ -329,14 +331,10 @@ const MissionControlPage = () => {
             {/* Loading Text */}
             <div className="flex flex-col items-center gap-2">
               <p className="text-lg font-semibold bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
-                {syncingProfilerCustomerProfile && !isLoadingProfile
-                  ? "Syncing customer profile"
-                  : "Loading company profile"}
+                Loading company profile
               </p>
               <p className="text-sm text-muted-foreground font-medium text-center px-2">
-                {syncingProfilerCustomerProfile && !isLoadingProfile
-                  ? "Applying your Profiler changes — fetching ICPs from the server…"
-                  : "Please wait while we fetch your data..."}
+                Please wait while we fetch your data...
               </p>
             </div>
             {/* Animated Progress Dots */}
@@ -380,6 +378,9 @@ const MissionControlPage = () => {
               return;
             }
             setActiveTab(value);
+            if (value === "customer-profile") {
+              void refreshCustomerProfileIcps();
+            }
           }}
           className="space-y-6"
         >
