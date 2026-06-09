@@ -15,8 +15,9 @@ export const MarketSizeResultSchema = z
     strategicRecommendations: z.array(z.string()).nullish(),
     marketEntry: z.string().nullish(),
     marketDrivers: z.array(z.string()).nullish(),
-    marketSizeBySegment: z.record(z.string()).nullish(),
-    growthProjections: z.record(z.string()).nullish(),
+    // Backend may return numeric index values (e.g. 1.0, 2.5) — coerce to strings.
+    marketSizeBySegment: z.record(z.coerce.string()).nullish(),
+    growthProjections: z.record(z.coerce.string()).nullish(),
   })
   .passthrough();
 
