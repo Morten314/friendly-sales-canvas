@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+
 import { useRegenerateResearch, useResearchComponent } from "../../../hooks/useMarketResearch";
 import { RESEARCH_COMPONENTS } from "../../../services/marketResearch";
 
@@ -18,8 +20,9 @@ export interface UseMarketSize {
 export function useMarketSize(userId: string, orgId: string): UseMarketSize {
   const query = useResearchComponent(userId, orgId, RESEARCH_COMPONENTS.marketSize, !!orgId);
   const regen = useRegenerateResearch(userId, orgId);
+  const data = useMemo(() => parseMarketSizeResult(query.data), [query.data]);
   return {
-    data: parseMarketSizeResult(query.data),
+    data,
     isLoading: query.isLoading,
     isError: query.isError,
     error: query.error,

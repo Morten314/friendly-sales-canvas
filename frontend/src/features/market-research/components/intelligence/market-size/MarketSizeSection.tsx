@@ -241,6 +241,16 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         // Clear if the view is not an array but local has data
         setLocalMarketDrivers([]);
       }
+
+      const segmentStr = JSON.stringify(view.marketSizeBySegment || {});
+      if (segmentStr !== JSON.stringify(localMarketSizeBySegment)) {
+        setLocalMarketSizeBySegment(view.marketSizeBySegment || {});
+      }
+
+      const projectionStr = JSON.stringify(view.growthProjections || {});
+      if (projectionStr !== JSON.stringify(localGrowthProjections)) {
+        setLocalGrowthProjections(view.growthProjections || {});
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- prop-sync effect: reads local* state for comparison only; including locals would cause infinite re-sync loops
   }, [
@@ -251,6 +261,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
     view.marketEntry,
     view.strategicRecommendations,
     view.marketDrivers,
+    view.marketSizeBySegment,
+    view.growthProjections,
     isEditing,
     currentUser?.uid,
   ]);

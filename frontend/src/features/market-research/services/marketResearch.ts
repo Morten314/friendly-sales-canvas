@@ -1,6 +1,9 @@
+import type { QueryClient } from "@tanstack/react-query";
+
 import { ResearchComponentSchema, type ResearchComponentResponse } from "../contracts";
 
 import { apiPost } from "@/shared/api/client";
+import { qk } from "@/shared/api/queryKeys";
 
 /** Canonical backend component_name values (verified in 5a/5b). */
 export const RESEARCH_COMPONENTS = {
@@ -11,6 +14,16 @@ export const RESEARCH_COMPONENTS = {
   marketEntry: "market entry & growth strategy",
 } as const;
 export type ResearchComponentName = (typeof RESEARCH_COMPONENTS)[keyof typeof RESEARCH_COMPONENTS];
+
+/** Keep the 5b section hook (useMarketSize) in sync when the legacy page fetcher
+ *  (fetchMarketSizeData in useMarketResearchData) receives a fresh response. */
+export function syncMarketSizeToQueryCache(
+  queryClient: QueryClient,
+  orgId: string,
+  response: ResearchComponentResponse,
+): void {
+  queryClient.setQueryData(qk.marketResearchComponent(orgId, RESEARCH_COMPONENTS.marketSize), response);
+}
 
 /** Fetch one research component (POST `/market-research`). The backend `MarketRequest`
  *  REQUIRES `user_id` and `data`; `org_id` and `refresh` are optional. `data` carries the

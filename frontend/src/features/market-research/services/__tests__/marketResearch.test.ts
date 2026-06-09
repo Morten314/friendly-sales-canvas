@@ -5,12 +5,35 @@ import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ZodError } from "zod";
 
-import { fetchResearchComponent, RESEARCH_COMPONENTS } from "../marketResearch";
+import { QueryClient } from "@tanstack/react-query";
 
+import {
+  fetchResearchComponent,
+  RESEARCH_COMPONENTS,
+  syncMarketSizeToQueryCache,
+} from "../marketResearch";
+
+import { qk } from "@/shared/api/queryKeys";
 import { server } from "@/test/msw/server";
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+describe("syncMarketSizeToQueryCache", () => {
+  it("writes the legacy fetch response into the TanStack market-size cache key", () => {
+    const queryClient = new QueryClient();
+    const response = {
+      status: "success",
+      data: { tamValue: "$23.05B", growthProjections: { "2023": 1 } },
+    };
+
+    syncMarketSizeToQueryCache(queryClient, "org-1", response);
+
+    expect(
+      queryClient.getQueryData(qk.marketResearchComponent("org-1", RESEARCH_COMPONENTS.marketSize)),
+    ).toEqual(response);
+  });
 });
 
 describe("fetchResearchComponent", () => {

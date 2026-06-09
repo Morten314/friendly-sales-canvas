@@ -2,10 +2,13 @@
 // as a STRUCTURAL move — raw fetch + useState + cascade/timestamp + localStorage cache, UNCHANGED.
 // NOT the 5b TanStack hook (`useMarketResearch`); 5d–5h convert THIS hook's internals to those.
 // Owns the data layer only — NOT routing, the scout cross-tab pair, the analysis handlers, or signalsChatContext.
+import { useQueryClient } from "@tanstack/react-query";
 import React, { useState, useEffect, useRef } from "react";
 
+import type { ResearchComponentResponse } from "../contracts";
 import { logApiCallResult } from "../lib/apiUtils";
 import { toUTCTimestamp, isTimestampNewer, logTimestampComparison } from "../lib/timestampUtils";
+import { syncMarketSizeToQueryCache } from "../services/marketResearch";
 
 import { useToast } from "@/components/ui/use-toast";
 import { buildApiUrl } from "@/shared/api/transport";
@@ -327,6 +330,7 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
   const { currentUser, orgId } = useAuth();
   const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
   const previousUserIdRef = useRef<string | null | undefined>(currentUser?.uid);
+  const queryClient = useQueryClient();
 
   const { toast } = useToast();
 
@@ -2801,6 +2805,16 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
         setIsMarketSizeLoading(false);
         setIsRefreshing(false);
         return;
+      }
+
+      // MarketSizeSection reads via useMarketSize (TanStack cache), not marketIntelligenceData.
+      // Always push a validated response into that cache so the UI matches what we fetched.
+      if (apiResponse.status === "success" && apiResponse.data) {
+        syncMarketSizeToQueryCache(
+          queryClient,
+          orgIdToUse,
+          apiResponse as ResearchComponentResponse,
+        );
       }
 
       // Extract timestamps for comparison - convert to UTC
