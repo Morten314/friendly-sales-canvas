@@ -190,6 +190,16 @@ export const ContextChat = ({
     onClearContext?.();
   };
 
+  const returnToSignalsPage = () => {
+    sessionStorage.removeItem("signalsChatContext");
+    onClearContext?.();
+    setMessages([]);
+    setInputValue("");
+    onMessagesChange?.([]);
+    window.dispatchEvent(new CustomEvent("signalsStateChanged"));
+    navigate("/signals");
+  };
+
   const handleAccept = async () => {
     if (!context.signalId || !context.contentHash || !currentUser?.uid || !orgId) return;
     setIsActionLoading(true);
@@ -204,7 +214,7 @@ export const ContextChat = ({
       }
       setIsAccepted(true);
       toast({ title: "Signal accepted", description: "This signal has been marked as accepted." });
-      window.dispatchEvent(new CustomEvent("signalsStateChanged"));
+      returnToSignalsPage();
     } catch (err) {
       console.error("Accept error:", err);
       toast({
@@ -233,13 +243,7 @@ export const ContextChat = ({
         title: "Signal removed",
         description: "This signal has been removed from your list.",
       });
-      sessionStorage.removeItem("signalsChatContext");
-      onClearContext?.();
-      setMessages([]);
-      setInputValue("");
-      onMessagesChange?.([]);
-      window.dispatchEvent(new CustomEvent("signalsStateChanged"));
-      navigate("/signals");
+      returnToSignalsPage();
     } catch (err) {
       console.error("Reject error:", err);
       toast({
