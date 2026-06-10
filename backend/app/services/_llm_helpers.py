@@ -39,8 +39,41 @@ from app.core.exceptions import ServiceError
 
 CLAUDE_RESEARCH_MAX_TOKENS = int(os.getenv("CLAUDE_RESEARCH_MAX_TOKENS") or "8192")
 
-# Matches http(s) URLs in free-form text. Used in 2 places below.
-_URL_PATTERN = r'https?://[^\s<>"{}|\\^`\[\]]+'
+# Matches http(s) URLs in free-form text. Exclude trailing punctuation often
+# captured from malformed Tavily/LLM output (e.g. https://api.tavily.com/search') ).
+_URL_PATTERN = r'https?://[^\s<>"{}|\\^`\[\]\'\"),.;]+'
+
+_BLOCKED_SOURCE_HOSTS = frozenset({"api.tavily.com"})
+
+
+def _sanitize_source_url(url: str) -> str:
+    """Normalize a citation URL and drop Tavily API / junk endpoints."""
+    if not url or not isinstance(url, str):
+        return ""
+    cleaned = url.strip().rstrip("')\"],.;")
+    if not cleaned.startswith(("http://", "https://")):
+        return ""
+    try:
+        from urllib.parse import urlparse
+
+        host = urlparse(cleaned).netloc.lower()
+        if not host or host in _BLOCKED_SOURCE_HOSTS:
+            return ""
+    except Exception:
+        return ""
+    return cleaned
+
+
+def _filter_source_urls(urls: List[str]) -> List[str]:
+    """Dedupe and keep only browser-safe citation URLs."""
+    seen: set[str] = set()
+    out: List[str] = []
+    for raw in urls:
+        cleaned = _sanitize_source_url(raw)
+        if cleaned and cleaned not in seen:
+            seen.add(cleaned)
+            out.append(cleaned)
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -58,21 +91,24 @@ def _tavily_context_and_urls(search_query: str, k: int = 10) -> tuple:
         raw = search_tool.run(search_query[:2000])
         if isinstance(raw, str):
             context = raw
-            urls = list(dict.fromkeys(re.findall(_URL_PATTERN, raw)))[:12]
+            urls = _filter_source_urls(re.findall(_URL_PATTERN, raw))[:12]
         elif isinstance(raw, list):
             parts = []
             for item in raw:
                 if isinstance(item, dict):
                     u = item.get("url") or item.get("source", "")
-                    if isinstance(u, str) and u.startswith("http"):
-                        urls.append(u)
+                    if isinstance(u, str):
+                        cleaned = _sanitize_source_url(u)
+                        if cleaned:
+                            urls.append(cleaned)
                     parts.append(json.dumps(item, default=str))
             context = "\n".join(parts)
+            urls = _filter_source_urls(urls)[:12]
         else:
             context = str(raw)
     except Exception as e:
         context = f"(web search unavailable: {e})"
-    return context, urls[:10]
+    return context, _filter_source_urls(urls)[:10]
 
 
 def _claude_messages_text(user_prompt: str, max_tokens: int = CLAUDE_RESEARCH_MAX_TOKENS) -> str:
@@ -157,10 +193,12 @@ def _research_agent_output(
                         if len(step) > 1 and isinstance(step[1], list):
                             for result in step[1]:
                                 if isinstance(result, dict) and "url" in result:
-                                    tavily_urls.append(result["url"])
+                                    cleaned = _sanitize_source_url(result["url"])
+                                    if cleaned:
+                                        tavily_urls.append(cleaned)
                 if not tavily_urls:
                     found_urls = re.findall(_URL_PATTERN, response)
-                    tavily_urls = list(set(found_urls))[:5]
+                    tavily_urls = _filter_source_urls(found_urls)[:5]
             except Exception:
                 pass
         return response, tavily_urls
@@ -174,7 +212,7 @@ def _research_agent_output(
     response = _claude_messages_text(augmented, max_tokens=CLAUDE_RESEARCH_MAX_TOKENS)
     if not tavily_urls:
         found_urls = re.findall(_URL_PATTERN, response)
-        tavily_urls = list(set(found_urls))[:5]
+        tavily_urls = _filter_source_urls(found_urls)[:5]
     return response, tavily_urls
 
 

@@ -14,7 +14,7 @@ _normalize_search_signals_result: signals-specific post-processor that
 """
 from typing import Any, Dict, List
 
-from app.services._llm_helpers import _extract_research_json
+from app.services._llm_helpers import _extract_research_json, _filter_source_urls, _sanitize_source_url
 
 
 def _parse_search_signals_response(response: str) -> Dict[str, Any]:
@@ -34,19 +34,19 @@ def _parse_search_signals_response(response: str) -> Dict[str, Any]:
 
 
 def _validate_url(url: str, tavily_urls_list: List[str]) -> str:
-    """Validate URL and replace with Tavily URL if invalid."""
-    if not url or not isinstance(url, str):
-        return tavily_urls_list[0] if tavily_urls_list else ""
-    if not url.startswith(('http://', 'https://')):
-        return tavily_urls_list[0] if tavily_urls_list else ""
-    if tavily_urls_list:
-        url_domain = url.split('/')[2] if len(url.split('/')) > 2 else ""
-        for tavily_url in tavily_urls_list:
-            tavily_domain = tavily_url.split('/')[2] if len(tavily_url.split('/')) > 2 else ""
-            if url_domain and url_domain == tavily_domain:
-                return tavily_url
-        return tavily_urls_list[0]
-    return url
+    """Validate URL and prefer real article links from Tavily search results."""
+    valid_tavily = _filter_source_urls(tavily_urls_list)
+    sanitized = _sanitize_source_url(url)
+    if sanitized:
+        if valid_tavily:
+            url_domain = sanitized.split("/")[2] if len(sanitized.split("/")) > 2 else ""
+            for tavily_url in valid_tavily:
+                tavily_domain = tavily_url.split("/")[2] if len(tavily_url.split("/")) > 2 else ""
+                if url_domain and url_domain == tavily_domain:
+                    return tavily_url
+            return sanitized
+        return sanitized
+    return valid_tavily[0] if valid_tavily else ""
 
 
 def _normalize_search_signals_result(
@@ -60,16 +60,21 @@ def _normalize_search_signals_result(
     timestamp, headline, snippet, description, sourceUrl, sourceLabel,
     source, nextBestMoves, NBAs, contextualSuggestions.
     """
-    source_url = _validate_url(parsed_json.get("sourceUrl", ""), tavily_urls)
+    valid_tavily_urls = _filter_source_urls(tavily_urls)
+    source_url = _validate_url(parsed_json.get("sourceUrl", ""), valid_tavily_urls)
 
     validated_sources = []
     for i, src in enumerate(parsed_json.get("source", [])[:2]):
         if isinstance(src, dict) and "url" in src:
-            validated_url = _validate_url(src["url"], tavily_urls[i:] if i < len(tavily_urls) else tavily_urls)
-            validated_sources.append({"citation": src.get("citation", ""), "url": validated_url})
+            validated_url = _validate_url(
+                src["url"],
+                valid_tavily_urls[i:] if i < len(valid_tavily_urls) else valid_tavily_urls,
+            )
+            if validated_url:
+                validated_sources.append({"citation": src.get("citation", ""), "url": validated_url})
 
-    if not validated_sources and tavily_urls:
-        for i, tavily_url in enumerate(tavily_urls[:2]):
+    if not validated_sources and valid_tavily_urls:
+        for i, tavily_url in enumerate(valid_tavily_urls[:2]):
             validated_sources.append({"citation": f"Source {i+1}", "url": tavily_url})
 
     hours_ago = 1
