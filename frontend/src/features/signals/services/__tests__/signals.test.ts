@@ -32,7 +32,7 @@ describe("fetchSignals", () => {
 
   it("throws on a non-ok response", async () => {
     server.use(http.get("/api/v2/fetch-signals", () => new HttpResponse(null, { status: 500 })));
-    await expect(fetchSignals("u1")).rejects.toThrow(/Failed to fetch signals: 500/);
+    await expect(fetchSignals("u1")).rejects.toThrow(/HTTP error! status: 500/);
   });
 
   it("throws when the response is not JSON", async () => {
@@ -42,7 +42,7 @@ describe("fetchSignals", () => {
         () => new HttpResponse("plain text", { headers: { "content-type": "text/plain" } }),
       ),
     );
-    await expect(fetchSignals("u1")).rejects.toThrow("Server returned non-JSON response");
+    await expect(fetchSignals("u1")).rejects.toThrow(/not valid JSON/);
   });
 });
 
@@ -69,6 +69,6 @@ describe("generateSignalsBatch", () => {
     server.use(
       http.post("/api/generate-signals-batch_claude", () => new HttpResponse(null, { status: 500 })),
     );
-    await expect(generateSignalsBatch("u1")).rejects.toThrow(/Failed to generate signals: 500/);
+    await expect(generateSignalsBatch("u1")).rejects.toThrow(/HTTP error! status: 500/);
   });
 });

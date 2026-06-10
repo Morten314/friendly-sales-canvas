@@ -6,6 +6,7 @@ import {
   type GenerateSignalsBatchResponse,
 } from "../contracts";
 
+import { apiGet, apiPost } from "@/shared/api/client";
 import { firstPageParams, paginatedSchema } from "@/shared/api/pagination";
 
 /**
@@ -14,15 +15,10 @@ import { firstPageParams, paginatedSchema } from "@/shared/api/pagination";
  * The consumer (Task 12) normalizes via `buildSignalCardsFromFetchData`.
  */
 export async function fetchSignals(userId: string): Promise<FetchSignalsResponse> {
-  const response = await fetch(`/api/v2/fetch-signals?user_id=${userId}&${firstPageParams(10)}`);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch signals: ${response.status} ${response.statusText}`);
-  }
-  const contentType = response.headers.get("content-type");
-  if (!contentType || !contentType.includes("application/json")) {
-    throw new Error("Server returned non-JSON response");
-  }
-  const env = paginatedSchema(z.unknown()).parse(await response.json());
+  const env = await apiGet(
+    `v2/fetch-signals?user_id=${encodeURIComponent(userId)}&${firstPageParams(10)}`,
+    paginatedSchema(z.unknown()),
+  );
   return { signals: env.items };
 }
 
@@ -32,12 +28,9 @@ export async function fetchSignals(userId: string): Promise<FetchSignalsResponse
  * fixed firmographics `data` block and `refresh: true`).
  */
 export async function generateSignalsBatch(userId: string): Promise<GenerateSignalsBatchResponse> {
-  const response = await fetch("/api/generate-signals-batch_claude", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
+  return apiPost(
+    "generate-signals-batch_claude",
+    {
       user_id: userId,
       component_name: "test",
       data: {
@@ -51,14 +44,7 @@ export async function generateSignalsBatch(userId: string): Promise<GenerateSign
         targetMarkets: ["North America", "Europe"],
       },
       refresh: true,
-    }),
-  });
-  if (!response.ok) {
-    throw new Error(`Failed to generate signals: ${response.status} ${response.statusText}`);
-  }
-  const contentType = response.headers.get("content-type");
-  if (!contentType || !contentType.includes("application/json")) {
-    throw new Error("Server returned non-JSON response");
-  }
-  return GenerateSignalsBatchResponseSchema.parse(await response.json());
+    },
+    GenerateSignalsBatchResponseSchema,
+  );
 }

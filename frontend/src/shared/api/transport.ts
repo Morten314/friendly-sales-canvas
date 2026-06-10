@@ -1,6 +1,5 @@
 // API utility for handling base URL and proxy configuration
 const isDevelopment = import.meta.env.DEV;
-const isVercel = import.meta.env.VITE_VERCEL || window.location.hostname.includes("vercel.app");
 // `vite preview` and e2e tests run on localhost serving a production bundle —
 // without this branch, requests would resolve to direct Render and bypass
 // Playwright's `**/api/*` route handlers.
@@ -11,8 +10,10 @@ const isLocalhost =
 // Single source of truth for the deployed backend host.
 export const BACKEND_BASE_URL = "https://brewra-gtm-intelligence.onrender.com";
 
-// Use proxy in development, Vercel, and localhost; direct URL elsewhere.
-const API_BASE_URL = isDevelopment || isVercel || isLocalhost ? "/api" : BACKEND_BASE_URL;
+// Dev + localhost use the Vite /api proxy. Vercel production calls Render
+// directly — proxied rewrites time out at 120s, but Claude signal batch often
+// runs longer; the backend allows CORS from any origin.
+const API_BASE_URL = isDevelopment || isLocalhost ? "/api" : BACKEND_BASE_URL;
 
 // Helper function to build API URLs
 export const buildApiUrl = (endpoint: string): string => {
