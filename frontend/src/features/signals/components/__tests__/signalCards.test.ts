@@ -9,6 +9,7 @@ import {
   buildSignalCardsFromFetchData,
   getSignalContentHash,
   parseTimestamp,
+  sanitizeSourceUrl,
 } from "../signalCards";
 
 const makeCard = (overrides: Partial<SignalCard> = {}): SignalCard => ({
@@ -133,5 +134,35 @@ describe("buildSignalCardsFromFetchData", () => {
 
     expect(result[0].id).toBe("primary");
     expect(result[0].NBAs).toEqual([{ nba: "Do thing", prompt: "" }]);
+  });
+
+  it("sanitizes malformed Tavily API citation URLs from API payloads", () => {
+    const result = buildSignalCardsFromFetchData({
+      signals: [
+        {
+          signal_id: "s1",
+          headline: "H",
+          sourceUrl: "https://api.tavily.com/search')",
+          source: [
+            { citation: "Gartner", url: "https://api.tavily.com/search')" },
+            { citation: "Statista", url: "https://statista.com/topic')" },
+          ],
+        },
+      ],
+    });
+
+    expect(result[0].sourceUrl).toBe("https://statista.com/topic");
+    expect(result[0].source).toEqual([
+      { citation: "Statista", url: "https://statista.com/topic" },
+    ]);
+  });
+});
+
+describe("sanitizeSourceUrl", () => {
+  it("removes trailing junk and blocks Tavily API hosts", () => {
+    expect(sanitizeSourceUrl("https://api.tavily.com/search')")).toBe("");
+    expect(sanitizeSourceUrl("https://www.gartner.com/report')")).toBe(
+      "https://www.gartner.com/report",
+    );
   });
 });

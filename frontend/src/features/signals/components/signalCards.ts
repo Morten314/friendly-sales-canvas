@@ -2,6 +2,32 @@ import type { NBAItem, SignalCard, SourceCitation } from "../types";
 
 import type { UntypedBackendSignal } from "@/shared/types/escape-hatches";
 
+const BLOCKED_SOURCE_HOSTS = new Set(["api.tavily.com"]);
+
+/** Strip junk punctuation and block non-article Tavily API endpoints. */
+export function sanitizeSourceUrl(url: string | undefined | null): string {
+  if (!url || typeof url !== "string") return "";
+  const cleaned = url.trim().replace(/['")\],.;]+$/g, "");
+  if (!/^https?:\/\//i.test(cleaned)) return "";
+  try {
+    const host = new URL(cleaned).hostname.toLowerCase();
+    if (BLOCKED_SOURCE_HOSTS.has(host)) return "";
+    return cleaned;
+  } catch {
+    return "";
+  }
+}
+
+function normalizeSourceCitation(
+  citation: string,
+  url: string | undefined | null,
+): SourceCitation | null {
+  const safeUrl = sanitizeSourceUrl(url);
+  if (!safeUrl) return null;
+  const label = citation.trim();
+  return { citation: label || safeUrl, url: safeUrl };
+}
+
 // Helper function to generate a stable content-based ID for a signal
 export const getSignalContentHash = (signal: SignalCard): string => {
   const content = `${signal.headline}-${signal.snippet}-${signal.description || ""}-${signal.agent}`;
@@ -104,22 +130,28 @@ export function buildSignalCardsFromFetchData(data: {
       ? sourceRaw
           .map((s: SourceCitation | string) =>
             typeof s === "object" && s !== null && "citation" in s && "url" in s
-              ? {
-                  citation: (s as SourceCitation).citation ?? "",
-                  url: (s as SourceCitation).url ?? "",
-                }
-              : {
-                  citation: typeof s === "string" ? s : "",
-                  url: typeof s === "string" && /^https?:\/\//i.test(s) ? s : "",
-                },
+              ? normalizeSourceCitation(
+                  (s as SourceCitation).citation ?? "",
+                  (s as SourceCitation).url ?? "",
+                )
+              : typeof s === "string"
+                ? normalizeSourceCitation(s, /^https?:\/\//i.test(s) ? s : "")
+                : null,
           )
-          .filter((c) => c.citation || c.url)
+          .filter((c): c is SourceCitation => c !== null)
       : [];
+
+    const sourceUrl =
+      sanitizeSourceUrl(signal.sourceUrl as string | undefined) ||
+      sanitizeSourceUrl(signal.source_url as string | undefined) ||
+      source.find((c) => c.url)?.url ||
+      "";
 
     return {
       ...signal,
       id: signalId,
       description: signal.description || "",
+      sourceUrl,
       source,
       nextBestMoves,
       NBAs,

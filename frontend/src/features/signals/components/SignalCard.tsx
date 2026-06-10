@@ -11,6 +11,7 @@ import {
 import type { ReactNode } from "react";
 
 import type { Agent, NBAItem, SignalCard as SignalCardType } from "../types";
+import { sanitizeSourceUrl } from "./signalCards";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -164,11 +165,11 @@ export const SignalCard = ({
                         <div className="mt-2 flex flex-col gap-1.5 justify-start">
                           {signal.source.map((src, idx) => {
                             const label = src.citation || src.url || "Source";
-                            const hasUrl = src.url && /^https?:\/\//i.test(src.url);
-                            return hasUrl ? (
+                            const safeUrl = sanitizeSourceUrl(src.url);
+                            return safeUrl ? (
                               <a
                                 key={idx}
-                                href={src.url}
+                                href={safeUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="block w-fit"
