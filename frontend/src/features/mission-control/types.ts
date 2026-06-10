@@ -26,6 +26,8 @@ export type DataSourceType = "url" | "file" | "system";
 export type DataSourceStatus = "active" | "failed" | "processing" | "completed";
 export interface DataSource {
   id: string;
+  /** S3 object key (`org_id/{uuid}_{filename}`) — used for GET /document-status. */
+  fileKey?: string;
   fileId?: string;
   type: DataSourceType;
   name: string;

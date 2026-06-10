@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { extractFileIdFromFileKey, getTypeLabel } from "../dataSourceHelpers";
+import type { DataSource } from "../../../types";
+import {
+  encodeFileKeyForStatusUrl,
+  extractFileIdFromFileKey,
+  getTypeLabel,
+  isSameDataSourceRow,
+  resolveDocumentStatusFileKey,
+  shouldMergeFileByFileName,
+} from "../dataSourceHelpers";
 
 // ---------------------------------------------------------------------------
 // extractFileIdFromFileKey
@@ -38,6 +46,80 @@ describe("extractFileIdFromFileKey", () => {
   it("is case-insensitive for hexadecimal UUID characters", () => {
     const upperUUID = UUID.toUpperCase();
     expect(extractFileIdFromFileKey(`user/${upperUUID}_data.csv`)).toBe(upperUUID);
+  });
+});
+
+describe("encodeFileKeyForStatusUrl", () => {
+  it("encodes spaces in the filename segment", () => {
+    expect(encodeFileKeyForStatusUrl("brewra/uuid_my report.pdf")).toBe(
+      "brewra/uuid_my%20report.pdf",
+    );
+  });
+});
+
+describe("shouldMergeFileByFileName", () => {
+  const base = (overrides: Partial<DataSource>): DataSource => ({
+    id: "id-1",
+    type: "file",
+    name: "Doc",
+    tags: [],
+    status: "processing",
+    createdAt: new Date(),
+    fileName: "report.pdf",
+    fileId: "uuid-1",
+    fileKey: "brewra/uuid-1_report.pdf",
+    ...overrides,
+  });
+
+  it("returns false when re-uploading the same filename with a new fileId", () => {
+    const existing = base({
+      id: "brewra/old-uuid_report.pdf",
+      fileId: "old-uuid",
+      fileKey: "brewra/old-uuid_report.pdf",
+    });
+    const backend = base({
+      id: "brewra/new-uuid_report.pdf",
+      fileId: "new-uuid",
+      fileKey: "brewra/new-uuid_report.pdf",
+    });
+    expect(shouldMergeFileByFileName(existing, backend)).toBe(false);
+  });
+
+  it("returns true when fileId matches", () => {
+    const existing = base({});
+    const backend = base({ id: "brewra/uuid-1_report.pdf" });
+    expect(shouldMergeFileByFileName(existing, backend)).toBe(true);
+  });
+});
+
+describe("resolveDocumentStatusFileKey", () => {
+  it("prefers fileKey over a stale merged id", () => {
+    const source: DataSource = {
+      id: "stale/old-key",
+      fileKey: "brewra/new-uuid_report.pdf",
+      type: "file",
+      name: "Doc",
+      tags: [],
+      status: "processing",
+      createdAt: new Date(),
+    };
+    expect(resolveDocumentStatusFileKey(source)).toBe("brewra/new-uuid_report.pdf");
+  });
+});
+
+describe("isSameDataSourceRow", () => {
+  it("matches rows by fileId when ids differ", () => {
+    const row: DataSource = {
+      id: "stale-id",
+      fileId: "uuid-1",
+      type: "file",
+      name: "Doc",
+      tags: [],
+      status: "processing",
+      createdAt: new Date(),
+    };
+    const target: DataSource = { ...row, id: "brewra/uuid-1_report.pdf" };
+    expect(isSameDataSourceRow(row, target)).toBe(true);
   });
 });
 

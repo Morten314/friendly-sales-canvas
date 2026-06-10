@@ -3,7 +3,7 @@
  * Extracted from DataSourcesManager (Phase 13b, Seam 2).
  */
 
-import type { DataSourceType } from "../../types";
+import type { DataSource, DataSourceType } from "../../types";
 
 // Extract file_id UUID from file_key (which is in format: {user_id}/{uuid}_{filename})
 export const extractFileIdFromFileKey = (fileKey: string): string => {
@@ -62,6 +62,37 @@ export const extractFileIdFromFileKey = (fileKey: string): string => {
     fileKey,
   );
   return fileKey;
+};
+
+/** file_key path for GET /document-status — never a stale merged UI id. */
+export const resolveDocumentStatusFileKey = (source: DataSource): string =>
+  source.type === "file" ? (source.fileKey ?? source.id) : source.id;
+
+/** Encode each path segment so spaces and special chars in filenames survive fetch. */
+export const encodeFileKeyForStatusUrl = (fileKey: string): string =>
+  fileKey
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+
+/** Only merge by fileName when both rows are the same backend object. */
+export const shouldMergeFileByFileName = (
+  existing: DataSource,
+  backend: DataSource,
+): boolean => {
+  if (!backend.fileName || existing.fileName !== backend.fileName) return false;
+  if (backend.fileId && existing.fileId) {
+    return backend.fileId === existing.fileId;
+  }
+  const backendKey = backend.fileKey ?? backend.id;
+  if (existing.fileKey && existing.fileKey === backendKey) return true;
+  return existing.id === backend.id;
+};
+
+/** Update the row that corresponds to a polled file (fileId is authoritative). */
+export const isSameDataSourceRow = (row: DataSource, target: DataSource): boolean => {
+  if (target.fileId && row.fileId && row.fileId === target.fileId) return true;
+  return row.id === target.id;
 };
 
 export const getTypeLabel = (type: DataSourceType) => {

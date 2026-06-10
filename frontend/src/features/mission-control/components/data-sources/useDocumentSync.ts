@@ -4,7 +4,14 @@ import { useState, useEffect, useCallback } from "react";
 import { useDataSources } from "../../hooks/useDataSources";
 import type { DataSource, DataSourceStatus } from "../../types";
 
-import { extractFileIdFromFileKey } from "./dataSourceHelpers";
+import {
+  encodeFileKeyForStatusUrl,
+  extractFileIdFromFileKey,
+  isSameDataSourceRow,
+  resolveDocumentStatusFileKey,
+  shouldMergeFileByFileName,
+} from "./dataSourceHelpers";
+import { mapDocumentListStatus, parseDocumentStatusResponse } from "./leadStreamStatus";
 
 import { buildApiUrl } from "@/shared/api/transport";
 import type { UntypedBackendDocument } from "@/shared/types/escape-hatches";
@@ -42,11 +49,11 @@ export function useDocumentSync({
   // Read hooks (TanStack Query). The two GET reads are served by these hooks; the
   // mapping/merge into component state stays here (sync-effects below). Writes
   // still use raw fetch + getAuthHeader (deferred).
-  const dataSourcesQuery = useDataSources(orgIdToUse);
+  const dataSourcesQuery = useDataSources(orgIdToUse, !!currentUser?.uid);
 
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
   const [_isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const isLoading = dataSourcesQuery.isLoading || dataSourcesQuery.isFetching;
 
   // Check processing status for a specific file
   const checkDocumentStatus = async (
@@ -57,7 +64,7 @@ export function useDocumentSync({
     }
 
     const authHeader = await getAuthHeader();
-    const url = buildApiUrl(`document-status/${fileKey}`);
+    const url = buildApiUrl(`document-status/${encodeFileKeyForStatusUrl(fileKey)}`);
 
     const response = await fetch(url, {
       method: "GET",
@@ -73,27 +80,24 @@ export function useDocumentSync({
     }
 
     const payload = await response.json();
-    return {
-      status: (payload.status || "processing") as DataSourceStatus,
-      chunks_count: payload.chunks_count,
-      timestamps: payload.timestamps,
-    };
+    return parseDocumentStatusResponse(payload);
   };
 
   // Check status for processing files
-  const checkProcessingFilesStatus = async () => {
+  const checkProcessingFilesStatus = useCallback(async () => {
     setDataSources((currentSources) => {
       const processingFiles = currentSources.filter(
         (s) => s.status === "processing" && s.type === "file",
       );
 
-      // Check status for each processing file using file_key
       processingFiles.forEach((file) => {
         void (async () => {
           try {
-            const statusPayload = await checkDocumentStatus(file.id);
+            const statusPayload = await checkDocumentStatus(resolveDocumentStatusFileKey(file));
             setDataSources((prev) =>
-              prev.map((s) => (s.id === file.id ? { ...s, status: statusPayload.status } : s)),
+              prev.map((s) =>
+                isSameDataSourceRow(s, file) ? { ...s, status: statusPayload.status } : s,
+              ),
             );
           } catch (err) {
             console.error(`Error checking status for file ${file.id}:`, err);
@@ -103,7 +107,7 @@ export function useDocumentSync({
 
       return currentSources;
     });
-  };
+  }, [currentUser?.uid, getAuthHeader]);
 
   // Map the backend documents (from the useDataSources read) into the merged
   // DataSource[] state. The hook already unwrapped the {documents|files|data}
@@ -143,8 +147,13 @@ export function useDocumentSync({
             doc.file_key !== null && doc.file_key !== undefined && doc.file_key !== "";
           const hasFileKeyAlt =
             doc.fileKey !== null && doc.fileKey !== undefined && doc.fileKey !== "";
-          const isUrlSource = !hasFileKey && !hasFileKeyAlt && doc.file_id; // URL if no file_key but has file_id
-          const isFileSource = hasFileKey || hasFileKeyAlt;
+          const docType = String(doc.data_source_type || doc.dataSourceType || "")
+            .toLowerCase()
+            .trim();
+          const isUrlSource =
+            docType === "url" ||
+            (!hasFileKey && !hasFileKeyAlt && docType !== "file" && !!doc.file_id);
+          const isFileSource = docType === "file" || hasFileKey || hasFileKeyAlt;
 
           if (isUrlSource) {
             console.log("🔗 DataSourcesManager - Identified as URL source:", {
@@ -243,7 +252,7 @@ export function useDocumentSync({
               url: urlValue,
               description: doc.description || undefined,
               tags: parsedTags,
-              status: (doc.status || "active") as DataSourceStatus,
+              status: mapDocumentListStatus(doc, "url"),
               createdAt: doc.uploaded_at
                 ? new Date(doc.uploaded_at)
                 : doc.created_at
@@ -252,8 +261,10 @@ export function useDocumentSync({
             };
           } else {
             // File source
+            const fileKeyPath = doc.file_key || doc.fileKey || undefined;
             return {
-              id: doc.file_key || doc.fileKey || doc.id || `source-${Date.now()}-${Math.random()}`,
+              id: fileKeyPath || doc.id || `source-${Date.now()}-${Math.random()}`,
+              fileKey: fileKeyPath || doc.id,
               fileId: fileId, // Store the file_id for deletion
               type: "file",
               name:
@@ -266,7 +277,7 @@ export function useDocumentSync({
               url: doc.file_url,
               description: doc.description || undefined,
               tags: parsedTags,
-              status: (doc.status || "processing") as DataSourceStatus,
+              status: mapDocumentListStatus(doc, "file"),
               createdAt: doc.uploaded_at
                 ? new Date(doc.uploaded_at)
                 : doc.created_at
@@ -321,6 +332,7 @@ export function useDocumentSync({
 
           // Merge file sources: use backend data, but preserve any local metadata updates
           const mergedFileSources = loadedFileSources.map((backendFile) => {
+            const backendStatusFileKey = backendFile.fileKey ?? backendFile.id;
             let existingFile: DataSource | undefined = undefined;
             let matchedById: string | undefined = undefined;
 
@@ -349,16 +361,15 @@ export function useDocumentSync({
               }
             }
 
-            // Priority 3: Match by fileName if both above failed
+            // Priority 3: Match by fileName only for the same backend file — never a re-upload.
             if (!existingFile && backendFile.fileName) {
-              existingFile = existingFilesByFileName.get(backendFile.fileName);
-              if (existingFile) {
-                matchedById = existingFile.id;
-                // Update backend file ID to match existing
-                backendFile.id = existingFile.id;
+              const candidate = existingFilesByFileName.get(backendFile.fileName);
+              if (candidate && shouldMergeFileByFileName(candidate, backendFile)) {
+                existingFile = candidate;
+                matchedById = candidate.id;
                 console.log("✅ DataSourcesManager - Matched by fileName:", {
                   fileName: backendFile.fileName,
-                  existingId: existingFile.id,
+                  existingId: candidate.id,
                   backendId: backendFile.id,
                 });
               }
@@ -371,6 +382,7 @@ export function useDocumentSync({
               return {
                 ...backendFile,
                 id: matchedById, // Keep the existing ID to maintain reference
+                fileKey: backendStatusFileKey,
                 fileId: backendFile.fileId || existingFile.fileId, // Use backend fileId (most up-to-date)
                 // Use backend data for all fields since backend is source of truth after PUT update
                 name: backendFile.name || existingFile.name,
@@ -503,11 +515,19 @@ export function useDocumentSync({
     }
   }, [dataSourcesQuery.data, applyBackendDocuments]);
 
-  // Keep the data-sources loading flag in sync with the query's fetch state so the
-  // existing isLoading UI still reflects in-flight reads.
+  // Poll /document-status while any file row is still processing.
   useEffect(() => {
-    setIsLoading(dataSourcesQuery.isFetching);
-  }, [dataSourcesQuery.isFetching]);
+    const needsPoll = dataSources.some(
+      (s) => s.type === "file" && s.status === "processing",
+    );
+    if (!needsPoll) return;
+
+    void checkProcessingFilesStatus();
+    const id = window.setInterval(() => {
+      void checkProcessingFilesStatus();
+    }, 4000);
+    return () => window.clearInterval(id);
+  }, [dataSources, checkProcessingFilesStatus]);
 
   // Load documents from backend (separate storage, not company profile).
   // Thin wrapper over the query refetch. The sync-effect above also re-maps query

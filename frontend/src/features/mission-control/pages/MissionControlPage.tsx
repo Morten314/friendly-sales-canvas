@@ -61,6 +61,17 @@ const MissionControlPage = () => {
     await queryClient.refetchQueries({ queryKey: qk.icps(orgIdToUse) });
   }, [currentUser?.uid, orgIdToUse, queryClient]);
 
+  /** Fresh GET of uploaded documents + lead-stream status when the Data Sources tab opens. */
+  const refreshDataSources = useCallback(async () => {
+    if (!currentUser?.uid) return;
+    await Promise.all([
+      queryClient.refetchQueries({ queryKey: qk.dataSources(orgIdToUse) }),
+      queryClient.refetchQueries({
+        queryKey: qk.leadStreamStatus(currentUser.uid, orgIdToUse),
+      }),
+    ]);
+  }, [currentUser?.uid, orgIdToUse, queryClient]);
+
   // Company-profile READ — the page shares ONE TanStack cache entry with
   // CompanyProfileForm's own useCompanyProfile(orgIdToUse) call (a single GET
   // /api/profile/company). The form owns the editable form state + writes; the
@@ -149,6 +160,7 @@ const MissionControlPage = () => {
       window.history.replaceState({}, document.title, newUrl);
     } else if (tabParam === "sources" && !isDataSourcesLocked) {
       setActiveTab("sources");
+      void refreshDataSources();
       // Clean up URL param after setting tab
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
@@ -158,7 +170,7 @@ const MissionControlPage = () => {
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
     }
-  }, [isCustomerProfileLocked, isDataSourcesLocked, refreshCustomerProfileIcps]); // Run after locks are determined
+  }, [isCustomerProfileLocked, isDataSourcesLocked, refreshCustomerProfileIcps, refreshDataSources]); // Run after locks are determined
 
   // Mount: ensure the profiler scope exists, and seed the page's read-driven
   // state from the profiler cache when valid (the data-sources branch +
@@ -380,6 +392,9 @@ const MissionControlPage = () => {
             setActiveTab(value);
             if (value === "customer-profile") {
               void refreshCustomerProfileIcps();
+            }
+            if (value === "sources") {
+              void refreshDataSources();
             }
           }}
           className="space-y-6"

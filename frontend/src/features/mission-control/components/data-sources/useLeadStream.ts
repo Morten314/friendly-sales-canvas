@@ -127,6 +127,8 @@ export function useLeadStream({
   const leadStreamQuery = useLeadStreamStatus(currentUser?.uid ?? "", orgIdToUse);
   // React Query refetch fn is stable across renders — destructure once
   const { refetch: refetchLeadStream } = leadStreamQuery;
+  const isLeadStreamQueryLoading =
+    leadStreamQuery.isLoading || leadStreamQuery.isFetching;
 
   const isLeadStreamRowDeletedInApi = (row: LeadStreamFileApiRow): boolean => {
     const ps = (row.processing_status || "").toLowerCase();
@@ -526,7 +528,7 @@ export function useLeadStream({
   return {
     // State values
     leadStreamFiles,
-    leadStreamStatusLoading,
+    leadStreamStatusLoading: leadStreamStatusLoading || isLeadStreamQueryLoading,
     isUploadingLeads,
     deletingLeadStreamFileId,
     showLeadUpload,

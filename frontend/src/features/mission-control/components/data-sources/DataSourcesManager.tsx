@@ -1407,7 +1407,7 @@ const DataSourcesManager: React.FC = () => {
   return (
     <div className="space-y-6 relative">
       {/* Loading Overlay */}
-      {isLoading && (
+      {(isLoading || leadStreamStatusLoading) && (
         <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="flex gap-2">
             <div

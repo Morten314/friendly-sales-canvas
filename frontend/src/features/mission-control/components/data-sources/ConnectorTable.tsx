@@ -5,6 +5,7 @@ import type { DataSource } from "../../types";
 
 import { getStatusBadge, getTypeIcon } from "./dataSourceBadges";
 import { getTypeLabel } from "./dataSourceHelpers";
+import { mapProcessingStatusToSourceStatus } from "./leadStreamStatus";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -87,7 +88,9 @@ const ConnectorTable: React.FC<ConnectorTableProps> = ({
                   <span className="text-sm text-muted-foreground">—</span>
                 )}
               </TableCell>
-              <TableCell>{getStatusBadge(source.status)}</TableCell>
+              <TableCell>
+                {getStatusBadge(mapProcessingStatusToSourceStatus(source.status))}
+              </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-1">
                   <Button

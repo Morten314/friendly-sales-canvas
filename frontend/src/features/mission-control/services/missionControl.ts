@@ -16,7 +16,11 @@ export async function fetchDataSources(orgId: string): Promise<unknown[]> {
     `v2/user-documents?org_id=${encodeURIComponent(orgId)}&${firstPageParams(500)}`,
     paginatedSchema(z.unknown()),
   );
-  return env.items ?? [];
+  const items = env.items ?? [];
+  if (items.length > 0) return items;
+  // Passthrough envelope may still carry a legacy v1 `files` array on some paths.
+  const legacy = env as { files?: unknown[]; documents?: unknown[]; data?: unknown[] };
+  return legacy.files ?? legacy.documents ?? legacy.data ?? [];
 }
 
 /** GET /api/leads/stream/status — uploaded lead-stream files + processing stats. */
