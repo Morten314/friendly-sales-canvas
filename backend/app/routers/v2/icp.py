@@ -13,6 +13,7 @@ router = APIRouter(prefix="/icp", tags=["v2", "icp"])
 async def list_icps_v2(
     user_id: str = Query(...),
     refresh: bool = Query(False),
+    org_id: str | None = Query(None),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
     driver=Depends(get_neo4j_driver),
@@ -23,5 +24,6 @@ async def list_icps_v2(
         driver, mongo, agent_chain,
         user_id=user_id, refresh=refresh,
         limit=limit, offset=offset,
+        org_id=org_id,
     )
     return PaginatedResponse(items=items, total=total, limit=limit, offset=offset)

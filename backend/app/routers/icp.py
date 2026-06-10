@@ -19,6 +19,7 @@ async def get_or_create_icp_config(
     response: Response,
     user_id: str = Query(...),
     refresh: bool = Query(False),
+    org_id: str | None = Query(None),
     driver=Depends(get_neo4j_driver),
     mongo=Depends(get_mongo),
     agent_chain=Depends(get_agent_chain),
@@ -29,7 +30,9 @@ async def get_or_create_icp_config(
     """
     response.headers["Deprecation"] = "true"
     response.headers["Link"] = '</api/v2/icp>; rel="successor-version"'
-    items, _ = icp_service.list_icps(driver, mongo, agent_chain, user_id=user_id, refresh=refresh)
+    items, _ = icp_service.list_icps(
+        driver, mongo, agent_chain, user_id=user_id, refresh=refresh, org_id=org_id,
+    )
     return {"suggestedICPs": items}
 
 

@@ -17,6 +17,7 @@ from app.core.exceptions import (
     ICPConfigNotFoundError,
     ICPIdRegistryError,
     RecommendedICPNotFoundError,
+    ServiceError,
 )
 from app.core.logging import logger
 from app.services._neo4j_helpers import fetch_company_profile
@@ -31,6 +32,7 @@ def list_icps(
     refresh: bool = False,
     limit: int = 500,
     offset: int = 0,
+    org_id: str | None = None,
 ) -> tuple[List[Dict[str, Any]], int]:
     """Fetch or generate ICPs for a given user_id.
 
@@ -39,7 +41,7 @@ def list_icps(
       - On cache miss or refresh, generates new ICPs via ICP_generator() from
         a Neo4j company profile, normalises the payload, and persists to Mongo.
     """
-    logger.info(f"[ICP] Request - user_id: {user_id}, refresh: {refresh}")
+    logger.info(f"[ICP] Request - user_id: {user_id}, refresh: {refresh}, org_id: {org_id}")
 
     def normalize_icp_response(payload: Any) -> Dict[str, Any]:
         """
@@ -203,10 +205,11 @@ def list_icps(
         logger.info(f"[ICP] Generating new ICPs for user_id: {user_id}")
 
         # Generate new ICPs from Neo4j company profile - get shared company profile
-        company_profile = fetch_company_profile(driver)
+        company_profile = fetch_company_profile(driver, org_id)
         if company_profile is None:
-            logger.error(f"[ICP] ERROR: No company profile in Neo4j")
-            raise CompanyProfileNotFoundError("No company profile found in Neo4j")
+            org_msg = f" for org_id: {org_id}" if org_id else ""
+            logger.error(f"[ICP] ERROR: No company profile in Neo4j{org_msg}")
+            raise CompanyProfileNotFoundError(f"No company profile found in Neo4j{org_msg}")
 
         logger.info(f"[ICP] Company profile retrieved from Neo4j")
 
@@ -220,7 +223,7 @@ def list_icps(
         # Generate ICPs
         logger.info(f"[ICP] Calling ICP_generator() for user_id: {user_id}")
         try:
-            icp_result, prompt_meta = ICP_generator(agent_chain, company_profile)
+            icp_result, prompt_meta = ICP_generator(agent_chain, json.dumps(company_profile))
             if isinstance(icp_result, dict) and "suggestedICPs" in icp_result:
                 logger.info(f"[ICP] Generated {len(icp_result.get('suggestedICPs', []))} ICPs for user_id: {user_id}")
             else:
@@ -228,7 +231,7 @@ def list_icps(
             icp_result = normalize_icp_response(icp_result)
         except Exception as gen_error:
             logger.error(f"[ICP] ERROR in ICP_generator: {str(gen_error)}")
-            raise
+            raise ServiceError(f"ICP generation failed: {gen_error}") from gen_error
 
         # Upsert the result in MongoDB - filter by user_id only
         logger.info(f"[ICP] Saving to MongoDB for user_id: {user_id}")
