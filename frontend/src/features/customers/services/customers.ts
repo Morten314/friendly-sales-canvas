@@ -7,6 +7,7 @@ import {
 } from "../contracts";
 
 import { firstPageParams, paginatedSchema } from "@/shared/api/pagination";
+import { apiPost } from "@/shared/api/client";
 import { apiFetch, apiFetchJson, buildApiUrl } from "@/shared/api/transport";
 import {
   buildCustomerProfileSavePayload,
@@ -26,6 +27,58 @@ export function fetchCustomerProfileIcps(userId: string, orgId: string): Promise
   return fetchIcpsRowsForOrg(userId, orgId);
 }
 
+/** Canonical backend component_name values for POST `/icp-research_claude`. */
+export const ICP_RESEARCH_COMPONENTS = {
+  summary: "icp summary & market opportunity",
+  buyerMap: "buyer map & roles, pain points, triggers",
+  competitive: "competitive overlap & buying signals",
+  regulatory: "regulatory, compliance & recommended icp",
+} as const;
+export type IcpResearchComponentName =
+  (typeof ICP_RESEARCH_COMPONENTS)[keyof typeof ICP_RESEARCH_COMPONENTS];
+
+const IcpResearchComponentSchema = z
+  .object({
+    status: z.string(),
+    data: z.record(z.string(), z.unknown()),
+  })
+  .passthrough();
+
+/** Fetch one ICP research component (POST `/icp-research_claude`). */
+export function fetchIcpResearchComponent(
+  userId: string,
+  componentName: IcpResearchComponentName,
+  opts: { orgId?: string; data?: Record<string, unknown>; refresh?: boolean } = {},
+): Promise<z.infer<typeof IcpResearchComponentSchema>> {
+  return apiPost(
+    "icp-research_claude",
+    {
+      user_id: userId,
+      ...(opts.orgId !== undefined && { org_id: opts.orgId }),
+      component_name: componentName,
+      data: opts.data ?? {},
+      refresh: opts.refresh ?? false,
+    },
+    IcpResearchComponentSchema,
+  );
+}
+
+/** Run all four ICP research components in sequence (Profiler refresh / deep-dive). */
+export async function runIcpResearchRefreshCascade(
+  userId: string,
+  orgId?: string,
+): Promise<void> {
+  let previousContext: Record<string, unknown> = {};
+  for (const componentName of Object.values(ICP_RESEARCH_COMPONENTS)) {
+    const response = await fetchIcpResearchComponent(userId, componentName, {
+      orgId,
+      data: previousContext,
+      refresh: true,
+    });
+    previousContext = { ...previousContext, ...response.data };
+  }
+}
+
 /**
  * Recommended ICPs read — GET /api/v2/icp (Spec 34 Task 4). Routes through
  * `buildApiUrl` → `/api` proxy (no longer direct-host). Decodes the v2
@@ -35,19 +88,45 @@ export function fetchCustomerProfileIcps(userId: string, orgId: string): Promise
  */
 export async function fetchSuggestedIcps(
   userId: string,
-  opts: { refresh?: boolean } = {},
+  opts: { refresh?: boolean; orgId?: string } = {},
 ): Promise<SuggestedIcpsResponse> {
   const params = new URLSearchParams({ user_id: userId });
   if (opts.refresh) params.set("refresh", "true");
+  if (opts.orgId) params.set("org_id", opts.orgId);
   const res = await fetch(buildApiUrl(`v2/icp?${params.toString()}&${firstPageParams(500)}`), {
     method: "GET",
     headers: { "Content-Type": "application/json" },
   });
   if (!res.ok) {
-    throw new Error(`GET /icp failed: ${res.status} ${res.statusText}`);
+    const detail = await res.text().catch(() => "");
+    throw new Error(
+      `GET /icp failed: ${res.status} ${res.statusText}${detail ? ` — ${detail}` : ""}`,
+    );
   }
   const env = paginatedSchema(z.unknown()).parse(await res.json());
   return SuggestedIcpsResponseSchema.parse({ suggestedICPs: env.items });
+}
+
+/** Refresh with fallback: if regenerate fails, load the last cached list instead. */
+export async function fetchSuggestedIcpsWithRefreshFallback(
+  userId: string,
+  orgId: string,
+  refresh: boolean,
+): Promise<{ data: SuggestedIcpsResponse; usedCachedFallback: boolean }> {
+  if (!refresh) {
+    return { data: await fetchSuggestedIcps(userId, { orgId }), usedCachedFallback: false };
+  }
+  try {
+    return {
+      data: await fetchSuggestedIcps(userId, { orgId, refresh: true }),
+      usedCachedFallback: false,
+    };
+  } catch {
+    return {
+      data: await fetchSuggestedIcps(userId, { orgId, refresh: false }),
+      usedCachedFallback: true,
+    };
+  }
 }
 
 /** POST /api/customer_profile/from_suggested_icp — persist an accepted ICP. */

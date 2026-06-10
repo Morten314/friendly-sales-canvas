@@ -43,11 +43,11 @@ beforeAll(() => {
 describe("ContextChat (substrate)", () => {
   it("renders the provided context and a message input", () => {
     // A context with a prompt but no answer triggers the answer-prefetch effect
-    // (POST /api/signal_Ask). setup.ts runs MSW with onUnhandledRequest: "error",
+    // (POST /api/signal_ask_claude). setup.ts runs MSW with onUnhandledRequest: "error",
     // and this task ships no global handler, so scope one locally. We assert on
     // signalHeading, which the collapsed context summary renders verbatim (the
     // bare prompt is only shown once the summary is expanded).
-    server.use(http.post("/api/signal_Ask", () => HttpResponse.json({ answer: "" })));
+    server.use(http.post("/api/signal_ask_claude", () => HttpResponse.json({ answer: "" })));
 
     const context: SignalsChatContext = {
       agent: "scout",

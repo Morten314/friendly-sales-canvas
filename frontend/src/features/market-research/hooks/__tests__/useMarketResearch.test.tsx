@@ -32,7 +32,7 @@ describe("useResearchComponent", () => {
     // (5h's useMarketSize fixture); this test only verifies generic fetch+parse, so it
     // owns its response shape — matching the server.use() pattern of the tests below.
     server.use(
-      http.post("/api/market-research", () =>
+      http.post("/api/market-research_claude", () =>
         HttpResponse.json({
           status: "success",
           data: { component_name: COMPONENT, title: "Test", summary: "Test summary" },
@@ -55,7 +55,7 @@ describe("useResearchComponent", () => {
   it("does not fire when userId or orgId is empty", async () => {
     let callCount = 0;
     server.use(
-      http.post("/api/market-research", () => {
+      http.post("/api/market-research_claude", () => {
         callCount += 1;
         return HttpResponse.json({
           status: "success",
@@ -78,10 +78,10 @@ describe("useResearchComponent", () => {
 
 describe("useRegenerateResearch", () => {
   it("writes mutation result into the component cache via setQueryData (no second POST)", async () => {
-    // Track how many POSTs are made to /api/market-research for this component.
+    // Track how many POSTs are made to /api/market-research_claude for this component.
     let postCount = 0;
     server.use(
-      http.post("/api/market-research", async ({ request }) => {
+      http.post("/api/market-research_claude", async ({ request }) => {
         postCount += 1;
         const body = (await request.json()) as { component_name?: string; refresh?: boolean };
         return HttpResponse.json({

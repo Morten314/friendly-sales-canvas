@@ -9,18 +9,18 @@ export interface SignalAskBody {
   history: { user: string; assistant: string }[];
 }
 
-/** POST /api/signal_Ask. Shared by the signals page + the ContextChat substrate. */
+/** POST /api/signal_ask_claude. Shared by the signals page + the ContextChat substrate. */
 export function useSignalAsk() {
   return useMutation<SignalAskResponse, Error, SignalAskBody>({
     mutationFn: async (body) => {
-      const res = await fetch("/api/signal_Ask", {
+      const res = await fetch("/api/signal_ask_claude", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(`signal_Ask failed: ${res.status} ${text}`);
+        throw new Error(`signal_ask_claude failed: ${res.status} ${text}`);
       }
       return SignalAskResponseSchema.parse(await res.json());
     },

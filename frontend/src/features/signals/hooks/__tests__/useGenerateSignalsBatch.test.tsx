@@ -16,7 +16,7 @@ function wrapper({ children }: { children: ReactNode }) {
 describe("useGenerateSignalsBatch", () => {
   it("posts the batch generate and resolves", async () => {
     server.use(
-      http.post("/api/generate-signals-batch", () =>
+      http.post("/api/generate-signals-batch_claude", () =>
         HttpResponse.json({ signals: [{ id: "g1" }] }),
       ),
     );

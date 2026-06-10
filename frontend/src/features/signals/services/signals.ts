@@ -27,12 +27,12 @@ export async function fetchSignals(userId: string): Promise<FetchSignalsResponse
 }
 
 /**
- * POST /api/generate-signals-batch — page-only. The body shape is lifted
+ * POST /api/generate-signals-batch_claude — page-only. The body shape is lifted
  * verbatim from SignalsPage (a hardcoded `component_name: "test"` probe with a
  * fixed firmographics `data` block and `refresh: true`).
  */
 export async function generateSignalsBatch(userId: string): Promise<GenerateSignalsBatchResponse> {
-  const response = await fetch("/api/generate-signals-batch", {
+  const response = await fetch("/api/generate-signals-batch_claude", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

@@ -57,7 +57,7 @@ describe("fetchResearchComponent", () => {
   it("sends optional orgId and refresh flags in the body", async () => {
     let capturedBody: unknown;
     server.use(
-      http.post("/api/market-research", async ({ request }) => {
+      http.post("/api/market-research_claude", async ({ request }) => {
         capturedBody = await request.json();
         return HttpResponse.json({
           status: "success",
@@ -84,7 +84,7 @@ describe("fetchResearchComponent", () => {
   it("defaults data to {} and refresh to false when opts are omitted", async () => {
     let capturedBody: unknown;
     server.use(
-      http.post("/api/market-research", async ({ request }) => {
+      http.post("/api/market-research_claude", async ({ request }) => {
         capturedBody = await request.json();
         return HttpResponse.json({ status: "success", data: {} });
       }),
@@ -100,7 +100,7 @@ describe("fetchResearchComponent", () => {
 
   it("rejects with a ZodError when the response does not match ResearchComponentSchema (no 'status' field)", async () => {
     server.use(
-      http.post("/api/market-research", () =>
+      http.post("/api/market-research_claude", () =>
         // Junk response — missing required 'status' field
         HttpResponse.json({}),
       ),

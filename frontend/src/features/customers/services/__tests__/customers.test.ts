@@ -32,6 +32,18 @@ describe("fetchSuggestedIcps", () => {
     expect(res).toMatchObject({ suggestedICPs: [] });
   });
 
+  it("sends org_id when provided", async () => {
+    let seenUrl = "";
+    server.use(
+      http.get("/api/v2/icp", ({ request }) => {
+        seenUrl = request.url;
+        return HttpResponse.json({ items: [], total: 0, limit: 500, offset: 0 });
+      }),
+    );
+    await fetchSuggestedIcps("u1", { orgId: "org-93713" });
+    expect(seenUrl).toContain("org_id=org-93713");
+  });
+
   it("sends refresh=true and user_id when requested", async () => {
     let seenUrl = "";
     server.use(

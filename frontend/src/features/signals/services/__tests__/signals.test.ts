@@ -50,7 +50,7 @@ describe("generateSignalsBatch", () => {
   it("parses the response and sends the lifted body shape", async () => {
     let body: unknown;
     server.use(
-      http.post("/api/generate-signals-batch", async ({ request }) => {
+      http.post("/api/generate-signals-batch_claude", async ({ request }) => {
         body = await request.json();
         return HttpResponse.json({ signals: [] });
       }),
@@ -67,7 +67,7 @@ describe("generateSignalsBatch", () => {
 
   it("throws on a non-ok response", async () => {
     server.use(
-      http.post("/api/generate-signals-batch", () => new HttpResponse(null, { status: 500 })),
+      http.post("/api/generate-signals-batch_claude", () => new HttpResponse(null, { status: 500 })),
     );
     await expect(generateSignalsBatch("u1")).rejects.toThrow(/Failed to generate signals: 500/);
   });

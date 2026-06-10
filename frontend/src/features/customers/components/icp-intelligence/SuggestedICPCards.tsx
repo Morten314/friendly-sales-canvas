@@ -6,7 +6,10 @@ import { useCustomerProfile } from "../../hooks/useCustomerProfile";
 import { useRejectSuggestedIcp, useDeleteCurrentIcp } from "../../hooks/useRejectSuggestedIcp";
 import { useSaveCustomerProfile } from "../../hooks/useSaveCustomerProfile";
 import { useSuggestedIcps } from "../../hooks/useSuggestedIcps";
-import { fetchCustomerProfileIcps, fetchSuggestedIcps } from "../../services/customers";
+import {
+  fetchCustomerProfileIcps,
+  fetchSuggestedIcpsWithRefreshFallback,
+} from "../../services/customers";
 import type { ExistingICP, SuggestedICP, ICPCardStatus, SuggestedICPCardsProps } from "../../types";
 import { getLeadCountForICP } from "../lead-stream/LeadStream";
 
@@ -185,9 +188,14 @@ async function loadProfilerPagePayload(options: {
     try {
       profilerIcpDebug("GET /icp (backend) — request", {
         user_id: uid,
+        org_id: orgIdToUse,
         refresh: refreshJustIncremented,
       });
-      const icpData = await fetchSuggestedIcps(uid, { refresh: refreshJustIncremented });
+      const { data: icpData, usedCachedFallback } = await fetchSuggestedIcpsWithRefreshFallback(
+        uid,
+        orgIdToUse,
+        refreshJustIncremented,
+      );
       profilerIcpDebug("GET /icp — raw JSON (summary)", {
         topLevelKeys:
           icpData && typeof icpData === "object" && !Array.isArray(icpData)
@@ -218,8 +226,11 @@ async function loadProfilerPagePayload(options: {
         );
         if (refreshJustIncremented) {
           toast?.({
-            title: "ICPs refreshed",
-            description: `${newSuggestions.length} recommended ICPs generated.`,
+            title: usedCachedFallback ? "Showing cached ICPs" : "ICPs refreshed",
+            description: usedCachedFallback
+              ? "Regeneration failed; loaded your last saved recommendations."
+              : `${newSuggestions.length} recommended ICPs generated.`,
+            ...(usedCachedFallback ? { variant: "destructive" as const } : {}),
           });
         }
       } else {
@@ -231,7 +242,7 @@ async function loadProfilerPagePayload(options: {
       if (refreshJustIncremented) {
         toast?.({
           title: "Refresh failed",
-          description: "Using cached data. Please try again.",
+          description: "Could not reach the ICP service. Showing cached or sample data.",
           variant: "destructive",
         });
       }
@@ -566,10 +577,13 @@ export const SuggestedICPCards = ({
         ensureMissionProfilerScope(uid, orgIdToUse);
         if (!refreshJustIncremented && isProfilerCacheValid(uid, orgIdToUse)) {
           const snap = getProfilerSnapshot(uid, orgIdToUse);
-          if (snap) {
+          const snapNew = (snap?.newICPs as SuggestedICP[]) ?? [];
+          const snapRefined = (snap?.refinedICPs as SuggestedICP[]) ?? [];
+          // Skip snapshot short-circuit when recommendations are empty so API/mock can repopulate.
+          if (snap && (snapNew.length > 0 || snapRefined.length > 0)) {
             setExistingICPs(snap.existingICPs as ExistingICP[]);
-            setRefinedICPs(snap.refinedICPs as SuggestedICP[]);
-            setNewICPs(snap.newICPs as SuggestedICP[]);
+            setRefinedICPs(snapRefined);
+            setNewICPs(snapNew);
             setCardStatuses(snap.cardStatuses as Record<string, ICPCardStatus>);
             setLoading(false);
             return;

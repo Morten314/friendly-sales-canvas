@@ -36,7 +36,7 @@ export function syncMarketSizeToQueryCache(
   syncResearchComponentToQueryCache(queryClient, orgId, RESEARCH_COMPONENTS.marketSize, response);
 }
 
-/** Fetch one research component (POST `/market-research`). The backend `MarketRequest`
+/** Fetch one research component (POST `/market-research_claude`). The backend `MarketRequest`
  *  REQUIRES `user_id` and `data`; `org_id` and `refresh` are optional. `data` carries the
  *  org/context fields the LLM needs: the legacy page's per-component fetchers pass a cascade
  *  `previousContext` here (not `{}`); only its all-components cascade sends `{}`. Callers pass
@@ -49,7 +49,7 @@ export function fetchResearchComponent(
   opts: { orgId?: string; data?: Record<string, unknown>; refresh?: boolean } = {},
 ): Promise<ResearchComponentResponse> {
   return apiPost(
-    "market-research",
+    "market-research_claude",
     {
       user_id: userId,
       ...(opts.orgId !== undefined && { org_id: opts.orgId }),

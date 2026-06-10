@@ -79,7 +79,7 @@ export const marketResearchApiCall = async (
   payload: unknown,
   options: ApiCallOptions = {},
 ): Promise<ApiResponse> => {
-  return simpleApiCall("market-research", payload, {
+  return simpleApiCall("market-research_claude", payload, {
     ...options,
     componentName,
   });

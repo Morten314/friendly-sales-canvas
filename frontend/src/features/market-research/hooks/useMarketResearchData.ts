@@ -1852,7 +1852,7 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
 
         await Promise.all(
           cacheNames.map((cacheName) =>
-            caches.open(cacheName).then((cache) => cache.delete("/api/market-research")),
+            caches.open(cacheName).then((cache) => cache.delete("/api/market-research_claude")),
           ),
         );
       }
@@ -1924,7 +1924,7 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
       };
 
       const response = await fetch(
-        `${buildApiUrl("market-research")}?_cb=${Date.now()}&_r=${Math.random()}`,
+        `${buildApiUrl("market-research_claude")}?_cb=${Date.now()}&_r=${Math.random()}`,
         {
           method: "POST",
 
@@ -2622,7 +2622,7 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
           refresh: refresh,
         };
 
-        const response = await fetch(buildApiUrl("market-research"), {
+        const response = await fetch(buildApiUrl("market-research_claude"), {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -2750,7 +2750,7 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
         console.log(JSON.stringify(payload, null, 2));
       }
 
-      const response = await fetch(buildApiUrl("market-research"), {
+      const response = await fetch(buildApiUrl("market-research_claude"), {
         method: "POST",
 
         headers: {
@@ -2783,7 +2783,7 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
             const altPayload = { ...payload, component_name: altName };
 
             try {
-              const altResponse = await fetch(buildApiUrl("market-research"), {
+              const altResponse = await fetch(buildApiUrl("market-research_claude"), {
                 method: "POST",
 
                 headers: { "Content-Type": "application/json" },
@@ -3056,7 +3056,7 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
       // Note: Removed cache-busting fields (_timestamp, _cache_bust) as backend doesn't accept them
       // The backend expects only: org_id, user_id, component_name, data, refresh
 
-      const response = await fetch(buildApiUrl("market-research"), {
+      const response = await fetch(buildApiUrl("market-research_claude"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -3286,7 +3286,7 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
         console.log(JSON.stringify(payload, null, 2));
       }
 
-      const response = await fetch(buildApiUrl("market-research"), {
+      const response = await fetch(buildApiUrl("market-research_claude"), {
         method: "POST",
 
         headers: {
@@ -3567,7 +3567,7 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
 
       while (retryCount <= maxRetries) {
         try {
-          const response = await fetch(buildApiUrl("market-research"), {
+          const response = await fetch(buildApiUrl("market-research_claude"), {
             method: "POST",
 
             headers: {
@@ -3898,7 +3898,7 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
       // Note: Removed cache-busting fields (_timestamp, _cache_bust) as backend doesn't accept them
       // The backend expects only: org_id, user_id, component_name, data, refresh
 
-      const response = await fetch(buildApiUrl("market-research"), {
+      const response = await fetch(buildApiUrl("market-research_claude"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

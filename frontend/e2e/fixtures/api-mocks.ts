@@ -19,7 +19,7 @@ const apiMocks: Record<string, unknown> = {
     limit: 500,
     offset: 0,
   },
-  "/api/market-research": {
+  "/api/market-research_claude": {
     status: "success",
     data: {
       component_name: "market size & opportunity",

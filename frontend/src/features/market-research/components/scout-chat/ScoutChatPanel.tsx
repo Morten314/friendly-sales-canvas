@@ -239,7 +239,7 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
           },
         };
       } else {
-        // Same contract as Signals Swagger: POST /signal_Ask (not GET /chat)
+        // Same contract as Signals Swagger: POST /signal_ask_claude (not GET /chat)
         if (!currentUser?.uid) {
           setTranscript((prev) => [
             ...prev,
@@ -248,7 +248,7 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
           setIsLoading(false);
           return;
         }
-        url = `${baseUrl}/signal_Ask`;
+        url = `${baseUrl}/signal_ask_claude`;
         requestOptions = {
           method: "POST",
           headers: {
@@ -265,7 +265,7 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
       }
 
       console.log(
-        `🤖 Making Scout API call to ${isEditMode ? "/ask" : "/signal_Ask"} with question:`,
+        `🤖 Making Scout API call to ${isEditMode ? "/ask" : "/signal_ask_claude"} with question:`,
         question,
       );
 

@@ -141,7 +141,7 @@ describe("IndustryTrendsSection container (hook-sourced)", () => {
     // Capture the regenerate POST (refresh:true) that Generate fires.
     let regenerateCalled = false;
     server.use(
-      http.post("/api/market-research", async ({ request }) => {
+      http.post("/api/market-research_claude", async ({ request }) => {
         const body = (await request.json()) as { refresh?: boolean };
         if (body.refresh) {
           regenerateCalled = true;

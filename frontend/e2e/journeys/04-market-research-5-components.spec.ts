@@ -5,7 +5,7 @@ import { loginAsTestUser } from "../helpers/login";
 /**
  * The page (src/pages/MarketResearch.tsx) auto-fetches market-research data
  * on mount via fetchMarketSizeData (and similar per-component fetchers). We
- * mock /api/market-research to respond per-component based on the request
+ * mock /api/market-research_claude to respond per-component based on the request
  * body's `component_name`. Real component_name values use spaces and `&`
  * (e.g. "market size & opportunity"), not the underscore/snake_case the
  * earlier draft assumed.
@@ -23,7 +23,7 @@ test("market research page loads + auto-fetches first component", async ({ page 
   await loginAsTestUser(page);
 
   let marketResearchRequestCount = 0;
-  await page.route("**/api/market-research", async (route) => {
+  await page.route("**/api/market-research_claude", async (route) => {
     marketResearchRequestCount += 1;
     const reqBody = route.request().postDataJSON();
     const componentName = reqBody?.component_name || "market size & opportunity";

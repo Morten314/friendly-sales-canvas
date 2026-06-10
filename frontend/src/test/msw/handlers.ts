@@ -57,7 +57,7 @@ export const handlers = [
   ),
 
   // 6. Market research — generic + market-entry + regulatory + industry-trends.
-  http.post("/api/market-research", async ({ request }) => {
+  http.post("/api/market-research_claude", async ({ request }) => {
     const body = (await request.json()) as { component_name?: string; user_id?: string };
     const name = body.component_name ?? "market size & opportunity";
     const lower = name.toLowerCase();
@@ -225,11 +225,18 @@ export const handlers = [
 
   // ── signals ──────────────────────────────────────────────────────────────────
   // Shared by useSignalAsk / useSignalAction and the ContextChat substrate.
-  http.post("/api/signal_Ask", () => HttpResponse.json({ answer: "ok" })),
+  http.post("/api/signal_ask_claude", () => HttpResponse.json({ answer: "ok" })),
   http.post("/api/signal_action", () => HttpResponse.json({ success: true })),
   // Page-only signals service (Task 9): read + batch-generate.
   http.get("/api/v2/fetch-signals", () =>
     HttpResponse.json({ items: [], total: 0, limit: 10, offset: 0 }),
   ),
-  http.post("/api/generate-signals-batch", () => HttpResponse.json({ signals: [] })),
+  http.post("/api/generate-signals-batch_claude", () => HttpResponse.json({ signals: [] })),
+  http.post("/api/icp-research_claude", async ({ request }) => {
+    const body = (await request.json()) as { component_name?: string };
+    return HttpResponse.json({
+      status: "success",
+      data: { component_name: body.component_name ?? "icp summary & market opportunity" },
+    });
+  }),
 ];

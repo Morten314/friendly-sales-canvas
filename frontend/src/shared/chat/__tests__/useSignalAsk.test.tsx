@@ -22,7 +22,7 @@ const body: SignalAskBody = {
 
 describe("useSignalAsk", () => {
   it("returns the parsed response on success", async () => {
-    server.use(http.post("/api/signal_Ask", () => HttpResponse.json({ answer: "hello" })));
+    server.use(http.post("/api/signal_ask_claude", () => HttpResponse.json({ answer: "hello" })));
     const { result } = renderHook(() => useSignalAsk(), { wrapper });
     result.current.mutate(body);
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5000 });
@@ -30,10 +30,10 @@ describe("useSignalAsk", () => {
   });
 
   it("throws on a non-ok response", async () => {
-    server.use(http.post("/api/signal_Ask", () => new HttpResponse("boom", { status: 500 })));
+    server.use(http.post("/api/signal_ask_claude", () => new HttpResponse("boom", { status: 500 })));
     const { result } = renderHook(() => useSignalAsk(), { wrapper });
     result.current.mutate(body);
     await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 5000 });
-    expect(result.current.error?.message).toContain("signal_Ask failed: 500");
+    expect(result.current.error?.message).toContain("signal_ask_claude failed: 500");
   });
 });
