@@ -1,5 +1,5 @@
 import { Database, Building2, Users } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 import type { DataSource, DataSourceType } from "../../types";
 
@@ -66,14 +66,14 @@ const DataSourcesManager: React.FC = () => {
   }, [currentUser?.uid]);
 
   // Helpers for auth + backend integration
-  const getAuthHeader = async () => {
+  const getAuthHeader = useCallback(async () => {
     try {
       return await jwtManager.getAuthHeader();
     } catch (error) {
       console.warn("DataSourcesManager: No auth header available", error);
       return "";
     }
-  };
+  }, []);
 
   // Backend-document read/sync/merge concern — dataSources/isLoading/isSaving state,
   // the useDataSources read, the mapping/merge of backend documents into state, the

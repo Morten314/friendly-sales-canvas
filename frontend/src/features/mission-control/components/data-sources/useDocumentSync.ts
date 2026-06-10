@@ -1,5 +1,5 @@
 import type { User } from "firebase/auth";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 
 import { useDataSources } from "../../hooks/useDataSources";
 import type { DataSource, DataSourceStatus } from "../../types";
@@ -53,7 +53,9 @@ export function useDocumentSync({
 
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
   const [_isSaving, setIsSaving] = useState(false);
-  const isLoading = dataSourcesQuery.isLoading || dataSourcesQuery.isFetching;
+  // Initial load only — background refetches (tab refresh, polling) must not
+  // re-show the full-page overlay or production feels like an infinite loop.
+  const isLoading = dataSourcesQuery.isLoading;
 
   // Check processing status for a specific file
   const checkDocumentStatus = async (
@@ -515,19 +517,21 @@ export function useDocumentSync({
     }
   }, [dataSourcesQuery.data, applyBackendDocuments]);
 
+  const hasProcessingFiles = useMemo(
+    () => dataSources.some((s) => s.type === "file" && s.status === "processing"),
+    [dataSources],
+  );
+
   // Poll /document-status while any file row is still processing.
   useEffect(() => {
-    const needsPoll = dataSources.some(
-      (s) => s.type === "file" && s.status === "processing",
-    );
-    if (!needsPoll) return;
+    if (!hasProcessingFiles) return;
 
     void checkProcessingFilesStatus();
     const id = window.setInterval(() => {
       void checkProcessingFilesStatus();
     }, 4000);
     return () => window.clearInterval(id);
-  }, [dataSources, checkProcessingFilesStatus]);
+  }, [hasProcessingFiles, checkProcessingFilesStatus]);
 
   // Load documents from backend (separate storage, not company profile).
   // Thin wrapper over the query refetch. The sync-effect above also re-maps query
