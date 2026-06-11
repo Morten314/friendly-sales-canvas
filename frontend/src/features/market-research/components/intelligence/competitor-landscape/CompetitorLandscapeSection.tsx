@@ -39,6 +39,7 @@ import { useCompetitorLandscape } from "./useCompetitorLandscape";
 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import { buildApiUrl } from "@/shared/api/transport";
 import { useAuth } from "@/shared/auth";
 import { getUserLocalStorage, setUserLocalStorage } from "@/shared/lib/cacheUtils";
 
@@ -481,7 +482,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
       let response;
       try {
-        response = await fetch(`/api/ask?${queryParams}`, {
+        response = await fetch(buildApiUrl(`ask?${queryParams}`), {
           method: "GET",
           headers: {
             "Content-Type": "application/json",

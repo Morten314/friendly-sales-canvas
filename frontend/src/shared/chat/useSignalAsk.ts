@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 
 import { SignalAskResponseSchema, type SignalAskResponse } from "@/shared/api/contracts";
+import { buildApiUrl } from "@/shared/api/transport";
 
 export interface SignalAskBody {
   org_id: string;
@@ -13,7 +14,7 @@ export interface SignalAskBody {
 export function useSignalAsk() {
   return useMutation<SignalAskResponse, Error, SignalAskBody>({
     mutationFn: async (body) => {
-      const res = await fetch("/api/signal_ask_claude", {
+      const res = await fetch(buildApiUrl("signal_ask_claude"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
