@@ -5,6 +5,7 @@ import {
   encodeFileKeyForStatusUrl,
   extractFileIdFromFileKey,
   getTypeLabel,
+  isPendingLocalDataSource,
   isSameDataSourceRow,
   resolveDocumentStatusFileKey,
   shouldMergeFileByFileName,
@@ -54,6 +55,21 @@ describe("encodeFileKeyForStatusUrl", () => {
     expect(encodeFileKeyForStatusUrl("brewra/uuid_my report.pdf")).toBe(
       "brewra/uuid_my%20report.pdf",
     );
+  });
+});
+
+describe("isPendingLocalDataSource", () => {
+  it("is true only while status is processing", () => {
+    const row: DataSource = {
+      id: "1",
+      type: "file",
+      name: "Doc",
+      tags: [],
+      status: "processing",
+      createdAt: new Date(),
+    };
+    expect(isPendingLocalDataSource(row)).toBe(true);
+    expect(isPendingLocalDataSource({ ...row, status: "completed" })).toBe(false);
   });
 });
 

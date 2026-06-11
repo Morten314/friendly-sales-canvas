@@ -217,7 +217,9 @@ export function useLeadStream({
         errorText,
         fileId,
       });
-      throw new Error(`Failed to delete leads for file: ${response.status} - ${errorText}`);
+      const err = new Error(`Failed to delete leads for file: ${response.status} - ${errorText}`);
+      (err as Error & { httpStatus?: number }).httpStatus = response.status;
+      throw err;
     }
 
     const result = await response.json().catch(() => ({}));
@@ -263,6 +265,20 @@ export function useLeadStream({
       });
     } catch (error) {
       console.error("❌ DataSourcesManager - Delete lead stream error:", error);
+      const httpStatus =
+        error instanceof Error
+          ? (error as Error & { httpStatus?: number }).httpStatus
+          : undefined;
+      if (httpStatus === 404) {
+        deletedLeadStreamFileIdsRef.current.add(fileId);
+        setLeadStreamFiles((prev) => prev.filter((f) => f.file_id !== fileId));
+        toast({
+          title: "Import removed",
+          description:
+            "This lead import was no longer on the server and has been cleared from your list.",
+        });
+        return;
+      }
       toast({
         title: "Delete failed",
         description:

@@ -1255,6 +1255,15 @@ const DataSourcesManager: React.FC = () => {
 
         if (!response.ok) {
           const errorText = await response.text();
+          if (response.status === 404) {
+            setDataSources((prev) => prev.filter((s) => s.id !== id));
+            toast({
+              title: "Source removed",
+              description:
+                "This file was no longer on the server and has been cleared from your list.",
+            });
+            return;
+          }
           console.error("❌ DataSourcesManager - Delete error:", {
             status: response.status,
             errorText,
@@ -1357,6 +1366,15 @@ const DataSourcesManager: React.FC = () => {
 
         if (!response.ok) {
           const errorText = await response.text();
+          if (response.status === 404) {
+            setDataSources((prev) => prev.filter((s) => s.id !== id));
+            toast({
+              title: "Source removed",
+              description:
+                "This URL was no longer on the server and has been cleared from your list.",
+            });
+            return;
+          }
           console.error("❌ DataSourcesManager - Delete URL error:", {
             status: response.status,
             errorText,

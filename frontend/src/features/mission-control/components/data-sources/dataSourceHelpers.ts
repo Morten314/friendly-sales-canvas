@@ -75,6 +75,10 @@ export const encodeFileKeyForStatusUrl = (fileKey: string): string =>
     .map((segment) => encodeURIComponent(segment))
     .join("/");
 
+/** Keep a local-only row during sync only while it is still uploading/processing. */
+export const isPendingLocalDataSource = (source: DataSource): boolean =>
+  source.status === "processing";
+
 /** Only merge by fileName when both rows are the same backend object. */
 export const shouldMergeFileByFileName = (
   existing: DataSource,

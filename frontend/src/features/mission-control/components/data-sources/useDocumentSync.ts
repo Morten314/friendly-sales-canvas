@@ -9,6 +9,7 @@ import {
   extractFileIdFromFileKey,
   isSameDataSourceRow,
   resolveDocumentStatusFileKey,
+  isPendingLocalDataSource,
   shouldMergeFileByFileName,
 } from "./dataSourceHelpers";
 import { mapDocumentListStatus, parseDocumentStatusResponse } from "./leadStreamStatus";
@@ -456,14 +457,14 @@ export function useDocumentSync({
             return backendUrl;
           });
 
-          // Add any existing file sources that weren't in the backend response (local-only edits or files not yet synced)
+          // Keep local-only rows only while still processing; completed rows missing
+          // from the backend are stale orphans and should not reappear in the UI.
           const unmatchedExistingFiles = existingFileSources.filter(
-            (s) => !matchedExistingIds.has(s.id),
+            (s) => !matchedExistingIds.has(s.id) && isPendingLocalDataSource(s),
           );
 
-          // Add any existing URL sources that weren't in the backend response
           const unmatchedExistingUrls = existingUrlSources.filter(
-            (s) => !matchedExistingIds.has(s.id),
+            (s) => !matchedExistingIds.has(s.id) && isPendingLocalDataSource(s),
           );
 
           // Combine all sources and remove duplicates by id
