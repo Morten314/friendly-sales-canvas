@@ -19,6 +19,7 @@ import { useMarketSize } from "./useMarketSize";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
+import { buildApiUrl } from "@/shared/api/transport";
 import { useAuth } from "@/shared/auth";
 import { setUserLocalStorage } from "@/shared/lib/cacheUtils";
 import type { UntypedBackendProfile } from "@/shared/types/escape-hatches";
@@ -408,7 +409,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         section: "market_size",
       });
 
-      const response = await fetch(`/api/ask?${queryParams}`, {
+      const response = await fetch(buildApiUrl(`ask?${queryParams}`), {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

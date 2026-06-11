@@ -23,6 +23,7 @@ import { useMarketEntry } from "./useMarketEntry";
 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import { buildApiUrl } from "@/shared/api/transport";
 import { useAuth } from "@/shared/auth";
 
 interface MarketEntrySectionProps {
@@ -202,7 +203,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
         section: "market_entry",
       });
 
-      const response = await fetch(`/api/ask?${queryParams}`, {
+      const response = await fetch(buildApiUrl(`ask?${queryParams}`), {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

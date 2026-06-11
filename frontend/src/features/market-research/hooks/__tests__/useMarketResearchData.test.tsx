@@ -1,5 +1,6 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import { useRef } from "react";
+import { useRef, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useMarketResearchData } from "../useMarketResearchData";
@@ -40,6 +41,13 @@ afterEach(() => {
   localStorage.clear();
 });
 
+// The data layer now pushes validated envelopes into the TanStack cache via
+// useQueryClient(), so the hook must render under a QueryClientProvider.
+function wrapper({ children }: { children: ReactNode }) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+}
+
 /** Tiny harness: the hook takes a routing-owned activeTab ref (the shell threads it in). */
 function useHarness() {
   const activeTabRef = useRef("intelligence");
@@ -48,7 +56,7 @@ function useHarness() {
 
 describe("useMarketResearchData", () => {
   it("returns the data-layer shape and reaches a non-crashing initial state", async () => {
-    const { result } = renderHook(() => useHarness());
+    const { result } = renderHook(() => useHarness(), { wrapper });
 
     // Core data states are present and start null-or-object (not undefined).
     expect(
