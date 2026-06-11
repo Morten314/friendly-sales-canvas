@@ -10,6 +10,7 @@ import type { EditRecord } from "../types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { buildApiUrl } from "@/shared/api/transport";
 import { useAuth } from "@/shared/auth";
 import { getUserLocalStorage } from "@/shared/lib/cacheUtils";
 
@@ -205,14 +206,13 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
     try {
       // Determine API endpoint based on context and edit state
       const isEditMode = hasEdits || isPostSave;
-      const baseUrl = "/api";
 
       let url: string;
       let requestOptions: RequestInit;
 
       if (isEditMode) {
         // Edit diff context: GET /ask (not signal_Ask)
-        url = `${baseUrl}/ask/?question=${encodeURIComponent(question)}`;
+        url = buildApiUrl(`ask/?question=${encodeURIComponent(question)}`);
 
         // Get the stored JSON data from localStorage (user-specific)
         const storedOriginalJson = getUserLocalStorage(
@@ -248,7 +248,7 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
           setIsLoading(false);
           return;
         }
-        url = `${baseUrl}/signal_ask_claude`;
+        url = buildApiUrl("signal_ask_claude");
         requestOptions = {
           method: "POST",
           headers: {
