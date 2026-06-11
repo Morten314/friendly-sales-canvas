@@ -5,6 +5,10 @@ import { useDataSources } from "../../hooks/useDataSources";
 import type { DataSource, DataSourceStatus } from "../../types";
 
 import {
+  getDismissedDataSourceKeys,
+  isDataSourceDismissed,
+} from "./dataSourceDismissals";
+import {
   encodeFileKeyForStatusUrl,
   extractFileIdFromFileKey,
   isSameDataSourceRow,
@@ -127,7 +131,9 @@ export function useDocumentSync({
           documents.length,
           "documents",
         );
-        const loadedSources: DataSource[] = documents.map((doc: UntypedBackendDocument) => {
+        const dismissedKeys = getDismissedDataSourceKeys(currentUser?.uid ?? "");
+        const loadedSources: DataSource[] = documents
+          .map((doc: UntypedBackendDocument) => {
           // Parse tags - handle both array and string formats
           let parsedTags: string[] = [];
           if (Array.isArray(doc.tags)) {
@@ -291,7 +297,8 @@ export function useDocumentSync({
                   : new Date(),
             };
           }
-        });
+        })
+          .filter((source) => !isDataSourceDismissed(source, dismissedKeys));
 
         // Log summary of loaded sources
         const urlCount = loadedSources.filter((s) => s.type === "url").length;
@@ -463,11 +470,17 @@ export function useDocumentSync({
           // Keep local-only rows only while still processing; completed rows missing
           // from the backend are stale orphans and should not reappear in the UI.
           const unmatchedExistingFiles = existingFileSources.filter(
-            (s) => !matchedExistingIds.has(s.id) && isPendingLocalDataSource(s),
+            (s) =>
+              !matchedExistingIds.has(s.id) &&
+              isPendingLocalDataSource(s) &&
+              !isDataSourceDismissed(s, dismissedKeys),
           );
 
           const unmatchedExistingUrls = existingUrlSources.filter(
-            (s) => !matchedExistingIds.has(s.id) && isPendingLocalDataSource(s),
+            (s) =>
+              !matchedExistingIds.has(s.id) &&
+              isPendingLocalDataSource(s) &&
+              !isDataSourceDismissed(s, dismissedKeys),
           );
 
           // Combine all sources and remove duplicates by id
@@ -510,7 +523,7 @@ export function useDocumentSync({
         console.log("Data sources loaded from dedicated backend:", loadedSources);
       }
     }
-  }, []);
+  }, [currentUser?.uid]);
 
   // Sync the useDataSources read into component state. Re-runs whenever the query
   // returns fresh documents (initial fetch + every refetch after a mutation),

@@ -5,6 +5,7 @@ import type { DataSource, DataSourceType } from "../../types";
 
 import AddDataSourceMenu from "./AddDataSourceMenu";
 import ConnectorTable from "./ConnectorTable";
+import { rememberDismissedDataSource } from "./dataSourceDismissals";
 import { extractFileIdFromFileKey } from "./dataSourceHelpers";
 import DataSourceUploader from "./DataSourceUploader";
 import LeadStreamTable from "./LeadStreamTable";
@@ -1171,6 +1172,12 @@ const DataSourcesManager: React.FC = () => {
     }
   };
 
+  const rememberRemovedSource = (source: DataSource) => {
+    if (currentUser?.uid) {
+      rememberDismissedDataSource(currentUser.uid, source);
+    }
+  };
+
   const handleDeleteSource = async (id: string) => {
     // Find the source to delete
     const sourceToDelete = dataSources.find((s) => s.id === id);
@@ -1256,6 +1263,7 @@ const DataSourcesManager: React.FC = () => {
         if (!response.ok) {
           const errorText = await response.text();
           if (response.status === 404) {
+            rememberRemovedSource(sourceToDelete);
             setDataSources((prev) => prev.filter((s) => s.id !== id));
             toast({
               title: "Source removed",
@@ -1274,6 +1282,7 @@ const DataSourcesManager: React.FC = () => {
         }
 
         // Remove from local state after successful backend deletion
+        rememberRemovedSource(sourceToDelete);
         const updatedSources = dataSources.filter((s) => s.id !== id);
         setDataSources(updatedSources);
 
@@ -1367,6 +1376,7 @@ const DataSourcesManager: React.FC = () => {
         if (!response.ok) {
           const errorText = await response.text();
           if (response.status === 404) {
+            rememberRemovedSource(sourceToDelete);
             setDataSources((prev) => prev.filter((s) => s.id !== id));
             toast({
               title: "Source removed",
@@ -1385,6 +1395,7 @@ const DataSourcesManager: React.FC = () => {
         }
 
         // Remove from local state after successful backend deletion
+        rememberRemovedSource(sourceToDelete);
         const updatedSources = dataSources.filter((s) => s.id !== id);
         setDataSources(updatedSources);
 

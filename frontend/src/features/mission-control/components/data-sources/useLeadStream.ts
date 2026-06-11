@@ -12,6 +12,11 @@ import {
   sniffExcelBinarySignature,
   validateCsvFormat,
 } from "./csvHelpers";
+import {
+  getDismissedLeadStreamFileIds,
+  pruneDismissedLeadStreamFileIds,
+  rememberDismissedLeadStreamFile,
+} from "./dataSourceDismissals";
 import { getLeadStreamRowStatus, isTerminalLeadStreamStatus } from "./leadStreamStatus";
 
 import type { toast as toastFnRef } from "@/components/ui/use-toast";
@@ -146,14 +151,16 @@ export function useLeadStream({
   // rows the API marks deleted). Re-runs on every query result (initial + refetch).
   useEffect(() => {
     const files = leadStreamQuery.data;
-    if (!files) return;
+    if (!files || !currentUser?.uid) return;
+    deletedLeadStreamFileIdsRef.current = getDismissedLeadStreamFileIds(currentUser.uid);
     const idsInResponse = new Set(files.map((f) => f.file_id));
     for (const id of [...deletedLeadStreamFileIdsRef.current]) {
       if (!idsInResponse.has(id)) deletedLeadStreamFileIdsRef.current.delete(id);
     }
+    pruneDismissedLeadStreamFileIds(currentUser.uid, idsInResponse);
     setLeadStreamFiles(filterVisibleLeadStreamFiles(files));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- filterVisibleLeadStreamFiles is a non-memoized helper reading only refs; re-runs are driven by the query data, not the helper identity
-  }, [leadStreamQuery.data]);
+  }, [leadStreamQuery.data, currentUser?.uid]);
 
   /** GET /leads/stream/status — thin refetch over useLeadStreamStatus. The
    *  sync-effect above re-maps the result into state. `silent` drives only the
@@ -253,6 +260,9 @@ export function useLeadStream({
     try {
       const result = await deleteLeadsByFile(fileId);
       deletedLeadStreamFileIdsRef.current.add(fileId);
+      if (currentUser?.uid) {
+        rememberDismissedLeadStreamFile(currentUser.uid, fileId);
+      }
       setLeadStreamFiles((prev) => prev.filter((f) => f.file_id !== fileId));
       await refreshLeadStreamStatus();
       const n = result?.deleted_count;
@@ -271,6 +281,9 @@ export function useLeadStream({
           : undefined;
       if (httpStatus === 404) {
         deletedLeadStreamFileIdsRef.current.add(fileId);
+        if (currentUser?.uid) {
+          rememberDismissedLeadStreamFile(currentUser.uid, fileId);
+        }
         setLeadStreamFiles((prev) => prev.filter((f) => f.file_id !== fileId));
         toast({
           title: "Import removed",
