@@ -39,9 +39,11 @@ from app.core.exceptions import ServiceError
 
 CLAUDE_RESEARCH_MAX_TOKENS = int(os.getenv("CLAUDE_RESEARCH_MAX_TOKENS") or "8192")
 
-# Matches http(s) URLs in free-form text. Exclude trailing punctuation often
-# captured from malformed Tavily/LLM output (e.g. https://api.tavily.com/search') ).
-_URL_PATTERN = r'https?://[^\s<>"{}|\\^`\[\]\'\"),.;]+'
+# Matches http(s) URLs in free-form text. Keep the negated class permissive so
+# multi-label domains aren't truncated at the first dot. Trailing punctuation
+# captured from prose/markdown (e.g. https://api.tavily.com/search') ) is trimmed
+# downstream by _sanitize_source_url(), which also drops api.tavily.com endpoints.
+_URL_PATTERN = r'https?://[^\s<>"{}|\\^`\[\]]+'
 
 _BLOCKED_SOURCE_HOSTS = frozenset({"api.tavily.com"})
 
