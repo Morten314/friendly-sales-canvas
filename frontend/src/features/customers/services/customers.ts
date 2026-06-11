@@ -6,8 +6,8 @@ import {
   type SuggestedIcpsResponse,
 } from "../contracts";
 
-import { firstPageParams, paginatedSchema } from "@/shared/api/pagination";
 import { apiPost } from "@/shared/api/client";
+import { firstPageParams, paginatedSchema } from "@/shared/api/pagination";
 import { apiFetch, apiFetchJson, buildApiUrl } from "@/shared/api/transport";
 import {
   buildCustomerProfileSavePayload,

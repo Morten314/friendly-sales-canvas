@@ -59,32 +59,35 @@ export function useDocumentSync({
   const isLoading = dataSourcesQuery.isLoading;
 
   // Check processing status for a specific file
-  const checkDocumentStatus = async (
-    fileKey: string,
-  ): Promise<{ status: DataSourceStatus; chunks_count?: number; timestamps?: unknown }> => {
-    if (!currentUser?.uid) {
-      throw new Error("User not authenticated");
-    }
+  const checkDocumentStatus = useCallback(
+    async (
+      fileKey: string,
+    ): Promise<{ status: DataSourceStatus; chunks_count?: number; timestamps?: unknown }> => {
+      if (!currentUser?.uid) {
+        throw new Error("User not authenticated");
+      }
 
-    const authHeader = await getAuthHeader();
-    const url = buildApiUrl(`document-status/${encodeFileKeyForStatusUrl(fileKey)}`);
+      const authHeader = await getAuthHeader();
+      const url = buildApiUrl(`document-status/${encodeFileKeyForStatusUrl(fileKey)}`);
 
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        ...(authHeader && { Authorization: authHeader }),
-      },
-    });
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(authHeader && { Authorization: authHeader }),
+        },
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to check document status: ${response.status} - ${errorText}`);
-    }
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to check document status: ${response.status} - ${errorText}`);
+      }
 
-    const payload = await response.json();
-    return parseDocumentStatusResponse(payload);
-  };
+      const payload = await response.json();
+      return parseDocumentStatusResponse(payload);
+    },
+    [currentUser?.uid, getAuthHeader],
+  );
 
   // Check status for processing files
   const checkProcessingFilesStatus = useCallback(async () => {
@@ -110,7 +113,7 @@ export function useDocumentSync({
 
       return currentSources;
     });
-  }, [currentUser?.uid, getAuthHeader]);
+  }, [checkDocumentStatus]);
 
   // Map the backend documents (from the useDataSources read) into the merged
   // DataSource[] state. The hook already unwrapped the {documents|files|data}

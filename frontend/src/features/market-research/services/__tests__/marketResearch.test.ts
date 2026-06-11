@@ -1,11 +1,11 @@
 // Phase 5b — service fn tests for fetchResearchComponent.
 // MSW server lifecycle is handled globally by src/test/setup.ts (beforeAll/afterEach/afterAll).
 // This file only imports `server` for one-off handler overrides.
+import { QueryClient } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ZodError } from "zod";
 
-import { QueryClient } from "@tanstack/react-query";
 
 import {
   fetchResearchComponent,
