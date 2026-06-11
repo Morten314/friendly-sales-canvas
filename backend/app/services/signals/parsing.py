@@ -34,17 +34,17 @@ def _parse_search_signals_response(response: str) -> Dict[str, Any]:
 
 
 def _validate_url(url: str, tavily_urls_list: List[str]) -> str:
-    """Validate URL and prefer real article links from Tavily search results."""
+    """Return the LLM's citation URL when it is valid; otherwise fall back to a
+    verified Tavily search URL.
+
+    A valid (sanitized) URL is kept as-is — including when it shares a domain with
+    a Tavily result — so the LLM's specific article link is preserved. Only
+    invalid/blocked URLs (empty, non-http, or api.tavily.com endpoints) are
+    replaced with the first verified Tavily URL.
+    """
     valid_tavily = _filter_source_urls(tavily_urls_list)
     sanitized = _sanitize_source_url(url)
     if sanitized:
-        if valid_tavily:
-            url_domain = sanitized.split("/")[2] if len(sanitized.split("/")) > 2 else ""
-            for tavily_url in valid_tavily:
-                tavily_domain = tavily_url.split("/")[2] if len(tavily_url.split("/")) > 2 else ""
-                if url_domain and url_domain == tavily_domain:
-                    return tavily_url
-            return sanitized
         return sanitized
     return valid_tavily[0] if valid_tavily else ""
 
@@ -64,13 +64,15 @@ def _normalize_search_signals_result(
     source_url = _validate_url(parsed_json.get("sourceUrl", ""), valid_tavily_urls)
 
     validated_sources = []
+    seen_source_urls: set[str] = set()
     for i, src in enumerate(parsed_json.get("source", [])[:2]):
         if isinstance(src, dict) and "url" in src:
             validated_url = _validate_url(
                 src["url"],
                 valid_tavily_urls[i:] if i < len(valid_tavily_urls) else valid_tavily_urls,
             )
-            if validated_url:
+            if validated_url and validated_url not in seen_source_urls:
+                seen_source_urls.add(validated_url)
                 validated_sources.append({"citation": src.get("citation", ""), "url": validated_url})
 
     if not validated_sources and valid_tavily_urls:
