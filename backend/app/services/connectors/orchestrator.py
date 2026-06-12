@@ -9,9 +9,12 @@ from typing import Any, Dict, List, Optional
 from fastapi import BackgroundTasks
 
 from app.core.exceptions import (
+    ApolloAPIError,
     ApolloCreditsExhaustedError,
     BrewraError,
     ConnectorCredentialsInvalidError,
+    MasterKeyRequiredError,
+    ProfileIncompleteError,
 )
 from app.models.connectors import (
     ApolloConnectRequest,
@@ -22,6 +25,7 @@ from app.services.connectors import apollo as apollo_mod
 from app.services.connectors import credentials
 from app.services.connectors import ingestion
 from app.services.connectors import runs
+from app.services.connectors import warmup
 from app.services.connectors.normalize import normalize_apollo_record
 
 logger = logging.getLogger(__name__)
@@ -37,9 +41,22 @@ def _now() -> str:
 # ─── Connection ───
 
 def connect_apollo(mongo, request: ApolloConnectRequest) -> Dict[str, Any]:
-    """Validate the key (credit-free) then store it. Raises on a bad key (no save)."""
+    """Gate on ICP completeness + master-key probe, then store the key."""
+    # Check 1 — profile completeness (UC6). Reuses the warmup ICP logic.
+    icps = warmup._icps_for_org(mongo, request.org_id)
+    if not any(warmup.icp_is_complete(icp)[0] for icp in icps):
+        missing = warmup.icp_is_complete(icps[-1] if icps else None)[1] or "icp"
+        raise ProfileIncompleteError(missing_section=missing)
+
+    # Check 2 — master-key + search capability via a free 1-record api_search probe.
     connector = apollo_mod.ApolloConnector(request.api_key)
-    connector.validate_credentials()  # raises ConnectorCredentialsInvalidError on bad key
+    try:
+        connector.search_people({}, page=1, per_page=1)
+    except ApolloAPIError as e:
+        # _request raises ApolloAPIError on 403 (insufficient plan / not a master key)
+        raise MasterKeyRequiredError(str(e))
+    # 401 -> ConnectorCredentialsInvalidError propagates (handled -> 400 "Invalid key")
+
     credentials.save_credentials(mongo, request.org_id, "apollo", request.api_key, status="connected")
     return {"connected": True, "status": "connected"}
 

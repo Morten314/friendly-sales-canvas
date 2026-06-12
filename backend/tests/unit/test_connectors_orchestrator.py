@@ -2,9 +2,12 @@
 import pytest
 
 from app.core.exceptions import (
+    ApolloAPIError,
     ApolloCreditsExhaustedError,
     ConnectorCredentialsInvalidError,
     ConnectorNotConnectedError,
+    MasterKeyRequiredError,
+    ProfileIncompleteError,
 )
 from app.services.connectors import orchestrator
 from app.models.connectors import (
@@ -27,6 +30,11 @@ class FakeConnector:
         if self.api_key == "bad":
             raise ConnectorCredentialsInvalidError("nope")
         self.validated = True
+
+    def search_people(self, filters, *, page=1, per_page=10):
+        if self.api_key == "bad":
+            raise ConnectorCredentialsInvalidError("nope")
+        return {"people": [{"id": "x"}], "pagination": {"page": 1, "total_pages": 1}}
 
     def list_collections(self):
         return [{"id": "L1", "name": "List One"}]
@@ -64,23 +72,49 @@ class _FakeBT:
         self.tasks.append((fn, args, kwargs))
 
 
+def _complete_icp_dict():
+    return {"id": "i1", "primary_region": "NA", "industry": ["SaaS"],
+            "company_size": ["11-50"], "buyer_role": ["VP Sales"], "fit_confidence": "high",
+            "created_at": "2026-06-01T00:00:00Z"}
+
+
 # ─── connection ───
 
-def test_connect_validates_and_saves(monkeypatch, patched):
+def test_connect_validates_and_saves(monkeypatch, patched, fake_mongo):
+    monkeypatch.setattr(orchestrator.warmup, "_icps_for_org", lambda m, o: [_complete_icp_dict()])
     saved = {}
     monkeypatch.setattr(orchestrator.credentials, "save_credentials",
                         lambda m, o, p, k, **kw: saved.update({"org": o, "key": k}) or {"status": "connected"})
-    out = orchestrator.connect_apollo(object(), ApolloConnectRequest(org_id=TEST_ORG_ID, user_id=TEST_USER_ID, api_key="good"))
+    out = orchestrator.connect_apollo(fake_mongo, ApolloConnectRequest(org_id=TEST_ORG_ID, user_id=TEST_USER_ID, api_key="good"))
     assert out["connected"] is True
     assert saved["key"] == "good"
 
 
-def test_connect_bad_key_raises_and_does_not_save(monkeypatch, patched):
+def test_connect_bad_key_raises_and_does_not_save(monkeypatch, patched, fake_mongo):
+    monkeypatch.setattr(orchestrator.warmup, "_icps_for_org", lambda m, o: [_complete_icp_dict()])
     calls = []
     monkeypatch.setattr(orchestrator.credentials, "save_credentials", lambda *a, **k: calls.append(1))
     with pytest.raises(ConnectorCredentialsInvalidError):
-        orchestrator.connect_apollo(object(), ApolloConnectRequest(org_id=TEST_ORG_ID, user_id=TEST_USER_ID, api_key="bad"))
+        orchestrator.connect_apollo(fake_mongo, ApolloConnectRequest(org_id=TEST_ORG_ID, user_id=TEST_USER_ID, api_key="bad"))
     assert calls == []
+
+
+def test_connect_blocks_when_profile_incomplete(monkeypatch, patched, fake_mongo):
+    monkeypatch.setattr(orchestrator.warmup, "_icps_for_org", lambda m, o: [])  # no complete ICP
+    with pytest.raises(ProfileIncompleteError):
+        orchestrator.connect_apollo(fake_mongo, ApolloConnectRequest(org_id="org1", user_id="u1", api_key="good"))
+
+
+def test_connect_probe_403_is_master_key_required(monkeypatch, fake_mongo):
+    monkeypatch.setattr(orchestrator.warmup, "_icps_for_org", lambda m, o: [_complete_icp_dict()])
+
+    class _Probe:
+        def __init__(self, *a, **k): pass
+        def search_people(self, *a, **k): raise ApolloAPIError("403 Forbidden")
+
+    monkeypatch.setattr(orchestrator.apollo_mod, "ApolloConnector", _Probe)
+    with pytest.raises(MasterKeyRequiredError):
+        orchestrator.connect_apollo(fake_mongo, ApolloConnectRequest(org_id="org1", user_id="u1", api_key="regular"))
 
 
 def test_status_disconnected(monkeypatch):
