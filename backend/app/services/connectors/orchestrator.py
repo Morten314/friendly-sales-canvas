@@ -479,3 +479,14 @@ def _ingest_discovery(driver, org_id, user_id, run_id, records, counts) -> None:
     counts["created"] += result["created"]
     counts["matched"] += result["matched"]
     counts["errors"].extend(result["errors"])
+
+
+def sweep_orphan_superseded(driver, mongo) -> None:
+    """Startup safety net: clear superseded tags left by a `replace` run killed mid-swap.
+    Scoped to orgs that have actually run `replace` (the only mode that tags superseded) —
+    avoids an unfiltered distinct over the whole collection; for each, clear only when no
+    discovery run is currently active (no legitimate in-flight swap)."""
+    org_ids = mongo["Profiler"][runs.DISCOVERY_RUNS_COLLECTION].distinct("org_id", {"mode": "replace"})
+    for org_id in org_ids:
+        if not runs.get_active_discovery_run(mongo, org_id):
+            ingestion.clear_superseded_discovery_leads(driver, org_id)

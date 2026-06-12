@@ -57,6 +57,13 @@ async def lifespan(app: FastAPI):
         _ensure_icp_indexes(app.state.clients.client)
         _ensure_connectors_indexes(app.state.clients.client)
 
+    if app.state.clients.client is not None and app.state.clients.driver is not None:
+        try:
+            from app.services.connectors import orchestrator as _conn
+            _conn.sweep_orphan_superseded(app.state.clients.driver, app.state.clients.client)
+        except Exception as e:
+            logger.error("Apollo superseded-tag sweep (lifespan) failed: %s", e)
+
     yield
     # No teardown — clients are process-lifetime singletons.
 
