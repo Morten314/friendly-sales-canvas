@@ -10,6 +10,7 @@ from app.core.exceptions import (
     ProfileIncompleteError,
 )
 from app.services.connectors import orchestrator
+from app.services.connectors import runs
 from app.models.connectors import (
     ApolloConnectRequest,
     ApolloEnrichRequest,
@@ -74,7 +75,7 @@ class _FakeBT:
 
 def _complete_icp_dict():
     return {"id": "i1", "primary_region": "NA", "industry": ["SaaS"],
-            "company_size": ["11-50"], "buyer_role": ["VP Sales"], "fit_confidence": "high",
+            "company_size": ["11-50", "51-200"], "buyer_role": ["VP Sales"], "fit_confidence": "high",
             "created_at": "2026-06-01T00:00:00Z"}
 
 
@@ -530,3 +531,185 @@ def test_run_enrich_multi_chunk_skipped_preserved(monkeypatch, patched):
     assert completed.get("skipped") == 1, (
         f"complete_enrich_run has skipped={completed.get('skipped')}, expected 1"
     )
+
+
+# ─── task body: discover ───
+
+class _DiscoFakeConnector:
+    def __init__(self, *a, **k): pass
+    def search_people(self, filters, *, page=1, per_page=100):
+        if page > 1:
+            return {"people": [], "pagination": {"page": page, "total_pages": 1}}
+        return {"people": [
+            {"id": "p1", "has_email": True, "title": "VP Sales",
+             "organization": {"industry": "SaaS", "estimated_num_employees": 80}},
+            {"id": "p2", "has_email": False, "title": "VP Sales",
+             "organization": {"industry": "SaaS", "estimated_num_employees": 80}},  # dropped: no email
+        ], "pagination": {"page": 1, "total_pages": 1}}
+    def match_person(self, pid, **k):
+        return ({"id": pid, "email": f"{pid}@x.com", "email_status": "verified",
+                 "organization": {"name": "X", "primary_domain": "x.com"}}, 1)
+
+
+def test_run_discover_reveals_only_has_email_and_ingests(monkeypatch, fake_mongo):
+    monkeypatch.setattr(orchestrator.apollo_mod, "ApolloConnector", _DiscoFakeConnector)
+    monkeypatch.setattr(orchestrator.credentials, "get_api_key", lambda *a, **k: "key")
+    monkeypatch.setattr(orchestrator.ingestion, "get_existing_apollo_contact_ids", lambda *a, **k: set())
+    captured = {}
+    monkeypatch.setattr(orchestrator.ingestion, "upsert_imported_leads",
+                        lambda *a, **k: captured.update(k) or {"created": len(a[3]), "matched": 0, "errors": []})
+    rid = runs.create_discovery_run(fake_mongo, "org1", "u1", icp_id="i1",
+                                    icp_fingerprint="fp", mode="keep", max_leads=50)
+    orchestrator._run_discover(object(), fake_mongo, "org1", "u1", rid, _complete_icp_dict(), "keep", 50)
+    doc = runs.get_discovery_run(fake_mongo, "org1", rid)
+    assert doc["status"] == "completed"
+    assert doc["counts"]["revealed"] == 1          # p2 dropped (has_email False)
+    assert doc["credits_consumed"] == 1
+    assert captured["apollo_origin"] == "discovery"
+
+
+def test_run_discover_replace_swaps_with_no_loss(monkeypatch, fake_mongo):
+    monkeypatch.setattr(orchestrator.apollo_mod, "ApolloConnector", _DiscoFakeConnector)
+    monkeypatch.setattr(orchestrator.credentials, "get_api_key", lambda *a, **k: "key")
+    monkeypatch.setattr(orchestrator.ingestion, "get_existing_apollo_contact_ids", lambda *a, **k: set())
+    monkeypatch.setattr(orchestrator.ingestion, "upsert_imported_leads",
+                        lambda *a, **k: {"created": 1, "matched": 0, "errors": []})
+    order = []
+    monkeypatch.setattr(orchestrator.ingestion, "tag_superseded_discovery_leads",
+                        lambda d, o: order.append("tag") or 3)
+    monkeypatch.setattr(orchestrator.ingestion, "delete_superseded_discovery_leads",
+                        lambda d, o: order.append("delete") or 3)
+    rid = runs.create_discovery_run(fake_mongo, "org1", "u1", icp_id="i1",
+                                    icp_fingerprint="fp", mode="replace", max_leads=50)
+    orchestrator._run_discover(object(), fake_mongo, "org1", "u1", rid, _complete_icp_dict(), "replace", 50)
+    assert order == ["tag", "delete"]   # tag before run, delete only after ingest
+
+
+def test_run_discover_partial_credit_wall_ingests_then_records_counts(monkeypatch, fake_mongo):
+    from app.core.exceptions import ApolloCreditsExhaustedError
+
+    class _CreditWall:
+        def __init__(self, *a, **k): pass
+        def search_people(self, filters, *, page=1, per_page=100):
+            if page > 1:
+                return {"people": [], "pagination": {"page": page, "total_pages": 1}}
+            return {"people": [
+                {"id": "p1", "has_email": True, "title": "VP Sales",
+                 "organization": {"industry": "SaaS", "estimated_num_employees": 80}},
+                {"id": "p2", "has_email": True, "title": "VP Sales",
+                 "organization": {"industry": "SaaS", "estimated_num_employees": 80}},
+            ], "pagination": {"page": 1, "total_pages": 1}}
+        def match_person(self, pid, **k):
+            if pid == "p1":
+                return ({"id": "p1", "email": "p1@x.com", "email_status": "verified",
+                         "organization": {"name": "X", "primary_domain": "x.com"}}, 1)
+            raise ApolloCreditsExhaustedError("out of credits")
+
+    monkeypatch.setattr(orchestrator.apollo_mod, "ApolloConnector", _CreditWall)
+    monkeypatch.setattr(orchestrator.apollo_mod, "_sleep", lambda *a, **k: None)  # no real throttle in tests
+    monkeypatch.setattr(orchestrator.credentials, "get_api_key", lambda *a, **k: "key")
+    monkeypatch.setattr(orchestrator.ingestion, "get_existing_apollo_contact_ids", lambda *a, **k: set())
+    monkeypatch.setattr(orchestrator.ingestion, "upsert_imported_leads",
+                        lambda *a, **k: {"created": len(a[3]), "matched": 0, "errors": []})
+    low = {}
+    monkeypatch.setattr(orchestrator.credentials, "set_low_credit", lambda m, o, p, v: low.update({"v": v}))
+    rid = runs.create_discovery_run(fake_mongo, "org1", "u1", icp_id="i1",
+                                    icp_fingerprint="fp", mode="keep", max_leads=50)
+    orchestrator._run_discover(object(), fake_mongo, "org1", "u1", rid, _complete_icp_dict(), "keep", 50)
+    doc = runs.get_discovery_run(fake_mongo, "org1", rid)
+    assert doc["status"] == "partial"
+    assert doc["counts"]["created"] == 1     # p1 ingested despite the wall
+    assert doc["credits_consumed"] == 1
+    assert low["v"] is True                  # UC10 flag set
+
+
+def test_run_discover_replace_partial_restores_on_credit_wall(monkeypatch, fake_mongo):
+    from app.core.exceptions import ApolloCreditsExhaustedError
+
+    class _CreditWall:
+        def __init__(self, *a, **k): pass
+        def search_people(self, filters, *, page=1, per_page=100):
+            if page > 1:
+                return {"people": [], "pagination": {"page": page, "total_pages": 1}}
+            return {"people": [
+                {"id": "p1", "has_email": True, "title": "VP Sales",
+                 "organization": {"industry": "SaaS", "estimated_num_employees": 80}},
+                {"id": "p2", "has_email": True, "title": "VP Sales",
+                 "organization": {"industry": "SaaS", "estimated_num_employees": 80}},
+            ], "pagination": {"page": 1, "total_pages": 1}}
+        def match_person(self, pid, **k):
+            if pid == "p1":
+                return ({"id": "p1", "email": "p1@x.com", "email_status": "verified",
+                         "organization": {"name": "X", "primary_domain": "x.com"}}, 1)
+            raise ApolloCreditsExhaustedError("out of credits")
+
+    monkeypatch.setattr(orchestrator.apollo_mod, "ApolloConnector", _CreditWall)
+    monkeypatch.setattr(orchestrator.apollo_mod, "_sleep", lambda *a, **k: None)
+    monkeypatch.setattr(orchestrator.credentials, "get_api_key", lambda *a, **k: "key")
+    monkeypatch.setattr(orchestrator.credentials, "set_low_credit", lambda *a, **k: None)
+    monkeypatch.setattr(orchestrator.ingestion, "get_existing_apollo_contact_ids", lambda *a, **k: set())
+    monkeypatch.setattr(orchestrator.ingestion, "upsert_imported_leads",
+                        lambda *a, **k: {"created": 1, "matched": 0, "errors": []})
+    calls = []
+    monkeypatch.setattr(orchestrator.ingestion, "tag_superseded_discovery_leads", lambda d, o: calls.append("tag") or 3)
+    monkeypatch.setattr(orchestrator.ingestion, "clear_superseded_discovery_leads", lambda d, o: calls.append("clear") or 3)
+    monkeypatch.setattr(orchestrator.ingestion, "delete_superseded_discovery_leads", lambda d, o: calls.append("delete") or 3)
+    rid = runs.create_discovery_run(fake_mongo, "org1", "u1", icp_id="i1",
+                                    icp_fingerprint="fp", mode="replace", max_leads=50)
+    orchestrator._run_discover(object(), fake_mongo, "org1", "u1", rid, _complete_icp_dict(), "replace", 50)
+    doc = runs.get_discovery_run(fake_mongo, "org1", rid)
+    assert doc["status"] == "partial"
+    assert calls == ["tag", "clear"]   # restored (no-loss), NOT committed via delete
+    assert "delete" not in calls
+
+
+# ─── D1: completed_empty when nothing qualifies ───
+
+def test_run_discover_completed_empty_when_nothing_qualifies(monkeypatch, fake_mongo):
+    class _NoEmailConnector:
+        def __init__(self, *a, **k): pass
+        def search_people(self, filters, *, page=1, per_page=100):
+            if page > 1:
+                return {"people": [], "pagination": {"page": page, "total_pages": 1}}
+            return {"people": [
+                {"id": "p1", "has_email": False, "title": "VP Sales",
+                 "organization": {"industry": "SaaS", "estimated_num_employees": 80}},
+            ], "pagination": {"page": 1, "total_pages": 1}}
+        def match_person(self, pid, **k):
+            raise AssertionError("match_person must not be called when nothing qualifies")
+
+    monkeypatch.setattr(orchestrator.apollo_mod, "ApolloConnector", _NoEmailConnector)
+    monkeypatch.setattr(orchestrator.credentials, "get_api_key", lambda *a, **k: "key")
+    monkeypatch.setattr(orchestrator.ingestion, "get_existing_apollo_contact_ids", lambda *a, **k: set())
+    rid = runs.create_discovery_run(fake_mongo, "org1", "u1", icp_id="i1",
+                                    icp_fingerprint="fp", mode="keep", max_leads=50)
+    orchestrator._run_discover(object(), fake_mongo, "org1", "u1", rid, _complete_icp_dict(), "keep", 50)
+    doc = runs.get_discovery_run(fake_mongo, "org1", rid)
+    assert doc["status"] == "completed_empty"
+    assert doc["counts"]["revealed"] == 0
+    assert doc["counts"]["created"] == 0
+    assert doc["credits_consumed"] == 0
+
+
+# ─── D2: invalid credentials mid-run fails run + sets status error ───
+
+def test_run_discover_invalid_credentials_fails_run(monkeypatch, fake_mongo):
+    class _BadKeyConnector:
+        def __init__(self, *a, **k): pass
+        def search_people(self, *a, **k):
+            raise ConnectorCredentialsInvalidError("401 invalid")
+        def match_person(self, *a, **k):
+            raise AssertionError("should not reach reveal")
+
+    monkeypatch.setattr(orchestrator.apollo_mod, "ApolloConnector", _BadKeyConnector)
+    monkeypatch.setattr(orchestrator.credentials, "get_api_key", lambda *a, **k: "key")
+    monkeypatch.setattr(orchestrator.ingestion, "get_existing_apollo_contact_ids", lambda *a, **k: set())
+    status_calls = {}
+    monkeypatch.setattr(orchestrator.credentials, "set_status",
+                        lambda m, o, p, s: status_calls.update({"status": s}))
+    rid = runs.create_discovery_run(fake_mongo, "org1", "u1", icp_id="i1",
+                                    icp_fingerprint="fp", mode="keep", max_leads=50)
+    orchestrator._run_discover(object(), fake_mongo, "org1", "u1", rid, _complete_icp_dict(), "keep", 50)
+    doc = runs.get_discovery_run(fake_mongo, "org1", rid)
+    assert doc["status"] == "failed"
+    assert status_calls.get("status") == "error"
