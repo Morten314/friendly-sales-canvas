@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.clients import build_clients
 from app.core.exceptions import (
+    ApolloConnectorHTTPError,
     AuthenticationError,
     AuthorizationError,
     BudgetExhaustedError,
@@ -126,6 +127,16 @@ def _handle_icp_registry(request, exc):
 def _handle_service_error(request, exc):
     logger.warning("%s: %s", type(exc).__name__, exc)
     return JSONResponse(status_code=500, content={"detail": str(exc)})
+
+
+@app.exception_handler(ApolloConnectorHTTPError)
+def _handle_apollo_connector_http(request, exc: ApolloConnectorHTTPError):
+    logger.debug("%s: %s", type(exc).__name__, exc)
+    body = {"detail": str(exc), "code": exc.code}
+    missing = getattr(exc, "missing_section", None)
+    if missing is not None:
+        body["missing_section"] = missing
+    return JSONResponse(status_code=exc.status_code, content=body)
 
 
 from app.routers import pipeline
