@@ -86,6 +86,13 @@ def set_status(mongo, org_id: str, provider: str, status: str) -> None:
     )
 
 
+def set_low_credit(mongo, org_id: str, provider: str, value: bool) -> None:
+    _coll(mongo).update_one(
+        {"org_id": org_id, "provider": provider},
+        {"$set": {"low_credit": bool(value), "updated_at": _now()}},
+    )
+
+
 def delete_credentials(mongo, org_id: str, provider: str) -> bool:
     result = _coll(mongo).delete_one({"org_id": org_id, "provider": provider})
     return bool(getattr(result, "deleted_count", 0))
