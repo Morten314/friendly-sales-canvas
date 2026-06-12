@@ -478,7 +478,7 @@ def _ingest_discovery(driver, org_id, user_id, run_id, records, counts) -> None:
     )
     counts["created"] += result["created"]
     counts["matched"] += result["matched"]
-    counts["errors"].extend(result["errors"])
+    counts["errors"].extend({"stage": "ingest", "message": m} for m in result.get("errors", []))
 
 
 def sweep_orphan_superseded(driver, mongo) -> None:

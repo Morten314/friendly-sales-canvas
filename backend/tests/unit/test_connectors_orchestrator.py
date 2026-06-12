@@ -736,6 +736,30 @@ def test_start_discover_queues_and_returns_run_id(monkeypatch, fake_mongo):
     assert len(bt.tasks) == 1
 
 
+# ─── I3: ingest errors wrapped as structured dicts ───
+
+def test_discover_status_response_validates_with_ingest_errors(monkeypatch, fake_mongo):
+    """Non-empty ingest errors must be stored as {stage, message} dicts so that
+    ApolloDiscoverStatusResponse (response_model on the route) never raises a
+    ValidationError on GET .../discover/status.  Regression for bare-string bug."""
+    from app.models.connectors import ApolloDiscoverStatusResponse
+
+    monkeypatch.setattr(orchestrator.apollo_mod, "ApolloConnector", _DiscoFakeConnector)
+    monkeypatch.setattr(orchestrator.credentials, "get_api_key", lambda *a, **k: "key")
+    monkeypatch.setattr(orchestrator.ingestion, "get_existing_apollo_contact_ids", lambda *a, **k: set())
+    monkeypatch.setattr(orchestrator.ingestion, "upsert_imported_leads",
+                        lambda *a, **k: {"created": 1, "matched": 0, "errors": ["boom while writing lead p1"]})
+    rid = runs.create_discovery_run(fake_mongo, "org1", "u1", icp_id="i1",
+                                    icp_fingerprint="fp", mode="keep", max_leads=50)
+    orchestrator._run_discover(object(), fake_mongo, "org1", "u1", rid, _complete_icp_dict(), "keep", 50)
+    doc = runs.get_discovery_run(fake_mongo, "org1", rid)
+    # errors must be structured dicts, not bare strings
+    assert doc["counts"]["errors"] == [{"stage": "ingest", "message": "boom while writing lead p1"}]
+    # response_model used by the route must validate without raising
+    resp = ApolloDiscoverStatusResponse(**doc)
+    assert resp.counts.errors[0]["message"] == "boom while writing lead p1"
+
+
 def test_start_discover_409_when_active_run(monkeypatch, fake_mongo):
     monkeypatch.setattr(orchestrator.credentials, "get_api_key", lambda *a, **k: "key")
     monkeypatch.setattr(orchestrator.warmup, "get_active_icp", lambda m, o, i: _complete_icp_dict())
