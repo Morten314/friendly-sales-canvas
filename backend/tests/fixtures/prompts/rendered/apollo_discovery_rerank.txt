@@ -1,0 +1,13 @@
+You are ranking sales prospects by fit to an Ideal Customer Profile (ICP).
+
+ICP:
+- Buyer roles: ['VP Sales', 'Head of Growth']
+- Industries: ['SaaS', 'Fintech']
+- Company sizes: ['11-50', '51-200']
+- Region: NA
+
+Candidates (id, title, company industry, company size):
+[{"id": "p1", "title": "VP Sales", "industry": "SaaS", "size": 80}, {"id": "p2", "title": "Head of Growth", "industry": "Fintech", "size": 120}]
+
+Return ONLY a JSON array of candidate ids, best fit first, no commentary.
+Example: ["p1","p2","p3"]
