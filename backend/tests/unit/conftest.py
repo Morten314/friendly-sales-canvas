@@ -93,21 +93,31 @@ class _FakeCollection:
             new_doc.update(update.get("$set", {}))
             self.docs.append(new_doc)
 
-    def find_one(self, flt, sort=None):
-        def _match(d):
-            for k, v in flt.items():
-                if isinstance(v, dict) and "$in" in v:
-                    if d.get(k) not in v["$in"]:
-                        return False
-                elif d.get(k) != v:
-                    return False
-            return True
+    @staticmethod
+    def _flat_match(d, flt):
+        """Return True when doc *d* satisfies flat filter *flt*.
 
-        matches = [d for d in self.docs if _match(d)]
+        Supports plain equality and ``{"$in": [...]}`` operators — the same
+        subset used by ``find_one`` and now ``delete_many``.
+        """
+        for k, v in flt.items():
+            if isinstance(v, dict) and "$in" in v:
+                if d.get(k) not in v["$in"]:
+                    return False
+            elif d.get(k) != v:
+                return False
+        return True
+
+    def find_one(self, flt, sort=None):
+        matches = [d for d in self.docs if self._flat_match(d, flt)]
         if sort:
             key, direction = sort[0]
             matches.sort(key=lambda d: d.get(key) or "", reverse=(direction < 0))
         return dict(matches[0]) if matches else None
+
+    def delete_many(self, flt):
+        """Remove all docs matching *flt*.  ``{}`` deletes everything."""
+        self.docs = [d for d in self.docs if not self._flat_match(d, flt)]
 
 
 class _FakeDbProxy:
@@ -131,7 +141,7 @@ def fake_mongo():
     """In-memory MongoDB double (db → collection → docs).
 
     Supports ``insert_one``, ``update_one`` (with ``$set`` + ``upsert``),
-    and ``find_one`` (with ``$in`` filter and ``sort``).
+    ``find_one`` (with ``$in`` filter and ``sort``), and ``delete_many``.
 
     Usage::
 
