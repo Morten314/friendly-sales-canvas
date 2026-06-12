@@ -68,3 +68,74 @@ def mock_mongo_client():
     `service_fn(mock_mongo_client, ...)`.
     """
     return MagicMock()
+
+
+# ---------------------------------------------------------------------------
+# fake_mongo — lightweight in-memory MongoDB double used across connector tests
+# that exercise real query logic (find_one / insert_one / update_one).
+# Modelled after the FakeMongo helper first introduced in test_connectors_runs.py.
+# ---------------------------------------------------------------------------
+
+class _FakeCollection:
+    def __init__(self):
+        self.docs = []
+
+    def insert_one(self, doc):
+        self.docs.append(dict(doc))
+
+    def update_one(self, flt, update, upsert=False):
+        for d in self.docs:
+            if all(d.get(k) == v for k, v in flt.items()):
+                d.update(update.get("$set", {}))
+                return
+        if upsert:
+            new_doc = dict(flt)
+            new_doc.update(update.get("$set", {}))
+            self.docs.append(new_doc)
+
+    def find_one(self, flt, sort=None):
+        def _match(d):
+            for k, v in flt.items():
+                if isinstance(v, dict) and "$in" in v:
+                    if d.get(k) not in v["$in"]:
+                        return False
+                elif d.get(k) != v:
+                    return False
+            return True
+
+        matches = [d for d in self.docs if _match(d)]
+        if sort:
+            key, direction = sort[0]
+            matches.sort(key=lambda d: d.get(key) or "", reverse=(direction < 0))
+        return dict(matches[0]) if matches else None
+
+
+class _FakeDbProxy:
+    def __init__(self, store):
+        self._store = store
+
+    def __getitem__(self, coll_name):
+        return self._store.setdefault(coll_name, _FakeCollection())
+
+
+class _FakeMongoClient:
+    def __init__(self):
+        self._store: dict = {}
+
+    def __getitem__(self, db_name):
+        return self._store.setdefault(db_name, _FakeDbProxy({}))
+
+
+@pytest.fixture
+def fake_mongo():
+    """In-memory MongoDB double (db → collection → docs).
+
+    Supports ``insert_one``, ``update_one`` (with ``$set`` + ``upsert``),
+    and ``find_one`` (with ``$in`` filter and ``sort``).
+
+    Usage::
+
+        fake_mongo["MyDb"]["MyCollection"].insert_one({...})
+        doc = fake_mongo["MyDb"]["MyCollection"].find_one({"key": "val"})
+    """
+    return _FakeMongoClient()
