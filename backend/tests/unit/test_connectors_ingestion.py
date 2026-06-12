@@ -1,7 +1,11 @@
 """Ingestion partition/dedup + tx behavior against a fake Neo4j driver that
 actually runs the transaction function body."""
 from app.services.connectors import ingestion
-from app.services.connectors.ingestion import _dedupe_import_records, get_leads_by_ids
+from app.services.connectors.ingestion import (
+    _dedupe_import_records,
+    get_leads_by_ids,
+    get_existing_apollo_contact_ids,
+)
 from tests.identities import TEST_ORG_ID, TEST_USER_ID
 
 
@@ -207,3 +211,88 @@ def test_upsert_origin_defaults_to_none():
     params = create_calls[0][1]
     assert params["apollo_origin"] is None
     assert params["discovery_run_id"] is None
+
+
+# ---------------------------------------------------------------------------
+# Task 5: get_existing_apollo_contact_ids — superseded exclusion
+# ---------------------------------------------------------------------------
+
+class _FakeRecord:
+    """Minimal Neo4j Record stand-in: exposes .data() returning the row dict."""
+
+    def __init__(self, row: dict):
+        self._row = row
+
+    def data(self) -> dict:
+        return self._row
+
+
+class _SeedTx:
+    """Fake tx for read-only tests: returns seeded lead rows when queried."""
+
+    def __init__(self, leads):
+        self._leads = leads  # list of dicts with org_id, apollo_contact_id, superseded
+
+    def run(self, query, **params):
+        org = params.get("org_id")
+        include_superseded = "coalesce(l.superseded, false) = false" not in query
+        result = []
+        for l in self._leads:
+            if l.get("org_id") != org:
+                continue
+            if l.get("apollo_contact_id") is None:
+                continue
+            if not include_superseded and l.get("superseded") is True:
+                continue
+            result.append(_FakeRecord({"cid": l["apollo_contact_id"]}))
+        return result
+
+
+class _SeedSession:
+    def __init__(self, tx):
+        self._tx = tx
+
+    def __enter__(self): return self
+    def __exit__(self, *a): return False
+
+    def execute_read(self, fn, *a, **k):
+        return fn(self._tx, *a, **k)
+
+
+class _SeedDriver:
+    def __init__(self, leads):
+        self._tx = _SeedTx(leads)
+
+    def session(self):
+        return _SeedSession(self._tx)
+
+
+def test_existing_apollo_contact_ids_excludes_superseded():
+    """include_superseded=False (default) must exclude leads where superseded=True."""
+    driver = _SeedDriver([
+        {"org_id": TEST_ORG_ID, "apollo_contact_id": "p1", "superseded": None},
+        {"org_id": TEST_ORG_ID, "apollo_contact_id": "p2", "superseded": True},
+    ])
+    ids = get_existing_apollo_contact_ids(driver, TEST_ORG_ID, include_superseded=False)
+    assert ids == {"p1"}
+
+
+def test_existing_apollo_contact_ids_includes_superseded_when_requested():
+    """include_superseded=True must return all contact ids regardless of superseded flag."""
+    driver = _SeedDriver([
+        {"org_id": TEST_ORG_ID, "apollo_contact_id": "p1", "superseded": None},
+        {"org_id": TEST_ORG_ID, "apollo_contact_id": "p2", "superseded": True},
+    ])
+    ids = get_existing_apollo_contact_ids(driver, TEST_ORG_ID, include_superseded=True)
+    assert ids == {"p1", "p2"}
+
+
+def test_existing_apollo_contact_ids_excludes_null_cid():
+    """A lead with apollo_contact_id=None must not appear in the returned set
+    (the set comprehension filters via `if r.get("cid")`)."""
+    driver = _SeedDriver([
+        {"org_id": TEST_ORG_ID, "apollo_contact_id": "p1", "superseded": None},
+        {"org_id": TEST_ORG_ID, "apollo_contact_id": None, "superseded": None},
+    ])
+    ids = get_existing_apollo_contact_ids(driver, TEST_ORG_ID)
+    assert ids == {"p1"}
