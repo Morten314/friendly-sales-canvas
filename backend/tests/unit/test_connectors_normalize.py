@@ -79,3 +79,16 @@ def test_non_dict_input_is_tolerated():
     assert rec["apollo_contact_id"] is None
     assert rec["email"] is None
     assert normalize_apollo_record(["x"])["name"] is None
+
+
+def test_email_status_is_canonical_and_mapped():
+    assert "email_status" in CANONICAL_FIELDS
+    rec = normalize_apollo_record({"id": "p1", "email": "a@x.com", "email_status": "verified"})
+    assert rec["email_status"] == "verified"
+
+
+def test_email_status_absent_in_search_shape_is_none():
+    # api_search shape has has_email but no email/email_status
+    rec = normalize_apollo_record({"id": "p1", "has_email": True, "title": "VP"})
+    assert rec["email_status"] is None
+    assert rec["email"] is None
