@@ -164,3 +164,46 @@ def test_dedupe_email_and_contact_id_second_contact_only():
     out = _dedupe_import_records([rec_a, rec_b])
     assert len(out) == 1, f"expected 1 record after dedup, got {len(out)}"
     assert out[0]["email_norm"] == "e@x.com"
+
+
+# ---------------------------------------------------------------------------
+# Task 5: apollo_origin + discovery_run_id on import-create
+# ---------------------------------------------------------------------------
+
+def test_upsert_passes_origin_and_run_id():
+    """apollo_origin and discovery_run_id must appear as tx.run params on the
+    import-create call so the Cypher can SET them on the created node."""
+    # matched_idxs=set() means no update matches -> both records go to create path
+    tx = FakeTx(matched_idxs=set())
+    driver = FakeDriver(tx)
+    recs = [{"apollo_contact_id": "p1", "email": "a@x.com", "email_norm": "a@x.com",
+             "company_domain_norm": "x.com", "company_domain": "x.com",
+             "company_name": "X", "name": "A", "first_name": None, "last_name": None,
+             "title": None, "seniority": None, "phone": None, "linkedin_url": None,
+             "location": None, "apollo_raw": "{}"}]
+    ingestion.upsert_imported_leads(
+        driver, TEST_ORG_ID, TEST_USER_ID, recs,
+        file_id="f1", source="apollo",
+        apollo_origin="discovery", discovery_run_id="run1",
+    )
+    create_calls = [c for c in tx.calls if "connector:import-create" in c[0]]
+    assert len(create_calls) == 1, "expected exactly one import-create call"
+    params = create_calls[0][1]
+    assert params["apollo_origin"] == "discovery"
+    assert params["discovery_run_id"] == "run1"
+
+
+def test_upsert_origin_defaults_to_none():
+    """When apollo_origin / discovery_run_id are omitted, params default to None
+    (not missing) so the Cypher SET coalesce doesn't error."""
+    tx = FakeTx(matched_idxs=set())
+    driver = FakeDriver(tx)
+    recs = [_rec(0, email_norm="a@x.com")]
+    ingestion.upsert_imported_leads(
+        driver, TEST_ORG_ID, TEST_USER_ID, recs, file_id="f1"
+    )
+    create_calls = [c for c in tx.calls if "connector:import-create" in c[0]]
+    assert len(create_calls) == 1
+    params = create_calls[0][1]
+    assert params["apollo_origin"] is None
+    assert params["discovery_run_id"] is None

@@ -72,7 +72,9 @@ SET l.user_id = $user_id,
     l.file_id = $file_id,
     l.stage = 'Initial Outreach',
     l.created_at = $now,
-    l.last_imported_at = $now
+    l.last_imported_at = $now,
+    l.apollo_origin = $apollo_origin,
+    l.discovery_run_id = $discovery_run_id
 WITH l, row
 {_COMPANY_MERGE}
 """
@@ -127,7 +129,8 @@ def _dedupe_import_records(records: List[Dict[str, Any]]) -> List[Dict[str, Any]
     return out
 
 
-def _import_chunk_tx(tx, org_id, user_id, chunk, file_id, source, now):
+def _import_chunk_tx(tx, org_id, user_id, chunk, file_id, source, now,
+                     apollo_origin=None, discovery_run_id=None):
     """Atomic: fill-only-empty UPDATE matched leads, then CREATE the residue."""
     result = tx.run(_IMPORT_UPDATE_CYPHER, rows=chunk, org_id=org_id, source=source, now=now)
     matched_idxs = {record["idx"] for record in result}
@@ -143,6 +146,8 @@ def _import_chunk_tx(tx, org_id, user_id, chunk, file_id, source, now):
             file_id=file_id,
             source=source,
             now=now,
+            apollo_origin=apollo_origin,
+            discovery_run_id=discovery_run_id,
         )
     return {"matched": len(matched_idxs), "created": len(to_create)}
 
@@ -160,6 +165,8 @@ def upsert_imported_leads(
     *,
     file_id: str,
     source: str = "apollo",
+    apollo_origin: Optional[str] = None,
+    discovery_run_id: Optional[str] = None,
     chunk_size: int = 500,
 ) -> Dict[str, Any]:
     """Import: dedup, then per-chunk atomic match-or-create. Returns counts."""
@@ -173,7 +180,8 @@ def upsert_imported_leads(
         try:
             with driver.session() as session:
                 out = session.execute_write(
-                    _import_chunk_tx, org_id, user_id, chunk, file_id, source, now
+                    _import_chunk_tx, org_id, user_id, chunk, file_id, source, now,
+                    apollo_origin, discovery_run_id,
                 )
             matched += out["matched"]
             created += out["created"]
