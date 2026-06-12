@@ -13,11 +13,13 @@ from app.core.exceptions import (
     ApolloCreditsExhaustedError,
     BrewraError,
     ConnectorCredentialsInvalidError,
+    DiscoveryInProgressError,
     MasterKeyRequiredError,
     ProfileIncompleteError,
 )
 from app.models.connectors import (
     ApolloConnectRequest,
+    ApolloDiscoverRequest,
     ApolloEnrichRequest,
     ApolloImportRequest,
 )
@@ -404,6 +406,34 @@ def _run_discover(driver, mongo, org_id, user_id, run_id, icp, mode, max_leads, 
         if tagged:
             ingestion.clear_superseded_discovery_leads(driver, org_id)
         runs.fail_discovery_run(mongo, run_id, str(e))
+
+
+def start_apollo_discover(driver, mongo, request: "ApolloDiscoverRequest", background_tasks, *, llm=None) -> Dict[str, Any]:
+    credentials.get_api_key(mongo, request.org_id, "apollo")  # ensure connected (404 otherwise)
+
+    icp = warmup.get_active_icp(mongo, request.org_id, request.icp_id)
+    fingerprint = discovery.icp_fingerprint(icp or {})
+    discovery.build_search_filters(icp or {})  # raises IcpUnderspecifiedError (422) early
+
+    # Retire a hung run first; if the killed run was a `replace`, clear its orphaned
+    # superseded tags so those leads don't stay tagged (spec §5.7).
+    stale = runs.fail_stale_discovery_runs(mongo, request.org_id)
+    if stale and stale.get("mode") == "replace":
+        ingestion.clear_superseded_discovery_leads(driver, request.org_id)
+    if runs.get_active_discovery_run(mongo, request.org_id):
+        raise DiscoveryInProgressError("A discovery run is already in progress for this org.")
+
+    max_leads = min(request.max_leads or MAX_LEADS_DEFAULT, MAX_LEADS_HARD_CAP)
+    run_id = runs.create_discovery_run(
+        mongo, request.org_id, request.user_id,
+        icp_id=(icp or {}).get("id"), icp_fingerprint=fingerprint,
+        mode=request.mode, max_leads=max_leads,
+    )
+    background_tasks.add_task(
+        _run_discover, driver, mongo, request.org_id, request.user_id, run_id,
+        icp, request.mode, max_leads, llm,
+    )
+    return {"run_id": run_id, "status": "queued"}
 
 
 def _ingest_discovery(driver, org_id, user_id, run_id, records, counts) -> None:

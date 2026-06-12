@@ -6,6 +6,8 @@ from app.core.exceptions import (
     ApolloCreditsExhaustedError,
     ConnectorCredentialsInvalidError,
     ConnectorNotConnectedError,
+    DiscoveryInProgressError,
+    IcpUnderspecifiedError,
     MasterKeyRequiredError,
     ProfileIncompleteError,
 )
@@ -13,6 +15,7 @@ from app.services.connectors import orchestrator
 from app.services.connectors import runs
 from app.models.connectors import (
     ApolloConnectRequest,
+    ApolloDiscoverRequest,
     ApolloEnrichRequest,
     ApolloImportRequest,
 )
@@ -713,3 +716,35 @@ def test_run_discover_invalid_credentials_fails_run(monkeypatch, fake_mongo):
     doc = runs.get_discovery_run(fake_mongo, "org1", rid)
     assert doc["status"] == "failed"
     assert status_calls.get("status") == "error"
+
+
+# ─── start_apollo_discover ───
+
+def test_start_discover_queues_and_returns_run_id(monkeypatch, fake_mongo):
+    monkeypatch.setattr(orchestrator.credentials, "get_api_key", lambda *a, **k: "key")
+    monkeypatch.setattr(orchestrator.warmup, "get_active_icp", lambda m, o, i: _complete_icp_dict())
+    monkeypatch.setattr(orchestrator.runs, "get_active_discovery_run", lambda m, o: None)
+    bt = _FakeBT()
+    out = orchestrator.start_apollo_discover(object(), fake_mongo,
+            ApolloDiscoverRequest(org_id="org1", user_id="u1", mode="keep"), bt)
+    assert out["status"] == "queued" and out["run_id"]
+    assert len(bt.tasks) == 1
+
+
+def test_start_discover_409_when_active_run(monkeypatch, fake_mongo):
+    monkeypatch.setattr(orchestrator.credentials, "get_api_key", lambda *a, **k: "key")
+    monkeypatch.setattr(orchestrator.warmup, "get_active_icp", lambda m, o, i: _complete_icp_dict())
+    monkeypatch.setattr(orchestrator.runs, "fail_stale_discovery_runs", lambda m, o: None)
+    monkeypatch.setattr(orchestrator.runs, "get_active_discovery_run", lambda m, o: {"run_id": "x"})
+    with pytest.raises(DiscoveryInProgressError):
+        orchestrator.start_apollo_discover(object(), fake_mongo,
+            ApolloDiscoverRequest(org_id="org1", user_id="u1", mode="keep"), _FakeBT())
+
+
+def test_start_discover_422_when_icp_underspecified(monkeypatch, fake_mongo):
+    monkeypatch.setattr(orchestrator.credentials, "get_api_key", lambda *a, **k: "key")
+    monkeypatch.setattr(orchestrator.warmup, "get_active_icp", lambda m, o, i: {"primary_region": "NA"})
+    monkeypatch.setattr(orchestrator.runs, "get_active_discovery_run", lambda m, o: None)
+    with pytest.raises(IcpUnderspecifiedError):
+        orchestrator.start_apollo_discover(object(), fake_mongo,
+            ApolloDiscoverRequest(org_id="org1", user_id="u1", mode="keep"), _FakeBT())
