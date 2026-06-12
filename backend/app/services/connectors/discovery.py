@@ -58,6 +58,13 @@ def build_search_filters(icp: Dict[str, Any]) -> Dict[str, Any]:
     filters: Dict[str, Any] = {
         "person_titles": list(icp.get("buyer_role") or []),
         "organization_num_employees_ranges": list(icp.get("company_size") or []),
+        # TODO(live-apollo): `person_titles`, `organization_num_employees_ranges`, and
+        # `person_locations` are confirmed against Apollo /docs. `q_organization_keywords`
+        # is the ONE unconfirmed name (Task 19 §3): docs lean toward `q_organization_keyword_tags`,
+        # but that param may expect Apollo's tag taxonomy rather than free-text industry names,
+        # so DO NOT blind-rename without a live `mixed_people/api_search` smoke test. If Apollo
+        # silently ignores this key, the step-3 hard-dimension funnel still re-filters industry,
+        # so results stay correct (just a wider initial pool). Change here only if a live test confirms.
         "q_organization_keywords": " ".join(str(i) for i in (icp.get("industry") or [])),
     }
     locations = list(icp.get("location") or [])
