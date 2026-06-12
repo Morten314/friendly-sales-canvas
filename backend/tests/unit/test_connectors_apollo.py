@@ -141,3 +141,26 @@ def test_403_raises_api_error_not_invalid_credentials(monkeypatch):
         ApolloConnector("key").validate_credentials()
     assert type(exc_info.value) is ApolloAPIError  # NOT ConnectorCredentialsInvalidError
     assert "403" in str(exc_info.value)
+
+
+def test_search_people_posts_api_search_and_returns_page(monkeypatch):
+    captured = {}
+
+    def fake_http(method, url, **kwargs):
+        captured["method"] = method
+        captured["url"] = url
+        captured["json"] = kwargs.get("json")
+        return FakeResp(200, {
+            "people": [{"id": "p1", "has_email": True, "title": "VP Sales"}],
+            "pagination": {"page": 1, "per_page": 100, "total_pages": 3, "total_entries": 250},
+        })
+
+    monkeypatch.setattr(apollo_mod, "_http_request", fake_http)
+    body = ApolloConnector("key").search_people({"person_titles": ["VP Sales"]}, page=1, per_page=100)
+
+    assert captured["method"] == "POST"
+    assert captured["url"].endswith("/mixed_people/api_search")
+    assert captured["json"]["person_titles"] == ["VP Sales"]
+    assert captured["json"]["page"] == 1 and captured["json"]["per_page"] == 100
+    assert body["people"][0]["id"] == "p1"
+    assert body["pagination"]["total_pages"] == 3

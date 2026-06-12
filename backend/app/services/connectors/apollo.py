@@ -182,3 +182,23 @@ class ApolloConnector:
             },
         )
         return body.get("matches") or []
+
+    def search_people(
+        self,
+        filters: Dict[str, Any],
+        *,
+        page: int = 1,
+        per_page: int = 100,
+    ) -> Dict[str, Any]:
+        """People Search via POST /mixed_people/api_search (credit-free, master key).
+
+        `filters` are Apollo search params (person_titles, organization_num_employees_ranges,
+        q_organization_keywords, person_locations, ...). Returns the raw page dict
+        (`people` list + `pagination`). A 403 surfaces as ApolloAPIError — the caller
+        (connect probe) translates that to "master key required".
+        """
+        payload = dict(filters)
+        payload["page"] = page
+        payload["per_page"] = min(per_page, 100)  # Apollo hard cap
+        body = self._request("POST", "/mixed_people/api_search", json=payload)
+        return body or {}
