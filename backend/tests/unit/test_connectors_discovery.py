@@ -1,6 +1,7 @@
 import pytest
 from app.services.connectors import discovery
 from app.core.exceptions import IcpUnderspecifiedError
+from app.core import prompts as prompt_registry
 
 
 def _icp():
@@ -58,3 +59,63 @@ def test_score_icp_fit_orders_better_matches_higher():
     strong = discovery.score_icp_fit(_cand(), _icp())
     weak = discovery.score_icp_fit(_cand(organization={"industry": "Mining", "estimated_num_employees": 5}), _icp())
     assert strong > weak
+
+
+# ---------------------------------------------------------------------------
+# Task 11 — rerank_candidates
+# ---------------------------------------------------------------------------
+
+class _FakeLLM:
+    def __init__(self, content):
+        self._content = content
+    def invoke(self, _prompt):
+        class R: pass
+        r = R(); r.content = self._content; return r
+
+
+def test_rerank_uses_llm_order_then_caps(monkeypatch):
+    monkeypatch.setattr(discovery, "_render_rerank_prompt", lambda icp, cands: "PROMPT")
+    cands = [_cand(id="p1"), _cand(id="p2"), _cand(id="p3")]
+    out = discovery.rerank_candidates(_FakeLLM('["p3","p1","p2"]'), cands, _icp(), max_leads=2)
+    assert [c["id"] for c in out] == ["p3", "p1"]
+
+
+def test_rerank_falls_back_to_fit_score_on_llm_error(monkeypatch):
+    monkeypatch.setattr(discovery, "_render_rerank_prompt", lambda icp, cands: "PROMPT")
+    class _Boom:
+        def invoke(self, _): raise RuntimeError("llm down")
+    cands = [
+        _cand(id="weak", organization={"industry": "Mining", "estimated_num_employees": 5}),
+        _cand(id="strong"),
+        _cand(id="middle"),
+    ]
+    out = discovery.rerank_candidates(_Boom(), cands, _icp(), max_leads=2)
+    assert out[0]["id"] == "strong"   # deterministic fit-score fallback, best first
+    assert len(out) == 2              # capped at max_leads
+
+
+def test_rerank_falls_back_on_bad_json(monkeypatch):
+    monkeypatch.setattr(discovery, "_render_rerank_prompt", lambda icp, cands: "PROMPT")
+    cands = [
+        _cand(id="weak", organization={"industry": "Mining", "estimated_num_employees": 5}),
+        _cand(id="strong"),
+        _cand(id="middle"),
+    ]
+    out = discovery.rerank_candidates(_FakeLLM("not json at all"), cands, _icp(), max_leads=2)
+    assert out[0]["id"] == "strong"   # bad JSON -> deterministic fit fallback
+    assert len(out) == 2
+
+
+def test_rerank_short_circuits_without_llm_when_all_fit(monkeypatch):
+    class _NeverCall:
+        def invoke(self, _):
+            raise AssertionError("LLM must not be called when candidates already fit")
+    cands = [_cand(id="a"), _cand(id="b")]
+    out = discovery.rerank_candidates(_NeverCall(), cands, _icp(), max_leads=5)
+    assert [c["id"] for c in out] == ["a", "b"]   # all returned, arrival order preserved
+
+
+def test_rerank_prompt_is_discoverable_and_renders():
+    prompt_registry.init_registry()
+    rendered = prompt_registry.render("apollo_discovery_rerank", icp=_icp(), candidates="[]")
+    assert rendered.body  # non-empty; proves prompts/connectors/ is discovered + the template renders

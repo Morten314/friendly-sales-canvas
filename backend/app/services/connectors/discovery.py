@@ -147,3 +147,45 @@ def score_icp_fit(candidate: Dict[str, Any], icp: Dict[str, Any]) -> float:
         score += 0.15
 
     return round(score, 3)
+
+
+def _render_rerank_prompt(icp: Dict[str, Any], candidates: List[Dict[str, Any]]) -> str:
+    """Render the re-rank prompt via the registry. Isolated so tests can patch it."""
+    from app.core import prompts as prompt_registry
+    compact = [
+        {"id": c.get("id"),
+         "title": c.get("title"),
+         "industry": (c.get("organization") or {}).get("industry"),
+         "size": (c.get("organization") or {}).get("estimated_num_employees")}
+        for c in candidates
+    ]
+    return prompt_registry.render(
+        "apollo_discovery_rerank", icp=icp, candidates=json.dumps(compact),
+    ).body
+
+
+def _fit_fallback(candidates: List[Dict[str, Any]], icp: Dict[str, Any], max_leads: int) -> List[Dict[str, Any]]:
+    return sorted(candidates, key=lambda c: score_icp_fit(c, icp), reverse=True)[:max_leads]
+
+
+def rerank_candidates(llm, candidates: List[Dict[str, Any]], icp: Dict[str, Any],
+                      *, max_leads: int) -> List[Dict[str, Any]]:
+    """Pick the top `max_leads` candidates to reveal. Uses the LLM to order them by
+    ICP fit; on ANY LLM/parse failure, degrades deterministically to score_icp_fit
+    (spec §5.2 step 4). Never raises."""
+    if len(candidates) <= max_leads:
+        return list(candidates)
+    by_id = {str(c.get("id")): c for c in candidates}
+    try:
+        prompt = _render_rerank_prompt(icp, candidates)
+        raw = llm.invoke(prompt)
+        content = getattr(raw, "content", raw)
+        order = json.loads(content if isinstance(content, str) else str(content))
+        ranked = [by_id[str(i)] for i in order if str(i) in by_id]
+        # Append any candidate the LLM omitted, fit-ordered, then cap.
+        seen = {str(c.get("id")) for c in ranked}
+        ranked.extend(c for c in _fit_fallback(candidates, icp, len(candidates)) if str(c.get("id")) not in seen)
+        return ranked[:max_leads]
+    except Exception as e:  # noqa: BLE001
+        logger.warning("LLM re-rank failed; using deterministic fit fallback: %s", e)
+        return _fit_fallback(candidates, icp, max_leads)
