@@ -124,7 +124,12 @@ def test_connect_probe_403_is_master_key_required(monkeypatch, fake_mongo):
 def test_status_disconnected(monkeypatch):
     monkeypatch.setattr(orchestrator.credentials, "get_credentials", lambda m, o, p: None)
     out = orchestrator.get_apollo_status(object(), TEST_ORG_ID)
-    assert out == {"connected": False, "status": "disconnected", "connected_at": None}
+    assert out == {
+        "connected": False, "status": "disconnected", "connected_at": None,
+        "credits_consumed_total": 0, "last_run_credits": 0, "low_credit": False,
+        "last_discovery_at": None, "last_discovery_icp_fingerprint": None,
+        "icp_changed_since_last_discovery": False,
+    }
 
 
 def test_lists_requires_connection(monkeypatch, patched):
@@ -748,3 +753,31 @@ def test_start_discover_422_when_icp_underspecified(monkeypatch, fake_mongo):
     with pytest.raises(IcpUnderspecifiedError):
         orchestrator.start_apollo_discover(object(), fake_mongo,
             ApolloDiscoverRequest(org_id="org1", user_id="u1", mode="keep"), _FakeBT())
+
+
+# ─── status (extended: credits + icp-change) ───
+
+def test_status_reports_icp_changed_and_credits(monkeypatch, fake_mongo):
+    monkeypatch.setattr(orchestrator.credentials, "get_credentials",
+                        lambda m, o, p: {"status": "connected", "connected_at": "t0", "low_credit": False})
+    monkeypatch.setattr(orchestrator.warmup, "get_active_icp", lambda m, o, i: _complete_icp_dict())
+    monkeypatch.setattr(orchestrator.runs, "latest_completed_discovery_run",
+                        lambda m, o: {"icp_fingerprint": "OLD", "finished_at": "t1"})
+    monkeypatch.setattr(orchestrator.runs, "sum_discovery_credits", lambda m, o: 42)
+    out = orchestrator.get_apollo_status(fake_mongo, "org1")
+    assert out["connected"] is True
+    assert out["credits_consumed_total"] == 42
+    assert out["icp_changed_since_last_discovery"] is True   # current fp != "OLD"
+    assert out["last_discovery_at"] == "t1"
+
+
+# ─── export ───
+
+def test_export_discovery_leads_csv(monkeypatch):
+    monkeypatch.setattr(orchestrator.ingestion, "get_discovery_leads",
+                        lambda d, o: [{"name": "A", "email": "a@x.com", "title": "VP", "email_status": "verified"}])
+    blob, content_type = orchestrator.export_discovery_leads(object(), "org1", fmt="csv")
+    assert "name,email" in blob.splitlines()[0]
+    assert "a@x.com" in blob
+    assert "A" in blob.splitlines()[1].split(",")[0]
+    assert content_type == "text/csv"

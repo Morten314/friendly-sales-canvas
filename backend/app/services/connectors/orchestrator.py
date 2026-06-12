@@ -71,12 +71,46 @@ def connect_apollo(mongo, request: ApolloConnectRequest) -> Dict[str, Any]:
 def get_apollo_status(mongo, org_id: str) -> Dict[str, Any]:
     doc = credentials.get_credentials(mongo, org_id, "apollo")
     if not doc:
-        return {"connected": False, "status": "disconnected", "connected_at": None}
+        return {"connected": False, "status": "disconnected", "connected_at": None,
+                "credits_consumed_total": 0, "last_run_credits": 0, "low_credit": False,
+                "last_discovery_at": None, "last_discovery_icp_fingerprint": None,
+                "icp_changed_since_last_discovery": False}
+    last = runs.latest_completed_discovery_run(mongo, org_id)
+    last_fp = (last or {}).get("icp_fingerprint")
+    current_icp = warmup.get_active_icp(mongo, org_id, None)
+    current_fp = discovery.icp_fingerprint(current_icp) if current_icp else None
     return {
-        "connected": doc.get("status") == "connected",
-        "status": str(doc.get("status") or "disconnected"),
+        "connected": True,
+        "status": doc.get("status", "connected"),
         "connected_at": doc.get("connected_at"),
+        "credits_consumed_total": runs.sum_discovery_credits(mongo, org_id),
+        "last_run_credits": int((last or {}).get("credits_consumed") or 0),
+        "low_credit": bool(doc.get("low_credit", False)),
+        "last_discovery_at": (last or {}).get("finished_at"),
+        "last_discovery_icp_fingerprint": last_fp,
+        "icp_changed_since_last_discovery": bool(last_fp and current_fp and last_fp != current_fp),
     }
+
+
+def get_apollo_discovery_status(mongo, org_id: str, run_id: Optional[str]) -> Dict[str, Any]:
+    return runs.get_discovery_run(mongo, org_id, run_id)
+
+
+def export_discovery_leads(driver, org_id: str, *, fmt: str = "json"):
+    """Return (body, content_type). Bounded, non-streaming. CSV is a flat projection."""
+    leads = ingestion.get_discovery_leads(driver, org_id)
+    if fmt == "csv":
+        import csv, io
+        cols = ["name", "first_name", "last_name", "email", "email_status", "title",
+                "seniority", "company_name", "company_domain", "phone", "linkedin_url", "location"]
+        buf = io.StringIO()
+        w = csv.writer(buf)
+        w.writerow(cols)
+        for ld in leads:
+            w.writerow([ld.get(c, "") for c in cols])
+        return buf.getvalue(), "text/csv"
+    import json as _json
+    return _json.dumps({"leads": leads}, default=str), "application/json"
 
 
 def disconnect_apollo(mongo, org_id: str) -> Dict[str, Any]:

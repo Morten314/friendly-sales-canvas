@@ -115,6 +115,16 @@ class _FakeCollection:
             matches.sort(key=lambda d: d.get(key) or "", reverse=(direction < 0))
         return dict(matches[0]) if matches else None
 
+    def find(self, flt=None, projection=None):
+        """Return all docs matching *flt* (flat equality / $in only).
+
+        ``projection`` is accepted but ignored — callers use ``.get()`` on
+        results, so returning full dicts is always safe.
+        """
+        if flt is None:
+            flt = {}
+        return [dict(d) for d in self.docs if self._flat_match(d, flt)]
+
     def delete_many(self, flt):
         """Remove all docs matching *flt*.  ``{}`` deletes everything."""
         self.docs = [d for d in self.docs if not self._flat_match(d, flt)]
@@ -141,7 +151,8 @@ def fake_mongo():
     """In-memory MongoDB double (db → collection → docs).
 
     Supports ``insert_one``, ``update_one`` (with ``$set`` + ``upsert``),
-    ``find_one`` (with ``$in`` filter and ``sort``), and ``delete_many``.
+    ``find_one`` (with ``$in`` filter and ``sort``), ``find`` (flat filter),
+    and ``delete_many``.
 
     Usage::
 
