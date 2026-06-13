@@ -41,7 +41,9 @@ def _resolve_customer_profile(mongo, org_id, user_id) -> Optional[Dict[str, Any]
     When the org has no saved ICPs (a common case — the user may only have
     *suggested* ICPs that were never saved into the customer profile), falls
     back to the user-scoped ``Profiler.ICP_config`` so the customer profile
-    still informs the answer. Returns ``{"icps": ...}`` or None. Never raises.
+    still informs the answer. Returns ``{"icps": [list]}`` or None — the inner
+    ``icps`` is always normalized to a list of ICP dicts regardless of which
+    source supplied it. Never raises.
     """
     customer_profile = None
     try:
@@ -53,10 +55,19 @@ def _resolve_customer_profile(mongo, org_id, user_id) -> Optional[Dict[str, Any]
         return customer_profile
 
     # Fall back to the user-scoped ICP config (suggested ICPs live here).
+    # ICP_config stores `icps` as either {"suggestedICPs": [...]} or a bare
+    # list — normalize to a list so the returned shape matches the primary path.
     try:
         icp_config = persistence._get_user_icp_config(mongo, user_id)
-        if icp_config and icp_config.get("icps"):
-            return {"icps": icp_config.get("icps")}
+        raw_icps = icp_config.get("icps") if icp_config else None
+        if isinstance(raw_icps, dict):
+            suggested = raw_icps.get("suggestedICPs", [])
+        elif isinstance(raw_icps, list):
+            suggested = raw_icps
+        else:
+            suggested = []
+        if suggested:
+            return {"icps": suggested}
     except Exception as e:
         logger.warning(f"Could not fetch ICP config fallback for customer profile: {e}")
 
@@ -120,7 +131,7 @@ async def signal_ask(driver, mongo, pc, agent_chain, request: SignalAskRequest) 
             context_parts.append(f"COMPANY PROFILE:\n{company_profile_json}")
 
         if customer_profile:
-            customer_profile_json = json.dumps(customer_profile, indent=2)
+            customer_profile_json = json.dumps(customer_profile, indent=2, default=str)
             context_parts.append(f"CUSTOMER PROFILE (ICPs):\n{customer_profile_json}")
 
         if data_source_context:
@@ -209,7 +220,7 @@ async def signal_ask_claude(driver, mongo, pc, request: SignalAskRequest) -> dic
             context_parts.append(f"COMPANY PROFILE:\n{company_profile_json}")
 
         if customer_profile:
-            customer_profile_json = json.dumps(customer_profile, indent=2)
+            customer_profile_json = json.dumps(customer_profile, indent=2, default=str)
             context_parts.append(f"CUSTOMER PROFILE (ICPs):\n{customer_profile_json}")
 
         if data_source_context:
