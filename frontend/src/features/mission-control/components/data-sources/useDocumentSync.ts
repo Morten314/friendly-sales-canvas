@@ -133,7 +133,7 @@ export function useDocumentSync({
         );
         const dismissedKeys = getDismissedDataSourceKeys(currentUser?.uid ?? "");
         const loadedSources: DataSource[] = documents
-          .map((doc: UntypedBackendDocument) => {
+          .map((doc: UntypedBackendDocument): DataSource => {
           // Parse tags - handle both array and string formats
           let parsedTags: string[] = [];
           if (Array.isArray(doc.tags)) {
