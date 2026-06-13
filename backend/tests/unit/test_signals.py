@@ -6,7 +6,7 @@ Covers all 8 public functions, the 4 typed-exception leaves, and the
 """
 import asyncio
 import json
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -374,3 +374,88 @@ def test_signal_ask_claude_happy_path_uses_captured(
     # observability-only ("claude-sonnet") since custom dispatch doesn't use the factory.
     assert result["prompt_meta"]["name"] == "signals_signal_ask_claude"
     assert result["prompt_meta"]["model"] == "claude-sonnet"
+
+
+# ---------------------------------------------------------------------------
+# _run_persona_signal_batch — per-signal resilience (Issue 1: Claude batch 500)
+#
+# The batch path used to call search_signals once per signal and re-raise on
+# the first failure, so any single transient Claude/Tavily/JSON error aborted
+# the whole batch with an HTTP 500 — even though the Profiler/ICP path and the
+# single-signal research path retry. These tests pin the new behavior: bounded
+# retry per signal, and skip-on-final-failure so one bad signal cannot 500 the
+# whole batch.
+# ---------------------------------------------------------------------------
+
+def test_run_persona_signal_batch_skips_failed_signal_instead_of_raising(
+    mocker, mock_mongo_client,
+):
+    """A per-signal failure must NOT abort the batch. Signal 1 fails on every
+    retry; signal 2 succeeds. The batch keeps the survivor and does not raise."""
+    from app.services.signals.batch import _run_persona_signal_batch
+
+    captured = load_captured("search_signals_scout_claude")
+    # signal 1: both attempts raise; signal 2: succeeds on the first attempt
+    mocker.patch(
+        "app.services.signals.search.search_signals",
+        side_effect=[
+            RuntimeError("Claude API failed (500)"),
+            RuntimeError("Claude API failed (500)"),
+            dict(captured),
+        ],
+    )
+    mocker.patch(
+        "app.services.signals.persistence._save_signal_and_track_headline",
+        return_value=None,
+    )
+    mocker.patch("app.services.signals.batch.asyncio.sleep", new=AsyncMock())
+
+    generated: list = []
+    request = MarketRequest(
+        user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
+        component_name="signals", data={}, refresh=True,
+    )
+
+    # Must NOT raise even though signal 1 fails outright.
+    asyncio.run(_run_persona_signal_batch(
+        "scout", {"existing_headlines": []},
+        agent_chain=MagicMock(), llm_backend="claude",
+        mongo=mock_mongo_client, track_key=None, request=request,
+        batch_id="batch_test", generated_signals=generated,
+    ))
+
+    assert len(generated) == 1  # signal 2 survived; signal 1 was skipped
+
+
+def test_run_persona_signal_batch_retries_transient_failure(
+    mocker, mock_mongo_client,
+):
+    """A transient failure on the first attempt is retried and recovered, so the
+    signal is still generated (no data loss, no 500)."""
+    from app.services.signals.batch import _run_persona_signal_batch
+
+    captured = load_captured("search_signals_scout_claude")
+    # signal 1: fail then succeed (retry recovers); signal 2: succeed first try
+    mocker.patch(
+        "app.services.signals.search.search_signals",
+        side_effect=[RuntimeError("transient"), dict(captured), dict(captured)],
+    )
+    mocker.patch(
+        "app.services.signals.persistence._save_signal_and_track_headline",
+        return_value=None,
+    )
+    mocker.patch("app.services.signals.batch.asyncio.sleep", new=AsyncMock())
+
+    generated: list = []
+    request = MarketRequest(
+        user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
+        component_name="signals", data={}, refresh=True,
+    )
+    asyncio.run(_run_persona_signal_batch(
+        "scout", {"existing_headlines": []},
+        agent_chain=MagicMock(), llm_backend="claude",
+        mongo=mock_mongo_client, track_key=None, request=request,
+        batch_id="batch_test", generated_signals=generated,
+    ))
+
+    assert len(generated) == 2  # both signals generated; signal 1 recovered via retry
