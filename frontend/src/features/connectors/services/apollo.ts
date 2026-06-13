@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ZodType } from "zod";
 
 import {
   ApolloDiscoverResponseSchema,
@@ -17,14 +18,17 @@ import { buildApiUrl } from "@/shared/api/transport";
 
 /** GET /api/connectors/apollo/status — connection + credit summary for the org. */
 export async function fetchApolloStatus(orgId: string): Promise<ApolloStatus> {
-  return apiGet(`connectors/apollo/status?org_id=${encodeURIComponent(orgId)}`, ApolloStatusSchema);
+  return apiGet(
+    `connectors/apollo/status?org_id=${encodeURIComponent(orgId)}`,
+    ApolloStatusSchema as ZodType<ApolloStatus>,
+  );
 }
 
 /** GET /api/connectors/apollo/warmup — ICP readiness gate for the org/user pair. */
 export async function fetchApolloWarmup(orgId: string, userId: string): Promise<ApolloWarmup> {
   return apiGet(
     `connectors/apollo/warmup?org_id=${encodeURIComponent(orgId)}&user_id=${encodeURIComponent(userId)}`,
-    ApolloWarmupSchema,
+    ApolloWarmupSchema as ZodType<ApolloWarmup>,
   );
 }
 
@@ -58,7 +62,10 @@ export async function fetchApolloDiscoverStatus(
   const q = runId
     ? `org_id=${encodeURIComponent(orgId)}&run_id=${encodeURIComponent(runId)}`
     : `org_id=${encodeURIComponent(orgId)}`;
-  return apiGet(`connectors/apollo/discover/status?${q}`, ApolloDiscoverStatusSchema);
+  return apiGet(
+    `connectors/apollo/discover/status?${q}`,
+    ApolloDiscoverStatusSchema as ZodType<ApolloDiscoverStatus>,
+  );
 }
 
 // ─── Connect + Export ────────────────────────────────────────────────────────
