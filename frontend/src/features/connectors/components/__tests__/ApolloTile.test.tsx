@@ -95,12 +95,22 @@ describe("ApolloTile", () => {
     expect(screen.getByText(/discovering leads/i)).toBeInTheDocument();
   });
 
-  it("shows zero-results widen-ICP affordance on completed_empty", () => {
+  it("shows the widen-ICP affordance on completed_empty when nobody matched (searched=0)", () => {
+    mocks.discoverStatus.mockReturnValue({
+      data: { status: "completed_empty", counts: { searched: 0, created: 0, matched: 0 } },
+    });
+    renderTile();
+    expect(screen.getByText(/no leads found/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /widen your icp/i })).toBeInTheDocument();
+  });
+
+  it("shows a not-contactable message on completed_empty when candidates matched (searched>0)", () => {
     mocks.discoverStatus.mockReturnValue({
       data: { status: "completed_empty", counts: { searched: 80, created: 0, matched: 0 } },
     });
     renderTile();
-    expect(screen.getByText(/no leads found/i)).toBeInTheDocument();
+    expect(screen.getByText(/none were contactable/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /widen your icp/i })).not.toBeInTheDocument();
   });
 
   it("shows a low-credit warning when status.low_credit", () => {

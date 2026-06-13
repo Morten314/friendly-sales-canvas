@@ -135,14 +135,22 @@ export function ApolloTile() {
               Discovery complete · {new Date(run.finished_at).toLocaleString()}
             </p>
           )}
-          {tileState === "complete_empty" && (
-            <p className="text-sm">
-              No leads found for your current ICP.{" "}
-              <Button variant="link" className="h-auto p-0" onClick={() => goDeepLink("icp")}>
-                Widen your ICP
-              </Button>
-            </p>
-          )}
+          {tileState === "complete_empty" &&
+            ((run?.counts.searched ?? 0) === 0 ? (
+              // No one in Apollo matched the ICP — widening it is the right advice (spec §5.3 / UC8).
+              <p className="text-sm">
+                No leads found — no one in Apollo matches your current ICP.{" "}
+                <Button variant="link" className="h-auto p-0" onClick={() => goDeepLink("icp")}>
+                  Widen your ICP
+                </Button>
+              </p>
+            ) : (
+              // Candidates matched but none cleared the reveal/quality gate — widening won't help.
+              <p className="text-sm">
+                Candidates were found, but none were contactable. Widening your ICP won&apos;t help
+                — try again later.
+              </p>
+            ))}
           {tileState === "complete_partial" && (
             <p role="status" className="text-sm text-amber-600">
               Discovery was interrupted — some leads may be missing.
