@@ -31,92 +31,68 @@ from app.services.signals import persistence, search
 _SIGNAL_BATCH_MAX_RETRIES = 2
 
 
-async def _run_persona_signal_batch(
+async def _generate_one_signal(
     persona: str,
     pre_data,
     *,
     agent_chain,
     llm_backend: str,
-    mongo,
-    track_key: Optional[str],
     request: MarketRequest,
     batch_id: str,
-    generated_signals: list,
-) -> None:
-    """Run one persona's signal-batch loop (scout or profiler).
+) -> Optional[dict]:
+    """Generate a single persona signal (scout or profiler).
 
-    The loop body is identical for both personas; only ``persona`` (used
-    in ``search_signals``, the ``"agent"`` field, and log messages) and
-    the ``pre_data`` source differ between callers.
+    Retries the ``search_signals`` LLM call up to ``_SIGNAL_BATCH_MAX_RETRIES``
+    times (matching ``run_signals_research``). Returns the assembled signal dict
+    (id/metadata attached) on success, or ``None`` if the LLM call failed all
+    retries — the caller skips a ``None`` so one bad signal cannot abort the
+    whole batch with an HTTP 500. The retry/skip is scoped to the LLM call (the
+    root cause); persistence is the caller's responsibility (after de-dup),
+    where a DB failure deliberately propagates so a real outage surfaces.
 
-    Resilience: each signal's ``search_signals`` call is retried up to
-    ``_SIGNAL_BATCH_MAX_RETRIES`` times (matching ``run_signals_research``),
-    and a signal that still fails is logged and SKIPPED rather than re-raised
-    — one bad signal must not abort the whole batch with an HTTP 500.
-    Observable surfaces: appends successful signals to ``generated_signals``,
-    DB writes via ``persistence._save_signal_and_track_headline``, and log
-    lines (same wording, persona substituted).
+    Side-effect-free w.r.t. shared state: it does NOT persist and does NOT
+    mutate ``pre_data``, so all four signals can run concurrently under
+    ``asyncio.gather`` without races.
     """
-    for i in range(2):
-        # --- Generate the signal text, retrying transient LLM failures. The
-        #     retry/skip is scoped to the LLM call (the root cause): a single
-        #     flaky Claude/Tavily/JSON error must not 500 the whole batch. A
-        #     failure in the persistence/DB write below is deliberately NOT
-        #     swallowed — it propagates so a real infra outage surfaces instead
-        #     of a silently-empty "success" batch. ---
-        signals_result = None
-        last_error: Optional[Exception] = None
-        for attempt in range(1, _SIGNAL_BATCH_MAX_RETRIES + 1):
-            try:
-                logger.info(
-                    f"Generating {persona} signal {i+1} "
-                    f"(attempt {attempt}/{_SIGNAL_BATCH_MAX_RETRIES})..."
-                )
-                signals_result = await asyncio.to_thread(
-                    search.search_signals, agent_chain, pre_data, persona, llm_backend
-                )
-                break
-            except Exception as e:
-                last_error = e
-                logger.warning(
-                    f"Attempt {attempt}/{_SIGNAL_BATCH_MAX_RETRIES} for "
-                    f"{persona} signal {i+1} failed: {e}"
-                )
-                if attempt < _SIGNAL_BATCH_MAX_RETRIES:
-                    await asyncio.sleep(1)  # retry delay
-
-        if signals_result is None:
-            # LLM call exhausted its retries — skip this signal but keep the
-            # batch alive so one bad signal can't abort the whole request.
-            logger.error(
-                f"Failed to generate {persona} signal {i+1} after "
-                f"{_SIGNAL_BATCH_MAX_RETRIES} attempts; skipping: {last_error}"
+    signals_result = None
+    last_error: Optional[Exception] = None
+    for attempt in range(1, _SIGNAL_BATCH_MAX_RETRIES + 1):
+        try:
+            logger.info(
+                f"Generating {persona} signal (attempt {attempt}/{_SIGNAL_BATCH_MAX_RETRIES})..."
             )
-            continue
+            signals_result = await asyncio.to_thread(
+                search.search_signals, agent_chain, pre_data, persona, llm_backend
+            )
+            break
+        except Exception as e:
+            last_error = e
+            logger.warning(
+                f"Attempt {attempt}/{_SIGNAL_BATCH_MAX_RETRIES} for {persona} signal failed: {e}"
+            )
+            if attempt < _SIGNAL_BATCH_MAX_RETRIES:
+                await asyncio.sleep(1)  # retry delay
 
-        signal_id = str(uuid.uuid4())
-        signals_result.update({
-            "id": signal_id,
-            "signal_id": signal_id,  # Ensure signal_id is also present
-            "user_id": request.user_id,
-            "agent": persona,
-            "timestamp": datetime.now(timezone.utc),
-            "batch_id": batch_id
-        })
-        if request.org_id:
-            signals_result["org_id"] = request.org_id
-
-        # Save signal + (if headline) upsert into signal_track.
-        await asyncio.to_thread(
-            persistence._save_signal_and_track_headline, mongo, signals_result, track_key,
+    if signals_result is None:
+        logger.error(
+            f"Failed to generate {persona} signal after "
+            f"{_SIGNAL_BATCH_MAX_RETRIES} attempts; skipping: {last_error}"
         )
+        return None
 
-        # Mirror the headline into pre_data for the next iteration's prompt.
-        if signals_result.get("headline") and track_key and isinstance(pre_data, dict):
-            pre_data["existing_headlines"].append(signals_result.get("headline"))
-        signals_result.pop("_id", None)
-        generated_signals.append(signals_result)
-        logger.info(f"Successfully generated {persona} signal {i+1}")
+    signal_id = str(uuid.uuid4())
+    signals_result.update({
+        "id": signal_id,
+        "signal_id": signal_id,  # Ensure signal_id is also present
+        "user_id": request.user_id,
+        "agent": persona,
+        "timestamp": datetime.now(timezone.utc),
+        "batch_id": batch_id,
+    })
+    if request.org_id:
+        signals_result["org_id"] = request.org_id
+    signals_result.pop("_id", None)
+    return signals_result
 
 
 async def _generate_signals_batch_impl(driver, mongo, pc, agent_chain, request: MarketRequest, llm_backend: str) -> dict:
@@ -216,24 +192,50 @@ async def _generate_signals_batch_impl(driver, mongo, pc, agent_chain, request: 
         profiler_pre_data["pinecone_context_queries"] = profiler_signal_context_queries
         profiler_pre_data["pinecone_supporting_context"] = profiler_pinecone_context
 
-    generated_signals = []
     batch_id = f"batch_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
 
-    # Generate 2 signals for scout
-    await _run_persona_signal_batch(
-        "scout", pre_data,
-        agent_chain=agent_chain, llm_backend=llm_backend,
-        mongo=mongo, track_key=track_key, request=request,
-        batch_id=batch_id, generated_signals=generated_signals,
-    )
+    # Generate 2 scout + 2 profiler signals CONCURRENTLY. Each is an independent
+    # Claude+Tavily call (~30s); the old code awaited them sequentially (~4x,
+    # ~120s) which pushed the request past upstream proxy timeouts. asyncio is
+    # already the batch concurrency primitive (search_signals already runs via
+    # asyncio.to_thread); gather just lets those calls overlap. A failed signal
+    # returns None and is skipped.
+    signal_specs = [
+        ("scout", pre_data),
+        ("scout", pre_data),
+        ("profiler", profiler_pre_data),
+        ("profiler", profiler_pre_data),
+    ]
+    results = await asyncio.gather(*[
+        _generate_one_signal(
+            persona, data,
+            agent_chain=agent_chain, llm_backend=llm_backend,
+            request=request, batch_id=batch_id,
+        )
+        for persona, data in signal_specs
+    ])
 
-    # Generate 2 signals for profiler
-    await _run_persona_signal_batch(
-        "profiler", profiler_pre_data,
-        agent_chain=agent_chain, llm_backend=llm_backend,
-        mongo=mongo, track_key=track_key, request=request,
-        batch_id=batch_id, generated_signals=generated_signals,
-    )
+    # Drop skipped (None) signals and de-duplicate by headline within the batch.
+    # Concurrency loses the old per-iteration headline-feedback dedup; this
+    # restores it. Survivors are persisted sequentially so signal_track's
+    # $addToSet headline writes stay consistent. A DB write failure here is NOT
+    # swallowed — it propagates so a real infra outage surfaces as a 500 rather
+    # than a silently-empty "success" batch.
+    generated_signals = []
+    seen_headlines: set = set()
+    for signals_result in results:
+        if signals_result is None:
+            continue
+        headline = (signals_result.get("headline") or "").strip()
+        if headline and headline in seen_headlines:
+            logger.info(f"Skipping duplicate signal headline within batch: {headline[:80]}")
+            continue
+        if headline:
+            seen_headlines.add(headline)
+        await asyncio.to_thread(
+            persistence._save_signal_and_track_headline, mongo, signals_result, track_key,
+        )
+        generated_signals.append(signals_result)
 
     return {
         "status": "success",

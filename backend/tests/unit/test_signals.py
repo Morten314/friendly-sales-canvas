@@ -377,88 +377,70 @@ def test_signal_ask_claude_happy_path_uses_captured(
 
 
 # ---------------------------------------------------------------------------
-# _run_persona_signal_batch — per-signal resilience (Issue 1: Claude batch 500)
+# _generate_one_signal — per-signal resilience (Issue 1: Claude batch 500)
 #
 # The batch path used to call search_signals once per signal and re-raise on
 # the first failure, so any single transient Claude/Tavily/JSON error aborted
 # the whole batch with an HTTP 500 — even though the Profiler/ICP path and the
-# single-signal research path retry. These tests pin the new behavior: bounded
-# retry per signal, and skip-on-final-failure so one bad signal cannot 500 the
-# whole batch.
+# single-signal research path retry. _generate_one_signal now retries the LLM
+# call and returns None (skipped) on exhaustion instead of raising, so one bad
+# signal cannot 500 the batch. It is side-effect-free (no persist, no pre_data
+# mutation) so the four signals run concurrently under asyncio.gather.
 # ---------------------------------------------------------------------------
 
-def test_run_persona_signal_batch_skips_failed_signal_instead_of_raising(
+def test_generate_one_signal_returns_none_after_exhausting_retries(
     mocker, mock_mongo_client,
 ):
-    """A per-signal failure must NOT abort the batch. Signal 1 fails on every
-    retry; signal 2 succeeds. The batch keeps the survivor and does not raise."""
-    from app.services.signals.batch import _run_persona_signal_batch
+    """A signal whose LLM call fails every retry returns None (skipped) rather
+    than raising — so one bad signal cannot abort the whole batch."""
+    from app.services.signals.batch import _generate_one_signal
 
-    captured = load_captured("search_signals_scout_claude")
-    # signal 1: both attempts raise; signal 2: succeeds on the first attempt
     mocker.patch(
         "app.services.signals.search.search_signals",
-        side_effect=[
-            RuntimeError("Claude API failed (500)"),
-            RuntimeError("Claude API failed (500)"),
-            dict(captured),
-        ],
-    )
-    mocker.patch(
-        "app.services.signals.persistence._save_signal_and_track_headline",
-        return_value=None,
+        side_effect=RuntimeError("Claude API failed (500)"),
     )
     mocker.patch("app.services.signals.batch.asyncio.sleep", new=AsyncMock())
 
-    generated: list = []
     request = MarketRequest(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
         component_name="signals", data={}, refresh=True,
     )
-
-    # Must NOT raise even though signal 1 fails outright.
-    asyncio.run(_run_persona_signal_batch(
+    result = asyncio.run(_generate_one_signal(
         "scout", {"existing_headlines": []},
         agent_chain=MagicMock(), llm_backend="claude",
-        mongo=mock_mongo_client, track_key=None, request=request,
-        batch_id="batch_test", generated_signals=generated,
+        request=request, batch_id="batch_test",
     ))
 
-    assert len(generated) == 1  # signal 2 survived; signal 1 was skipped
+    assert result is None
 
 
-def test_run_persona_signal_batch_retries_transient_failure(
+def test_generate_one_signal_retries_then_succeeds(
     mocker, mock_mongo_client,
 ):
     """A transient failure on the first attempt is retried and recovered, so the
-    signal is still generated (no data loss, no 500)."""
-    from app.services.signals.batch import _run_persona_signal_batch
+    signal is still produced (no data loss, no 500), with metadata attached."""
+    from app.services.signals.batch import _generate_one_signal
 
     captured = load_captured("search_signals_scout_claude")
-    # signal 1: fail then succeed (retry recovers); signal 2: succeed first try
     mocker.patch(
         "app.services.signals.search.search_signals",
-        side_effect=[RuntimeError("transient"), dict(captured), dict(captured)],
-    )
-    mocker.patch(
-        "app.services.signals.persistence._save_signal_and_track_headline",
-        return_value=None,
+        side_effect=[RuntimeError("transient"), dict(captured)],
     )
     mocker.patch("app.services.signals.batch.asyncio.sleep", new=AsyncMock())
 
-    generated: list = []
     request = MarketRequest(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
         component_name="signals", data={}, refresh=True,
     )
-    asyncio.run(_run_persona_signal_batch(
+    result = asyncio.run(_generate_one_signal(
         "scout", {"existing_headlines": []},
         agent_chain=MagicMock(), llm_backend="claude",
-        mongo=mock_mongo_client, track_key=None, request=request,
-        batch_id="batch_test", generated_signals=generated,
+        request=request, batch_id="batch_test",
     ))
 
-    assert len(generated) == 2  # both signals generated; signal 1 recovered via retry
+    assert result is not None
+    assert result["agent"] == "scout"
+    assert result["signal_id"]  # metadata attached
 
 
 def test_generate_signals_batch_claude_all_failed_returns_empty_success(
@@ -488,6 +470,84 @@ def test_generate_signals_batch_claude_all_failed_returns_empty_success(
 
     assert result["status"] == "success"
     assert result["data"] == []
+
+
+def test_generate_signals_batch_claude_runs_calls_concurrently(
+    mocker, mock_session, mock_mongo_client,
+):
+    """Issue 1 (latency): the 4 signal generations must run CONCURRENTLY, not
+    sequentially — that keeps total wall-time near a single call (~30s) instead
+    of ~4x (~120s), under the upstream proxy timeout. Assert search_signals
+    calls overlap (observed max concurrency > 1)."""
+    import threading
+    import time as _time
+
+    base = dict(load_captured("search_signals_scout_claude"))
+    state = {"running": 0, "max": 0, "n": 0}
+    lock = threading.Lock()
+
+    def fake_search(agent_chain, pre_data, persona, llm_backend):
+        with lock:
+            state["running"] += 1
+            state["max"] = max(state["max"], state["running"])
+            state["n"] += 1
+            n = state["n"]
+        _time.sleep(0.3)  # hold the slot so concurrent calls overlap
+        with lock:
+            state["running"] -= 1
+        s = dict(base)
+        s["headline"] = f"{persona}-headline-{n}"  # unique -> no dedup collapse
+        return s
+
+    mocker.patch("app.services.signals.search.search_signals", side_effect=fake_search)
+    mocker.patch("app.services.signals.persistence._get_existing_headlines", return_value=[])
+    mocker.patch("app.services.signals.persistence._get_user_icp_config", return_value=None)
+    mocker.patch("app.services.signals.persistence._save_signal_and_track_headline", return_value=None)
+    mocker.patch("app.services.signals.batch._fetch_pinecone_supporting_context", return_value=[])
+
+    request = MarketRequest(
+        user_id=TEST_USER_ID, org_id=None,
+        component_name="signals", data={"industry": "SaaS"}, refresh=True,
+    )
+    result = asyncio.run(generate_signals_batch_claude(
+        mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request,
+    ))
+
+    assert result["status"] == "success"
+    assert len(result["data"]) == 4
+    assert state["max"] >= 2  # calls overlapped — not strictly sequential
+
+
+def test_generate_signals_batch_claude_dedupes_identical_headlines(
+    mocker, mock_session, mock_mongo_client,
+):
+    """Concurrency removes the per-iteration headline-feedback dedup, so the
+    batch de-duplicates identical headlines after gathering. 2 scout + 2 profiler
+    with persona-identical headlines collapse to one signal each."""
+    base = dict(load_captured("search_signals_scout_claude"))
+
+    def fake_search(agent_chain, pre_data, persona, llm_backend):
+        s = dict(base)
+        s["headline"] = f"{persona.upper()}_HEADLINE"
+        return s
+
+    mocker.patch("app.services.signals.search.search_signals", side_effect=fake_search)
+    mocker.patch("app.services.signals.persistence._get_existing_headlines", return_value=[])
+    mocker.patch("app.services.signals.persistence._get_user_icp_config", return_value=None)
+    mocker.patch("app.services.signals.persistence._save_signal_and_track_headline", return_value=None)
+    mocker.patch("app.services.signals.batch._fetch_pinecone_supporting_context", return_value=[])
+
+    request = MarketRequest(
+        user_id=TEST_USER_ID, org_id=None,
+        component_name="signals", data={"industry": "SaaS"}, refresh=True,
+    )
+    result = asyncio.run(generate_signals_batch_claude(
+        mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request,
+    ))
+
+    assert result["status"] == "success"
+    assert len(result["data"]) == 2  # 2 scout collapse to 1, 2 profiler to 1
+    assert sorted({s["headline"] for s in result["data"]}) == ["PROFILER_HEADLINE", "SCOUT_HEADLINE"]
 
 
 # ---------------------------------------------------------------------------
