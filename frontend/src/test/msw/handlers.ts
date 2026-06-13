@@ -239,4 +239,46 @@ export const handlers = [
       data: { component_name: body.component_name ?? "icp summary & market opportunity" },
     });
   }),
+
+  // ── connectors / apollo ───────────────────────────────────────────────────────
+  // Default handlers so any test mounting the app shell (ApolloUnlockWatcher)
+  // does not hit onUnhandledRequest: "error".
+  http.get("/api/connectors/apollo/status", () =>
+    HttpResponse.json({
+      connected: false,
+      status: "disconnected",
+      credits_consumed_total: 0,
+      last_run_credits: 0,
+      low_credit: false,
+      icp_changed_since_last_discovery: false,
+    }),
+  ),
+  http.get("/api/connectors/apollo/warmup", () =>
+    HttpResponse.json({
+      icp_configured: false,
+      signals_generated: false,
+      scout_completed: false,
+      profiler_analyzed: false,
+      ready_count: 0,
+      unlocked: false,
+      missing: [],
+    }),
+  ),
+  http.post("/api/connectors/apollo/connect", () =>
+    HttpResponse.json({ connected: true, status: "connected" }),
+  ),
+  http.post("/api/connectors/apollo/discover", () =>
+    HttpResponse.json({ run_id: "mock-run", status: "queued" }),
+  ),
+  http.get("/api/connectors/apollo/discover/status", () =>
+    HttpResponse.json({
+      run_id: "mock-run",
+      org_id: "o1",
+      status: "completed",
+      mode: "keep",
+      counts: { searched: 0, created: 0, matched: 0, errors: [] },
+      credits_consumed: 0,
+      progress_percent: 100,
+    }),
+  ),
 ];
