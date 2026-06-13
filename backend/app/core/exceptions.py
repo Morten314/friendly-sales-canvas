@@ -10,6 +10,7 @@ Base classes route to status codes:
   - `AuthenticationError` → 401, `AuthorizationError` → 403
   - `BudgetExhaustedError` → 429
   - `ICPIdRegistryError`, `ServiceError` → 500
+  - `ApolloConnectorHTTPError` → status from exc.status_code (4xx/502) with a machine `code`
 
 The generic `ServiceError` exists so 500 responses can carry a useful detail
 message instead of FastAPI's default "Internal Server Error".
@@ -182,3 +183,56 @@ class ApolloAPIError(ServiceError):
 class ApolloCreditsExhaustedError(ServiceError):
     """Apollo reported the account is out of enrichment credits. → 500.
     Background tasks catch this and end the run `partial` rather than surfacing 500."""
+
+
+# ─── Apollo connector HTTP exceptions (discovery pipeline) ───
+
+class ApolloConnectorHTTPError(BrewraError):
+    """Base for connector errors that map to a specific HTTP status + machine code.
+
+    Carries a class-level `status_code` and `code`; the app-level handler
+    serialises both (plus an optional `missing_section`) into the JSON body so
+    the frontend can branch on `code` rather than parse `detail`.
+    """
+    status_code: int = 400
+    code: str = "connector_error"
+
+
+class ProfileIncompleteError(ApolloConnectorHTTPError):
+    """Customer profile is not complete enough to connect/discover. -> 409."""
+    status_code = 409
+    code = "profile_incomplete"
+
+    def __init__(self, missing_section: str, message: str = "Customer profile is incomplete."):
+        super().__init__(message)
+        self.missing_section = missing_section
+
+
+class DiscoveryInProgressError(ApolloConnectorHTTPError):
+    """A discovery run is already queued/processing for this org. -> 409."""
+    status_code = 409
+    code = "discovery_in_progress"
+
+
+class IcpUnderspecifiedError(ApolloConnectorHTTPError):
+    """The selected ICP lacks the hard dimensions needed for a bounded search. -> 422."""
+    status_code = 422
+    code = "icp_underspecified"
+
+
+class MasterKeyRequiredError(ApolloConnectorHTTPError):
+    """Apollo rejected the key for People Search (needs a master API key). -> 403."""
+    status_code = 403
+    code = "master_key_required"
+
+
+class ApolloSearchError(ApolloConnectorHTTPError):
+    """Search-specific transport failure surfaced synchronously (spec §5.10). -> 502.
+
+    Note: the discovery *run* executes in a background task, so search failures there
+    are recorded on the run doc (status `failed`), not surfaced as HTTP. This class is
+    for any future synchronous search call and for spec parity; raise it from a sync
+    `search_people` caller that wants a 502 rather than the generic ApolloAPIError (500).
+    """
+    status_code = 502
+    code = "apollo_search_error"

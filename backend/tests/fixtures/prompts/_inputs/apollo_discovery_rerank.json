@@ -1,0 +1,9 @@
+{
+  "candidates": "[{\"id\": \"p1\", \"title\": \"VP Sales\", \"industry\": \"SaaS\", \"size\": 80}, {\"id\": \"p2\", \"title\": \"Head of Growth\", \"industry\": \"Fintech\", \"size\": 120}]",
+  "icp": {
+    "buyer_role": ["VP Sales", "Head of Growth"],
+    "company_size": ["11-50", "51-200"],
+    "industry": ["SaaS", "Fintech"],
+    "primary_region": "NA"
+  }
+}

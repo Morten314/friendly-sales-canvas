@@ -177,3 +177,27 @@ def test_fail_stale_enrich_runs_sets_updated_at():
     )
     assert any("stale" in e.lower() or "auto-failed" in e.lower()
                for e in after.get("errors", [])), "errors must mention stale/auto-failed"
+
+
+def test_discovery_run_lifecycle():
+    m = FakeMongo()
+    rid = runs.create_discovery_run(m, "org1", "u1", icp_id="i1",
+                                    icp_fingerprint="abc", mode="keep", max_leads=50)
+    runs.mark_discovery_processing(m, rid)
+    runs.complete_discovery_run(
+        m, rid,
+        counts={"searched": 10, "qualified": 8, "selected": 5, "revealed": 5,
+                "verified": 3, "unverified": 2, "created": 5, "matched": 0,
+                "skipped_duplicates": 2, "errors": []},
+        credits_consumed=5, status="completed",
+    )
+    doc = runs.get_discovery_run(m, "org1", rid)
+    assert doc["status"] == "completed"
+    assert doc["counts"]["created"] == 5
+    assert doc["credits_consumed"] == 5
+    assert doc["progress_percent"] == 100.0
+
+
+def test_discovery_stale_threshold_scales_with_max_leads():
+    young = {"status": "processing", "max_leads": 200, "updated_at": runs._now()}
+    assert runs._is_stale_discovery_run(young) is False

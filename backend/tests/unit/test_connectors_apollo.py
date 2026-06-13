@@ -141,3 +141,52 @@ def test_403_raises_api_error_not_invalid_credentials(monkeypatch):
         ApolloConnector("key").validate_credentials()
     assert type(exc_info.value) is ApolloAPIError  # NOT ConnectorCredentialsInvalidError
     assert "403" in str(exc_info.value)
+
+
+def test_search_people_posts_api_search_and_returns_page(monkeypatch):
+    captured = {}
+
+    def fake_http(method, url, **kwargs):
+        captured["method"] = method
+        captured["url"] = url
+        captured["json"] = kwargs.get("json")
+        return FakeResp(200, {
+            "people": [{"id": "p1", "has_email": True, "title": "VP Sales"}],
+            "pagination": {"page": 1, "per_page": 100, "total_pages": 3, "total_entries": 250},
+        })
+
+    monkeypatch.setattr(apollo_mod, "_http_request", fake_http)
+    body = ApolloConnector("key").search_people({"person_titles": ["VP Sales"]}, page=1, per_page=100)
+
+    assert captured["method"] == "POST"
+    assert captured["url"].endswith("/mixed_people/api_search")
+    assert captured["json"]["person_titles"] == ["VP Sales"]
+    assert captured["json"]["page"] == 1 and captured["json"]["per_page"] == 100
+    assert body["people"][0]["id"] == "p1"
+    assert body["pagination"]["total_pages"] == 3
+
+
+def test_match_person_posts_people_match_with_reveal_flags(monkeypatch):
+    captured = {}
+
+    def fake_http(method, url, **kwargs):
+        captured["url"] = url
+        captured["json"] = kwargs.get("json")
+        return FakeResp(200, {"person": {"id": "p1", "email": "a@x.com", "email_status": "verified"},
+                              "credits_consumed": 1})
+
+    monkeypatch.setattr(apollo_mod, "_http_request", fake_http)
+    person, credits = ApolloConnector("key").match_person("p1")
+
+    assert captured["url"].endswith("/people/match")
+    assert captured["json"]["id"] == "p1"
+    assert captured["json"]["reveal_personal_emails"] is True
+    assert captured["json"]["reveal_phone_number"] is False
+    assert person["email_status"] == "verified"
+    assert credits == 1
+
+
+def test_match_person_no_match_returns_none(monkeypatch):
+    monkeypatch.setattr(apollo_mod, "_http_request", lambda *a, **k: FakeResp(200, {"person": None, "credits_consumed": 0}))
+    person, credits = ApolloConnector("key").match_person("nope")
+    assert person is None and credits == 0

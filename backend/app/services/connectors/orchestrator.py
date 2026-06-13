@@ -9,25 +9,36 @@ from typing import Any, Dict, List, Optional
 from fastapi import BackgroundTasks
 
 from app.core.exceptions import (
+    ApolloAPIError,
     ApolloCreditsExhaustedError,
     BrewraError,
     ConnectorCredentialsInvalidError,
+    DiscoveryInProgressError,
+    MasterKeyRequiredError,
+    ProfileIncompleteError,
 )
 from app.models.connectors import (
     ApolloConnectRequest,
+    ApolloDiscoverRequest,
     ApolloEnrichRequest,
     ApolloImportRequest,
 )
 from app.services.connectors import apollo as apollo_mod
 from app.services.connectors import credentials
+from app.services.connectors import discovery
 from app.services.connectors import ingestion
 from app.services.connectors import runs
+from app.services.connectors import warmup
 from app.services.connectors.normalize import normalize_apollo_record
 
 logger = logging.getLogger(__name__)
 
 IMPORT_RECORD_CAP = 25_000  # spec §8 hard per-import cap
 INGEST_CHUNK_SIZE = 500
+SEARCH_SCAN_CAP = 500
+MAX_LEADS_DEFAULT = 50
+MAX_LEADS_HARD_CAP = 200
+REVEAL_RATE_DELAY = 0.3  # seconds between sequential people/match reveals (plan-tuned; respects Apollo rate limits)
 
 
 def _now() -> str:
@@ -37,9 +48,22 @@ def _now() -> str:
 # ─── Connection ───
 
 def connect_apollo(mongo, request: ApolloConnectRequest) -> Dict[str, Any]:
-    """Validate the key (credit-free) then store it. Raises on a bad key (no save)."""
+    """Gate on ICP completeness + master-key probe, then store the key."""
+    # Check 1 — profile completeness (UC6). Reuses the warmup ICP logic.
+    icps = warmup._icps_for_org(mongo, request.org_id)
+    if not any(warmup.icp_is_complete(icp)[0] for icp in icps):
+        missing = warmup.icp_is_complete(icps[-1] if icps else None)[1] or "icp"
+        raise ProfileIncompleteError(missing_section=missing)
+
+    # Check 2 — master-key + search capability via a free 1-record api_search probe.
     connector = apollo_mod.ApolloConnector(request.api_key)
-    connector.validate_credentials()  # raises ConnectorCredentialsInvalidError on bad key
+    try:
+        connector.search_people({}, page=1, per_page=1)
+    except ApolloAPIError as e:
+        # _request raises ApolloAPIError on 403 (insufficient plan / not a master key)
+        raise MasterKeyRequiredError(str(e))
+    # 401 -> ConnectorCredentialsInvalidError propagates (handled -> 400 "Invalid key")
+
     credentials.save_credentials(mongo, request.org_id, "apollo", request.api_key, status="connected")
     return {"connected": True, "status": "connected"}
 
@@ -47,12 +71,46 @@ def connect_apollo(mongo, request: ApolloConnectRequest) -> Dict[str, Any]:
 def get_apollo_status(mongo, org_id: str) -> Dict[str, Any]:
     doc = credentials.get_credentials(mongo, org_id, "apollo")
     if not doc:
-        return {"connected": False, "status": "disconnected", "connected_at": None}
+        return {"connected": False, "status": "disconnected", "connected_at": None,
+                "credits_consumed_total": 0, "last_run_credits": 0, "low_credit": False,
+                "last_discovery_at": None, "last_discovery_icp_fingerprint": None,
+                "icp_changed_since_last_discovery": False}
+    last = runs.latest_completed_discovery_run(mongo, org_id)
+    last_fp = (last or {}).get("icp_fingerprint")
+    current_icp = warmup.get_active_icp(mongo, org_id, None)
+    current_fp = discovery.icp_fingerprint(current_icp) if current_icp else None
     return {
-        "connected": doc.get("status") == "connected",
-        "status": str(doc.get("status") or "disconnected"),
+        "connected": True,
+        "status": doc.get("status", "connected"),
         "connected_at": doc.get("connected_at"),
+        "credits_consumed_total": runs.sum_discovery_credits(mongo, org_id),
+        "last_run_credits": int((last or {}).get("credits_consumed") or 0),
+        "low_credit": bool(doc.get("low_credit", False)),
+        "last_discovery_at": (last or {}).get("finished_at"),
+        "last_discovery_icp_fingerprint": last_fp,
+        "icp_changed_since_last_discovery": bool(last_fp and current_fp and last_fp != current_fp),
     }
+
+
+def get_apollo_discovery_status(mongo, org_id: str, run_id: Optional[str]) -> Dict[str, Any]:
+    return runs.get_discovery_run(mongo, org_id, run_id)
+
+
+def export_discovery_leads(driver, org_id: str, *, fmt: str = "json"):
+    """Return (body, content_type). Bounded, non-streaming. CSV is a flat projection."""
+    leads = ingestion.get_discovery_leads(driver, org_id)
+    if fmt == "csv":
+        import csv, io
+        cols = ["name", "first_name", "last_name", "email", "email_status", "title",
+                "seniority", "company_name", "company_domain", "phone", "linkedin_url", "location"]
+        buf = io.StringIO()
+        w = csv.writer(buf)
+        w.writerow(cols)
+        for ld in leads:
+            w.writerow([ld.get(c, "") for c in cols])
+        return buf.getvalue(), "text/csv"
+    import json as _json
+    return _json.dumps({"leads": leads}, default=str), "application/json"
 
 
 def disconnect_apollo(mongo, org_id: str) -> Dict[str, Any]:
@@ -270,3 +328,165 @@ def _run_enrich(driver, mongo, org_id, user_id, run_id, lead_ids, reveal_persona
     except Exception as e:  # noqa: BLE001
         logger.error("Apollo enrich failed (org_id=%s run_id=%s): %s", org_id, run_id, e)
         runs.fail_enrich_run(mongo, run_id, str(e))
+
+
+# ─── Discovery ───
+
+def _run_discover(driver, mongo, org_id, user_id, run_id, icp, mode, max_leads, llm=None) -> None:
+    """Background body: search -> free funnel -> LLM re-rank -> reveal -> quality gate -> ingest.
+    In `replace` mode: tag old discovery leads superseded first; delete only after a clean ingest."""
+    counts = {"searched": 0, "qualified": 0, "selected": 0, "revealed": 0,
+              "verified": 0, "unverified": 0, "created": 0, "matched": 0,
+              "skipped_duplicates": 0, "errors": []}
+    credits = 0
+    tagged = False
+    try:
+        api_key = credentials.get_api_key(mongo, org_id, "apollo")
+        connector = apollo_mod.ApolloConnector(api_key)
+        runs.mark_discovery_processing(mongo, run_id)
+
+        if mode == "replace":
+            ingestion.tag_superseded_discovery_leads(driver, org_id)
+            tagged = True
+
+        filters = discovery.build_search_filters(icp)
+        existing = ingestion.get_existing_apollo_contact_ids(driver, org_id, include_superseded=False)
+
+        # 1-2: search + paginate up to the scan cap; 3a: drop no-email + dupes.
+        candidates: List[Dict[str, Any]] = []
+        page = 1
+        while len(candidates) < SEARCH_SCAN_CAP:
+            body = connector.search_people(filters, page=page, per_page=100)
+            people = body.get("people") or []
+            counts["searched"] += len(people)
+            for p in people:
+                if not p.get("has_email"):
+                    continue
+                cid = str(p.get("id")) if p.get("id") is not None else None
+                if cid and cid in existing:
+                    counts["skipped_duplicates"] += 1
+                    continue
+                candidates.append(p)
+            total_pages = int((body.get("pagination") or {}).get("total_pages") or 1)
+            if page >= total_pages or not people:
+                break
+            page += 1
+
+        # 3b: hard-dimension drop; 4: LLM re-rank to top max_leads.
+        candidates = [c for c in candidates if discovery.passes_hard_dimensions(c, icp)]
+        counts["qualified"] = len(candidates)
+        selected = discovery.rerank_candidates(llm, candidates, icp, max_leads=max_leads)
+        counts["selected"] = len(selected)
+        runs.update_discovery_progress(mongo, run_id, counts=counts, credits_consumed=credits)
+
+        # 5-6: reveal sequentially; keep any revealed email, tag verified/unverified.
+        records: List[Dict[str, Any]] = []
+        for i, cand in enumerate(selected):
+            if i:
+                apollo_mod._sleep(REVEAL_RATE_DELAY)  # throttle between reveals (Apollo rate limits)
+            try:
+                person, spent = connector.match_person(str(cand.get("id")))
+            except ApolloCreditsExhaustedError:
+                # Credit wall mid-reveal — the ONLY path that raises this (search is credit-free),
+                # so set the low-credit flag (UC10) HERE. Ingest what we revealed FIRST so counts
+                # reflect created/matched, THEN record the run with post-ingest counts.
+                credentials.set_low_credit(mongo, org_id, "apollo", True)
+                if records:
+                    _ingest_discovery(driver, org_id, user_id, run_id, records, counts)
+                # A partial run is closer to a failure than a success: in `replace` mode RESTORE
+                # the prior discovery leads (clear, NOT delete) so the pool never drops below its
+                # pre-run count (spec AC4, no-loss). Done unconditionally on `tagged`.
+                if tagged:
+                    ingestion.clear_superseded_discovery_leads(driver, org_id)
+                runs.complete_discovery_run(mongo, run_id, counts=counts, credits_consumed=credits, status="partial")
+                return
+            credits += spent
+            counts["revealed"] += 1
+            if not person or not person.get("email"):
+                continue
+            if person.get("email_status") == "verified":
+                counts["verified"] += 1
+            else:
+                counts["unverified"] += 1
+            rec = normalize_apollo_record(person)
+            records.append(rec)
+            runs.update_discovery_progress(mongo, run_id, counts=counts, credits_consumed=credits)
+
+        # 7: ingest.
+        if records:
+            _ingest_discovery(driver, org_id, user_id, run_id, records, counts)
+
+        if tagged:
+            ingestion.delete_superseded_discovery_leads(driver, org_id)  # commit the swap
+
+        status = "completed" if counts["created"] or counts["matched"] else "completed_empty"
+        if credits > 0:
+            credentials.set_low_credit(mongo, org_id, "apollo", False)  # a clean revealing run clears the flag
+        runs.complete_discovery_run(mongo, run_id, counts=counts, credits_consumed=credits, status=status)
+
+    except ConnectorCredentialsInvalidError as e:
+        credentials.set_status(mongo, org_id, "apollo", "error")
+        if tagged:
+            ingestion.clear_superseded_discovery_leads(driver, org_id)
+        runs.fail_discovery_run(mongo, run_id, f"Apollo credentials invalid: {e}")
+    # NOTE: no outer except ApolloCreditsExhaustedError — unreachable (only match_person raises it,
+    # caught inside the reveal loop which returns). search_people is credit-free.
+    except BrewraError as e:
+        if tagged:
+            ingestion.clear_superseded_discovery_leads(driver, org_id)
+        runs.fail_discovery_run(mongo, run_id, str(e))
+    except Exception as e:  # noqa: BLE001
+        logger.error("Apollo discovery failed (org_id=%s run_id=%s): %s", org_id, run_id, e)
+        if tagged:
+            ingestion.clear_superseded_discovery_leads(driver, org_id)
+        runs.fail_discovery_run(mongo, run_id, str(e))
+
+
+def start_apollo_discover(driver, mongo, request: "ApolloDiscoverRequest", background_tasks, *, llm=None) -> Dict[str, Any]:
+    credentials.get_api_key(mongo, request.org_id, "apollo")  # ensure connected (404 otherwise)
+
+    icp = warmup.get_active_icp(mongo, request.org_id, request.icp_id)
+    fingerprint = discovery.icp_fingerprint(icp or {})
+    discovery.build_search_filters(icp or {})  # raises IcpUnderspecifiedError (422) early
+
+    # Retire a hung run first; if the killed run was a `replace`, clear its orphaned
+    # superseded tags so those leads don't stay tagged (spec §5.7).
+    stale = runs.fail_stale_discovery_runs(mongo, request.org_id)
+    if stale and stale.get("mode") == "replace":
+        ingestion.clear_superseded_discovery_leads(driver, request.org_id)
+    if runs.get_active_discovery_run(mongo, request.org_id):
+        raise DiscoveryInProgressError("A discovery run is already in progress for this org.")
+
+    max_leads = min(request.max_leads or MAX_LEADS_DEFAULT, MAX_LEADS_HARD_CAP)
+    run_id = runs.create_discovery_run(
+        mongo, request.org_id, request.user_id,
+        icp_id=(icp or {}).get("id"), icp_fingerprint=fingerprint,
+        mode=request.mode, max_leads=max_leads,
+    )
+    background_tasks.add_task(
+        _run_discover, driver, mongo, request.org_id, request.user_id, run_id,
+        icp, request.mode, max_leads, llm,
+    )
+    return {"run_id": run_id, "status": "queued"}
+
+
+def _ingest_discovery(driver, org_id, user_id, run_id, records, counts) -> None:
+    result = ingestion.upsert_imported_leads(
+        driver, org_id, user_id, records,
+        file_id=run_id, source="apollo", apollo_origin="discovery",
+        discovery_run_id=run_id, chunk_size=INGEST_CHUNK_SIZE,
+    )
+    counts["created"] += result["created"]
+    counts["matched"] += result["matched"]
+    counts["errors"].extend({"stage": "ingest", "message": m} for m in result.get("errors", []))
+
+
+def sweep_orphan_superseded(driver, mongo) -> None:
+    """Startup safety net: clear superseded tags left by a `replace` run killed mid-swap.
+    Scoped to orgs that have actually run `replace` (the only mode that tags superseded) —
+    avoids an unfiltered distinct over the whole collection; for each, clear only when no
+    discovery run is currently active (no legitimate in-flight swap)."""
+    org_ids = mongo["Profiler"][runs.DISCOVERY_RUNS_COLLECTION].distinct("org_id", {"mode": "replace"})
+    for org_id in org_ids:
+        if not runs.get_active_discovery_run(mongo, org_id):
+            ingestion.clear_superseded_discovery_leads(driver, org_id)

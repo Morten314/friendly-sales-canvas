@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from app.core.exceptions import ConnectorNotConnectedError
+from app.services.connectors.runs import DISCOVERY_RUNS_COLLECTION
 
 CREDENTIALS_COLLECTION = "Connector_Credentials"
 ENRICH_RUNS_COLLECTION = "Connector_Enrich_Runs"
@@ -33,6 +34,11 @@ def _ensure_connectors_indexes(mongo) -> None:
     runs.create_index([("org_id", 1), ("status", 1)])
     runs.create_index([("org_id", 1), ("created_at", -1)])
     runs.create_index("run_id", unique=True)
+
+    discovery = mongo["Profiler"][DISCOVERY_RUNS_COLLECTION]
+    discovery.create_index([("org_id", 1), ("status", 1)])
+    discovery.create_index([("org_id", 1), ("created_at", -1)])
+    discovery.create_index("run_id", unique=True)
 
 
 def save_credentials(mongo, org_id: str, provider: str, api_key: str, status: str = "connected") -> Dict[str, Any]:
@@ -77,6 +83,13 @@ def set_status(mongo, org_id: str, provider: str, status: str) -> None:
     _coll(mongo).update_one(
         {"org_id": org_id, "provider": provider},
         {"$set": {"status": status, "updated_at": _now()}},
+    )
+
+
+def set_low_credit(mongo, org_id: str, provider: str, value: bool) -> None:
+    _coll(mongo).update_one(
+        {"org_id": org_id, "provider": provider},
+        {"$set": {"low_credit": bool(value), "updated_at": _now()}},
     )
 
 

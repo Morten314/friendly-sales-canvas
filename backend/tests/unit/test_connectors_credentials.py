@@ -99,6 +99,12 @@ def test_ensure_indexes_idempotent():
     credentials._ensure_connectors_indexes(m)
 
 
+def test_set_low_credit(fake_mongo):
+    credentials.save_credentials(fake_mongo, "org1", "apollo", "k")
+    credentials.set_low_credit(fake_mongo, "org1", "apollo", True)
+    assert credentials.get_credentials(fake_mongo, "org1", "apollo")["low_credit"] is True
+
+
 def test_save_credentials_update_returns_original_connected_at(monkeypatch):
     """Second save (update) must return the PERSISTED connected_at, not the new now."""
     times = iter(["2020-01-01T00:00:00+00:00", "2030-06-15T12:00:00+00:00"])

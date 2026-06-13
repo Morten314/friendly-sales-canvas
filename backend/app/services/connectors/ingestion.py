@@ -72,7 +72,9 @@ SET l.user_id = $user_id,
     l.file_id = $file_id,
     l.stage = 'Initial Outreach',
     l.created_at = $now,
-    l.last_imported_at = $now
+    l.last_imported_at = $now,
+    l.apollo_origin = $apollo_origin,
+    l.discovery_run_id = $discovery_run_id
 WITH l, row
 {_COMPANY_MERGE}
 """
@@ -127,7 +129,8 @@ def _dedupe_import_records(records: List[Dict[str, Any]]) -> List[Dict[str, Any]
     return out
 
 
-def _import_chunk_tx(tx, org_id, user_id, chunk, file_id, source, now):
+def _import_chunk_tx(tx, org_id, user_id, chunk, file_id, source, now,
+                     apollo_origin=None, discovery_run_id=None):
     """Atomic: fill-only-empty UPDATE matched leads, then CREATE the residue."""
     result = tx.run(_IMPORT_UPDATE_CYPHER, rows=chunk, org_id=org_id, source=source, now=now)
     matched_idxs = {record["idx"] for record in result}
@@ -143,6 +146,8 @@ def _import_chunk_tx(tx, org_id, user_id, chunk, file_id, source, now):
             file_id=file_id,
             source=source,
             now=now,
+            apollo_origin=apollo_origin,
+            discovery_run_id=discovery_run_id,
         )
     return {"matched": len(matched_idxs), "created": len(to_create)}
 
@@ -160,6 +165,8 @@ def upsert_imported_leads(
     *,
     file_id: str,
     source: str = "apollo",
+    apollo_origin: Optional[str] = None,
+    discovery_run_id: Optional[str] = None,
     chunk_size: int = 500,
 ) -> Dict[str, Any]:
     """Import: dedup, then per-chunk atomic match-or-create. Returns counts."""
@@ -173,7 +180,8 @@ def upsert_imported_leads(
         try:
             with driver.session() as session:
                 out = session.execute_write(
-                    _import_chunk_tx, org_id, user_id, chunk, file_id, source, now
+                    _import_chunk_tx, org_id, user_id, chunk, file_id, source, now,
+                    apollo_origin, discovery_run_id,
                 )
             matched += out["matched"]
             created += out["created"]
@@ -248,3 +256,79 @@ def get_leads_by_ids(driver, org_id: str, lead_ids: List[str]) -> List[Dict[str,
     with driver.session() as session:
         rows = session.execute_read(_read_leads_by_ids_tx, org_id, lead_ids)
     return _records_to_dicts(rows)
+
+
+# ---------------------------------------------------------------------------
+# Discovery superseded-swap helpers + dedup/export reads (spec §5.5, §5.6)
+# ---------------------------------------------------------------------------
+
+def tag_superseded_discovery_leads(driver, org_id: str) -> int:
+    """Mark the org's current discovery leads `superseded` ahead of a replace swap."""
+    with driver.session() as session:
+        return session.execute_write(_set_superseded_tx, org_id, True)
+
+
+def clear_superseded_discovery_leads(driver, org_id: str) -> int:
+    """Un-tag superseded discovery leads (replace failed, or orphan-tag sweep)."""
+    with driver.session() as session:
+        return session.execute_write(_set_superseded_tx, org_id, False)
+
+
+def delete_superseded_discovery_leads(driver, org_id: str) -> int:
+    """Delete the superseded discovery leads after a successful replace commit."""
+    with driver.session() as session:
+        return session.execute_write(_delete_superseded_tx, org_id)
+
+
+def get_existing_apollo_contact_ids(
+    driver, org_id: str, *, include_superseded: bool = False
+) -> set:
+    """Apollo person ids already in the pool — for pre-reveal dedup. Excludes
+    superseded leads by default so a `replace` run can re-discover the same people."""
+    with driver.session() as session:
+        rows = session.execute_read(_existing_contact_ids_tx, org_id, include_superseded)
+    return {r["cid"] for r in rows if r.get("cid")}
+
+
+def get_discovery_leads(driver, org_id: str) -> List[Dict[str, Any]]:
+    """All discovery-sourced leads for an org (for export)."""
+    with driver.session() as session:
+        rows = session.execute_read(_discovery_leads_tx, org_id)
+    return _records_to_dicts(rows)
+
+
+def _set_superseded_tx(tx, org_id: str, value: bool) -> int:
+    res = tx.run(
+        "MATCH (l:Lead {org_id: $org_id, source: 'apollo', apollo_origin: 'discovery'}) "
+        "SET l.superseded = $value RETURN count(l) AS n",
+        org_id=org_id,
+        value=(True if value else None),
+    )
+    return res.single()["n"]
+
+
+def _delete_superseded_tx(tx, org_id: str) -> int:
+    res = tx.run(
+        "MATCH (l:Lead {org_id: $org_id, source: 'apollo', apollo_origin: 'discovery'}) "
+        "WHERE l.superseded = true DETACH DELETE l RETURN count(l) AS n",
+        org_id=org_id,
+    )
+    return res.single()["n"]
+
+
+def _existing_contact_ids_tx(tx, org_id: str, include_superseded: bool):
+    cypher = (
+        "MATCH (l:Lead {org_id: $org_id}) "
+        "WHERE l.apollo_contact_id IS NOT NULL "
+        + ("" if include_superseded else "AND coalesce(l.superseded, false) = false ")
+        + "RETURN l.apollo_contact_id AS cid"
+    )
+    rows = tx.run(cypher, org_id=org_id)
+    return [r.data() for r in rows]
+
+
+def _discovery_leads_tx(tx, org_id: str):
+    return list(tx.run(
+        "MATCH (l:Lead {org_id: $org_id, source: 'apollo', apollo_origin: 'discovery'}) RETURN l",
+        org_id=org_id,
+    ))

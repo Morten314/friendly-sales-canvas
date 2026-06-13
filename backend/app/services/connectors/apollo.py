@@ -8,7 +8,7 @@ read from config.
 import logging
 import random
 import time
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 import requests
 
@@ -43,7 +43,7 @@ def _http_request(method: str, url: str, **kwargs) -> requests.Response:
 
 class ApolloConnector:
     """Concrete connector. Documented method surface (spec §4): validate_credentials,
-    fetch_contacts, bulk_match, list_collections. No ABC in v1."""
+    fetch_contacts, bulk_match, list_collections, search_people, match_person. No ABC in v1."""
 
     def __init__(self, api_key: str, *, timeout: int = _DEFAULT_TIMEOUT):
         self._api_key = api_key
@@ -182,3 +182,49 @@ class ApolloConnector:
             },
         )
         return body.get("matches") or []
+
+    def search_people(
+        self,
+        filters: Dict[str, Any],
+        *,
+        page: int = 1,
+        per_page: int = 100,
+    ) -> Dict[str, Any]:
+        """People Search via POST /mixed_people/api_search (credit-free, master key).
+
+        `filters` are Apollo search params (person_titles, organization_num_employees_ranges,
+        q_organization_keywords, person_locations, ...). Returns the raw page dict
+        (`people` list + `pagination`). A 403 surfaces as ApolloAPIError — the caller
+        (connect probe) translates that to "master key required".
+        """
+        payload = dict(filters)
+        payload["page"] = page
+        payload["per_page"] = min(per_page, 100)  # Apollo hard cap
+        body = self._request("POST", "/mixed_people/api_search", json=payload)
+        return body or {}
+
+    def match_person(
+        self,
+        person_id: str,
+        *,
+        reveal_personal_emails: bool = True,
+        reveal_phone_number: bool = False,
+    ) -> Tuple[Optional[Dict[str, Any]], int]:
+        """Reveal one person via POST /people/match keyed by Apollo id.
+
+        Search ids do NOT work with /people/bulk_match (spec §3), so discovery reveals
+        one at a time. Returns (person|None, credits_consumed). 402/422-credit raise
+        ApolloCreditsExhaustedError inside _request.
+        """
+        body = self._request(
+            "POST",
+            "/people/match",
+            json={
+                "id": person_id,
+                "reveal_personal_emails": reveal_personal_emails,
+                "reveal_phone_number": reveal_phone_number,
+            },
+        )
+        person = body.get("person") if isinstance(body, dict) else None
+        credits = int(body.get("credits_consumed") or 0) if isinstance(body, dict) else 0
+        return (person or None), credits

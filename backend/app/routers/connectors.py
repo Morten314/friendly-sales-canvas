@@ -1,17 +1,20 @@
-"""Apollo connector endpoints: connect/status/disconnect/lists/import/enrich.
+"""Apollo connector endpoints: connect/status/disconnect/lists/import/enrich/discover/warmup/export.
 
 Endpoints that make a blocking Apollo call (/connect, /lists) are sync `def` so
 FastAPI runs them in its threadpool (requests must not block the event loop).
-Import/enrich schedule BackgroundTasks and return immediately.
+Import/enrich/discover schedule BackgroundTasks and return immediately.
 """
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response
 
-from app.core.dependencies import get_mongo, get_neo4j_driver
+from app.core.dependencies import get_llm, get_mongo, get_neo4j_driver
 from app.models.connectors import (
     ApolloConnectRequest,
     ApolloConnectResponse,
+    ApolloDiscoverRequest,
+    ApolloDiscoverResponse,
+    ApolloDiscoverStatusResponse,
     ApolloEnrichRequest,
     ApolloEnrichResponse,
     ApolloEnrichStatusResponse,
@@ -19,9 +22,11 @@ from app.models.connectors import (
     ApolloImportResponse,
     ApolloListsResponse,
     ApolloStatusResponse,
+    ApolloWarmupResponse,
     DisconnectResponse,
 )
 from app.services import connectors as connectors_service
+from app.services.connectors import warmup as warmup_service
 
 router = APIRouter(prefix="/connectors", tags=["connectors"])
 
@@ -80,3 +85,46 @@ async def apollo_enrich_status(
 ):
     """Return progress and result summary for an Apollo enrichment run."""
     return connectors_service.get_apollo_enrich_status(mongo, org_id, run_id)
+
+
+@router.post("/apollo/discover", response_model=ApolloDiscoverResponse)
+async def apollo_discover(
+    request: ApolloDiscoverRequest,
+    background_tasks: BackgroundTasks,
+    driver=Depends(get_neo4j_driver),
+    mongo=Depends(get_mongo),
+    llm=Depends(get_llm),
+):
+    """Queue an ICP-driven Apollo discovery run."""
+    return connectors_service.start_apollo_discover(driver, mongo, request, background_tasks, llm=llm)
+
+
+@router.get("/apollo/discover/status", response_model=ApolloDiscoverStatusResponse)
+async def apollo_discover_status(
+    org_id: str = Query(...),
+    run_id: Optional[str] = Query(None),
+    mongo=Depends(get_mongo),
+):
+    """Return progress and result summary for an Apollo discovery run."""
+    return connectors_service.get_apollo_discovery_status(mongo, org_id, run_id)
+
+
+@router.get("/apollo/warmup", response_model=ApolloWarmupResponse)
+async def apollo_warmup(
+    org_id: str = Query(...),
+    user_id: str = Query(...),
+    mongo=Depends(get_mongo),
+):
+    """Return the four-milestone warmup readiness status for ICP-driven discovery."""
+    return warmup_service.get_warmup_status(mongo, org_id, user_id)
+
+
+@router.get("/apollo/leads/export")
+async def apollo_leads_export(
+    org_id: str = Query(...),
+    fmt: str = Query("json", alias="format"),
+    driver=Depends(get_neo4j_driver),
+):
+    """Export discovery leads as JSON or CSV."""
+    body, content_type = connectors_service.export_discovery_leads(driver, org_id, fmt=fmt)
+    return Response(content=body, media_type=content_type)
