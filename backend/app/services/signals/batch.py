@@ -235,6 +235,11 @@ async def _generate_signals_batch_impl(driver, mongo, pc, agent_chain, request: 
         await asyncio.to_thread(
             persistence._save_signal_and_track_headline, mongo, signals_result, track_key,
         )
+        # insert_one mutates signals_result in place, assigning a bson ObjectId
+        # `_id`. Strip it AFTER the write (matching run_signals_research) so the
+        # dict stays JSON-serializable — an ObjectId in the response body makes
+        # FastAPI's serialize_response raise PydanticSerializationError → 500.
+        signals_result.pop("_id", None)
         generated_signals.append(signals_result)
 
     return {

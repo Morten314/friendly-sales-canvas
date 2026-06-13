@@ -550,6 +550,65 @@ def test_generate_signals_batch_claude_dedupes_identical_headlines(
     assert sorted({s["headline"] for s in result["data"]}) == ["PROFILER_HEADLINE", "SCOUT_HEADLINE"]
 
 
+def test_generate_signals_batch_claude_strips_mongo_objectid_from_response(
+    mocker, mock_session, mock_mongo_client,
+):
+    """Regression (Issue 1, the actual prod 500): pymongo's insert_one mutates
+    the passed dict in place, injecting a bson ObjectId ``_id``. That same dict
+    object goes into the response ``data``, so FastAPI's serialize_response then
+    raises ``PydanticSerializationError`` ("Unable to serialize unknown type:
+    ObjectId") and 500s the whole batch AFTER the signals were already persisted.
+
+    The batch must strip ``_id`` AFTER persistence so the response stays
+    JSON-serializable. run_signals_research already pops ``_id`` post-persist
+    (search.py); the concurrency refactor moved the batch's pop to before the
+    insert and dropped the post-persist pop, reintroducing the ObjectId.
+
+    The other batch tests patch _save_signal_and_track_headline with a no-op, so
+    they never reproduce the insert_one mutation — this test simulates it.
+    """
+    from bson import ObjectId
+
+    from app.models.signals import GenerateSignalsBatchResponse
+
+    base = dict(load_captured("search_signals_scout_claude"))
+
+    def fake_search(agent_chain, pre_data, persona, llm_backend):
+        s = dict(base)
+        s["headline"] = f"{persona}-unique-headline"  # 1 scout + 1 profiler survive
+        return s
+
+    def fake_persist(mongo, signals_result, track_key):
+        # Mirror pymongo: insert_one assigns _id onto the passed dict in place.
+        signals_result["_id"] = ObjectId()
+        return None
+
+    mocker.patch("app.services.signals.search.search_signals", side_effect=fake_search)
+    mocker.patch("app.services.signals.persistence._get_existing_headlines", return_value=[])
+    mocker.patch("app.services.signals.persistence._get_user_icp_config", return_value=None)
+    mocker.patch(
+        "app.services.signals.persistence._save_signal_and_track_headline",
+        side_effect=fake_persist,
+    )
+    mocker.patch("app.services.signals.batch._fetch_pinecone_supporting_context", return_value=[])
+
+    request = MarketRequest(
+        user_id=TEST_USER_ID, org_id=None,
+        component_name="signals", data={"industry": "SaaS"}, refresh=True,
+    )
+    result = asyncio.run(generate_signals_batch_claude(
+        mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request,
+    ))
+
+    assert result["status"] == "success"
+    assert result["data"], "expected persisted signals in the response"
+    # No bson ObjectId leaks into the response payload...
+    assert all("_id" not in s for s in result["data"])
+    # ...and the typed response serializes to JSON (exactly what FastAPI does in
+    # serialize_response) without raising PydanticSerializationError.
+    GenerateSignalsBatchResponse(**result).model_dump_json()
+
+
 # ---------------------------------------------------------------------------
 # signal_ask / signal_ask_claude — context enrichment (Issue 2: old signals
 # only used company profile, not customer profile or data sources)
