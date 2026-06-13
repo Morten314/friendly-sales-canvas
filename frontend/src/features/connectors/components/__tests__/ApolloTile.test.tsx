@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   discoverStatus: vi.fn(),
   discover: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
   exportLeads: vi.fn(() => vi.fn()),
+  toast: vi.fn(),
 }));
 
 vi.mock("../../hooks/useApolloStatus", () => ({ useApolloStatus: mocks.status }));
@@ -18,11 +19,21 @@ vi.mock("../../hooks/useDiscoverStatus", () => ({
 }));
 vi.mock("../../hooks/useDiscover", () => ({ useDiscover: mocks.discover }));
 vi.mock("../../hooks/useExportApolloLeads", () => ({ useExportApolloLeads: mocks.exportLeads }));
+vi.mock("@/components/ui/use-toast", () => ({ useToast: () => ({ toast: mocks.toast }) }));
 vi.mock("@/shared/auth", () => ({
   useAuth: () => ({ orgId: "o1", currentUser: { uid: "u1" } }),
 }));
 
+import { ApolloDiscoverError } from "../../services/apollo";
 import { ApolloTile } from "../ApolloTile";
+
+// Drive launch() onError by having the discover mock invoke the supplied onError synchronously.
+function discoverRejectingWith(err: unknown) {
+  return {
+    mutate: (_vars: unknown, opts?: { onError?: (e: unknown) => void }) => opts?.onError?.(err),
+    isPending: false,
+  };
+}
 
 function renderTile() {
   return render(
@@ -48,6 +59,7 @@ beforeEach(() => {
   mocks.discoverStatus.mockReturnValue({ data: undefined });
   mocks.discover.mockReturnValue({ mutate: vi.fn(), isPending: false });
   mocks.exportLeads.mockReturnValue(vi.fn());
+  mocks.toast.mockClear();
 });
 
 describe("ApolloTile", () => {
@@ -136,5 +148,40 @@ describe("ApolloTile", () => {
     mocks.discoverStatus.mockReturnValue({ data: { status: "failed", counts: {} } });
     renderTile();
     expect(screen.getByText(/check your apollo credits/i)).toBeInTheDocument();
+  });
+
+  it("toasts a widen-ICP message when discovery is rejected as icp_underspecified (422)", () => {
+    mocks.discover.mockReturnValue(
+      discoverRejectingWith(
+        new ApolloDiscoverError({ httpStatus: 422, code: "icp_underspecified" }),
+      ),
+    );
+    renderTile();
+    fireEvent.click(screen.getByRole("button", { name: /discover leads/i }));
+    expect(mocks.toast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: expect.stringMatching(/icp/i) }),
+    );
+  });
+
+  it("toasts an already-running message on discovery_in_progress (409)", () => {
+    mocks.discover.mockReturnValue(
+      discoverRejectingWith(
+        new ApolloDiscoverError({ httpStatus: 409, code: "discovery_in_progress" }),
+      ),
+    );
+    renderTile();
+    fireEvent.click(screen.getByRole("button", { name: /discover leads/i }));
+    expect(mocks.toast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: expect.stringMatching(/already running/i) }),
+    );
+  });
+
+  it("toasts a generic message on an unrecognized discovery error", () => {
+    mocks.discover.mockReturnValue(discoverRejectingWith(new Error("network down")));
+    renderTile();
+    fireEvent.click(screen.getByRole("button", { name: /discover leads/i }));
+    expect(mocks.toast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: expect.stringMatching(/couldn't start discovery/i) }),
+    );
   });
 });

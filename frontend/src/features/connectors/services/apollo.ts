@@ -13,7 +13,7 @@ import {
 } from "../contracts";
 import type { ApolloConnectErrorShape, DiscoverMode } from "../types";
 
-import { apiGet, apiPost } from "@/shared/api/client";
+import { apiGet } from "@/shared/api/client";
 import { buildApiUrl } from "@/shared/api/transport";
 
 /** GET /api/connectors/apollo/status — connection + credit summary for the org. */
@@ -40,7 +40,29 @@ export interface StartDiscoverArgs {
   maxLeads?: number;
 }
 
-/** POST /api/connectors/apollo/discover — enqueue a discovery run. Throws on non-2xx (incl. 409). */
+/** Typed error for the discover enqueue path so the tile can branch on the documented codes. */
+export class ApolloDiscoverError extends Error {
+  httpStatus: number;
+  code?: string;
+  detail?: string;
+  constructor(opts: { httpStatus: number; code?: string; detail?: string }) {
+    super(opts.detail || `Apollo discovery failed (${opts.httpStatus})`);
+    Object.setPrototypeOf(this, ApolloDiscoverError.prototype);
+    this.name = "ApolloDiscoverError";
+    this.httpStatus = opts.httpStatus;
+    this.code = opts.code;
+    this.detail = opts.detail;
+  }
+}
+
+/**
+ * POST /api/connectors/apollo/discover — enqueue a discovery run.
+ *
+ * Uses raw fetch (not apiPost) so the documented error codes — 409 `discovery_in_progress`,
+ * 422 `icp_underspecified` — can be parsed from the JSON body and surfaced to the user,
+ * mirroring the connect path (G1: apiPost throws a generic Error and drops the body). Success
+ * is still zod-validated.
+ */
 export async function startApolloDiscover(
   args: StartDiscoverArgs,
 ): Promise<ApolloDiscoverResponse> {
@@ -51,7 +73,25 @@ export async function startApolloDiscover(
   };
   if (args.icpId) body.icp_id = args.icpId;
   if (typeof args.maxLeads === "number") body.max_leads = args.maxLeads;
-  return apiPost("connectors/apollo/discover", body, ApolloDiscoverResponseSchema);
+  const res = await fetch(buildApiUrl("connectors/apollo/discover"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let parsed: Record<string, unknown> = {};
+    try {
+      parsed = await res.json();
+    } catch {
+      /* non-JSON error body — leave parsed empty */
+    }
+    throw new ApolloDiscoverError({
+      httpStatus: res.status,
+      code: typeof parsed.code === "string" ? parsed.code : undefined,
+      detail: typeof parsed.detail === "string" ? parsed.detail : undefined,
+    });
+  }
+  return ApolloDiscoverResponseSchema.parse(await res.json());
 }
 
 /** GET /api/connectors/apollo/discover/status — poll run progress. `runId` may be null to fetch latest. */

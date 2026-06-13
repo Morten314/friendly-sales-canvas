@@ -9,6 +9,7 @@ import {
   connectApollo,
   apolloLeadsExportUrl,
   ApolloConnectError,
+  ApolloDiscoverError,
 } from "../apollo";
 
 import { server } from "@/test/msw/server";
@@ -82,7 +83,7 @@ describe("apollo read/discover services", () => {
     expect(st.status).toBe("completed");
   });
 
-  it("startApolloDiscover surfaces a 409 in-progress as an Error", async () => {
+  it("startApolloDiscover throws a typed ApolloDiscoverError with code on 409 in-progress", async () => {
     server.use(
       http.post("/api/connectors/apollo/discover", () =>
         HttpResponse.json(
@@ -93,7 +94,21 @@ describe("apollo read/discover services", () => {
     );
     await expect(
       startApolloDiscover({ orgId: "o1", userId: "u1", mode: "keep" }),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({ code: "discovery_in_progress", httpStatus: 409 });
+    await startApolloDiscover({ orgId: "o1", userId: "u1", mode: "keep" }).catch((e) => {
+      expect(e).toBeInstanceOf(ApolloDiscoverError);
+    });
+  });
+
+  it("startApolloDiscover throws ApolloDiscoverError with code on 422 icp_underspecified", async () => {
+    server.use(
+      http.post("/api/connectors/apollo/discover", () =>
+        HttpResponse.json({ detail: "too narrow", code: "icp_underspecified" }, { status: 422 }),
+      ),
+    );
+    await expect(
+      startApolloDiscover({ orgId: "o1", userId: "u1", mode: "keep" }),
+    ).rejects.toMatchObject({ code: "icp_underspecified", httpStatus: 422 });
   });
 });
 

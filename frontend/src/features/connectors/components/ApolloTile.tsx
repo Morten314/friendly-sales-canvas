@@ -8,6 +8,7 @@ import { useDiscoverStatus } from "../hooks/useDiscoverStatus";
 import { useExportApolloLeads } from "../hooks/useExportApolloLeads";
 import { selectDiscoveryPrompt } from "../lib/discoveryPrompt";
 import { deriveApolloTileState } from "../lib/tileState";
+import { ApolloDiscoverError } from "../services/apollo";
 import type { DiscoverMode } from "../types";
 
 import { ApolloConnectModal } from "./ApolloConnectModal";
@@ -16,6 +17,7 @@ import { LowCreditWarning } from "./LowCreditWarning";
 import { WarmupProgress } from "./WarmupProgress";
 
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/shared/auth";
 
 const MC_PATH = "/mission-control";
@@ -25,6 +27,7 @@ export function ApolloTile() {
   const orgId = rawOrgId ?? "";
   const userId = currentUser?.uid ?? "";
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const statusQ = useApolloStatus(orgId);
   const status = statusQ.data;
@@ -56,7 +59,33 @@ export function ApolloTile() {
   function launch(mode: DiscoverMode) {
     setPrompt("none");
     setRunId(null); // clear any prior run so a failed re-launch doesn't show stale "complete"
-    discover.mutate({ orgId, userId, mode }, { onSuccess: (r) => setRunId(r.run_id) });
+    discover.mutate(
+      { orgId, userId, mode },
+      {
+        onSuccess: (r) => setRunId(r.run_id),
+        onError: (err) => {
+          const code = err instanceof ApolloDiscoverError ? err.code : undefined;
+          if (code === "icp_underspecified") {
+            toast({
+              title: "Your ICP is too narrow",
+              description: "Widen your ICP to discover leads.",
+              variant: "destructive",
+            });
+          } else if (code === "discovery_in_progress") {
+            toast({
+              title: "Discovery already running",
+              description: "A discovery run is already in progress for your team.",
+            });
+          } else {
+            toast({
+              title: "Couldn't start discovery",
+              description: "Something went wrong. Please try again.",
+              variant: "destructive",
+            });
+          }
+        },
+      },
+    );
   }
 
   function onDiscoverClick() {
