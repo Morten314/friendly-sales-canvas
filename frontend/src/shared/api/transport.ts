@@ -1,19 +1,21 @@
 // API utility for handling base URL and proxy configuration
-const isDevelopment = import.meta.env.DEV;
-// `vite preview` and e2e tests run on localhost serving a production bundle —
-// without this branch, requests would resolve to direct Render and bypass
-// Playwright's `**/api/*` route handlers.
-const isLocalhost =
-  typeof window !== "undefined" &&
-  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
-// Single source of truth for the deployed backend host.
+// Single source of truth for the deployed backend host. Still consumed by the
+// handful of components that make raw direct-backend calls (streaming `/chat/`,
+// `/ask`, `/profile/company`) — those bypasses are tracked separately as debt.
 export const BACKEND_BASE_URL = "https://brewra-gtm-intelligence.onrender.com";
 
-// Dev + localhost use the Vite /api proxy. Vercel production calls Render
-// directly — proxied rewrites time out at 120s, but Claude signal batch often
-// runs longer; the backend allows CORS from any origin.
-const API_BASE_URL = isDevelopment || isLocalhost ? "/api" : BACKEND_BASE_URL;
+// Every environment routes the client stack through `/api`:
+//   - dev / `vite preview` / localhost e2e → the Vite dev proxy (and Playwright's
+//     `**/api/*` route handlers) serve `/api/*`.
+//   - Vercel production → the `vercel.json` rewrite proxies `/api/*` → Render.
+// Production formerly called Render directly to dodge Vercel's ~120s edge gateway
+// timeout, because the Claude signal batch ran ~120s sequentially. The batch now
+// runs its calls concurrently (~40–45s, well under the ceiling), so the
+// direct-to-Render workaround is retired in favor of `/api` — dev/prod parity and
+// no reliance on the CORS wildcard for the main client path. (Cold-start margin
+// note: see docs/TECH_DEBT.md.)
+const API_BASE_URL = "/api";
 
 // Helper function to build API URLs
 export const buildApiUrl = (endpoint: string): string => {

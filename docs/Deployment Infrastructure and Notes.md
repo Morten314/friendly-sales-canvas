@@ -54,11 +54,15 @@ for how the FE reaches them in dev vs production.
   No queue, no retries.
 
 **Latency note (Claude signal batch).** `POST /generate-signals-batch_claude`
-runs four sequential Claude+Tavily calls (`max_tokens=8192`). Measured live
-(direct to Render, 2026-06-13): **~117–130s**. A single Claude call
-(`/signal_ask_claude`) is **~33s**. This ~2-minute batch latency is the reason
-the production frontend calls Render directly rather than through the Vercel
-`/api` rewrite (which has a ~120s gateway timeout — see below).
+runs four Claude+Tavily calls (`max_tokens=8192`) **concurrently**
+(`asyncio.gather`). Measured live (2026-06-13, warm): **~40–45s** direct to
+Render and **~45s** through the Vercel `/api` rewrite. A single Claude call
+(`/signal_ask_claude`) is **~30–33s**. The batch formerly ran these calls
+sequentially (~120s), which is why production used to call Render directly; now
+that it fits well under the Vercel ~120s gateway timeout, production routes
+through `/api` (see below). Cold-start caveat: a cold free-dyno spin-up (~50s)
+stacked on the batch (~45s) is ~95s — under the ceiling but with only ~25s of
+headroom (`TD-FE-68`).
 
 **Liveness check** (run on your host, or in a sandbox with the domain allowed):
 
@@ -83,41 +87,46 @@ sbx policy allow network brewra-gtm-intelligence.vercel.app
 
 ```ts
 export const BACKEND_BASE_URL = "https://brewra-gtm-intelligence.onrender.com";
-// Dev + localhost use the Vite /api proxy; Vercel production calls Render directly.
-const API_BASE_URL = (import.meta.env.DEV || hostname is localhost/127.0.0.1)
-  ? "/api"
-  : BACKEND_BASE_URL;
+// Every environment routes the client stack through `/api`.
+const API_BASE_URL = "/api";
 ```
 
-All FE→backend calls route through `buildApiUrl()` / `apiFetch()` in that file.
-The per-component hardcoded-URL bypasses from the pre-refactor codebase
-(`src/lib/api.ts`, `ICPSummaryOpportunity`, `ChatWithScout`, `DataHistoryDialog`,
-the old `buildIcpUrl` `/icp` bypass, etc.) are **gone** — those files were
-removed/relocated in the feature-folder refactor; everything now goes through
-`transport.ts`.
+The main client stack (`buildApiUrl()` / `apiFetch()` and the TanStack
+`shared/api/client` layer) routes through `/api` in **all** environments as of
+2026-06-13:
 
-- **Dev / `vite preview` / localhost e2e:** requests target `/api/...` → the Vite
-  dev proxy (`frontend/vite.config.ts`, target `brewra-gtm-intelligence.onrender.com`)
-  → Render. (Playwright's `**/api/*` route handlers also hook this path.)
-- **Vercel production:** requests target `https://brewra-gtm-intelligence.onrender.com/...`
-  **directly** — they do **not** pass through the Vercel `/api` rewrite. This is
-  deliberate: `frontend/vercel.json` rewrites `/api/(.*)` → Render, but Vercel's
-  edge gateway **times out proxied rewrites at ~120s** (confirmed 2026-06-13:
-  `POST /api/generate-signals-batch_claude` *through* Vercel returns **502 at
-  ~119s**, while the same call **direct to Render** returns 200 at ~120s), and the
-  Claude signal batch often runs longer than that. Calling Render directly avoids
-  the ceiling; the backend sets `allow_origins=["*"]` so cross-origin browser
-  calls are accepted.
+- **Dev / `vite preview` / localhost e2e:** `/api/...` → the Vite dev proxy
+  (`frontend/vite.config.ts`, target `brewra-gtm-intelligence.onrender.com`) →
+  Render. (Playwright's `**/api/*` route handlers also hook this path.)
+- **Vercel production:** `/api/...` → the `frontend/vercel.json` rewrite
+  (`/api/(.*)` → Render) → Render.
+
+Production **used to** call Render directly to dodge Vercel's edge gateway, which
+times out proxied rewrites at ~120s — the Claude signal batch then ran ~120s
+sequentially. The batch now runs its calls concurrently (~40–45s; verified live
+2026-06-13: `POST /api/generate-signals-batch_claude` *through* Vercel → **200 at
+~45s**), so the direct-to-Render workaround is retired in favor of `/api`
+(dev/prod parity, no reliance on the CORS wildcard for the main client path).
+
+> **Residual direct-backend callsites.** A handful of components still import
+> `BACKEND_BASE_URL` and call Render directly, bypassing `/api`: streaming
+> `GET /chat/` in `ChatWithScout` and `StrategistWorkspace`, `GET /ask` in
+> `AIPromptingInterface`, and `GET /profile/company` in
+> `RegulatoryComplianceSection`. These rely on the backend `allow_origins=["*"]`
+> CORS wildcard and are tracked as debt (`TD-FE-68`) — not migrated with the
+> batch fix.
 
 > **Consequences for debugging:**
-> - The `vercel.json` `/api/*` rewrite is **effectively vestigial in production** —
->   the FE bypasses it. It still matters for dev parity and any code that hardcodes
->   `/api`. If you ever route production through `/api` again, the ~120s Vercel
->   ceiling re-applies; keep long endpoints (the signal batch) under it.
-> - Because production hits Render directly, a slow/failing batch surfaces as a
->   **direct Render response** (e.g. a 500 from a transient Claude/Tavily/JSON
->   error, or a long wait), **not** a Vercel 502. When triaging a Scout-signal
->   failure, read the **Render** logs, not Vercel's.
+> - Production now reaches Render *through* the `vercel.json` `/api/*` rewrite, so
+>   the ~120s edge ceiling applies again. A warm batch (~45s) clears it
+>   comfortably; a cold free-dyno spin-up (~50s) + batch (~45s) ≈ ~95s leaves only
+>   ~25s of headroom. If cold-start 502s appear, keep the dyno warm or fall the
+>   batch endpoint back to direct-to-Render (`TD-FE-68`).
+> - A failing batch can now surface **either** as a Vercel 502 (only if it exceeds
+>   ~120s) **or** as a direct Render response proxied back (e.g. a 500 from a
+>   transient Claude/Tavily/JSON error). Read the **Render** logs for the
+>   application-level traceback; check Vercel's edge/function logs only to rule out
+>   a gateway timeout.
 
 ## Database topology and isolation
 
