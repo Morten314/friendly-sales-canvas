@@ -64,10 +64,7 @@ export function fetchIcpResearchComponent(
 }
 
 /** Run all four ICP research components in sequence (Profiler refresh / deep-dive). */
-export async function runIcpResearchRefreshCascade(
-  userId: string,
-  orgId?: string,
-): Promise<void> {
+export async function runIcpResearchRefreshCascade(userId: string, orgId?: string): Promise<void> {
   let previousContext: Record<string, unknown> = {};
   for (const componentName of Object.values(ICP_RESEARCH_COMPONENTS)) {
     const response = await fetchIcpResearchComponent(userId, componentName, {

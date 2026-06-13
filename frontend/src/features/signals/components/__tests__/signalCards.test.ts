@@ -152,9 +152,7 @@ describe("buildSignalCardsFromFetchData", () => {
     });
 
     expect(result[0].sourceUrl).toBe("https://statista.com/topic");
-    expect(result[0].source).toEqual([
-      { citation: "Statista", url: "https://statista.com/topic" },
-    ]);
+    expect(result[0].source).toEqual([{ citation: "Statista", url: "https://statista.com/topic" }]);
   });
 });
 

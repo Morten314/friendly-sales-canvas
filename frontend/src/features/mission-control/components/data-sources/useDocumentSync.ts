@@ -4,10 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useDataSources } from "../../hooks/useDataSources";
 import type { DataSource, DataSourceStatus } from "../../types";
 
-import {
-  getDismissedDataSourceKeys,
-  isDataSourceDismissed,
-} from "./dataSourceDismissals";
+import { getDismissedDataSourceKeys, isDataSourceDismissed } from "./dataSourceDismissals";
 import {
   encodeFileKeyForStatusUrl,
   extractFileIdFromFileKey,
@@ -123,407 +120,411 @@ export function useDocumentSync({
   // DataSource[] state. The hook already unwrapped the {documents|files|data}
   // envelope to a raw array; this reproduces the original loadDataSourcesFromBackend
   // mapping/merge verbatim, just sourced from the query instead of a raw fetch.
-  const applyBackendDocuments = useCallback((documents: unknown[]) => {
-    if (Array.isArray(documents)) {
-      {
-        console.log(
-          "📋 DataSourcesManager - Loading documents from backend:",
-          documents.length,
-          "documents",
-        );
-        const dismissedKeys = getDismissedDataSourceKeys(currentUser?.uid ?? "");
-        const loadedSources: DataSource[] = documents
-          .map((doc: UntypedBackendDocument): DataSource => {
-          // Parse tags - handle both array and string formats
-          let parsedTags: string[] = [];
-          if (Array.isArray(doc.tags)) {
-            parsedTags = doc.tags;
-          } else if (typeof doc.tags === "string") {
-            // Handle comma-separated string or JSON array string
-            try {
-              // Try parsing as JSON first
-              const parsed = JSON.parse(doc.tags);
-              parsedTags = Array.isArray(parsed) ? parsed : [];
-            } catch {
-              // If not JSON, treat as comma-separated string
-              parsedTags = doc.tags
-                .split(",")
-                .map((tag: string) => tag.trim())
-                .filter((tag: string) => tag.length > 0);
-            }
-          }
-
-          // Determine if this is a URL or file source
-          // URLs have file_key === null (or undefined), files have file_key with a path
-          const hasFileKey =
-            doc.file_key !== null && doc.file_key !== undefined && doc.file_key !== "";
-          const hasFileKeyAlt =
-            doc.fileKey !== null && doc.fileKey !== undefined && doc.fileKey !== "";
-          const docType = String(doc.data_source_type || doc.dataSourceType || "")
-            .toLowerCase()
-            .trim();
-          const isUrlSource =
-            docType === "url" ||
-            (!hasFileKey && !hasFileKeyAlt && docType !== "file" && !!doc.file_id);
-          const isFileSource = docType === "file" || hasFileKey || hasFileKeyAlt;
-
-          if (isUrlSource) {
-            console.log("🔗 DataSourcesManager - Identified as URL source:", {
-              file_id: doc.file_id,
-              file_key: doc.file_key,
-              fileKey: doc.fileKey,
-              name: doc.name || doc.file_name,
-              hasFileKey,
-              hasFileKeyAlt,
-            });
-          }
-
-          // Extract file_id/document_id - backend returns file_id for both files and URLs
-          // Priority: file_id > _id > extract from file_key (for files only)
-          let fileId: string | undefined = undefined;
-          if (doc.file_id) {
-            // file_id is the primary identifier for both files and URLs
-            fileId = doc.file_id;
-            console.log(
-              "📋 DataSourcesManager - Using doc.file_id:",
-              fileId,
-              "type:",
-              isUrlSource ? "URL" : "file",
-            );
-          } else if (doc._id) {
-            // Fallback to _id if file_id is not present
-            fileId = doc._id;
-            console.log(
-              "📋 DataSourcesManager - Using doc._id as fallback:",
-              fileId,
-              "type:",
-              isUrlSource ? "URL" : "file",
-            );
-          } else if (isFileSource) {
-            // For files only, extract UUID from file_key as fallback
-            const extracted = extractFileIdFromFileKey(doc.file_key || doc.fileKey);
-            // Validate that we got a UUID, not the full path
-            const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-            if (uuidPattern.test(extracted)) {
-              fileId = extracted;
-              console.log("📋 DataSourcesManager - Extracted valid file_id from file_key:", {
-                file_key: doc.file_key || doc.fileKey,
-                extracted_fileId: fileId,
-              });
-            } else {
-              console.warn(
-                "⚠️ DataSourcesManager - Extraction failed, got full path instead of UUID:",
-                {
-                  file_key: doc.file_key || doc.fileKey,
-                  extracted: extracted,
-                },
-              );
-              // Try one more time with a more aggressive extraction
-              const fileKeyStr = doc.file_key || doc.fileKey;
-              if (fileKeyStr.includes("/")) {
-                const parts = fileKeyStr.split("/");
-                const afterSlash = parts[parts.length - 1];
-                const uuidPart = afterSlash.split("_")[0];
-                if (uuidPattern.test(uuidPart)) {
-                  fileId = uuidPart;
-                  console.log(
-                    "✅ DataSourcesManager - Successfully extracted UUID on retry:",
-                    fileId,
-                  );
+  const applyBackendDocuments = useCallback(
+    (documents: unknown[]) => {
+      if (Array.isArray(documents)) {
+        {
+          console.log(
+            "📋 DataSourcesManager - Loading documents from backend:",
+            documents.length,
+            "documents",
+          );
+          const dismissedKeys = getDismissedDataSourceKeys(currentUser?.uid ?? "");
+          const loadedSources: DataSource[] = documents
+            .map((doc: UntypedBackendDocument): DataSource => {
+              // Parse tags - handle both array and string formats
+              let parsedTags: string[] = [];
+              if (Array.isArray(doc.tags)) {
+                parsedTags = doc.tags;
+              } else if (typeof doc.tags === "string") {
+                // Handle comma-separated string or JSON array string
+                try {
+                  // Try parsing as JSON first
+                  const parsed = JSON.parse(doc.tags);
+                  parsedTags = Array.isArray(parsed) ? parsed : [];
+                } catch {
+                  // If not JSON, treat as comma-separated string
+                  parsedTags = doc.tags
+                    .split(",")
+                    .map((tag: string) => tag.trim())
+                    .filter((tag: string) => tag.length > 0);
                 }
               }
-            }
-          } else {
-            console.warn("⚠️ DataSourcesManager - No file_id found in document:", doc);
-          }
 
-          if (isUrlSource) {
-            // URL source - use file_id as primary identifier (same as files)
-            // If file_id exists, use it as both id and fileId
-            // Otherwise fall back to _id
-            const urlId = fileId || doc._id || doc.id || `url-${Date.now()}-${Math.random()}`;
+              // Determine if this is a URL or file source
+              // URLs have file_key === null (or undefined), files have file_key with a path
+              const hasFileKey =
+                doc.file_key !== null && doc.file_key !== undefined && doc.file_key !== "";
+              const hasFileKeyAlt =
+                doc.fileKey !== null && doc.fileKey !== undefined && doc.fileKey !== "";
+              const docType = String(doc.data_source_type || doc.dataSourceType || "")
+                .toLowerCase()
+                .trim();
+              const isUrlSource =
+                docType === "url" ||
+                (!hasFileKey && !hasFileKeyAlt && docType !== "file" && !!doc.file_id);
+              const isFileSource = docType === "file" || hasFileKey || hasFileKeyAlt;
 
-            // URL might be in doc.url, doc.source_url, or might need to be fetched separately
-            // For now, check multiple possible fields
-            const urlValue = doc.url || doc.source_url || doc.file_url || undefined;
+              if (isUrlSource) {
+                console.log("🔗 DataSourcesManager - Identified as URL source:", {
+                  file_id: doc.file_id,
+                  file_key: doc.file_key,
+                  fileKey: doc.fileKey,
+                  name: doc.name || doc.file_name,
+                  hasFileKey,
+                  hasFileKeyAlt,
+                });
+              }
 
-            console.log("📋 DataSourcesManager - Loading URL source:", {
-              file_id: fileId,
-              id: urlId,
-              name: doc.name || doc.file_name,
-              url: urlValue,
-              hasUrl: !!urlValue,
-              docKeys: Object.keys(doc),
+              // Extract file_id/document_id - backend returns file_id for both files and URLs
+              // Priority: file_id > _id > extract from file_key (for files only)
+              let fileId: string | undefined = undefined;
+              if (doc.file_id) {
+                // file_id is the primary identifier for both files and URLs
+                fileId = doc.file_id;
+                console.log(
+                  "📋 DataSourcesManager - Using doc.file_id:",
+                  fileId,
+                  "type:",
+                  isUrlSource ? "URL" : "file",
+                );
+              } else if (doc._id) {
+                // Fallback to _id if file_id is not present
+                fileId = doc._id;
+                console.log(
+                  "📋 DataSourcesManager - Using doc._id as fallback:",
+                  fileId,
+                  "type:",
+                  isUrlSource ? "URL" : "file",
+                );
+              } else if (isFileSource) {
+                // For files only, extract UUID from file_key as fallback
+                const extracted = extractFileIdFromFileKey(doc.file_key || doc.fileKey);
+                // Validate that we got a UUID, not the full path
+                const uuidPattern =
+                  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                if (uuidPattern.test(extracted)) {
+                  fileId = extracted;
+                  console.log("📋 DataSourcesManager - Extracted valid file_id from file_key:", {
+                    file_key: doc.file_key || doc.fileKey,
+                    extracted_fileId: fileId,
+                  });
+                } else {
+                  console.warn(
+                    "⚠️ DataSourcesManager - Extraction failed, got full path instead of UUID:",
+                    {
+                      file_key: doc.file_key || doc.fileKey,
+                      extracted: extracted,
+                    },
+                  );
+                  // Try one more time with a more aggressive extraction
+                  const fileKeyStr = doc.file_key || doc.fileKey;
+                  if (fileKeyStr.includes("/")) {
+                    const parts = fileKeyStr.split("/");
+                    const afterSlash = parts[parts.length - 1];
+                    const uuidPart = afterSlash.split("_")[0];
+                    if (uuidPattern.test(uuidPart)) {
+                      fileId = uuidPart;
+                      console.log(
+                        "✅ DataSourcesManager - Successfully extracted UUID on retry:",
+                        fileId,
+                      );
+                    }
+                  }
+                }
+              } else {
+                console.warn("⚠️ DataSourcesManager - No file_id found in document:", doc);
+              }
+
+              if (isUrlSource) {
+                // URL source - use file_id as primary identifier (same as files)
+                // If file_id exists, use it as both id and fileId
+                // Otherwise fall back to _id
+                const urlId = fileId || doc._id || doc.id || `url-${Date.now()}-${Math.random()}`;
+
+                // URL might be in doc.url, doc.source_url, or might need to be fetched separately
+                // For now, check multiple possible fields
+                const urlValue = doc.url || doc.source_url || doc.file_url || undefined;
+
+                console.log("📋 DataSourcesManager - Loading URL source:", {
+                  file_id: fileId,
+                  id: urlId,
+                  name: doc.name || doc.file_name,
+                  url: urlValue,
+                  hasUrl: !!urlValue,
+                  docKeys: Object.keys(doc),
+                });
+
+                return {
+                  id: urlId,
+                  fileId: fileId || doc._id, // Store the file_id for deletion (required for API calls)
+                  type: "url",
+                  name: doc.name || doc.file_name || "URL Source",
+                  url: urlValue,
+                  description: doc.description || undefined,
+                  tags: parsedTags,
+                  status: mapDocumentListStatus(doc, "url"),
+                  createdAt: doc.uploaded_at
+                    ? new Date(doc.uploaded_at)
+                    : doc.created_at
+                      ? new Date(doc.created_at)
+                      : new Date(),
+                };
+              } else {
+                // File source
+                const fileKeyPath = doc.file_key || doc.fileKey || undefined;
+                return {
+                  id: fileKeyPath || doc.id || `source-${Date.now()}-${Math.random()}`,
+                  fileKey: fileKeyPath || doc.id,
+                  fileId: fileId, // Store the file_id for deletion
+                  type: "file",
+                  name:
+                    doc.name ||
+                    doc.file_name ||
+                    doc.original_filename ||
+                    doc.fileKey ||
+                    "Uploaded file",
+                  fileName: doc.file_name || doc.original_filename || doc.name,
+                  url: doc.file_url,
+                  description: doc.description || undefined,
+                  tags: parsedTags,
+                  status: mapDocumentListStatus(doc, "file"),
+                  createdAt: doc.uploaded_at
+                    ? new Date(doc.uploaded_at)
+                    : doc.created_at
+                      ? new Date(doc.created_at)
+                      : new Date(),
+                };
+              }
+            })
+            .filter((source) => !isDataSourceDismissed(source, dismissedKeys));
+
+          // Log summary of loaded sources
+          const urlCount = loadedSources.filter((s) => s.type === "url").length;
+          const fileCount = loadedSources.filter((s) => s.type === "file").length;
+          console.log("📋 DataSourcesManager - Loaded sources summary:", {
+            total: loadedSources.length,
+            urls: urlCount,
+            files: fileCount,
+          });
+
+          // Merge with existing sources: keep system types, update file and URL types from backend
+          setDataSources((prev) => {
+            const systemSources = prev.filter((s) => s.type === "system");
+            const existingFileSources = prev.filter((s) => s.type === "file");
+            const existingUrlSources = prev.filter((s) => s.type === "url");
+
+            // Separate loaded sources by type
+            const loadedFileSources = loadedSources.filter((s) => s.type === "file");
+            const loadedUrlSources = loadedSources.filter((s) => s.type === "url");
+
+            // Create a map of existing files by fileId (UUID) for primary matching - this is the most reliable
+            const existingFilesByFileId = new Map(
+              existingFileSources.filter((f) => f.fileId).map((f) => [f.fileId!, f]),
+            );
+
+            // Create a map by ID (file_key) for fallback matching
+            const existingFilesById = new Map(existingFileSources.map((f) => [f.id, f]));
+
+            // Also create a map by fileName for additional fallback matching
+            const existingFilesByFileName = new Map(
+              existingFileSources.filter((f) => f.fileName).map((f) => [f.fileName!, f]),
+            );
+
+            // Create a map of existing URLs by fileId (UUID) for primary matching
+            const existingUrlsByFileId = new Map(
+              existingUrlSources.filter((u) => u.fileId).map((u) => [u.fileId!, u]),
+            );
+
+            // Create a map by ID for URL fallback matching
+            const existingUrlsById = new Map(existingUrlSources.map((u) => [u.id, u]));
+
+            // Track which existing files and URLs we've matched (by their IDs)
+            const matchedExistingIds = new Set<string>();
+
+            // Merge file sources: use backend data, but preserve any local metadata updates
+            const mergedFileSources = loadedFileSources.map((backendFile) => {
+              const backendStatusFileKey = backendFile.fileKey ?? backendFile.id;
+              let existingFile: DataSource | undefined = undefined;
+              let matchedById: string | undefined = undefined;
+
+              // Priority 1: Match by fileId (UUID) - most reliable for updated entries
+              if (backendFile.fileId) {
+                existingFile = existingFilesByFileId.get(backendFile.fileId);
+                if (existingFile) {
+                  matchedById = existingFile.id;
+                  console.log("✅ DataSourcesManager - Matched by fileId:", {
+                    fileId: backendFile.fileId,
+                    existingId: existingFile.id,
+                    backendId: backendFile.id,
+                  });
+                }
+              }
+
+              // Priority 2: Match by ID (file_key) if fileId match failed
+              if (!existingFile) {
+                existingFile = existingFilesById.get(backendFile.id);
+                if (existingFile) {
+                  matchedById = existingFile.id;
+                  console.log("✅ DataSourcesManager - Matched by ID:", {
+                    id: backendFile.id,
+                    existingId: existingFile.id,
+                  });
+                }
+              }
+
+              // Priority 3: Match by fileName only for the same backend file — never a re-upload.
+              if (!existingFile && backendFile.fileName) {
+                const candidate = existingFilesByFileName.get(backendFile.fileName);
+                if (candidate && shouldMergeFileByFileName(candidate, backendFile)) {
+                  existingFile = candidate;
+                  matchedById = candidate.id;
+                  console.log("✅ DataSourcesManager - Matched by fileName:", {
+                    fileName: backendFile.fileName,
+                    existingId: candidate.id,
+                    backendId: backendFile.id,
+                  });
+                }
+              }
+
+              if (existingFile && matchedById) {
+                matchedExistingIds.add(matchedById);
+                // When matched by fileId, use backend data (which has the latest updates from PUT)
+                // This ensures that after refresh, we get the updated tags and description
+                return {
+                  ...backendFile,
+                  id: matchedById, // Keep the existing ID to maintain reference
+                  fileKey: backendStatusFileKey,
+                  fileId: backendFile.fileId || existingFile.fileId, // Use backend fileId (most up-to-date)
+                  // Use backend data for all fields since backend is source of truth after PUT update
+                  name: backendFile.name || existingFile.name,
+                  description:
+                    backendFile.description !== undefined
+                      ? backendFile.description
+                      : existingFile.description,
+                  tags: backendFile.tags, // Always use backend tags (even if empty array)
+                  fileName: backendFile.fileName || existingFile.fileName,
+                  createdAt: existingFile.createdAt, // Preserve original creation date
+                };
+              }
+
+              // New file from backend - return as is
+              return backendFile;
             });
 
-            return {
-              id: urlId,
-              fileId: fileId || doc._id, // Store the file_id for deletion (required for API calls)
-              type: "url",
-              name: doc.name || doc.file_name || "URL Source",
-              url: urlValue,
-              description: doc.description || undefined,
-              tags: parsedTags,
-              status: mapDocumentListStatus(doc, "url"),
-              createdAt: doc.uploaded_at
-                ? new Date(doc.uploaded_at)
-                : doc.created_at
-                  ? new Date(doc.created_at)
-                  : new Date(),
-            };
-          } else {
-            // File source
-            const fileKeyPath = doc.file_key || doc.fileKey || undefined;
-            return {
-              id: fileKeyPath || doc.id || `source-${Date.now()}-${Math.random()}`,
-              fileKey: fileKeyPath || doc.id,
-              fileId: fileId, // Store the file_id for deletion
-              type: "file",
-              name:
-                doc.name ||
-                doc.file_name ||
-                doc.original_filename ||
-                doc.fileKey ||
-                "Uploaded file",
-              fileName: doc.file_name || doc.original_filename || doc.name,
-              url: doc.file_url,
-              description: doc.description || undefined,
-              tags: parsedTags,
-              status: mapDocumentListStatus(doc, "file"),
-              createdAt: doc.uploaded_at
-                ? new Date(doc.uploaded_at)
-                : doc.created_at
-                  ? new Date(doc.created_at)
-                  : new Date(),
-            };
-          }
-        })
-          .filter((source) => !isDataSourceDismissed(source, dismissedKeys));
+            // Merge URL sources: use backend data, but preserve any local metadata updates
+            const mergedUrlSources = loadedUrlSources.map((backendUrl) => {
+              let existingUrl: DataSource | undefined = undefined;
+              let matchedById: string | undefined = undefined;
 
-        // Log summary of loaded sources
-        const urlCount = loadedSources.filter((s) => s.type === "url").length;
-        const fileCount = loadedSources.filter((s) => s.type === "file").length;
-        console.log("📋 DataSourcesManager - Loaded sources summary:", {
-          total: loadedSources.length,
-          urls: urlCount,
-          files: fileCount,
-        });
-
-        // Merge with existing sources: keep system types, update file and URL types from backend
-        setDataSources((prev) => {
-          const systemSources = prev.filter((s) => s.type === "system");
-          const existingFileSources = prev.filter((s) => s.type === "file");
-          const existingUrlSources = prev.filter((s) => s.type === "url");
-
-          // Separate loaded sources by type
-          const loadedFileSources = loadedSources.filter((s) => s.type === "file");
-          const loadedUrlSources = loadedSources.filter((s) => s.type === "url");
-
-          // Create a map of existing files by fileId (UUID) for primary matching - this is the most reliable
-          const existingFilesByFileId = new Map(
-            existingFileSources.filter((f) => f.fileId).map((f) => [f.fileId!, f]),
-          );
-
-          // Create a map by ID (file_key) for fallback matching
-          const existingFilesById = new Map(existingFileSources.map((f) => [f.id, f]));
-
-          // Also create a map by fileName for additional fallback matching
-          const existingFilesByFileName = new Map(
-            existingFileSources.filter((f) => f.fileName).map((f) => [f.fileName!, f]),
-          );
-
-          // Create a map of existing URLs by fileId (UUID) for primary matching
-          const existingUrlsByFileId = new Map(
-            existingUrlSources.filter((u) => u.fileId).map((u) => [u.fileId!, u]),
-          );
-
-          // Create a map by ID for URL fallback matching
-          const existingUrlsById = new Map(existingUrlSources.map((u) => [u.id, u]));
-
-          // Track which existing files and URLs we've matched (by their IDs)
-          const matchedExistingIds = new Set<string>();
-
-          // Merge file sources: use backend data, but preserve any local metadata updates
-          const mergedFileSources = loadedFileSources.map((backendFile) => {
-            const backendStatusFileKey = backendFile.fileKey ?? backendFile.id;
-            let existingFile: DataSource | undefined = undefined;
-            let matchedById: string | undefined = undefined;
-
-            // Priority 1: Match by fileId (UUID) - most reliable for updated entries
-            if (backendFile.fileId) {
-              existingFile = existingFilesByFileId.get(backendFile.fileId);
-              if (existingFile) {
-                matchedById = existingFile.id;
-                console.log("✅ DataSourcesManager - Matched by fileId:", {
-                  fileId: backendFile.fileId,
-                  existingId: existingFile.id,
-                  backendId: backendFile.id,
-                });
+              // Priority 1: Match by fileId (UUID) - most reliable for updated entries
+              if (backendUrl.fileId) {
+                existingUrl = existingUrlsByFileId.get(backendUrl.fileId);
+                if (existingUrl) {
+                  matchedById = existingUrl.id;
+                  console.log("✅ DataSourcesManager - Matched URL by fileId:", {
+                    fileId: backendUrl.fileId,
+                    existingId: existingUrl.id,
+                    backendId: backendUrl.id,
+                  });
+                }
               }
-            }
 
-            // Priority 2: Match by ID (file_key) if fileId match failed
-            if (!existingFile) {
-              existingFile = existingFilesById.get(backendFile.id);
-              if (existingFile) {
-                matchedById = existingFile.id;
-                console.log("✅ DataSourcesManager - Matched by ID:", {
-                  id: backendFile.id,
-                  existingId: existingFile.id,
-                });
+              // Priority 2: Match by ID if fileId match failed
+              if (!existingUrl) {
+                existingUrl = existingUrlsById.get(backendUrl.id);
+                if (existingUrl) {
+                  matchedById = existingUrl.id;
+                  console.log("✅ DataSourcesManager - Matched URL by ID:", {
+                    id: backendUrl.id,
+                    existingId: existingUrl.id,
+                  });
+                }
               }
-            }
 
-            // Priority 3: Match by fileName only for the same backend file — never a re-upload.
-            if (!existingFile && backendFile.fileName) {
-              const candidate = existingFilesByFileName.get(backendFile.fileName);
-              if (candidate && shouldMergeFileByFileName(candidate, backendFile)) {
-                existingFile = candidate;
-                matchedById = candidate.id;
-                console.log("✅ DataSourcesManager - Matched by fileName:", {
-                  fileName: backendFile.fileName,
-                  existingId: candidate.id,
-                  backendId: backendFile.id,
-                });
+              if (existingUrl && matchedById) {
+                matchedExistingIds.add(matchedById);
+                // When matched by fileId, use backend data (which has the latest updates from PUT)
+                // This ensures that after refresh, we get the updated tags and description
+                return {
+                  ...backendUrl,
+                  id: matchedById, // Keep the existing ID to maintain reference
+                  fileId: backendUrl.fileId || existingUrl.fileId, // Use backend fileId (most up-to-date)
+                  // Use backend data for all fields since backend is source of truth after PUT update
+                  name: backendUrl.name || existingUrl.name,
+                  description:
+                    backendUrl.description !== undefined
+                      ? backendUrl.description
+                      : existingUrl.description,
+                  tags: backendUrl.tags, // Always use backend tags (even if empty array)
+                  url: backendUrl.url || existingUrl.url,
+                  createdAt: existingUrl.createdAt, // Preserve original creation date
+                };
               }
-            }
 
-            if (existingFile && matchedById) {
-              matchedExistingIds.add(matchedById);
-              // When matched by fileId, use backend data (which has the latest updates from PUT)
-              // This ensures that after refresh, we get the updated tags and description
-              return {
-                ...backendFile,
-                id: matchedById, // Keep the existing ID to maintain reference
-                fileKey: backendStatusFileKey,
-                fileId: backendFile.fileId || existingFile.fileId, // Use backend fileId (most up-to-date)
-                // Use backend data for all fields since backend is source of truth after PUT update
-                name: backendFile.name || existingFile.name,
-                description:
-                  backendFile.description !== undefined
-                    ? backendFile.description
-                    : existingFile.description,
-                tags: backendFile.tags, // Always use backend tags (even if empty array)
-                fileName: backendFile.fileName || existingFile.fileName,
-                createdAt: existingFile.createdAt, // Preserve original creation date
-              };
-            }
+              // New URL from backend - return as is
+              return backendUrl;
+            });
 
-            // New file from backend - return as is
-            return backendFile;
-          });
+            // Keep local-only rows only while still processing; completed rows missing
+            // from the backend are stale orphans and should not reappear in the UI.
+            const unmatchedExistingFiles = existingFileSources.filter(
+              (s) =>
+                !matchedExistingIds.has(s.id) &&
+                isPendingLocalDataSource(s) &&
+                !isDataSourceDismissed(s, dismissedKeys),
+            );
 
-          // Merge URL sources: use backend data, but preserve any local metadata updates
-          const mergedUrlSources = loadedUrlSources.map((backendUrl) => {
-            let existingUrl: DataSource | undefined = undefined;
-            let matchedById: string | undefined = undefined;
+            const unmatchedExistingUrls = existingUrlSources.filter(
+              (s) =>
+                !matchedExistingIds.has(s.id) &&
+                isPendingLocalDataSource(s) &&
+                !isDataSourceDismissed(s, dismissedKeys),
+            );
 
-            // Priority 1: Match by fileId (UUID) - most reliable for updated entries
-            if (backendUrl.fileId) {
-              existingUrl = existingUrlsByFileId.get(backendUrl.fileId);
-              if (existingUrl) {
-                matchedById = existingUrl.id;
-                console.log("✅ DataSourcesManager - Matched URL by fileId:", {
-                  fileId: backendUrl.fileId,
-                  existingId: existingUrl.id,
-                  backendId: backendUrl.id,
-                });
-              }
-            }
+            // Combine all sources and remove duplicates by id
+            const allSources = [
+              ...systemSources,
+              ...mergedFileSources,
+              ...mergedUrlSources,
+              ...unmatchedExistingFiles,
+              ...unmatchedExistingUrls,
+            ];
+            const uniqueSourcesMap = new Map<string, DataSource>();
 
-            // Priority 2: Match by ID if fileId match failed
-            if (!existingUrl) {
-              existingUrl = existingUrlsById.get(backendUrl.id);
-              if (existingUrl) {
-                matchedById = existingUrl.id;
-                console.log("✅ DataSourcesManager - Matched URL by ID:", {
-                  id: backendUrl.id,
-                  existingId: existingUrl.id,
-                });
-              }
-            }
-
-            if (existingUrl && matchedById) {
-              matchedExistingIds.add(matchedById);
-              // When matched by fileId, use backend data (which has the latest updates from PUT)
-              // This ensures that after refresh, we get the updated tags and description
-              return {
-                ...backendUrl,
-                id: matchedById, // Keep the existing ID to maintain reference
-                fileId: backendUrl.fileId || existingUrl.fileId, // Use backend fileId (most up-to-date)
-                // Use backend data for all fields since backend is source of truth after PUT update
-                name: backendUrl.name || existingUrl.name,
-                description:
-                  backendUrl.description !== undefined
-                    ? backendUrl.description
-                    : existingUrl.description,
-                tags: backendUrl.tags, // Always use backend tags (even if empty array)
-                url: backendUrl.url || existingUrl.url,
-                createdAt: existingUrl.createdAt, // Preserve original creation date
-              };
-            }
-
-            // New URL from backend - return as is
-            return backendUrl;
-          });
-
-          // Keep local-only rows only while still processing; completed rows missing
-          // from the backend are stale orphans and should not reappear in the UI.
-          const unmatchedExistingFiles = existingFileSources.filter(
-            (s) =>
-              !matchedExistingIds.has(s.id) &&
-              isPendingLocalDataSource(s) &&
-              !isDataSourceDismissed(s, dismissedKeys),
-          );
-
-          const unmatchedExistingUrls = existingUrlSources.filter(
-            (s) =>
-              !matchedExistingIds.has(s.id) &&
-              isPendingLocalDataSource(s) &&
-              !isDataSourceDismissed(s, dismissedKeys),
-          );
-
-          // Combine all sources and remove duplicates by id
-          const allSources = [
-            ...systemSources,
-            ...mergedFileSources,
-            ...mergedUrlSources,
-            ...unmatchedExistingFiles,
-            ...unmatchedExistingUrls,
-          ];
-          const uniqueSourcesMap = new Map<string, DataSource>();
-
-          // Process in order: existing sources first (to preserve local edits), then backend sources
-          allSources.forEach((source) => {
-            if (!uniqueSourcesMap.has(source.id)) {
-              uniqueSourcesMap.set(source.id, source);
-            } else {
-              // If duplicate found, prefer the one with fileId match (from backend)
-              const existing = uniqueSourcesMap.get(source.id)!;
-              if (source.fileId && existing.fileId && source.fileId === existing.fileId) {
-                // Same fileId - use the backend version (more up-to-date)
+            // Process in order: existing sources first (to preserve local edits), then backend sources
+            allSources.forEach((source) => {
+              if (!uniqueSourcesMap.has(source.id)) {
                 uniqueSourcesMap.set(source.id, source);
+              } else {
+                // If duplicate found, prefer the one with fileId match (from backend)
+                const existing = uniqueSourcesMap.get(source.id)!;
+                if (source.fileId && existing.fileId && source.fileId === existing.fileId) {
+                  // Same fileId - use the backend version (more up-to-date)
+                  uniqueSourcesMap.set(source.id, source);
+                }
               }
-            }
-          });
+            });
 
-          const result = Array.from(uniqueSourcesMap.values());
-          console.log("📋 DataSourcesManager - Merged data sources:", {
-            systemCount: systemSources.length,
-            mergedFileCount: mergedFileSources.length,
-            mergedUrlCount: mergedUrlSources.length,
-            unmatchedFileCount: unmatchedExistingFiles.length,
-            unmatchedUrlCount: unmatchedExistingUrls.length,
-            totalCount: result.length,
-            matchedIds: Array.from(matchedExistingIds),
-          });
+            const result = Array.from(uniqueSourcesMap.values());
+            console.log("📋 DataSourcesManager - Merged data sources:", {
+              systemCount: systemSources.length,
+              mergedFileCount: mergedFileSources.length,
+              mergedUrlCount: mergedUrlSources.length,
+              unmatchedFileCount: unmatchedExistingFiles.length,
+              unmatchedUrlCount: unmatchedExistingUrls.length,
+              totalCount: result.length,
+              matchedIds: Array.from(matchedExistingIds),
+            });
 
-          return result;
-        });
-        console.log("Data sources loaded from dedicated backend:", loadedSources);
+            return result;
+          });
+          console.log("Data sources loaded from dedicated backend:", loadedSources);
+        }
       }
-    }
-  }, [currentUser?.uid]);
+    },
+    [currentUser?.uid],
+  );
 
   // Sync the useDataSources read into component state. Re-runs whenever the query
   // returns fresh documents (initial fetch + every refetch after a mutation),

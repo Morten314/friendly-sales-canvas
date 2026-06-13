@@ -276,9 +276,7 @@ export function useLeadStream({
     } catch (error) {
       console.error("❌ DataSourcesManager - Delete lead stream error:", error);
       const httpStatus =
-        error instanceof Error
-          ? (error as Error & { httpStatus?: number }).httpStatus
-          : undefined;
+        error instanceof Error ? (error as Error & { httpStatus?: number }).httpStatus : undefined;
       if (httpStatus === 404) {
         deletedLeadStreamFileIdsRef.current.add(fileId);
         if (currentUser?.uid) {

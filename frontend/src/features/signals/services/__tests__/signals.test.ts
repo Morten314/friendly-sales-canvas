@@ -67,7 +67,10 @@ describe("generateSignalsBatch", () => {
 
   it("throws on a non-ok response", async () => {
     server.use(
-      http.post("/api/generate-signals-batch_claude", () => new HttpResponse(null, { status: 500 })),
+      http.post(
+        "/api/generate-signals-batch_claude",
+        () => new HttpResponse(null, { status: 500 }),
+      ),
     );
     await expect(generateSignalsBatch("u1")).rejects.toThrow(/HTTP error! status: 500/);
   });
