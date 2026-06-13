@@ -79,6 +79,6 @@ STAGE_MAPPING = {
 
 # CORS origins
 origins = [
-    "https://brewera.vercel.app",  # Replace with your frontend domain
+    "https://brewra-gtm-intelligence.vercel.app",  # Production PWA (Vercel)
     "http://localhost:3000",  # Allow local dev testing
 ]

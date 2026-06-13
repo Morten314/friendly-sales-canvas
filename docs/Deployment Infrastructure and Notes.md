@@ -6,7 +6,7 @@ Update when the deployed surface changes.
 
 ## Render backend
 
-**URL:** `https://backend-11kr.onrender.com`
+**URL:** `https://brewra-gtm-intelligence.onrender.com`
 
 **Render service config** (`backend/render.yaml`):
 
@@ -37,22 +37,22 @@ forwarding, and the hardcoded direct fetches in components hit paths like
 network policy** (default-deny). Probes:
 
 ```
-HTTP 403 — Blocked by network policy: domain backend-11kr.onrender.com:443
+HTTP 403 — Blocked by network policy: domain brewra-gtm-intelligence.onrender.com:443
   detail: no matching allow rule — blocked by default deny policy
 ```
 
 To check liveness from your host:
 
 ```bash
-curl -i https://backend-11kr.onrender.com/
-curl -i https://backend-11kr.onrender.com/docs           # FastAPI swagger UI
-curl -i https://backend-11kr.onrender.com/openapi.json
+curl -i https://brewra-gtm-intelligence.onrender.com/
+curl -i https://brewra-gtm-intelligence.onrender.com/docs           # FastAPI swagger UI
+curl -i https://brewra-gtm-intelligence.onrender.com/openapi.json
 ```
 
 To make the sandbox able to reach it (run on the host, not in the sandbox):
 
 ```bash
-sbx policy allow network backend-11kr.onrender.com
+sbx policy allow network brewra-gtm-intelligence.onrender.com
 ```
 
 ## Database topology and isolation
@@ -111,7 +111,7 @@ Mongo instance.
 ## Vite proxy and the bypass surface
 
 `frontend/vite.config.ts` proxies `/api/*` to
-`https://backend-11kr.onrender.com` (hard-coded). In dev, code paths that go
+`https://brewra-gtm-intelligence.onrender.com` (hard-coded). In dev, code paths that go
 through `apiFetch` / `enhancedApi` / `authenticatedApi` route through this
 proxy. **Several call sites bypass the proxy entirely and hit Render directly
 even in dev**, so swapping the proxy to a local backend won't fully isolate
@@ -142,7 +142,7 @@ Grouped by what changing the proxy actually changes.
 | ----------------------------------------------------------------- | ---- | --------------------------------- |
 | `src/components/customers/ICPSummaryOpportunity.tsx`              | 674  | `/icp-research` (POST)            |
 | `src/components/market-research/ChatWithScout.tsx`                | 76   | `/chat/?question=...`             |
-| `src/components/market-research/DataHistoryDialog.tsx`            | 938  | module-level `const API_BASE_URL = 'https://backend-11kr.onrender.com'` (lines 31 and 621 are commented variants) |
+| `src/components/market-research/DataHistoryDialog.tsx`            | 938  | module-level `const API_BASE_URL = 'https://brewra-gtm-intelligence.onrender.com'` (lines 31 and 621 are commented variants) |
 | `src/components/market-research/StrategistWorkspace.tsx`          | 722  | `/chat/?question=...`             |
 | `src/components/market-research/AIPromptingInterface.tsx`         | 209  | `/ask?...`                        |
 | `src/components/market-research/RegulatoryComplianceSection.tsx`  | 674  | `/profile/company?org_id=...`     |

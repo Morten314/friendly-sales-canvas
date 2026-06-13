@@ -2,10 +2,10 @@
 
 ## Problem
 
-The application was experiencing CORS (Cross-Origin Resource Sharing) errors when making API requests from `http://localhost:8080` to `https://backend-11kr.onrender.com`. The error was:
+The application was experiencing CORS (Cross-Origin Resource Sharing) errors when making API requests from `http://localhost:8080` to `https://brewra-gtm-intelligence.onrender.com`. The error was:
 
 ```
-Access to fetch at 'https://backend-11kr.onrender.com/market-research' from origin 'http://localhost:8080' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+Access to fetch at 'https://brewra-gtm-intelligence.onrender.com/market-research' from origin 'http://localhost:8080' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
 ```
 
 ## Solution
@@ -15,7 +15,7 @@ Implemented a development proxy in Vite configuration to handle CORS issues duri
 ### Changes Made
 
 1. **Updated `vite.config.ts`**
-   - Added proxy configuration to route `/api/*` requests to `https://backend-11kr.onrender.com`
+   - Added proxy configuration to route `/api/*` requests to `https://brewra-gtm-intelligence.onrender.com`
    - The proxy handles CORS headers automatically
 
 2. **Created `src/lib/api.ts`**
@@ -30,7 +30,7 @@ Implemented a development proxy in Vite configuration to handle CORS issues duri
 
 ### How It Works
 
-- **Development**: API calls to `/api/market-research` are proxied to `https://backend-11kr.onrender.com/market-research`
+- **Development**: API calls to `/api/market-research` are proxied to `https://brewra-gtm-intelligence.onrender.com/market-research`
 - **Production**: API calls go directly to the backend URL
 - The proxy automatically handles CORS headers and request/response forwarding
 
@@ -40,7 +40,7 @@ Implemented a development proxy in Vite configuration to handle CORS issues duri
 import { apiFetchJson } from "@/lib/api";
 
 // Instead of:
-const response = await fetch("https://backend-11kr.onrender.com/market-research", {
+const response = await fetch("https://brewra-gtm-intelligence.onrender.com/market-research", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(data),
