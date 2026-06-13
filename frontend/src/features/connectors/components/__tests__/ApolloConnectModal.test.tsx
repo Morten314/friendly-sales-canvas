@@ -86,4 +86,43 @@ describe("ApolloConnectModal", () => {
     fireEvent.click(screen.getByRole("button", { name: /connect/i }));
     expect(await screen.findByText(/master api key/i)).toBeInTheDocument();
   });
+
+  it("shows a connection message (not 'invalid key') on a network failure", async () => {
+    server.use(http.post("/api/connectors/apollo/connect", () => HttpResponse.error()));
+    wrap(
+      <ApolloConnectModal
+        open
+        orgId="o1"
+        userId="u1"
+        onClose={vi.fn()}
+        onConnected={vi.fn()}
+        onDeepLink={vi.fn()}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText(/api key/i), { target: { value: "k" } });
+    fireEvent.click(screen.getByRole("button", { name: /connect/i }));
+    expect(await screen.findByText(/couldn't reach apollo/i)).toBeInTheDocument();
+    expect(screen.queryByText(/invalid key/i)).not.toBeInTheDocument();
+  });
+
+  it("shows the invalid-key message on a server rejection without a recognized code", async () => {
+    server.use(
+      http.post("/api/connectors/apollo/connect", () =>
+        HttpResponse.json({ detail: "bad key" }, { status: 400 }),
+      ),
+    );
+    wrap(
+      <ApolloConnectModal
+        open
+        orgId="o1"
+        userId="u1"
+        onClose={vi.fn()}
+        onConnected={vi.fn()}
+        onDeepLink={vi.fn()}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText(/api key/i), { target: { value: "k" } });
+    fireEvent.click(screen.getByRole("button", { name: /connect/i }));
+    expect(await screen.findByText(/invalid key/i)).toBeInTheDocument();
+  });
 });

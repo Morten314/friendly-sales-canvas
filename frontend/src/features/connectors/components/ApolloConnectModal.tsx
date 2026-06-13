@@ -111,7 +111,9 @@ export function ApolloConnectModal({
         )}
         {error && !error.code && (
           <p role="alert" className="text-sm text-destructive">
-            Invalid key — please check your Apollo account.
+            {error.httpStatus === 0
+              ? "Couldn't reach Apollo — check your connection and try again."
+              : "Invalid key — please check your Apollo account."}
           </p>
         )}
 
