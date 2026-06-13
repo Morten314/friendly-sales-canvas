@@ -28,9 +28,12 @@ import { ApolloDiscoverError } from "../../services/apollo";
 import { ApolloTile } from "../ApolloTile";
 
 // Drive launch() onError by having the discover mock invoke the supplied onError synchronously.
+// mutate must be a vi.fn() (Mock) to match the useDiscover mock's inferred return type.
 function discoverRejectingWith(err: unknown) {
   return {
-    mutate: (_vars: unknown, opts?: { onError?: (e: unknown) => void }) => opts?.onError?.(err),
+    mutate: vi.fn((_vars: unknown, opts?: { onError?: (e: unknown) => void }) => {
+      opts?.onError?.(err);
+    }),
     isPending: false,
   };
 }
