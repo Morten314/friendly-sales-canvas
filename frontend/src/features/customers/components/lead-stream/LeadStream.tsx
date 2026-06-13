@@ -23,6 +23,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -31,6 +38,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  LEAD_SOURCE_OPTIONS,
+  filterLeadsBySource,
+  type LeadSourceFilter,
+  UnverifiedBadge,
+} from "@/features/connectors";
 
 // --- Types ---
 interface Lead {
@@ -42,6 +55,8 @@ interface Lead {
   fitScore: number; // 0-100
   intentLevel: "High" | "Medium" | "Low";
   reason: string;
+  email_status?: string | null;
+  source?: string | null;
 }
 
 interface ContextChip {
@@ -380,7 +395,12 @@ const LeadRows = ({
       .sort((a, b) => b.fitScore - a.fitScore)
       .map((lead) => (
         <TableRow key={lead.id} className="group">
-          <TableCell className="font-medium text-foreground">{lead.name}</TableCell>
+          <TableCell className="font-medium text-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              {lead.name}
+              <UnverifiedBadge emailStatus={lead.email_status} />
+            </span>
+          </TableCell>
           <TableCell className="text-muted-foreground">{lead.company}</TableCell>
           <TableCell className="text-muted-foreground text-xs">{lead.title}</TableCell>
           <TableCell>
@@ -469,6 +489,7 @@ export const LeadStreamPanel = ({ filterByICP, onClearFilter }: LeadStreamPanelP
   const [howOpen, setHowOpen] = useState(false);
   const [savedLeads, setSavedLeads] = useState<Set<string>>(new Set());
   const [collapsedSegments, setCollapsedSegments] = useState<Set<string>>(new Set());
+  const [sourceFilter, setSourceFilter] = useState<LeadSourceFilter>("all");
   const hasProspectData = true;
 
   const isFiltered = !!filterByICP;
@@ -484,10 +505,15 @@ export const LeadStreamPanel = ({ filterByICP, onClearFilter }: LeadStreamPanelP
     );
   }, [filterByICP]);
 
+  const sourceFilteredLeads = useMemo(
+    () => filterLeadsBySource(filteredLeads, sourceFilter),
+    [filteredLeads, sourceFilter],
+  );
+
   // Group leads by matchedICP for segmented view
   const segments = useMemo(() => {
     const map = new Map<string, Lead[]>();
-    filteredLeads.forEach((lead) => {
+    sourceFilteredLeads.forEach((lead) => {
       const list = map.get(lead.matchedICP) || [];
       list.push(lead);
       map.set(lead.matchedICP, list);
@@ -498,7 +524,7 @@ export const LeadStreamPanel = ({ filterByICP, onClearFilter }: LeadStreamPanelP
       const avgB = b[1].reduce((s, l) => s + l.fitScore, 0) / b[1].length;
       return avgB - avgA;
     });
-  }, [filteredLeads]);
+  }, [sourceFilteredLeads]);
 
   const toggleSave = (id: string) => {
     setSavedLeads((prev) => {
@@ -548,6 +574,21 @@ export const LeadStreamPanel = ({ filterByICP, onClearFilter }: LeadStreamPanelP
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          <Select
+            value={sourceFilter}
+            onValueChange={(v) => setSourceFilter(v as LeadSourceFilter)}
+          >
+            <SelectTrigger className="h-8 text-xs w-[120px]" aria-label="Filter by lead source">
+              <SelectValue placeholder="All leads" />
+            </SelectTrigger>
+            <SelectContent>
+              {LEAD_SOURCE_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button variant="outline" size="sm" className="gap-1.5 text-xs">
             <RefreshCw className="h-3.5 w-3.5" />
             Refresh
@@ -600,7 +641,11 @@ export const LeadStreamPanel = ({ filterByICP, onClearFilter }: LeadStreamPanelP
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <LeadRows leads={filteredLeads} savedLeads={savedLeads} toggleSave={toggleSave} />
+                <LeadRows
+                  leads={sourceFilteredLeads}
+                  savedLeads={savedLeads}
+                  toggleSave={toggleSave}
+                />
               </TableBody>
             </Table>
           </div>

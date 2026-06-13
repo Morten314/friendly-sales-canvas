@@ -8,3 +8,4 @@
 export { ApolloTile } from "./components/ApolloTile";
 export { useApolloUnlockToast } from "./hooks/useApolloUnlockToast";
 export { LEAD_SOURCE_OPTIONS, filterLeadsBySource, type LeadSourceFilter } from "./lib/leadSource";
+export { UnverifiedBadge } from "./components/UnverifiedBadge";

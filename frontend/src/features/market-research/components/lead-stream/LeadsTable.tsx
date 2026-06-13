@@ -54,6 +54,7 @@ import {
   LEAD_SOURCE_OPTIONS,
   filterLeadsBySource,
   type LeadSourceFilter,
+  UnverifiedBadge,
 } from "@/features/connectors";
 import { buildApiUrl } from "@/shared/api/transport";
 import { useAuthToken } from "@/shared/auth";
@@ -739,6 +740,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                             )}
                           </button>
                           {lead.name}
+                          <UnverifiedBadge emailStatus={lead.email_status} />
                         </div>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
