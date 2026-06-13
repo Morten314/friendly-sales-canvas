@@ -6,6 +6,9 @@ import {
   fetchApolloWarmup,
   startApolloDiscover,
   fetchApolloDiscoverStatus,
+  connectApollo,
+  apolloLeadsExportUrl,
+  ApolloConnectError,
 } from "../apollo";
 
 describe("apollo read/discover services", () => {
@@ -89,5 +92,59 @@ describe("apollo read/discover services", () => {
     await expect(
       startApolloDiscover({ orgId: "o1", userId: "u1", mode: "keep" }),
     ).rejects.toThrow();
+  });
+});
+
+describe("connectApollo (error-body parsing — G1)", () => {
+  it("returns the parsed body on success", async () => {
+    server.use(
+      http.post("/api/connectors/apollo/connect", () =>
+        HttpResponse.json({ connected: true, status: "connected" }),
+      ),
+    );
+    const r = await connectApollo({ orgId: "o1", userId: "u1", apiKey: "k" });
+    expect(r.connected).toBe(true);
+  });
+
+  it("throws ApolloConnectError with code+missing_section on 409 profile_incomplete", async () => {
+    server.use(
+      http.post("/api/connectors/apollo/connect", () =>
+        HttpResponse.json(
+          { detail: "incomplete", code: "profile_incomplete", missing_section: "industry" },
+          { status: 409 },
+        ),
+      ),
+    );
+    await expect(connectApollo({ orgId: "o1", userId: "u1", apiKey: "k" })).rejects.toMatchObject({
+      code: "profile_incomplete",
+      missing_section: "industry",
+      httpStatus: 409,
+    });
+    await connectApollo({ orgId: "o1", userId: "u1", apiKey: "k" }).catch((e) => {
+      expect(e).toBeInstanceOf(ApolloConnectError);
+    });
+  });
+
+  it("throws ApolloConnectError with code master_key_required on 403", async () => {
+    server.use(
+      http.post("/api/connectors/apollo/connect", () =>
+        HttpResponse.json(
+          { detail: "needs master key", code: "master_key_required" },
+          { status: 403 },
+        ),
+      ),
+    );
+    await expect(connectApollo({ orgId: "o1", userId: "u1", apiKey: "k" })).rejects.toMatchObject({
+      code: "master_key_required",
+    });
+  });
+});
+
+describe("apolloLeadsExportUrl (G2)", () => {
+  it("builds a proxied URL with org_id and format", () => {
+    const url = apolloLeadsExportUrl("o1", "csv");
+    expect(url).toContain("connectors/apollo/leads/export");
+    expect(url).toContain("org_id=o1");
+    expect(url).toContain("format=csv");
   });
 });

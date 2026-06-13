@@ -1,4 +1,6 @@
+import { z } from "zod";
 import { apiGet, apiPost } from "@/shared/api/client";
+import { buildApiUrl } from "@/shared/api/transport";
 import {
   ApolloDiscoverResponseSchema,
   ApolloDiscoverStatusSchema,
@@ -9,7 +11,7 @@ import {
   type ApolloStatus,
   type ApolloWarmup,
 } from "../contracts";
-import type { DiscoverMode } from "../types";
+import type { ApolloConnectErrorShape, DiscoverMode } from "../types";
 
 /** GET /api/connectors/apollo/status — connection + credit summary for the org. */
 export async function fetchApolloStatus(orgId: string): Promise<ApolloStatus> {
@@ -55,4 +57,76 @@ export async function fetchApolloDiscoverStatus(
     ? `org_id=${encodeURIComponent(orgId)}&run_id=${encodeURIComponent(runId)}`
     : `org_id=${encodeURIComponent(orgId)}`;
   return apiGet(`connectors/apollo/discover/status?${q}`, ApolloDiscoverStatusSchema);
+}
+
+// ─── Connect + Export ────────────────────────────────────────────────────────
+
+export class ApolloConnectError extends Error implements ApolloConnectErrorShape {
+  httpStatus: number;
+  code?: string;
+  detail?: string;
+  missing_section?: string;
+  constructor(shape: ApolloConnectErrorShape) {
+    super(shape.detail || `Apollo connect failed (${shape.httpStatus})`);
+    Object.setPrototypeOf(this, ApolloConnectError.prototype);
+    this.name = "ApolloConnectError";
+    this.httpStatus = shape.httpStatus;
+    this.code = shape.code;
+    this.detail = shape.detail;
+    this.missing_section = shape.missing_section;
+  }
+}
+
+export interface ConnectApolloArgs {
+  orgId: string;
+  userId: string;
+  apiKey: string;
+}
+
+const ConnectOkSchema = z.object({ connected: z.boolean(), status: z.string() }).passthrough();
+
+/**
+ * POST /api/connectors/apollo/connect — save + verify an Apollo API key.
+ *
+ * Uses raw fetch (not apiPost) so the error JSON body ({code, missing_section}) can be
+ * parsed and surfaced as a typed ApolloConnectError (G1). The connect modal branches on
+ * `code` to deep-link the user to the right fix (profile_incomplete, master_key_required, etc.).
+ */
+export async function connectApollo(
+  args: ConnectApolloArgs,
+): Promise<{ connected: boolean; status: string }> {
+  const res = await fetch(buildApiUrl("connectors/apollo/connect"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ org_id: args.orgId, user_id: args.userId, api_key: args.apiKey }),
+  });
+  if (!res.ok) {
+    let parsed: Record<string, unknown> = {};
+    try {
+      parsed = await res.json();
+    } catch {
+      /* non-JSON error body — leave parsed empty */
+    }
+    throw new ApolloConnectError({
+      httpStatus: res.status,
+      code: typeof parsed.code === "string" ? parsed.code : undefined,
+      detail: typeof parsed.detail === "string" ? parsed.detail : undefined,
+      missing_section:
+        typeof parsed.missing_section === "string" ? parsed.missing_section : undefined,
+    });
+  }
+  return ConnectOkSchema.parse(await res.json());
+}
+
+/**
+ * Build a proxied URL for the leads export endpoint (G2).
+ *
+ * The export endpoint returns raw bytes (CSV or JSON), not a JSON envelope, so we
+ * build a URL here rather than using apiGet+zod. Tasks downstream trigger a browser
+ * download by assigning this URL to an anchor or calling fetch() directly.
+ */
+export function apolloLeadsExportUrl(orgId: string, format: "json" | "csv"): string {
+  return buildApiUrl(
+    `connectors/apollo/leads/export?org_id=${encodeURIComponent(orgId)}&format=${format}`,
+  );
 }
