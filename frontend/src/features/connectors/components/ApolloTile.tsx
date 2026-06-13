@@ -175,7 +175,8 @@ export function ApolloTile() {
               ? "Apollo key error — reconnect to resume discovery."
               : "Discovery failed — check your Apollo credits."}
           </p>
-          <Button onClick={onDiscoverClick}>Retry</Button>
+          {/* Retry should re-run, not re-open the keep/replace prompt — launch directly (keep). */}
+          <Button onClick={() => launch("keep")}>Retry</Button>
         </div>
       )}
 

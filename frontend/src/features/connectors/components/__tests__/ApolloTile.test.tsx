@@ -194,4 +194,28 @@ describe("ApolloTile", () => {
       expect.objectContaining({ title: expect.stringMatching(/couldn't start discovery/i) }),
     );
   });
+
+  it("error-state Retry re-runs discovery directly without re-opening the prompt", () => {
+    const mutate = vi.fn();
+    mocks.discover.mockReturnValue({ mutate, isPending: false });
+    // Prior discovery + changed ICP would make onDiscoverClick open the keep/replace prompt
+    // (which does NOT call mutate); Retry must bypass that and launch("keep") directly.
+    mocks.status.mockReturnValue({
+      data: {
+        connected: true,
+        status: "connected",
+        low_credit: false,
+        last_discovery_at: "2026-06-10T00:00:00Z",
+        icp_changed_since_last_discovery: true,
+      },
+      refetch: vi.fn(),
+    });
+    mocks.discoverStatus.mockReturnValue({ data: { status: "failed", counts: {} } });
+    renderTile();
+    fireEvent.click(screen.getByRole("button", { name: /retry/i }));
+    expect(mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ mode: "keep" }),
+      expect.anything(),
+    );
+  });
 });
