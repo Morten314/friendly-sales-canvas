@@ -6,3 +6,4 @@
 //   LEAD_SOURCE_OPTIONS, filterLeadsBySource, LeadSourceFilter → Task 13
 //   UnverifiedBadge       → Task 14
 export { ApolloTile } from "./components/ApolloTile";
+export { useApolloUnlockToast } from "./hooks/useApolloUnlockToast";
