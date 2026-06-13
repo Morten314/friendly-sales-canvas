@@ -258,7 +258,7 @@ def test_signal_ask_groq_uses_captured(mocker, mock_session, mock_mongo_client):
     # signal_ask uses raw_response.get("output", "") from the chain result
     chain_mock.invoke.return_value = {"output": str(captured)}
     mocker.patch(
-        "app.services.signals.search._fetch_pinecone_supporting_context",
+        "app.services.signals.ask._fetch_pinecone_supporting_context",
         return_value=[],
     )
 
@@ -271,7 +271,7 @@ def test_signal_ask_groq_uses_captured(mocker, mock_session, mock_mongo_client):
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
         question="What's the latest signal?",
     )
-    result = asyncio.run(signal_ask(mock_session._driver, mock_mongo_client, chain_mock, request))
+    result = asyncio.run(signal_ask(mock_session._driver, mock_mongo_client, MagicMock(), chain_mock, request))
 
     assert result is not None
     assert "answer" in result
@@ -290,7 +290,7 @@ def test_signal_ask_claude_raises_service_error_when_api_key_missing(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID, question="Q",
     )
     with pytest.raises(ServiceError, match="ANTHROPIC_API_KEY"):
-        asyncio.run(signal_ask_claude(MagicMock(), mock_mongo_client, request))
+        asyncio.run(signal_ask_claude(MagicMock(), mock_mongo_client, MagicMock(), request))
 
 
 def test_signal_ask_claude_raises_service_error_when_claude_call_fails(
@@ -299,7 +299,7 @@ def test_signal_ask_claude_raises_service_error_when_claude_call_fails(
     """ServiceError site: Claude API HTTP error (status >= 400) → ServiceError."""
     mocker.patch("app.services.signals.ask.CLAUDE_API_KEY", "valid-key")
     mocker.patch(
-        "app.services.signals.search._fetch_pinecone_supporting_context",
+        "app.services.signals.ask._fetch_pinecone_supporting_context",
         return_value=[],
     )
     mocker.patch(
@@ -323,7 +323,7 @@ def test_signal_ask_claude_raises_service_error_when_claude_call_fails(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID, question="Q",
     )
     with pytest.raises(ServiceError):
-        asyncio.run(signal_ask_claude(mock_session._driver, mock_mongo_client, request))
+        asyncio.run(signal_ask_claude(mock_session._driver, mock_mongo_client, MagicMock(), request))
 
 
 def test_signal_ask_claude_happy_path_uses_captured(
@@ -339,7 +339,7 @@ def test_signal_ask_claude_happy_path_uses_captured(
 
     mocker.patch("app.services.signals.ask.CLAUDE_API_KEY", "valid-key")
     mocker.patch(
-        "app.services.signals.search._fetch_pinecone_supporting_context",
+        "app.services.signals.ask._fetch_pinecone_supporting_context",
         return_value=[],
     )
     mocker.patch(
@@ -366,7 +366,7 @@ def test_signal_ask_claude_happy_path_uses_captured(
     request = SignalAskRequest(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID, question="Q",
     )
-    result = asyncio.run(signal_ask_claude(mock_session._driver, mock_mongo_client, request))
+    result = asyncio.run(signal_ask_claude(mock_session._driver, mock_mongo_client, MagicMock(), request))
 
     assert result is not None
     assert result.get("status") == "success"
@@ -459,3 +459,125 @@ def test_run_persona_signal_batch_retries_transient_failure(
     ))
 
     assert len(generated) == 2  # both signals generated; signal 1 recovered via retry
+
+
+# ---------------------------------------------------------------------------
+# signal_ask / signal_ask_claude — context enrichment (Issue 2: old signals
+# only used company profile, not customer profile or data sources)
+#
+# The ask path never consulted Pinecone (uploaded data sources) and dropped the
+# customer profile whenever the org-scoped Company_Profile read returned None
+# (e.g. when only suggested ICPs exist in ICP_config). These tests pin the new
+# behavior: data-source context is injected, and the customer profile falls
+# back to the user-scoped ICP_config.
+# ---------------------------------------------------------------------------
+
+def _fake_claude_post(captured_payload):
+    """A requests.post double that records the request body and returns 200."""
+    def _post(url, headers=None, json=None, timeout=None):
+        captured_payload["json"] = json
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {"content": [{"type": "text", "text": "ok"}]}
+        return resp
+    return _post
+
+
+def test_signal_ask_claude_includes_data_source_context(
+    mocker, mock_session, mock_mongo_client,
+):
+    """signal_ask_claude must ground answers on uploaded data sources (Pinecone),
+    injecting retrieved document content into the Claude prompt."""
+    mocker.patch("app.services.signals.ask.CLAUDE_API_KEY", "valid-key")
+    mocker.patch("app.services.signals.ask._reserve_claude_signal_budget", return_value={"run_id": "rid"})
+    mocker.patch("app.services.signals.ask._estimate_token_count", return_value=10)
+    mocker.patch(
+        "app.services.signals.ask._finalize_claude_signal_budget",
+        return_value={"window_tokens_5m": 10, "run_count_5m": 1, "run_count_total": 1},
+    )
+    mocker.patch(
+        "app.services.signals.ask._fetch_pinecone_supporting_context",
+        return_value=[{"content": "DATA_SOURCE_SENTINEL_42", "score": 0.9}],
+    )
+
+    # No company / customer profile (avoid json.dumps on a MagicMock).
+    mock_session.run.return_value.single.return_value = None
+    mock_mongo_client.__getitem__.return_value.__getitem__.return_value.find_one.return_value = None
+
+    captured_payload: dict = {}
+    mocker.patch("app.services.signals.ask.requests.post", side_effect=_fake_claude_post(captured_payload))
+
+    request = SignalAskRequest(user_id=TEST_USER_ID, org_id=TEST_ORG_ID, question="What changed?")
+    result = asyncio.run(signal_ask_claude(mock_session._driver, mock_mongo_client, MagicMock(), request))
+
+    assert result["status"] == "success"
+    prompt = captured_payload["json"]["messages"][0]["content"]
+    assert "DATA_SOURCE_SENTINEL_42" in prompt
+
+
+def test_signal_ask_groq_includes_data_source_context(
+    mocker, mock_session, mock_mongo_client,
+):
+    """signal_ask (Groq) must also inject uploaded data-source context into the
+    prompt it hands to the agent chain (parity with the Claude path)."""
+    mocker.patch(
+        "app.services.signals.ask._fetch_pinecone_supporting_context",
+        return_value=[{"content": "DATA_SOURCE_SENTINEL_GROQ", "score": 0.8}],
+    )
+    mock_session.run.return_value.single.return_value = None
+    mock_mongo_client.__getitem__.return_value.__getitem__.return_value.find_one.return_value = None
+
+    chain_mock = MagicMock()
+    chain_mock.invoke.return_value = {"output": "answer"}
+
+    request = SignalAskRequest(user_id=TEST_USER_ID, org_id=TEST_ORG_ID, question="What changed?")
+    result = asyncio.run(signal_ask(mock_session._driver, mock_mongo_client, MagicMock(), chain_mock, request))
+
+    assert result["status"] == "success"
+    chain_mock.invoke.assert_called_once()
+    prompt = chain_mock.invoke.call_args[0][0]["input"]
+    assert "DATA_SOURCE_SENTINEL_GROQ" in prompt
+
+
+def test_signal_ask_claude_falls_back_to_user_icp_config(
+    mocker, mock_session,
+):
+    """When the org-scoped customer profile has no saved ICPs, signal_ask_claude
+    falls back to the user-scoped ICP_config so the customer profile (ICPs)
+    still informs the answer."""
+    mocker.patch("app.services.signals.ask.CLAUDE_API_KEY", "valid-key")
+    mocker.patch("app.services.signals.ask._reserve_claude_signal_budget", return_value={"run_id": "rid"})
+    mocker.patch("app.services.signals.ask._estimate_token_count", return_value=10)
+    mocker.patch(
+        "app.services.signals.ask._finalize_claude_signal_budget",
+        return_value={"window_tokens_5m": 10, "run_count_5m": 1, "run_count_total": 1},
+    )
+    mocker.patch("app.services.signals.ask._fetch_pinecone_supporting_context", return_value=[])
+
+    mock_session.run.return_value.single.return_value = None  # no company profile
+
+    # Differentiate collections: Company_Profile has no saved customer profile,
+    # but ICP_config carries the user's (suggested) ICPs.
+    company_profile_coll = MagicMock()
+    company_profile_coll.find_one.return_value = None
+    icp_config_coll = MagicMock()
+    icp_config_coll.find_one.return_value = {
+        "user_id": TEST_USER_ID,
+        "icps": {"suggestedICPs": [{"id": "1", "industry": "ICP_SENTINEL_SAAS"}]},
+    }
+    profiler_db = MagicMock()
+    profiler_db.__getitem__.side_effect = lambda name: (
+        icp_config_coll if name == "ICP_config" else company_profile_coll
+    )
+    mongo = MagicMock()
+    mongo.__getitem__.side_effect = lambda name: profiler_db if name == "Profiler" else MagicMock()
+
+    captured_payload: dict = {}
+    mocker.patch("app.services.signals.ask.requests.post", side_effect=_fake_claude_post(captured_payload))
+
+    request = SignalAskRequest(user_id=TEST_USER_ID, org_id=TEST_ORG_ID, question="Q")
+    result = asyncio.run(signal_ask_claude(mock_session._driver, mongo, MagicMock(), request))
+
+    assert result["status"] == "success"
+    prompt = captured_payload["json"]["messages"][0]["content"]
+    assert "ICP_SENTINEL_SAAS" in prompt

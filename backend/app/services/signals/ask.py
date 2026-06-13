@@ -1,11 +1,12 @@
 """Signal Q&A — interactive query against signal/lead data.
 
 Houses signal_ask (Groq-backed) and signal_ask_claude (Anthropic-backed).
-Both answer questions about signals using company profile, customer profile,
-chat history, and WebSearch context.
+Both answer questions about signals using company profile, customer profile
+(ICPs), uploaded data sources (Pinecone), chat history, and WebSearch context.
 
 Cross-package imports:
   - app.services._claude_budget — token counting + budget reservation
+  - app.services._retrieval — Pinecone retrieval of uploaded data-source context
   - requests — direct HTTP calls to Claude API (signal_ask_claude path)
 """
 import asyncio
@@ -28,11 +29,57 @@ from app.services._claude_budget import (
     _reserve_claude_signal_budget,
 )
 from app.services._neo4j_helpers import fetch_company_profile
+from app.services._retrieval import _fetch_pinecone_supporting_context
 from app.services.signals import persistence
 
 
-async def signal_ask(driver, mongo, agent_chain, request: SignalAskRequest) -> dict:
-    """Answer a question about signals using company profile, customer profile, history, and WebSearch."""
+def _resolve_customer_profile(mongo, org_id, user_id) -> Optional[Dict[str, Any]]:
+    """Resolve the customer profile (ICPs) for the signal-ask context.
+
+    Reads the org-scoped saved customer profile first
+    (``Profiler.Company_Profile`` via ``_get_signal_ask_customer_profile``).
+    When the org has no saved ICPs (a common case — the user may only have
+    *suggested* ICPs that were never saved into the customer profile), falls
+    back to the user-scoped ``Profiler.ICP_config`` so the customer profile
+    still informs the answer. Returns ``{"icps": ...}`` or None. Never raises.
+    """
+    customer_profile = None
+    try:
+        customer_profile = persistence._get_signal_ask_customer_profile(mongo, org_id)
+    except Exception as e:
+        logger.warning(f"Could not fetch customer profile: {e}")
+
+    if customer_profile and customer_profile.get("icps"):
+        return customer_profile
+
+    # Fall back to the user-scoped ICP config (suggested ICPs live here).
+    try:
+        icp_config = persistence._get_user_icp_config(mongo, user_id)
+        if icp_config and icp_config.get("icps"):
+            return {"icps": icp_config.get("icps")}
+    except Exception as e:
+        logger.warning(f"Could not fetch ICP config fallback for customer profile: {e}")
+
+    return customer_profile
+
+
+async def _fetch_signal_ask_data_sources(pc, question, org_id) -> list:
+    """Best-effort retrieval of uploaded data-source context (Pinecone) relevant
+    to the question. Runs the blocking retrieval in a thread; never raises."""
+    if not question or not org_id:
+        return []
+    try:
+        return await asyncio.to_thread(
+            _fetch_pinecone_supporting_context, pc, [question], org_id, 3
+        )
+    except Exception as e:
+        logger.warning(f"Could not fetch data-source context: {e}")
+        return []
+
+
+async def signal_ask(driver, mongo, pc, agent_chain, request: SignalAskRequest) -> dict:
+    """Answer a question about signals using company profile, customer profile,
+    uploaded data sources, history, and WebSearch."""
     try:
         # Fetch company profile from Neo4j
         company_profile = None
@@ -41,12 +88,13 @@ async def signal_ask(driver, mongo, agent_chain, request: SignalAskRequest) -> d
         except Exception as e:
             logger.warning(f"Could not fetch company profile: {e}")
 
-        # Fetch customer profile from MongoDB
-        customer_profile = None
-        try:
-            customer_profile = persistence._get_signal_ask_customer_profile(mongo, request.org_id)
-        except Exception as e:
-            logger.warning(f"Could not fetch customer profile: {e}")
+        # Fetch customer profile (org-scoped, falling back to user ICP config).
+        customer_profile = _resolve_customer_profile(mongo, request.org_id, request.user_id)
+
+        # Fetch uploaded data-source context (Pinecone), best-effort.
+        data_source_context = await _fetch_signal_ask_data_sources(
+            pc, request.question, request.org_id
+        )
 
         # Format history for prompt
         history_text = ""
@@ -74,6 +122,10 @@ async def signal_ask(driver, mongo, agent_chain, request: SignalAskRequest) -> d
         if customer_profile:
             customer_profile_json = json.dumps(customer_profile, indent=2)
             context_parts.append(f"CUSTOMER PROFILE (ICPs):\n{customer_profile_json}")
+
+        if data_source_context:
+            data_source_json = json.dumps(data_source_context, indent=2, default=str)
+            context_parts.append(f"DATA SOURCES (uploaded documents):\n{data_source_json}")
 
         context = "\n\n".join(context_parts)
 
@@ -108,7 +160,7 @@ async def signal_ask(driver, mongo, agent_chain, request: SignalAskRequest) -> d
         raise
 
 
-async def signal_ask_claude(driver, mongo, request: SignalAskRequest) -> dict:
+async def signal_ask_claude(driver, mongo, pc, request: SignalAskRequest) -> dict:
     """Claude-powered signal ask endpoint with local token/run limiter."""
     if not CLAUDE_API_KEY:
         raise ServiceError("ANTHROPIC_API_KEY is not configured")
@@ -126,12 +178,13 @@ async def signal_ask_claude(driver, mongo, request: SignalAskRequest) -> dict:
         except Exception as e:
             logger.warning(f"Could not fetch company profile (Claude): {e}")
 
-        # Fetch customer profile from MongoDB
-        customer_profile = None
-        try:
-            customer_profile = persistence._get_signal_ask_customer_profile(mongo, request.org_id)
-        except Exception as e:
-            logger.warning(f"Could not fetch customer profile (Claude): {e}")
+        # Fetch customer profile (org-scoped, falling back to user ICP config).
+        customer_profile = _resolve_customer_profile(mongo, request.org_id, request.user_id)
+
+        # Fetch uploaded data-source context (Pinecone), best-effort.
+        data_source_context = await _fetch_signal_ask_data_sources(
+            pc, request.question, request.org_id
+        )
 
         # Format history for prompt
         history_text = ""
@@ -158,6 +211,10 @@ async def signal_ask_claude(driver, mongo, request: SignalAskRequest) -> dict:
         if customer_profile:
             customer_profile_json = json.dumps(customer_profile, indent=2)
             context_parts.append(f"CUSTOMER PROFILE (ICPs):\n{customer_profile_json}")
+
+        if data_source_context:
+            data_source_json = json.dumps(data_source_context, indent=2, default=str)
+            context_parts.append(f"DATA SOURCES (uploaded documents):\n{data_source_json}")
 
         context = "\n\n".join(context_parts)
 

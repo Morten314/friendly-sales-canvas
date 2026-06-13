@@ -253,7 +253,8 @@ def test_post_signal_ask_returns_answer(client, mock_neo4j, mock_llm_chain):
     app.dependency_overrides[get_agent_chain] = lambda: chain_mock
 
     try:
-        with _override_mongo(mc):
+        with _override_mongo(mc), \
+             patch("app.services.signals.ask._fetch_pinecone_supporting_context", return_value=[]):
             response = client.post("/signal_Ask", json=payload)
     finally:
         app.dependency_overrides.pop(get_agent_chain, None)
