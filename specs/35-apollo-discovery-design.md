@@ -60,7 +60,7 @@ The existing **import-from-lists + enrich** endpoints remain in the codebase but
 - Degrade gracefully against Apollo's API gaps (no credit-balance endpoint; master-key requirement; obfuscated search data).
 
 **Acceptance criteria** (functional + verifiable; MVP-appropriate — no arbitrary latency/quality SLAs while there are 0 users):
-1. A discovery run on a complete ICP lands ≥ 1 lead flagged `source="apollo", apollo_origin="discovery"` into the pool, or terminates `completed_empty` with run counts (`searched`/`created`) that explain why.
+1. A discovery run on a complete ICP lands ≥ 1 lead into the pool — a newly created lead flagged `source="apollo", apollo_origin="discovery"`, or an existing lead enriched via match — or terminates `completed_empty` (`created == 0` **and** `matched == 0`) with run counts (`searched`/`created`/`matched`) that explain why.
 2. Zero credits are spent on `has_email == false` candidates, on **Apollo-ID-identifiable** duplicates already in the pool, or on candidates the funnel did not select — i.e. `credits_consumed ≤ revealed ≤ selected ≤ effective max_leads`. (CSV-sourced duplicates lack an Apollo ID and are merged at ingest, not skipped pre-reveal — §5.2 step 3.)
 3. `credits_consumed` is recorded on every run doc and accumulated into `credits_consumed_total`.
 4. A `replace` run never reduces the pool below its **pre-run lead count**: prior discovery leads are removed only after new leads commit (no-loss swap, §5.7).
@@ -168,7 +168,7 @@ Mirrors `Connector_Enrich_Runs` (unique index on `run_id`; `[(org_id,1),(status,
 ```
 **Count semantics:** `matched` = revealed candidates that, at ingest, *updated* an existing lead (e.g. an `email_norm` overlap with a CSV lead) rather than creating one; `errors` holds `[{stage, message}]` objects for debugging.
 
-`completed_empty` fires when **`created == 0`**, regardless of which stage emptied the funnel; the FE distinguishes the cause from the counts — `searched == 0` ⇒ "no one in Apollo matches this ICP — widen it" (UC8); `searched > 0` but `created == 0` ⇒ "candidates were found but none were contactable / passed the gate." `partial` ⇒ a credit/rate error mid-run after some leads already landed.
+`completed_empty` fires when **`created == 0` and `matched == 0`** — nothing landed in the pool, neither a newly created lead nor an enrichment of an existing one. A run that only *enriches* existing leads (`matched > 0, created == 0`) is `completed`, not `completed_empty`: the revealed contacts did improve the pool. The FE distinguishes the empty cause from the counts — `searched == 0` ⇒ "no one in Apollo matches this ICP — widen it" (UC8); `searched > 0` but nothing landed ⇒ "candidates were found but none were contactable / passed the gate." `partial` ⇒ a credit/rate error mid-run after some leads already landed.
 
 ### 5.4 Warmup readiness — `GET /connectors/apollo/warmup?org_id&user_id`
 New code querying four collections via the **single shared Mongo client** (one deployment — not four failure domains; confirmed collections below). Each milestone check is independent and wrapped: a query error on one check yields `false` for that milestone (degraded, never a `500`), so a transient issue in one store never blocks the whole readiness signal. Per-check timeouts are not added at MVP (one Mongo deployment, the same one the rest of the app already depends on).
