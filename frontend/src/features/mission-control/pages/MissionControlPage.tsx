@@ -170,7 +170,12 @@ const MissionControlPage = () => {
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
     }
-  }, [isCustomerProfileLocked, isDataSourcesLocked, refreshCustomerProfileIcps, refreshDataSources]); // Run after locks are determined
+  }, [
+    isCustomerProfileLocked,
+    isDataSourcesLocked,
+    refreshCustomerProfileIcps,
+    refreshDataSources,
+  ]); // Run after locks are determined
 
   // Mount: ensure the profiler scope exists, and seed the page's read-driven
   // state from the profiler cache when valid (the data-sources branch +

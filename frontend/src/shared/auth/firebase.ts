@@ -1,4 +1,4 @@
-import { getAnalytics } from "firebase/analytics";
+import { getAnalytics, isSupported } from "firebase/analytics";
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
@@ -20,8 +20,12 @@ const app = initializeApp(firebaseConfig);
 // Initialize Firebase Authentication and get a reference to the service
 export const auth = getAuth(app);
 
-// Initialize Analytics (optional)
-getAnalytics(app);
+// Initialize Analytics only where supported (browser with IndexedDB). Guarding
+// behind isSupported() prevents a "window is not defined" rejection in SSR/test
+// environments, where the async gtag init would otherwise run after teardown.
+void isSupported().then((supported) => {
+  if (supported) getAnalytics(app);
+});
 
 // Verify Firebase is properly initialized
 console.log("Firebase initialized:", app.name);

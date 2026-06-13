@@ -102,10 +102,10 @@ const ICPManager: React.FC = () => {
         console.warn("Failed to save to localStorage:", e);
       }
 
-      const response = await apiFetch(
-        `customer_profile?org_id=${encodeURIComponent(orgIdToUse)}`,
-        { method: "POST", body: payload },
-      );
+      const response = await apiFetch(`customer_profile?org_id=${encodeURIComponent(orgIdToUse)}`, {
+        method: "POST",
+        body: payload,
+      });
 
       const data = await response.json();
       console.log("✅ Customer profile saved successfully to backend");
@@ -122,8 +122,7 @@ const ICPManager: React.FC = () => {
       return true;
     } catch (error) {
       const isServerError =
-        error instanceof Error &&
-        (error.message.includes("500") || error.message.includes("502"));
+        error instanceof Error && (error.message.includes("500") || error.message.includes("502"));
       if (isServerError && retryCount < 2) {
         console.log(`Retrying save (attempt ${retryCount + 1}/2)...`);
         await new Promise((resolve) => setTimeout(resolve, 1000 * (retryCount + 1)));

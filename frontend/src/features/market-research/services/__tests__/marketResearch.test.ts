@@ -6,7 +6,6 @@ import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ZodError } from "zod";
 
-
 import {
   fetchResearchComponent,
   RESEARCH_COMPONENTS,
@@ -36,9 +35,7 @@ describe("syncResearchComponentToQueryCache", () => {
     );
 
     expect(
-      queryClient.getQueryData(
-        qk.marketResearchComponent("org-1", RESEARCH_COMPONENTS.competitor),
-      ),
+      queryClient.getQueryData(qk.marketResearchComponent("org-1", RESEARCH_COMPONENTS.competitor)),
     ).toEqual(response);
   });
 });

@@ -50,6 +50,12 @@ import {
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
+import {
+  LEAD_SOURCE_OPTIONS,
+  filterLeadsBySource,
+  type LeadSourceFilter,
+  UnverifiedBadge,
+} from "@/features/connectors";
 import { buildApiUrl } from "@/shared/api/transport";
 import { useAuthToken } from "@/shared/auth";
 import jwtManager from "@/shared/auth/jwt";
@@ -333,6 +339,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
   const [sortBy, setSortBy] = useState<"score" | "priority" | null>(null);
   const [sortAsc, setSortAsc] = useState(false);
   const [tierFilter, setTierFilter] = useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<LeadSourceFilter>("all");
   const [expandedLeads, setExpandedLeads] = useState<Set<string>>(new Set());
   const [scoreDetailByLeadId, setScoreDetailByLeadId] = useState<
     Record<string, LeadScoreDetailState>
@@ -517,9 +524,10 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
     }
   };
 
-  // Filter by tier
-  const filteredLeads =
+  // Filter by tier then source
+  const tierFiltered =
     tierFilter === "all" ? baseLeads : baseLeads.filter((l) => l.priority === tierFilter);
+  const filteredLeads = filterLeadsBySource(tierFiltered, sourceFilter);
 
   // Sort
   const sortedLeads = sortBy
@@ -592,6 +600,21 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
           <ArrowRight className="h-3 w-3" />
         </button>
         <div className="flex items-center gap-2">
+          <Select
+            value={sourceFilter}
+            onValueChange={(v) => setSourceFilter(v as LeadSourceFilter)}
+          >
+            <SelectTrigger className="h-8 text-xs w-[120px]" aria-label="Filter by lead source">
+              <SelectValue placeholder="All leads" />
+            </SelectTrigger>
+            <SelectContent>
+              {LEAD_SOURCE_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={tierFilter} onValueChange={setTierFilter}>
             <SelectTrigger className="h-8 text-xs w-[130px]">
               <SelectValue placeholder="All Tiers" />
@@ -717,6 +740,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                             )}
                           </button>
                           {lead.name}
+                          <UnverifiedBadge emailStatus={lead.email_status} />
                         </div>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">

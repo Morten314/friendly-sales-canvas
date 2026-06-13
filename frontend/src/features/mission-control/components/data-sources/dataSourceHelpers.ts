@@ -80,10 +80,7 @@ export const isPendingLocalDataSource = (source: DataSource): boolean =>
   source.status === "processing";
 
 /** Only merge by fileName when both rows are the same backend object. */
-export const shouldMergeFileByFileName = (
-  existing: DataSource,
-  backend: DataSource,
-): boolean => {
+export const shouldMergeFileByFileName = (existing: DataSource, backend: DataSource): boolean => {
   if (!backend.fileName || existing.fileName !== backend.fileName) return false;
   if (backend.fileId && existing.fileId) {
     return backend.fileId === existing.fileId;

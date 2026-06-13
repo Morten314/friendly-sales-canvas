@@ -8,9 +8,7 @@ import ICPManager from "../ICPManager";
 
 function renderWithQueryClient(ui: ReactNode) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>{ui}</QueryClientProvider>,
-  );
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
 }
 
 // Auth so the read hook is enabled and the settle effect has a uid.

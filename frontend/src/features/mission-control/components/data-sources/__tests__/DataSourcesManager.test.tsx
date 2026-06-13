@@ -62,6 +62,12 @@ vi.mock("../SourceForm", () => ({
   ),
 }));
 
+// Stub the Apollo tile: its internals/hooks (incl. useAuth) are covered by its own
+// tests; this container test only needs it to render without firing those.
+vi.mock("@/features/connectors", () => ({
+  ApolloTile: () => <div data-testid="apollo-tile" />,
+}));
+
 afterEach(() => {
   vi.clearAllMocks();
 });

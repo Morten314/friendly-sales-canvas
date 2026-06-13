@@ -30,7 +30,9 @@ describe("useSignalAsk", () => {
   });
 
   it("throws on a non-ok response", async () => {
-    server.use(http.post("/api/signal_ask_claude", () => new HttpResponse("boom", { status: 500 })));
+    server.use(
+      http.post("/api/signal_ask_claude", () => new HttpResponse("boom", { status: 500 })),
+    );
     const { result } = renderHook(() => useSignalAsk(), { wrapper });
     result.current.mutate(body);
     await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 5000 });

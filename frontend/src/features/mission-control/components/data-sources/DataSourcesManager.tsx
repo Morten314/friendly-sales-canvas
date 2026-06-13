@@ -15,6 +15,7 @@ import { useDocumentSync } from "./useDocumentSync";
 import { useLeadStream } from "./useLeadStream";
 
 import { useToast } from "@/components/ui/use-toast";
+import { ApolloTile } from "@/features/connectors";
 import { buildApiUrl } from "@/shared/api/transport";
 import { useAuthToken } from "@/shared/auth";
 import jwtManager from "@/shared/auth/jwt";
@@ -1611,6 +1612,9 @@ const DataSourcesManager: React.FC = () => {
           </div>
         </>
       )}
+
+      {/* Apollo — ICP-driven lead discovery connector */}
+      <ApolloTile />
     </div>
   );
 };
