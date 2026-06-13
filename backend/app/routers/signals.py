@@ -93,12 +93,14 @@ async def signal_ask(
     request: SignalAskRequest,
     driver=Depends(get_neo4j_driver),
     mongo=Depends(get_mongo),
+    pc=Depends(get_pinecone),
     agent_chain=Depends(get_agent_chain),
 ):
     """
-    Answer a question about signals using company profile, customer profile, history, and WebSearch.
+    Answer a question about signals using company profile, customer profile,
+    uploaded data sources, history, and WebSearch.
     """
-    return await signals_service.signal_ask(driver, mongo, agent_chain, request)
+    return await signals_service.signal_ask(driver, mongo, pc, agent_chain, request)
 
 
 @router.post("/signal_ask_claude", response_model=SignalAskResponse)
@@ -106,8 +108,9 @@ async def signal_ask_claude(
     request: SignalAskRequest,
     driver=Depends(get_neo4j_driver),
     mongo=Depends(get_mongo),
+    pc=Depends(get_pinecone),
 ):
     """
     Claude-powered signal ask endpoint with local token/run limiter.
     """
-    return await signals_service.signal_ask_claude(driver, mongo, request)
+    return await signals_service.signal_ask_claude(driver, mongo, pc, request)
