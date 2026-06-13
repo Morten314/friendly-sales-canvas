@@ -1483,3 +1483,39 @@ v2 `limit`/`offset`.
 documents / signals / ICPs.
 
 **Owner:** TBD.
+
+## TD-FE-68 — production routed back through `/api`; cold-start batch margin + residual direct-backend callsites
+
+**Date logged:** 2026-06-13
+**Origin:** Scout signal-resilience fix. The Claude signal batch was parallelized
+(its four calls now run concurrently, ~40–45s vs the old ~120s sequential),
+removing the reason production called Render directly. `transport.ts`
+`API_BASE_URL` switched from `BACKEND_BASE_URL` to `/api` for all environments.
+
+**Current state:** the main client stack (`apiFetch`/`buildApiUrl`) now goes
+through Vercel's `/api/*` rewrite in production (verified live: `POST
+/api/generate-signals-batch_claude` → 200 at ~45s). Two residual gaps:
+1. **Cold-start margin.** Vercel's edge gateway times out proxied rewrites at
+   ~120s. A warm batch is ~40–45s, but a cold Render free-dyno spin-up (~50s)
+   stacked on the batch (~45s) is ~95s — under the ceiling, but only ~25s of
+   headroom. A cold start coinciding with a slow Claude/Tavily turn could
+   approach a 502.
+2. **Residual direct-backend callsites.** Four components still call
+   `BACKEND_BASE_URL` directly (streaming `/chat/` in `ChatWithScout` and
+   `StrategistWorkspace`, `/ask` in `AIPromptingInterface`, `/profile/company`
+   in `RegulatoryComplianceSection`), bypassing `/api` and relying on the
+   backend CORS wildcard. Not migrated here.
+
+**What it should be:** keep the whole client surface on `/api`; migrate the four
+direct-backend callsites onto the proxy (or an SSE-aware `/api` transport for the
+streaming `/chat/` path). If cold-start 502s appear, keep the Render dyno warm
+(cron ping / paid plan) or fall an over-ceiling endpoint back to direct-to-Render.
+
+**Why deferred:** 0 users; warm latency is comfortable; the direct callsites are
+pre-existing (some streaming, which the current `/api` transport doesn't model)
+and out of scope for the batch fix.
+
+**Pull-forward trigger:** a production 502 on a cold-start batch, a paid Render
+plan (no spin-down), or migrating the streaming `/chat/` path onto `/api`.
+
+**Owner:** TBD.
