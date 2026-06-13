@@ -1,6 +1,5 @@
 import { z } from "zod";
-import { apiGet, apiPost } from "@/shared/api/client";
-import { buildApiUrl } from "@/shared/api/transport";
+
 import {
   ApolloDiscoverResponseSchema,
   ApolloDiscoverStatusSchema,
@@ -12,6 +11,9 @@ import {
   type ApolloWarmup,
 } from "../contracts";
 import type { ApolloConnectErrorShape, DiscoverMode } from "../types";
+
+import { apiGet, apiPost } from "@/shared/api/client";
+import { buildApiUrl } from "@/shared/api/transport";
 
 /** GET /api/connectors/apollo/status — connection + credit summary for the org. */
 export async function fetchApolloStatus(orgId: string): Promise<ApolloStatus> {

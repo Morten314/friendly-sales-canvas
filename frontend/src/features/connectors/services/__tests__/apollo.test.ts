@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
-import { server } from "@/test/msw/server";
+
 import {
   fetchApolloStatus,
   fetchApolloWarmup,
@@ -10,6 +10,8 @@ import {
   apolloLeadsExportUrl,
   ApolloConnectError,
 } from "../apollo";
+
+import { server } from "@/test/msw/server";
 
 describe("apollo read/discover services", () => {
   it("fetchApolloStatus parses the status envelope", async () => {
