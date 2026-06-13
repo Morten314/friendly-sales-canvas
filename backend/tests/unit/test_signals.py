@@ -461,6 +461,35 @@ def test_run_persona_signal_batch_retries_transient_failure(
     assert len(generated) == 2  # both signals generated; signal 1 recovered via retry
 
 
+def test_generate_signals_batch_claude_all_failed_returns_empty_success(
+    mocker, mock_session, mock_mongo_client,
+):
+    """Issue 1 contract: when EVERY signal exhausts its retries, the batch must
+    NOT 500 — it returns a success envelope with an empty data list (graceful
+    degradation). Failures are logged, not surfaced in the body; structured
+    failure reporting (failed_count/partial status) is intentionally deferred
+    (see synthesis round 1)."""
+    mocker.patch("app.services.signals.persistence._get_existing_headlines", return_value=[])
+    mocker.patch("app.services.signals.persistence._get_user_icp_config", return_value=None)
+    mocker.patch("app.services.signals.batch._fetch_pinecone_supporting_context", return_value=[])
+    mocker.patch(
+        "app.services.signals.search.search_signals",
+        side_effect=RuntimeError("Claude API failed (500)"),
+    )
+    mocker.patch("app.services.signals.batch.asyncio.sleep", new=AsyncMock())
+
+    request = MarketRequest(
+        user_id=TEST_USER_ID, org_id=None,
+        component_name="signals", data={"industry": "SaaS"}, refresh=True,
+    )
+    result = asyncio.run(generate_signals_batch_claude(
+        mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request,
+    ))
+
+    assert result["status"] == "success"
+    assert result["data"] == []
+
+
 # ---------------------------------------------------------------------------
 # signal_ask / signal_ask_claude — context enrichment (Issue 2: old signals
 # only used company profile, not customer profile or data sources)

@@ -71,7 +71,10 @@ def _resolve_customer_profile(mongo, org_id, user_id) -> Optional[Dict[str, Any]
     except Exception as e:
         logger.warning(f"Could not fetch ICP config fallback for customer profile: {e}")
 
-    return customer_profile
+    # Neither source yielded usable ICPs — return None (not a truthy-but-empty
+    # {"icps": []}) so the caller drops the section instead of emitting empty
+    # ICP brackets into the prompt. Honors the documented return contract.
+    return None
 
 
 async def _fetch_signal_ask_data_sources(pc, question, org_id) -> list:
@@ -127,7 +130,7 @@ async def signal_ask(driver, mongo, pc, agent_chain, request: SignalAskRequest) 
         context_parts = []
 
         if company_profile:
-            company_profile_json = json.dumps(company_profile, indent=2)
+            company_profile_json = json.dumps(company_profile, indent=2, default=str)
             context_parts.append(f"COMPANY PROFILE:\n{company_profile_json}")
 
         if customer_profile:
@@ -216,7 +219,7 @@ async def signal_ask_claude(driver, mongo, pc, request: SignalAskRequest) -> dic
         # Build context for prompt
         context_parts = []
         if company_profile:
-            company_profile_json = json.dumps(company_profile, indent=2)
+            company_profile_json = json.dumps(company_profile, indent=2, default=str)
             context_parts.append(f"COMPANY PROFILE:\n{company_profile_json}")
 
         if customer_profile:

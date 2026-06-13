@@ -23,9 +23,11 @@ from app.services.leads import get_leads_for_org
 from app.services.signals import persistence, search
 
 
-# Per-signal LLM-call retry budget for the batch path. Mirrors the
-# single-signal research path (run_signals_research) so a transient
-# Claude/Tavily/JSON failure is retried rather than aborting the batch.
+# Per-signal LLM-call attempt budget for the batch path (2 = one initial try
+# plus one retry — a *total attempts* count, not a retry count). Named to mirror
+# run_signals_research's `max_retries = 2`, which is likewise a total-attempts
+# count; kept parallel deliberately so a transient Claude/Tavily/JSON failure is
+# retried rather than aborting the batch.
 _SIGNAL_BATCH_MAX_RETRIES = 2
 
 
