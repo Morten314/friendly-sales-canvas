@@ -240,13 +240,13 @@ routes and the shared `PaginatedResponse` envelope.
   - Multitenant (user_id)
 
 ### 16a. **POST `/market-research_claude`** - Market Research (Claude backend)
-- **Description**: Same as `POST /market-research`, but research is generated with Claude (Tavily + Anthropic) instead of Groq
+- **Description**: Same as `POST /market-research`, but research is generated with Claude (Tavily + Anthropic) instead of Qwen
 - **Request Body**: MarketRequest
 - **Returns**: `MarketResponse` (same shape as `/market-research`)
 - **Notes**: Returns HTTP 500 if `ANTHROPIC_API_KEY` is not configured
 
 ### 16b. **POST `/icp-research_claude`** - ICP Research (Claude backend)
-- **Description**: Same as `POST /icp-research`, but research is generated with Claude (Tavily + Anthropic) instead of Groq
+- **Description**: Same as `POST /icp-research`, but research is generated with Claude (Tavily + Anthropic) instead of Qwen
 - **Request Body**: MarketRequest
 - **Returns**: `ICPResearchResponse` (same shape as `/icp-research`)
 - **Notes**: Returns HTTP 500 if `ANTHROPIC_API_KEY` is not configured
@@ -280,7 +280,7 @@ routes and the shared `PaginatedResponse` envelope.
   - Multitenant (user_id)
 
 ### 18a. **POST `/generate-signals-batch_claude`** - Generate Signals Batch (Claude backend)
-- **Description**: Same as `POST /generate-signals-batch`, but signal text is produced with Claude (Tavily + Anthropic) instead of Groq
+- **Description**: Same as `POST /generate-signals-batch`, but signal text is produced with Claude (Tavily + Anthropic) instead of Qwen
 - **Request Body**: MarketRequest
 - **Returns**: `GenerateSignalsBatchResponse` (same shape)
 - **Notes**: Returns HTTP 500 if `ANTHROPIC_API_KEY` is not configured
@@ -300,7 +300,7 @@ routes and the shared `PaginatedResponse` envelope.
 - **Returns**: `SignalActionResponse` (status, message, signal_id, action, optional org_id)
 
 ### 19b. **POST `/signal_Ask`** - Ask About Signals
-- **Description**: Answer a question about signals using company profile, customer profile, history, and WebSearch (Groq + agent chain)
+- **Description**: Answer a question about signals using company profile, customer profile, history, and WebSearch (Qwen + agent chain)
 - **Request Body**: `SignalAskRequest`
 - **Returns**: `SignalAskResponse` (status, answer, org_id, user_id, question, optional prompt_meta)
 
