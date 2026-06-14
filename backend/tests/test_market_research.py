@@ -35,16 +35,16 @@ VALID_COMPONENTS = [
 
 # Map component names to their captured fixture slugs.
 _COMPONENT_FIXTURE_SLUG = {
-    "market size & opportunity": "market_research_market_size_groq",
-    "industry trends report": "market_research_industry_trends_groq",
-    "competitor landscape": "market_research_competitor_landscape_groq",
-    "regulatory & compliance highlights": "market_research_regulatory_compliance_groq",
-    "market entry & growth strategy": "market_research_market_entry_groq",
+    "market size & opportunity": "market_research_market_size_qwen",
+    "industry trends report": "market_research_industry_trends_qwen",
+    "competitor landscape": "market_research_competitor_landscape_qwen",
+    "regulatory & compliance highlights": "market_research_regulatory_compliance_qwen",
+    "market entry & growth strategy": "market_research_market_entry_qwen",
 }
 
 
 def _captured_result(component_name: str = "market size & opportunity") -> dict:
-    slug = _COMPONENT_FIXTURE_SLUG.get(component_name, "market_research_market_size_groq")
+    slug = _COMPONENT_FIXTURE_SLUG.get(component_name, "market_research_market_size_qwen")
     return load_captured(slug)
 
 

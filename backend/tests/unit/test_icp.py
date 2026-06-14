@@ -143,10 +143,10 @@ def test_run_icp_research_raises_unsupported_component(
         component_name="totally bogus", data={}, refresh=True,
     )
     with pytest.raises(UnsupportedComponentError):
-        asyncio.run(run_icp_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend="groq"))
+        asyncio.run(run_icp_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend="qwen"))
 
 
-def test_run_icp_research_groq_happy_path(
+def test_run_icp_research_qwen_happy_path(
     mocker, mock_session, mock_mongo_client,
 ):
     """ICP_FUNCTIONS holds direct refs to icp_research_N — same dispatch-dict
@@ -156,7 +156,7 @@ def test_run_icp_research_groq_happy_path(
     orchestrator unpacks the tuple and merges prompt_meta into the inserted
     Mongo doc — assert both pieces propagate.
     """
-    captured = load_captured("icp_research_icp_summary_groq")
+    captured = load_captured("icp_research_icp_summary_qwen")
     prompt_meta = {
         "name": "icp_research_1",
         "version": "1.0.0",
@@ -185,7 +185,7 @@ def test_run_icp_research_groq_happy_path(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
         component_name="icp summary & market opportunity", data={}, refresh=True,
     )
-    result = asyncio.run(run_icp_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend="groq"))
+    result = asyncio.run(run_icp_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend="qwen"))
 
     assert result["status"] == "success"
     assert result["data"]["user_id"] == TEST_USER_ID
@@ -203,7 +203,7 @@ def test_run_icp_research_claude_happy_path(
 ):
     """Claude path: ICP_FUNCTIONS_CLAUDE entries are lambdas that resolve
     the underlying icp_research_N at call time, so patching the module
-    attr works here (unlike the direct-ref Groq dict above).
+    attr works here (unlike the direct-ref Qwen dict above).
 
     Post-Task-8, research functions return ``(parsed_json, prompt_meta)``.
     """
@@ -258,7 +258,7 @@ def test_run_icp_research_raises_when_company_profile_missing(
         data={}, refresh=True,
     )
     with pytest.raises(CompanyProfileNotFoundError):
-        asyncio.run(run_icp_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend="groq"))
+        asyncio.run(run_icp_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend="qwen"))
 
 
 # ---------------------------------------------------------------------------

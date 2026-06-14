@@ -72,7 +72,7 @@ def ICP_generator(agent_chain, pre_data: str) -> tuple[dict, dict]:
     return parsed_json, prompt_meta
 
 
-def icp_research_1(agent_chain, pre_data: str, llm_backend: str = "default") -> tuple[dict, dict]:
+def icp_research_1(agent_chain, pre_data: str, llm_backend: str = "qwen") -> tuple[dict, dict]:
     rendered = prompts.render("icp_research_1", pre_data=pre_data)
     prompt_meta = prompts.prompt_meta_from(rendered)
 
@@ -84,7 +84,7 @@ def icp_research_1(agent_chain, pre_data: str, llm_backend: str = "default") -> 
     return parsed_json, prompt_meta
 
 
-def icp_research_2(agent_chain, pre_data: str, llm_backend: str = "default") -> tuple[dict, dict]:
+def icp_research_2(agent_chain, pre_data: str, llm_backend: str = "qwen") -> tuple[dict, dict]:
     rendered = prompts.render("icp_research_2", pre_data=pre_data)
     prompt_meta = prompts.prompt_meta_from(rendered)
 
@@ -120,7 +120,7 @@ def icp_research_2(agent_chain, pre_data: str, llm_backend: str = "default") -> 
             continue
 
 
-def icp_research_3(agent_chain, pre_data: str, llm_backend: str = "default") -> tuple[dict, dict]:
+def icp_research_3(agent_chain, pre_data: str, llm_backend: str = "qwen") -> tuple[dict, dict]:
     rendered = prompts.render("icp_research_3", pre_data=pre_data)
     prompt_meta = prompts.prompt_meta_from(rendered)
 
@@ -158,7 +158,7 @@ def icp_research_3(agent_chain, pre_data: str, llm_backend: str = "default") -> 
             continue
 
 
-def icp_research_4(agent_chain, pre_data: str, llm_backend: str = "default") -> tuple[dict, dict]:
+def icp_research_4(agent_chain, pre_data: str, llm_backend: str = "qwen") -> tuple[dict, dict]:
     rendered = prompts.render("icp_research_4", pre_data=pre_data)
     prompt_meta = prompts.prompt_meta_from(rendered)
 
@@ -223,7 +223,7 @@ async def _run_icp_research_impl(driver, mongo, pc, agent_chain, request: Any, l
     request:
         A ``MarketRequest`` instance (imported lazily to avoid circular import).
     llm_backend:
-        ``"groq"`` — uses ICP_FUNCTIONS (default Groq/Together pipeline).
+        ``"qwen"`` — uses ICP_FUNCTIONS (Qwen/Together agent_chain pipeline).
         ``"claude"`` — uses ICP_FUNCTIONS_CLAUDE (Tavily + Anthropic).
     """
     component_name = request.component_name.strip().lower()
@@ -327,7 +327,7 @@ async def _run_icp_research_impl(driver, mongo, pc, agent_chain, request: Any, l
     return {"status": "success", "data": research_result}
 
 
-async def run_icp_research(driver, mongo, pc, agent_chain, request: Any, llm_backend: str = "groq") -> Dict[str, Any]:
+async def run_icp_research(driver, mongo, pc, agent_chain, request: Any, llm_backend: str = "qwen") -> Dict[str, Any]:
     """Unified worker for POST /icp-research and POST /icp-research_claude.
     Dispatches to `_run_icp_research_impl` with the chosen backend. The
     `CLAUDE_API_KEY` availability check lives in the router.
@@ -337,6 +337,6 @@ async def run_icp_research(driver, mongo, pc, agent_chain, request: Any, llm_bac
     request:
         A ``MarketRequest`` instance.
     llm_backend:
-        ``"groq"`` (default) or ``"claude"``.
+        ``"qwen"`` (default) or ``"claude"``.
     """
     return await _run_icp_research_impl(driver, mongo, pc, agent_chain, request, llm_backend=llm_backend)

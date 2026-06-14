@@ -6,7 +6,6 @@ bundle fields via FastAPI dependency injection — no module-level state.
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
 from langchain_experimental.graph_transformers import LLMGraphTransformer
 from langchain_neo4j import GraphCypherQAChain
@@ -14,14 +13,13 @@ from langchain_classic.memory import ConversationBufferMemory
 from langchain_classic.agents import initialize_agent, Tool
 from langchain_classic.agents.agent_types import AgentType
 from langchain_community.tools.tavily_search.tool import TavilySearchResults
-from app.core.config import groq_api_key, together_api_key, tavily_api_key
+from app.core.config import together_api_key, tavily_api_key
 from app.core.clients import ClientBundle
 
 
 @dataclass
 class LLMBundle:
-    llm: Any                                      # ChatGroq
-    llm2: Any                                     # ChatOpenAI (Together)
+    llm2: Any                                     # ChatOpenAI (Together — Qwen3-235B)
     llm_transformer: Any                          # LLMGraphTransformer
     memory: Any                                   # ConversationBufferMemory
     chain: Optional[Any]                          # GraphCypherQAChain — None when clients.graph is None
@@ -35,8 +33,9 @@ def build_llm_config(clients_bundle: ClientBundle) -> LLMBundle:
     matching today's conditional construction.
 
     Initialization arguments match the legacy module-level construction line
-    for line (Groq llama-3.3, Together Qwen3-235B with the `-tput` model
-    suffix, GraphCypherQAChain with `verbose=True`, agent with
+    for line (Together Qwen3-235B with the `-tput` model suffix — the single
+    chat model, also driving the graph transformer; GraphCypherQAChain with
+    `verbose=True`, agent with
     `verbose=False`, `handle_parsing_errors=True`, `max_iterations=20`,
     `max_execution_time=120`, Tavily `k=10`).
 
@@ -45,7 +44,6 @@ def build_llm_config(clients_bundle: ClientBundle) -> LLMBundle:
     (`init_registry()`) before this function is called — wired in
     `app.main.lifespan` (init_registry on line 43, build_llm_config on 44).
     """
-    llm = ChatGroq(model="llama-3.3-70b-versatile", api_key=groq_api_key)
     llm2 = ChatOpenAI(
         openai_api_base="https://api.together.xyz/v1",
         openai_api_key=together_api_key,
@@ -54,8 +52,9 @@ def build_llm_config(clients_bundle: ClientBundle) -> LLMBundle:
     # Register simple-invoke models in the LLM factory (spec §3.5).
     from app.services._llm_helpers import register_llm
     register_llm("Qwen/Qwen3-235B-A22B-Instruct-2507-tput", lambda: llm2)
-    register_llm("llama-3.3-70b-versatile", lambda: llm)
-    llm_transformer = LLMGraphTransformer(llm=llm)
+    # Graph extraction runs on Qwen via Together (function/tool-calling — validated
+    # live). Previously ChatGroq llama-3.3; Groq has been retired from the stack.
+    llm_transformer = LLMGraphTransformer(llm=llm2)
     memory = ConversationBufferMemory(return_messages=True)
 
     from app.core import prompts as _prompts
@@ -101,7 +100,7 @@ def build_llm_config(clients_bundle: ClientBundle) -> LLMBundle:
     )
 
     return LLMBundle(
-        llm=llm, llm2=llm2,
+        llm2=llm2,
         llm_transformer=llm_transformer, memory=memory,
         chain=chain, chain2=chain2, agent_chain=agent_chain,
     )

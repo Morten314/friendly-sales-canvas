@@ -47,7 +47,7 @@ def _mock_market_collection(mock_mongo_client, find_one_return=None):
 
 
 # ---------------------------------------------------------------------------
-# Happy paths — Groq backend
+# Happy paths — Qwen backend
 # ---------------------------------------------------------------------------
 
 _COMPONENT_FIXTURE_SLUG = {
@@ -60,7 +60,7 @@ _COMPONENT_FIXTURE_SLUG = {
 
 
 @pytest.mark.parametrize("component_name", list(_COMPONENT_FIXTURE_SLUG))
-def test_run_market_research_groq_per_component(
+def test_run_market_research_qwen_per_component(
     mocker, mock_session, mock_mongo_client, component_name,
 ):
     """Each of the 5 components dispatches via COMPONENT_FUNCTIONS.
@@ -76,7 +76,7 @@ def test_run_market_research_groq_per_component(
     inserted Mongo doc.
     """
     slug = _COMPONENT_FIXTURE_SLUG[component_name]
-    captured = load_captured(f"market_research_{slug}_groq")
+    captured = load_captured(f"market_research_{slug}_qwen")
     prompt_meta = {
         "name": f"research_market_{list(_COMPONENT_FIXTURE_SLUG).index(component_name) + 1}",
         "version": "1.0.0",
@@ -102,7 +102,7 @@ def test_run_market_research_groq_per_component(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
         component_name=component_name, data={}, refresh=True,
     )
-    result = asyncio.run(run_market_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend="groq"))
+    result = asyncio.run(run_market_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend="qwen"))
 
     assert result["status"] == "success"
     assert result["data"]["component_name"] == component_name
@@ -120,7 +120,7 @@ def test_run_market_research_returns_cached_when_not_refreshing(
     mocker, mock_session, mock_mongo_client,
 ):
     """refresh=False should return the latest Mongo report and skip the LLM call."""
-    captured = load_captured("market_research_market_size_groq")
+    captured = load_captured("market_research_market_size_qwen")
     cached_doc = dict(captured)
     cached_doc.update({
         "user_id": TEST_USER_ID,
@@ -139,7 +139,7 @@ def test_run_market_research_returns_cached_when_not_refreshing(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
         component_name="market size & opportunity", data={}, refresh=False,
     )
-    result = asyncio.run(run_market_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend="groq"))
+    result = asyncio.run(run_market_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend="qwen"))
 
     assert result["status"] == "success"
     fake_fn.assert_not_called()
@@ -155,7 +155,7 @@ def test_run_market_research_claude_uses_captured(
     """Claude path: COMPONENT_FUNCTIONS_CLAUDE wraps the unified dispatch
     in a lambda (`lambda agent_chain, d: _run_research_component(N, agent_chain, d, "claude")`).
     The lambda resolves the name at call time, so patching the module-level
-    _run_research_component DOES reach the call. (Contrast with the Groq path
+    _run_research_component DOES reach the call. (Contrast with the Qwen path
     above, where patch.dict is used for parity.)
 
     Post-Task-10, _run_research_component returns ``(parsed_json, prompt_meta)``.

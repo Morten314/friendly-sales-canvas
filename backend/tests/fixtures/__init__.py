@@ -15,7 +15,7 @@ SEED_DIR = FIXTURES_DIR / "seed"
 def load_captured(name: str) -> dict:
     """Load a captured LLM fixture by stem name.
 
-    Example: load_captured("market_research_market_size_groq")
+    Example: load_captured("market_research_market_size_qwen")
     """
     stem = name[:-5] if name.endswith(".json") else name
     return json.loads((CAPTURED_DIR / f"{stem}.json").read_text())

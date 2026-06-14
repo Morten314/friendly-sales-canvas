@@ -44,7 +44,7 @@ async def icp_research(
     pc=Depends(get_pinecone),
     agent_chain=Depends(get_agent_chain),
 ):
-    return await icp_service.run_icp_research(driver, mongo, pc, agent_chain, request, llm_backend="groq")
+    return await icp_service.run_icp_research(driver, mongo, pc, agent_chain, request, llm_backend="qwen")
 
 
 @router.post("/icp-research_claude", response_model=ICPResearchResponse)

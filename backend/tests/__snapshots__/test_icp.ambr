@@ -164,7 +164,7 @@
         '_metadata': dict({
           'dataSource': 'stub',
         }),
-        'blurb': 'Stub for icp_buyer_map (groq). REGENERATE with capture_fixtures.py.',
+        'blurb': 'Stub for icp_buyer_map (qwen). REGENERATE with capture_fixtures.py.',
         'buyingTriggers': list([
           dict({
             'description': 'Stub description',
@@ -199,7 +199,7 @@
           'dataSource': 'stub',
         }),
         'activeBuyingSignals': 1,
-        'blurb': 'Stub for icp_competitive (groq). REGENERATE with capture_fixtures.py.',
+        'blurb': 'Stub for icp_competitive (qwen). REGENERATE with capture_fixtures.py.',
         'buyingSignals': list([
           dict({
             'description': 'Stub signal description',
@@ -262,7 +262,7 @@
           'title': 'Stub ICP 1',
         }),
       ]),
-      'summary': 'ICP stub for icp_summary (groq). REGENERATE.',
+      'summary': 'ICP stub for icp_summary (qwen). REGENERATE.',
       'timestamp': '<scrubbed>',
       'user_id': 'test_user_123',
     }),
@@ -279,7 +279,7 @@
         '_metadata': dict({
           'dataSource': 'stub',
         }),
-        'blurb': 'Stub for icp_regulatory (groq). REGENERATE with capture_fixtures.py.',
+        'blurb': 'Stub for icp_regulatory (qwen). REGENERATE with capture_fixtures.py.',
         'icpFitScore': '0% match',
         'icpRefinementRecommendations': list([
           dict({

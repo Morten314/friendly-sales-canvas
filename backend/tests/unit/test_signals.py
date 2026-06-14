@@ -40,15 +40,15 @@ from tests.identities import (
 # search_signals (sync) — uses captured fixtures
 # ---------------------------------------------------------------------------
 
-def test_search_signals_scout_groq_uses_captured(mocker):
-    captured = load_captured("search_signals_scout_groq")
+def test_search_signals_scout_qwen_uses_captured(mocker):
+    captured = load_captured("search_signals_scout_qwen")
     # _signals_agent_output calls llm_config.agent_chain.invoke({"input": prompt})
     # and accesses raw_response["output"] — return a JSON-parseable string.
     chain_mock = MagicMock()
     chain_mock.invoke.return_value = {"output": json.dumps(captured)}
 
     pre_data = json.dumps(load_seed("company_profile"))
-    result = search_signals(chain_mock, pre_data, persona="scout", llm_backend="default")
+    result = search_signals(chain_mock, pre_data, persona="scout", llm_backend="qwen")
 
     assert result is not None
     chain_mock.invoke.assert_called_once()
@@ -105,8 +105,8 @@ def test_generate_signals_batch_happy_path(
     mocker, mock_session, mock_mongo_client,
 ):
     """generate_signals_batch dispatches to _generate_signals_batch_impl
-    with llm_backend='default'."""
-    captured = load_captured("search_signals_scout_groq")
+    with llm_backend='qwen'."""
+    captured = load_captured("search_signals_scout_qwen")
     mocker.patch(
         "app.services.signals.batch._generate_signals_batch_impl",
         return_value={"status": "success", "data": captured},
@@ -248,12 +248,12 @@ def test_record_signal_action_reject_raises_service_error_on_delete_race(
 # signal_ask / signal_ask_claude — captured fixtures + ServiceError paths
 # ---------------------------------------------------------------------------
 
-def test_signal_ask_groq_uses_captured(mocker, mock_session, mock_mongo_client):
+def test_signal_ask_qwen_uses_captured(mocker, mock_session, mock_mongo_client):
     """signal_ask calls asyncio.to_thread(llm_config.agent_chain.invoke, ...).
     The session mock prevents Neo4j I/O; chain mock returns {"output": answer}.
     mock_session.run().single() must return None to avoid json.dumps on a MagicMock
     company_profile. The Profiler/Company_Profile find_one must return None too."""
-    captured = load_captured("signal_ask_groq")
+    captured = load_captured("signal_ask_qwen")
     chain_mock = MagicMock()
     # signal_ask uses raw_response.get("output", "") from the chain result
     chain_mock.invoke.return_value = {"output": str(captured)}
@@ -276,8 +276,8 @@ def test_signal_ask_groq_uses_captured(mocker, mock_session, mock_mongo_client):
     assert result is not None
     assert "answer" in result
     # Post-Task-9: signal_ask threads prompt_meta into the response.
-    assert result["prompt_meta"]["name"] == "signals_signal_ask_groq"
-    assert result["prompt_meta"]["model"] == "llama-3.3-70b-versatile"
+    assert result["prompt_meta"]["name"] == "signals_signal_ask_qwen"
+    assert result["prompt_meta"]["model"] == "Qwen/Qwen3-235B-A22B-Instruct-2507-tput"
 
 
 def test_signal_ask_claude_raises_service_error_when_api_key_missing(
@@ -663,14 +663,14 @@ def test_signal_ask_claude_includes_data_source_context(
     assert "DATA_SOURCE_SENTINEL_42" in prompt
 
 
-def test_signal_ask_groq_includes_data_source_context(
+def test_signal_ask_qwen_includes_data_source_context(
     mocker, mock_session, mock_mongo_client,
 ):
-    """signal_ask (Groq) must also inject uploaded data-source context into the
+    """signal_ask (Qwen) must also inject uploaded data-source context into the
     prompt it hands to the agent chain (parity with the Claude path)."""
     mocker.patch(
         "app.services.signals.ask._fetch_pinecone_supporting_context",
-        return_value=[{"content": "DATA_SOURCE_SENTINEL_GROQ", "score": 0.8}],
+        return_value=[{"content": "DATA_SOURCE_SENTINEL_QWEN", "score": 0.8}],
     )
     mock_session.run.return_value.single.return_value = None
     mock_mongo_client.__getitem__.return_value.__getitem__.return_value.find_one.return_value = None
@@ -684,7 +684,7 @@ def test_signal_ask_groq_includes_data_source_context(
     assert result["status"] == "success"
     chain_mock.invoke.assert_called_once()
     prompt = chain_mock.invoke.call_args[0][0]["input"]
-    assert "DATA_SOURCE_SENTINEL_GROQ" in prompt
+    assert "DATA_SOURCE_SENTINEL_QWEN" in prompt
 
 
 def test_signal_ask_claude_falls_back_to_user_icp_config(

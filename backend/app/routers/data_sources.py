@@ -4,7 +4,7 @@ import shutil
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, File, Form, Query, Response, UploadFile
 
 from app.core.dependencies import (
-    get_llm,
+    get_llm2,
     get_llm_transformer,
     get_mongo,
     get_neo4j_driver,
@@ -40,7 +40,7 @@ async def upload_document(
 async def upload_prospect_list(
     file: UploadFile = File(...),
     driver=Depends(get_neo4j_driver),
-    llm=Depends(get_llm),
+    llm=Depends(get_llm2),
 ):
     file_path = f"/tmp/{file.filename}"
     with open(file_path, 'wb') as buffer:

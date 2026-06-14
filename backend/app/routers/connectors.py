@@ -8,7 +8,7 @@ from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response
 
-from app.core.dependencies import get_llm, get_mongo, get_neo4j_driver
+from app.core.dependencies import get_llm2, get_mongo, get_neo4j_driver
 from app.models.connectors import (
     ApolloConnectRequest,
     ApolloConnectResponse,
@@ -93,7 +93,7 @@ async def apollo_discover(
     background_tasks: BackgroundTasks,
     driver=Depends(get_neo4j_driver),
     mongo=Depends(get_mongo),
-    llm=Depends(get_llm),
+    llm=Depends(get_llm2),
 ):
     """Queue an ICP-driven Apollo discovery run."""
     return connectors_service.start_apollo_discover(driver, mongo, request, background_tasks, llm=llm)

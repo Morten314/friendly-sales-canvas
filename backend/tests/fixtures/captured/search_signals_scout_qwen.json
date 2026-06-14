@@ -2,7 +2,7 @@
   "signals": [
     {
       "signal_id": "sig_stub_1",
-      "headline": "Stub signal for profiler (groq)",
+      "headline": "Stub signal for scout (qwen)",
       "summary": "Replace via capture_fixtures.py",
       "company_name": "Stub Co",
       "trigger_type": "funding"

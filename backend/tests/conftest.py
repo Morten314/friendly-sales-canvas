@@ -133,14 +133,13 @@ def mock_llm_config():
     """Composite LLM/graph override for converted routes."""
     from app.main import app
     from app.core.dependencies import (
-        get_chain, get_chain2, get_llm, get_llm2, get_llm_transformer,
+        get_chain, get_chain2, get_llm2, get_llm_transformer,
         get_neo4j_graph,
     )
 
     provider_by_name = {
         "chain": get_chain,
         "chain2": get_chain2,
-        "llm": get_llm,
         "llm2": get_llm2,
         "llm_transformer": get_llm_transformer,
     }

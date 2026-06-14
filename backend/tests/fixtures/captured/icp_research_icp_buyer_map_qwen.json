@@ -1,7 +1,7 @@
 {
   "currentData": {
     "title": "Buyer Map & Roles, Pain Points, Triggers",
-    "blurb": "Stub for icp_buyer_map (groq). REGENERATE with capture_fixtures.py.",
+    "blurb": "Stub for icp_buyer_map (qwen). REGENERATE with capture_fixtures.py.",
     "_metadata": {"dataSource": "stub"},
     "coreBuyerPersonas": 3,
     "topPainPoint": "Stub pain point",

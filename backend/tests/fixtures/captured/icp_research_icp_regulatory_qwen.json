@@ -1,7 +1,7 @@
 {
   "currentData": {
     "title": "Regulatory, Compliance & Recommended ICP",
-    "blurb": "Stub for icp_regulatory (groq). REGENERATE with capture_fixtures.py.",
+    "blurb": "Stub for icp_regulatory (qwen). REGENERATE with capture_fixtures.py.",
     "_metadata": {"dataSource": "stub"},
     "keyComplianceFrameworks": ["Stub Framework 1", "Stub Framework 2"],
     "upcomingMandates": "Stub mandate description",

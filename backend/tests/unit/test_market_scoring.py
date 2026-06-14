@@ -81,7 +81,7 @@ def _fake_qwen_in_factory():
     """Register a fake Qwen LLM in the factory for this test module.
 
     Snapshots/restores factory + cache state so other test modules' LLM
-    registrations (production Qwen/Groq from build_llm_config) survive.
+    registrations (production Qwen from build_llm_config) survive.
     """
     from app.services import _llm_helpers
     factory_snapshot = dict(_llm_helpers._LLM_FACTORY)

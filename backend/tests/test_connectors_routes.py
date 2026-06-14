@@ -14,7 +14,7 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.dependencies import get_llm, get_mongo, get_neo4j_driver
+from app.core.dependencies import get_llm2, get_mongo, get_neo4j_driver
 from app.main import app
 
 
@@ -112,7 +112,7 @@ def test_discover_route_queues(monkeypatch):
     )
     app.dependency_overrides[get_mongo] = lambda: MagicMock()
     app.dependency_overrides[get_neo4j_driver] = lambda: MagicMock()
-    app.dependency_overrides[get_llm] = lambda: MagicMock()
+    app.dependency_overrides[get_llm2] = lambda: MagicMock()
     try:
         client = TestClient(app)
         resp = client.post(
@@ -124,4 +124,4 @@ def test_discover_route_queues(monkeypatch):
     finally:
         app.dependency_overrides.pop(get_mongo, None)
         app.dependency_overrides.pop(get_neo4j_driver, None)
-        app.dependency_overrides.pop(get_llm, None)
+        app.dependency_overrides.pop(get_llm2, None)

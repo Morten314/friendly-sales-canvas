@@ -1,6 +1,6 @@
 """Market research service: 5-component report generation. Cross-domain LLM
 helpers live in `app.services._llm_helpers`. `run_market_research` is the
-unified Groq/Claude worker.
+unified Qwen/Claude worker.
 """
 import asyncio
 import json
@@ -50,7 +50,7 @@ def _run_research_component(
     component_n: int,
     agent_chain,
     pre_data,
-    llm_backend: str = "default",
+    llm_backend: str = "qwen",
 ) -> tuple[dict, dict]:
     """Run one of the 5 market-research components via prompted LLM agent.
 
@@ -106,8 +106,8 @@ COMPONENT_FUNCTIONS_CLAUDE = {
 }
 
 
-async def run_market_research(driver, mongo, pc, agent_chain, request: MarketRequest, llm_backend: str = "groq") -> dict:
-    """Unified worker for both Groq and Claude market-research variants.
+async def run_market_research(driver, mongo, pc, agent_chain, request: MarketRequest, llm_backend: str = "qwen") -> dict:
+    """Unified worker for both Qwen and Claude market-research variants.
 
     The caller (router) is responsible for:
     - API-key precheck before invoking with llm_backend="claude"

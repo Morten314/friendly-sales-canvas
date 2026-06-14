@@ -9,11 +9,11 @@ Usage (run from backend/):
     python tests/capture_fixtures.py
     python tests/capture_fixtures.py --llm-backend claude
     python tests/capture_fixtures.py --components market_size,icp_summary
-    python tests/capture_fixtures.py --components signals_scout --llm-backend groq
+    python tests/capture_fixtures.py --components signals_scout --llm-backend qwen
 
 Required env vars (script aborts if missing):
     ANTHROPIC_API_KEY  — Claude path
-    TOGETHER_API_KEY   — Groq path (Together.ai-hosted Llama via agent_chain)
+    TOGETHER_API_KEY   — Qwen path (Together.ai-hosted Qwen via agent_chain)
     TAVILY_API_KEY     — Claude path web context
 
 Re-run intentionally when:
@@ -97,7 +97,7 @@ def capture_market_research(components: List[str], backends: List[str]) -> None:
         component_n = slug_to_n[slug]
         for backend in backends:
             print(f"Capturing market_research/{slug} ({backend})...")
-            if backend == "groq":
+            if backend == "qwen":
                 result = _run_research_component(component_n, pre_data)
             else:
                 result = _run_research_component(component_n, pre_data, "claude")
@@ -121,7 +121,7 @@ def capture_icp_research(components: List[str], backends: List[str]) -> None:
         fn = fn_map[slug]
         for backend in backends:
             print(f"Capturing icp_research/{slug} ({backend})...")
-            llm_backend = "claude" if backend == "claude" else "default"
+            llm_backend = "claude" if backend == "claude" else "qwen"
             result = fn(pre_data, llm_backend)
             _write_capture(f"icp_research_{slug}_{backend}", result)
 
@@ -135,7 +135,7 @@ def capture_search_signals(components: List[str], backends: List[str]) -> None:
         persona = "scout" if slug == "signals_scout" else "profiler"
         for backend in backends:
             print(f"Capturing search_signals/{persona} ({backend})...")
-            llm_backend = "claude" if backend == "claude" else "default"
+            llm_backend = "claude" if backend == "claude" else "qwen"
             result = search_signals(pre_data, persona=persona, llm_backend=llm_backend)
             _write_capture(f"search_signals_{persona}_{backend}", result)
 
@@ -151,7 +151,7 @@ def capture_signal_ask(backends: List[str]) -> None:
     )
     for backend in backends:
         print(f"Capturing signal_ask ({backend})...")
-        if backend == "groq":
+        if backend == "qwen":
             result = llm_config.agent_chain.invoke({"input": prompt})
         else:
             result = {"output": _claude_messages_text(prompt)}
@@ -161,7 +161,7 @@ def capture_signal_ask(backends: List[str]) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--llm-backend", choices=("groq", "claude", "both"), default="both"
+        "--llm-backend", choices=("qwen", "claude", "both"), default="both"
     )
     parser.add_argument(
         "--components",
@@ -182,7 +182,7 @@ def main() -> None:
     _check_env()
 
     backends = (
-        ["groq", "claude"] if args.llm_backend == "both" else [args.llm_backend]
+        ["qwen", "claude"] if args.llm_backend == "both" else [args.llm_backend]
     )
 
     if args.components == "all":

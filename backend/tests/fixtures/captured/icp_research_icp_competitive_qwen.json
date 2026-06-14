@@ -1,7 +1,7 @@
 {
   "currentData": {
     "title": "Competitive Overlap & Buying Signals",
-    "blurb": "Stub for icp_competitive (groq). REGENERATE with capture_fixtures.py.",
+    "blurb": "Stub for icp_competitive (qwen). REGENERATE with capture_fixtures.py.",
     "_metadata": {"dataSource": "stub"},
     "numberOfMainCompetitors": 3,
     "recentWinLossChange": "+0%",

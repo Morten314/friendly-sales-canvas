@@ -28,10 +28,9 @@ def get_pinecone(request: Request):
 
 
 # ── LLM providers ───────────────────────────────────────────────────────
-def get_llm(request: Request):
-    return request.app.state.llm.llm
-
-
+# Single chat model (Together-served Qwen3-235B). Groq/llama-3.3 has been
+# retired, so there is no second raw chat model — graph extraction, the Apollo
+# rerank, and prospect scoring all use this one.
 def get_llm2(request: Request):
     return request.app.state.llm.llm2
 

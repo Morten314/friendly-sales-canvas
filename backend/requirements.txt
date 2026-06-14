@@ -5,7 +5,6 @@ langchain
 langchain-core
 langchain-community
 langchain-experimental
-langchain-groq
 langchain-neo4j
 langchain-classic
 jinja2>=3.1

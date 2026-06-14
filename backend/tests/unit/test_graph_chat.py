@@ -53,7 +53,7 @@ def test_score_prospect_returns_score_and_prompt_meta():
     # prompt_meta carries the canonical observability fields from the user render
     assert prompt_meta["name"] == "score_prospect_user"
     assert prompt_meta["version"] == "1.0.0"
-    assert prompt_meta["model"] == "llama-3.3-70b-versatile"
+    assert prompt_meta["model"] == "Qwen/Qwen3-235B-A22B-Instruct-2507-tput"
     assert "content_hash" in prompt_meta
     assert "render_inputs_hash" in prompt_meta
     assert "rendered_at" in prompt_meta

@@ -1,4 +1,4 @@
-"""Market research endpoints: 5-component report (Groq + Claude variants)."""
+"""Market research endpoints: 5-component report (Qwen + Claude variants)."""
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.dependencies import (
@@ -22,7 +22,7 @@ async def market_research(
     pc=Depends(get_pinecone),
     agent_chain=Depends(get_agent_chain),
 ):
-    return await mr_service.run_market_research(driver, mongo, pc, agent_chain, request, llm_backend="groq")
+    return await mr_service.run_market_research(driver, mongo, pc, agent_chain, request, llm_backend="qwen")
 
 
 @router.post("/market-research_claude", response_model=MarketResponse)

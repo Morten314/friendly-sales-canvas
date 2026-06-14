@@ -1,6 +1,6 @@
 """Unit tests for app/services/_llm_helpers.py shared helpers.
 
-Covers _research_agent_output (Groq + Claude paths, URL extraction)
+Covers _research_agent_output (Qwen + Claude paths, URL extraction)
 and _extract_research_json (escape_keys, trim_braces, strip_final_answer).
 """
 from unittest.mock import MagicMock
@@ -14,23 +14,23 @@ from app.services._llm_helpers import (
 
 
 # ---------------------------------------------------------------------------
-# _research_agent_output — Groq path
+# _research_agent_output — Qwen path
 # ---------------------------------------------------------------------------
 
-def test_research_agent_output_groq_returns_text_and_empty_urls_by_default():
+def test_research_agent_output_qwen_returns_text_and_empty_urls_by_default():
     """Default (extract_intermediate_urls=False) returns (text, [])."""
     agent_chain = MagicMock()
     agent_chain.invoke.return_value = {"output": "agent response text"}
 
     text, urls = _research_agent_output(
-        agent_chain, prompt="hello", seed_text="seed", llm_backend="groq",
+        agent_chain, prompt="hello", seed_text="seed", llm_backend="qwen",
         search_query_template="market research {seed}",
     )
     assert text == "agent response text"
     assert urls == []
 
 
-def test_research_agent_output_groq_extracts_intermediate_urls_when_flagged():
+def test_research_agent_output_qwen_extracts_intermediate_urls_when_flagged():
     """extract_intermediate_urls=True walks intermediate_steps for tavily URLs."""
     agent_chain = MagicMock()
     raw = MagicMock()
@@ -41,7 +41,7 @@ def test_research_agent_output_groq_extracts_intermediate_urls_when_flagged():
     agent_chain.invoke.return_value = raw
 
     text, urls = _research_agent_output(
-        agent_chain, prompt="x", seed_text="s", llm_backend="groq",
+        agent_chain, prompt="x", seed_text="s", llm_backend="qwen",
         search_query_template="q {seed}",
         extract_intermediate_urls=True,
     )
@@ -50,7 +50,7 @@ def test_research_agent_output_groq_extracts_intermediate_urls_when_flagged():
     assert "https://b.com" in urls
 
 
-def test_research_agent_output_groq_regex_fallback_when_no_intermediate_urls():
+def test_research_agent_output_qwen_regex_fallback_when_no_intermediate_urls():
     """extract_intermediate_urls=True falls back to regex on the response text."""
     agent_chain = MagicMock()
     raw = MagicMock()
@@ -59,7 +59,7 @@ def test_research_agent_output_groq_regex_fallback_when_no_intermediate_urls():
     agent_chain.invoke.return_value = raw
 
     text, urls = _research_agent_output(
-        agent_chain, prompt="x", seed_text="s", llm_backend="groq",
+        agent_chain, prompt="x", seed_text="s", llm_backend="qwen",
         search_query_template="q {seed}",
         extract_intermediate_urls=True,
     )
