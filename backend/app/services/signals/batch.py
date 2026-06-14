@@ -1,8 +1,8 @@
 """Signal batch generation — batched persona-shared signal discovery.
 
 Houses _generate_signals_batch_impl (shared body) and the two public
-backend-variant wrappers (generate_signals_batch for Groq, _claude for
-Anthropic+Tavily).
+backend-variant wrappers (generate_signals_batch for Qwen via the Together
+agent_chain, _claude for Anthropic+Tavily).
 
 batch.py uses search.search_signals via module-import + namespace-prefix
 to keep mocker.patch effective (see feedback_phase_h_module_import_pattern.md).
@@ -96,7 +96,7 @@ async def _generate_one_signal(
 
 
 async def _generate_signals_batch_impl(driver, mongo, pc, agent_chain, request: MarketRequest, llm_backend: str) -> dict:
-    """Shared implementation for batch signal generation (Groq and Claude)."""
+    """Shared implementation for batch signal generation (Qwen and Claude)."""
     # Prepare data for the signals functions
     pre_data = request.data
 
@@ -250,15 +250,15 @@ async def _generate_signals_batch_impl(driver, mongo, pc, agent_chain, request: 
 
 
 async def generate_signals_batch(driver, mongo, pc, agent_chain, request: MarketRequest) -> dict:
-    """Generate 2 signals for scout and 2 signals for profiler (Groq)."""
-    return await _generate_signals_batch_impl(driver, mongo, pc, agent_chain, request, "default")
+    """Generate 2 signals for scout and 2 signals for profiler (Qwen via agent_chain)."""
+    return await _generate_signals_batch_impl(driver, mongo, pc, agent_chain, request, "qwen")
 
 
 async def generate_signals_batch_claude(driver, mongo, pc, agent_chain, request: MarketRequest) -> dict:
     """Same as generate_signals_batch but signal text is produced with Claude.
     The `CLAUDE_API_KEY` availability check lives in the router. The
-    Groq/Claude pair stays parallel — Groq uses `agent_chain`; Claude does
-    direct HTTP with per-window budget tracking — divergence too large to
+    Qwen/Claude pair stays parallel — Qwen uses `agent_chain` (Together); Claude
+    does direct HTTP with per-window budget tracking — divergence too large to
     collapse cleanly.
     """
     return await _generate_signals_batch_impl(driver, mongo, pc, agent_chain, request, "claude")

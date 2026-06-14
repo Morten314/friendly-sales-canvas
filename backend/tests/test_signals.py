@@ -133,7 +133,7 @@ def test_post_generate_signals_batch_calls_llm(client):
     mc.__getitem__.return_value.__getitem__.return_value.find_one.return_value = None
 
     with _override_mongo(mc), \
-         patch("app.services.signals.search.search_signals", return_value=dict(load_captured("search_signals_scout_groq"))) as mock_search, \
+         patch("app.services.signals.search.search_signals", return_value=dict(load_captured("search_signals_scout_qwen"))) as mock_search, \
          patch("app.services.signals.search._fetch_pinecone_supporting_context", return_value=[]):
         response = client.post("/generate-signals-batch", json=_base_market_request())
 
@@ -151,7 +151,7 @@ def test_post_generate_signals_batch_returns_signals(client):
     mc, coll = _make_mc_for_signals([])
 
     with _override_mongo(mc), \
-         patch("app.services.signals.search.search_signals", return_value=dict(load_captured("search_signals_scout_groq"))), \
+         patch("app.services.signals.search.search_signals", return_value=dict(load_captured("search_signals_scout_qwen"))), \
          patch("app.services.signals.search._fetch_pinecone_supporting_context", return_value=[]):
         response = client.post("/generate-signals-batch", json=_base_market_request())
 
@@ -266,7 +266,7 @@ def test_post_signal_ask_returns_answer(client, mock_neo4j, mock_llm_chain):
     assert body["answer"] == "This is the AI answer."
     chain_mock.invoke.assert_called_once()
     # Post-Task-9: response carries prompt_meta from the migrated registry-driven prompt.
-    assert body["prompt_meta"]["name"] == "signals_signal_ask_groq"
+    assert body["prompt_meta"]["name"] == "signals_signal_ask_qwen"
 
 
 # ---------------------------------------------------------------------------

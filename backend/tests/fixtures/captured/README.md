@@ -25,7 +25,7 @@ The script writes all 24 files and prints progress. Partial re-runs are supporte
 python tests/capture_fixtures.py --components market_size --llm-backend claude
 
 # Multiple components
-python tests/capture_fixtures.py --components signals_scout,signals_profiler --llm-backend groq
+python tests/capture_fixtures.py --components signals_scout,signals_profiler --llm-backend qwen
 ```
 
 ## When to regenerate
@@ -42,27 +42,27 @@ Regenerate intentionally when any of the following occur:
 
 | File | Category | Backend |
 |------|----------|---------|
-| market_research_market_size_groq.json | market research | groq |
+| market_research_market_size_qwen.json | market research | qwen |
 | market_research_market_size_claude.json | market research | claude |
-| market_research_industry_trends_groq.json | market research | groq |
+| market_research_industry_trends_qwen.json | market research | qwen |
 | market_research_industry_trends_claude.json | market research | claude |
-| market_research_competitor_landscape_groq.json | market research | groq |
+| market_research_competitor_landscape_qwen.json | market research | qwen |
 | market_research_competitor_landscape_claude.json | market research | claude |
-| market_research_regulatory_compliance_groq.json | market research | groq |
+| market_research_regulatory_compliance_qwen.json | market research | qwen |
 | market_research_regulatory_compliance_claude.json | market research | claude |
-| market_research_market_entry_groq.json | market research | groq |
+| market_research_market_entry_qwen.json | market research | qwen |
 | market_research_market_entry_claude.json | market research | claude |
-| icp_research_icp_summary_groq.json | icp research | groq |
+| icp_research_icp_summary_qwen.json | icp research | qwen |
 | icp_research_icp_summary_claude.json | icp research | claude |
-| icp_research_icp_buyer_map_groq.json | icp research | groq |
+| icp_research_icp_buyer_map_qwen.json | icp research | qwen |
 | icp_research_icp_buyer_map_claude.json | icp research | claude |
-| icp_research_icp_competitive_groq.json | icp research | groq |
+| icp_research_icp_competitive_qwen.json | icp research | qwen |
 | icp_research_icp_competitive_claude.json | icp research | claude |
-| icp_research_icp_regulatory_groq.json | icp research | groq |
+| icp_research_icp_regulatory_qwen.json | icp research | qwen |
 | icp_research_icp_regulatory_claude.json | icp research | claude |
-| search_signals_scout_groq.json | search signals | groq |
+| search_signals_scout_qwen.json | search signals | qwen |
 | search_signals_scout_claude.json | search signals | claude |
-| search_signals_profiler_groq.json | search signals | groq |
+| search_signals_profiler_qwen.json | search signals | qwen |
 | search_signals_profiler_claude.json | search signals | claude |
-| signal_ask_groq.json | signal ask | groq |
+| signal_ask_qwen.json | signal ask | qwen |
 | signal_ask_claude.json | signal ask | claude |

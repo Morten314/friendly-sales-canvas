@@ -51,25 +51,25 @@ parameters and response shapes, see `API_ENDPOINTS_SUMMARY.md`.
 
 ## Research and Signals
 
-Each of the research/signal *generator* endpoints has a Groq-backed default and a
+Each of the research/signal *generator* endpoints has a Qwen-backed default and a
 Claude-backed `_claude` twin (same request/response shape; the `_claude` variant
 uses Tavily + Anthropic and returns HTTP 500 if `ANTHROPIC_API_KEY` is unset).
 `GET /test-llm` is a separate diagnostic utility and does not follow this pattern.
 
 - `POST /market-research`  
-  Runs market research workflow (Groq backend) and returns structured output.
+  Runs market research workflow (Qwen backend) and returns structured output.
 - `POST /market-research_claude`  
   Same as `/market-research`, generated with the Claude backend.
 - `GET /icp`  
   Retrieves ICP (Ideal Customer Profile) data. **Deprecated** — see `GET /api/v2/icp`; only the list portion is replaced (the lazy generate/create behavior has no v2 successor).
 - `POST /icp-research`  
-  Generates/refines ICP research results (Groq backend).
+  Generates/refines ICP research results (Qwen backend).
 - `POST /icp-research_claude`  
   Same as `/icp-research`, generated with the Claude backend.
 - `POST /signals-research`  
   Runs signal discovery/research process.
 - `POST /generate-signals-batch`  
-  Batch generates signals (2 scout + 2 profiler) in one call (Groq backend).
+  Batch generates signals (2 scout + 2 profiler) in one call (Qwen backend).
 - `POST /generate-signals-batch_claude`  
   Same as `/generate-signals-batch`, generated with the Claude backend.
 - `GET /test-llm`  
@@ -79,7 +79,7 @@ uses Tavily + Anthropic and returns HTTP 500 if `ANTHROPIC_API_KEY` is unset).
 - `POST /signal_action`  
   Records a user/system action (accept/reject) on a signal.
 - `POST /signal_Ask`  
-  Answers a question about signals (Groq + agent chain + WebSearch).
+  Answers a question about signals (Qwen + agent chain + WebSearch).
 - `POST /signal_ask_claude`  
   Claude-powered variant of `/signal_Ask` with a local token/run limiter.
 - `POST /edit`  

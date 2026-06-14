@@ -38,7 +38,7 @@ def search_signals(
     agent_chain,
     pre_data,
     persona: Literal["scout", "profiler"] = "scout",
-    llm_backend: str = "default",
+    llm_backend: str = "qwen",
 ) -> dict:
     """Unified scout/profiler signal search.
 

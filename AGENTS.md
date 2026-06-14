@@ -80,8 +80,8 @@ Brewra is a B2B GTM/sales-intelligence PWA. Three customer-facing "agents" — *
   - **Pinecone** — document embeddings, namespaced by `org_id`.
   - **S3 (`eu-north-1`)** — uploaded PDFs/text.
 - LLMs (`app/core/llm_config`):
-  - **Groq `llama-3.3-70b-versatile`** — primary chat/research.
-  - **Together.ai `Qwen/Qwen3-235B-A22B-Instruct-2507-tput`** — driver for the LangChain `ZERO_SHOT_REACT_DESCRIPTION` `agent_chain` with Tavily WebSearch (`max_iterations=20`, `max_execution_time=120`).
+  - **Together.ai `Qwen/Qwen3-235B-A22B-Instruct-2507-tput`** — the single non-Claude chat model. Drives the LangChain `ZERO_SHOT_REACT_DESCRIPTION` `agent_chain` with Tavily WebSearch (`max_iterations=20`, `max_execution_time=120`) for the research/signals/ICP/market-research paths (the `llm_backend="qwen"` variants), and also the `LLMGraphTransformer` (uploaded doc → Neo4j extraction), the Apollo discovery re-rank, and prospect scoring. **Groq `llama-3.3-70b-versatile` was retired 2026-06-14** — every path it drove moved to Qwen (validated live before the swap).
+  - **Anthropic Claude (`claude-sonnet-4-6`)** — the `_claude` endpoint variants the frontend actually calls for Scout/Profiler signal generation/ask and ICP/market research.
   - **Embeddings: `intfloat/multilingual-e5-large-instruct`, 1024-dim**, served by TogetherAI through `langchain_openai.OpenAIEmbeddings` (`app/services/_retrieval.py`). Despite the class name, this is **not OpenAI**.
 - Async: only `fastapi.BackgroundTasks` — used for document embedding and lead market scoring. **In-process; tasks are lost on Render restart.** No queue, no retries.
 
@@ -126,7 +126,7 @@ Backend test conventions live in `backend/TESTING.md` — patch-where-used is th
 ## Gotchas (things you can't infer from the code)
 
 - **Smoke-test scripts hit production.** The root-level `backend/test_*.py` probes use `https://backend-11kr.onrender.com` and hardcoded IDs — treat them as live integration probes, not unit tests. They are **distinct** from the real pytest suite under `backend/tests/` (see `backend/TESTING.md`).
-- **`app/core/config.py` has hardcoded credential fallbacks** (Groq, Neo4j, Mongo, Together, Tavily, RapidAPI) for when env vars aren't set. Do not paste `app/core/config.py` into a PR description, screenshot, or chat.
+- **`app/core/config.py` has hardcoded credential fallbacks** (Neo4j, Mongo, Together, Tavily, RapidAPI) for when env vars aren't set. Do not paste `app/core/config.py` into a PR description, screenshot, or chat.
 - **Cypher injection risk in the graph-chat paths** (`app/routers/graph_chat.py` → `app/services/graph_chat/neo4j.py`, including the raw-Cypher `/query` path). These exist; don't extend the same f-string pattern.
 - **Pagination is a convention now.** The shared `PaginatedResponse[T]` model lives in `app/models/pagination.py` (`items` / `total` / `limit` / `offset`, `limit` capped at 500) and is used by the v2 list endpoints. Note the v1 `count` caveat: on capped v1 list routes, `count` reflects page size, not the true DB total — see `TD-005` in `docs/TECH_DEBT.md`.
 - **CORS is `allow_origins=["*"]` with `credentials=True`** (`app/main.py`). Don't rely on origin checks.

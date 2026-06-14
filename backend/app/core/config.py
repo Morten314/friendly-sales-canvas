@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Load API Keys and DB Credentials from environment variables
-groq_api_key = os.getenv("GROQ_API_KEY") or "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"
 neo4j_uri = os.getenv("NEO4J_URI") or "neo4j+s://29adf28f.databases.neo4j.io"
 neo4j_username = os.getenv("NEO4J_USERNAME") or "neo4j"
 neo4j_password = os.getenv("NEO4J_PASSWORD") or "ShhMJSuKlseOSfN936BK_8gXNelap65MnZVyPrBCGyU"

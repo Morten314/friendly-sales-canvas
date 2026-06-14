@@ -476,7 +476,7 @@ def test_post_icp_research_icp_summary(client, mock_neo4j, mock_llm_chain, mock_
     _setup_icp_research_neo4j(mock_neo4j)
     _set_invoke_output(
         mock_llm_chain,
-        json.dumps(load_captured("icp_research_icp_summary_groq")),
+        json.dumps(load_captured("icp_research_icp_summary_qwen")),
     )
 
     mc = _mc_factory({
@@ -502,7 +502,7 @@ def test_post_icp_research_buyer_map(client, mock_neo4j, mock_llm_chain, mock_pi
     _setup_icp_research_neo4j(mock_neo4j)
     _set_invoke_output(
         mock_llm_chain,
-        json.dumps(load_captured("icp_research_icp_buyer_map_groq")),
+        json.dumps(load_captured("icp_research_icp_buyer_map_qwen")),
     )
 
     mc = _mc_factory({
@@ -526,7 +526,7 @@ def test_post_icp_research_competitive_overlap(client, mock_neo4j, mock_llm_chai
     _setup_icp_research_neo4j(mock_neo4j)
     _set_invoke_output(
         mock_llm_chain,
-        json.dumps(load_captured("icp_research_icp_competitive_groq")),
+        json.dumps(load_captured("icp_research_icp_competitive_qwen")),
     )
 
     mc = _mc_factory({
@@ -550,7 +550,7 @@ def test_post_icp_research_regulatory(client, mock_neo4j, mock_llm_chain, mock_p
     _setup_icp_research_neo4j(mock_neo4j)
     _set_invoke_output(
         mock_llm_chain,
-        json.dumps(load_captured("icp_research_icp_regulatory_groq")),
+        json.dumps(load_captured("icp_research_icp_regulatory_qwen")),
     )
 
     mc = _mc_factory({

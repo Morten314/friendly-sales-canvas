@@ -1,6 +1,6 @@
 """Signal Q&A — interactive query against signal/lead data.
 
-Houses signal_ask (Groq-backed) and signal_ask_claude (Anthropic-backed).
+Houses signal_ask (Qwen-backed) and signal_ask_claude (Anthropic-backed).
 Both answer questions about signals using company profile, customer profile
 (ICPs), uploaded data sources (Pinecone), chat history, and WebSearch context.
 
@@ -145,7 +145,7 @@ async def signal_ask(driver, mongo, pc, agent_chain, request: SignalAskRequest) 
 
         # Render the prompt via the registry
         rendered = prompts.render(
-            "signals_signal_ask_groq",
+            "signals_signal_ask_qwen",
             context=context,
             history_text=history_text,
             question=request.question,

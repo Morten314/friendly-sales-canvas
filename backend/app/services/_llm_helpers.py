@@ -5,8 +5,8 @@ Primitives:
   - _claude_messages_text(user_prompt, max_tokens) — Anthropic /v1/messages call
 
 Shared patterns:
-  - _research_agent_output — Groq agent_chain OR Claude+Tavily dispatch for the 3
-    research services (signals, icp, market_research). Each service's llm.py module
+  - _research_agent_output — Qwen agent_chain (Together) OR Claude+Tavily dispatch
+    for the 3 research services (signals, icp, market_research). Each service's llm.py module
     is a thin wrapper that hardcodes its search_query_template, claude_prompt_suffix,
     and extract_intermediate_urls flag.
   - _extract_research_json — JSON extraction from LLM markdown-wrapped output.
@@ -143,7 +143,7 @@ def _claude_messages_text(user_prompt: str, max_tokens: int = CLAUDE_RESEARCH_MA
 
 
 # ---------------------------------------------------------------------------
-# Shared pattern — research dispatch (Groq agent_chain vs Claude+Tavily)
+# Shared pattern — research dispatch (Qwen agent_chain vs Claude+Tavily)
 # ---------------------------------------------------------------------------
 
 _DEFAULT_CLAUDE_PROMPT_SUFFIX = "\n\nWEB SEARCH RESULTS:\n{web_ctx}\n"
@@ -158,17 +158,17 @@ def _research_agent_output(
     claude_prompt_suffix_template: str = _DEFAULT_CLAUDE_PROMPT_SUFFIX,
     extract_intermediate_urls: bool = False,
 ) -> tuple:
-    """Dispatch a research call to the Groq agent_chain (default) or to
+    """Dispatch a research call to the Qwen agent_chain (default) or to
     Anthropic+Tavily (when llm_backend == "claude"). Returns (text, urls).
 
     Args:
-      agent_chain: a LangChain initialize_agent result (Groq path).
+      agent_chain: a LangChain initialize_agent result (Qwen/Together path).
       prompt: the research prompt to send.
       seed_text: free-form text used to seed the Tavily search query (Claude path).
         Whitespace-normalized via " ".join(str(seed_text).split()) then truncated
         to 1200 chars before substitution.
-      llm_backend: "claude" routes to Anthropic+Tavily; anything else routes to
-        agent_chain.invoke({"input": prompt}).
+      llm_backend: "claude" routes to Anthropic+Tavily; anything else (e.g.
+        "qwen") routes to agent_chain.invoke({"input": prompt}).
       search_query_template: must contain literal "{seed}" placeholder, filled via
         str.format(seed=...). Only used in Claude path.
       claude_prompt_suffix_template: must contain literal "{web_ctx}" placeholder.
@@ -176,8 +176,9 @@ def _research_agent_output(
         framing; icp + market_research pass custom triple-quoted templates.
       extract_intermediate_urls: when True (signals path), walks
         agent_chain response's intermediate_steps to collect tavily URLs from
-        the Groq path; falls back to regex over the text if empty. When False
-        (icp/market_research paths), the returned url list is empty for Groq.
+        the agent_chain path; falls back to regex over the text if empty. When
+        False (icp/market_research paths), the returned url list is empty for
+        the agent_chain path.
 
     Returns:
       (response_text, tavily_urls) tuple. Callers that don't need URLs unpack
