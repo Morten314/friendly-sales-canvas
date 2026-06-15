@@ -1,23 +1,22 @@
 import { useState, useEffect } from "react";
 
+import { useAgentProfile } from "../hooks/useAgentProfile";
+
 import {
   AgentConfigForm,
   type AgentConfigValues,
   type AgentConfigChecks,
 } from "@/shared/agent-config";
-import type { UntypedBackendProfile } from "@/shared/types/escape-hatches";
+import { useAuth } from "@/shared/auth";
 
 interface AgentProfileProps {
   onProfileUpdate?: () => void;
   isEditMode?: boolean;
-  profileData?: UntypedBackendProfile;
 }
 
-export function AgentProfile({
-  onProfileUpdate,
-  isEditMode = false,
-  profileData,
-}: AgentProfileProps) {
+export function AgentProfile({ onProfileUpdate, isEditMode = false }: AgentProfileProps) {
+  const { currentUser } = useAuth();
+  const { data: profileData } = useAgentProfile(currentUser?.uid);
   const [formData, setFormData] = useState<AgentConfigValues>({
     agentName: "",
     assignedTasks: "",
