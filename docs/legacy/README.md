@@ -7,7 +7,7 @@ authoritative sources are the code itself, `docs/architecture/BACKEND.md`,
 These files are retained for historical reference (and remain in git history
 regardless).
 
-## `pwa-frontend/` — pre-cutover PWA frontend guides (19 files)
+## `pwa-frontend/` — pre-cutover PWA frontend guides (20 files)
 
 Setup / integration / debugging guides copied verbatim from the legacy
 `PWA-multi-tenancy` repo into `frontend/` root during the monorepo cutover
@@ -21,7 +21,8 @@ not how-to guides.
   `DEV_VS_PREVIEW_PWA`, `QUICK_DIAGNOSTIC`, `CLEAR_SERVICE_WORKER`,
   `TEST_PWA_INSTALL`, `REFRESH_FLOW_EXPLANATION`, `REFRESH_FLOW_VERIFICATION`
 - **API / integration:** `JWT_INTEGRATION_GUIDE`, `CRM_API_INTEGRATION_GUIDE`,
-  `REAL_WORLD_API_EXAMPLES`, `RATE_LIMIT_SOLUTION`, `frontend-config`
+  `REAL_WORLD_API_EXAMPLES`, `RATE_LIMIT_SOLUTION`, `frontend-config`,
+  `CORS_FIX_README` (a pre-refactor Vite-proxy/`src/lib/api.ts` CORS workaround)
 - **Scout (pre-refactor component tree):** `SCOUT_API_REQUEST_SCHEMAS`,
   `SCOUT_COMPONENT_SCHEMAS`, `SCOUT_COMPONENTS_JSON_STRUCTURE`,
   `SCOUT_LEAD_STREAM_CONNECTION`
