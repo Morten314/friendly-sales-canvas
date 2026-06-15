@@ -2,8 +2,10 @@ import { z } from "zod";
 
 import {
   GenerateSignalsBatchResponseSchema,
+  SignalLeadMapResponseSchema,
   type FetchSignalsResponse,
   type GenerateSignalsBatchResponse,
+  type SignalLeadMapResponse,
 } from "../contracts";
 
 import { apiGet, apiPost } from "@/shared/api/client";
@@ -46,5 +48,21 @@ export async function generateSignalsBatch(userId: string): Promise<GenerateSign
       refresh: true,
     },
     GenerateSignalsBatchResponseSchema,
+  );
+}
+
+/**
+ * POST /api/signal-lead-map_claude — one read-time mapping over the org's
+ * newest-50 signals × leads. `refresh` forces a recompute past the cache.
+ */
+export async function fetchSignalLeadMap(
+  userId: string,
+  orgId: string,
+  opts: { refresh?: boolean } = {},
+): Promise<SignalLeadMapResponse> {
+  return apiPost(
+    "signal-lead-map_claude",
+    { user_id: userId, org_id: orgId, refresh: opts.refresh ?? false },
+    SignalLeadMapResponseSchema as import("zod").ZodType<SignalLeadMapResponse>,
   );
 }

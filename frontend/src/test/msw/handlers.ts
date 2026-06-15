@@ -281,4 +281,12 @@ export const handlers = [
       progress_percent: 100,
     }),
   ),
+
+  // ── signals / lead-map ────────────────────────────────────────────────────────
+  http.post("/api/signal-lead-map_claude", () =>
+    HttpResponse.json({
+      status: "success",
+      data: { mapping: [], generated_at: "t", cached: false },
+    }),
+  ),
 ];
