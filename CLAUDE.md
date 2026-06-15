@@ -92,7 +92,7 @@ Brewra is a B2B GTM/sales-intelligence PWA. Three customer-facing "agents" — *
 - **App-wide state:** `AuthContext` + `TenantContext` live in `src/shared/auth/` and `src/shared/tenant/`.
 - Routing: `/` → login → `/tenant-selection` → protected. Scout at `/your-ai-team/scout/:tab`, Strategist at `/your-ai-team/strategist/:tab` (Deals.tsx is the Strategist page); Profiler is distributed across `/mission-control` and `/customers` (no separate `features/profiler/` — see ADR-0006 / TD-FE-60).
 - Tooling/quality gates: `npm run preflight` (typecheck, lint, format:check, vitest, build, advisory bundle:check, Playwright + visual regression, knip --strict). See "AI-Native Development".
-- Originally Lovable-generated; the `lovable-tagger` build plugin has since been removed. The Lovable URL in `frontend/README.md` and the markdown integration guides (archived to `docs/legacy/pwa-frontend/` in the 2026-06-15 doc-staleness cleanup) reflect that lineage.
+- Originally Lovable-generated; the `lovable-tagger` build plugin has since been removed. The Lovable URL in `frontend/README.md` reflects that lineage; the markdown integration guides that used to sit at the frontend root were removed in the 2026-06-15 doc-staleness cleanup (recoverable from git history).
 
 ### Auth reality check
 The frontend looks like it does JWT auth: `JWTManager` posts to `/api/auth/token` and `/api/auth/refresh`, attaches `Authorization: Bearer …` to every call, gracefully handles 404. **The backend does not validate this token.** Every endpoint reads `user_id` / `org_id` from query/body params and trusts them. Multi-tenancy is enforced by `WHERE l.org_id = $org_id` in Cypher and `{"org_id": ...}` in Mongo, nothing more. When you add an endpoint, do not assume an auth context exists.
@@ -145,7 +145,7 @@ If asked to reason about architecture, product scope, or design system, **read t
 - `/docs/dry-run-merge/` — develop-vs-production canvas drift, file-level (`dev-only.txt`, `prod-only.txt`, `differ-with-sizes.txt`, `identical.txt`). Input for Plan 05 reconciliation. For the conceptual summary of the divergence (which feature groups live where), see the "Dev/prod codebase unification" row in either `FUNCTIONALITY_INVENTORY.md` under `/docs/analysis/`.
 - `/frontend/analysis/` (subtree-imported from PWA) — earlier per-repo passes; mostly superseded by `/docs/analysis/`.
 - The backend area also contains self-authored markdown guides at its root — `backend/API_DOCUMENTATION.md` and `backend/API_ENDPOINTS_SUMMARY.md` (primary sources for the API surface; the Apollo `/connectors` routes are documented there too). The pre-modularization `ANALYSIS_MARKET_ICP_RESEARCH_ISSUES.md` was archived to `docs/legacy/`.
-- The pre-cutover PWA frontend guides (`JWT_INTEGRATION_GUIDE.md`, `SCOUT_API_REQUEST_SCHEMAS.md`, `PWA_SETUP.md`, etc.) were archived to `docs/legacy/pwa-frontend/` — they are **frozen PWA lineage** describing the old `src/lib`/`src/pages` layout, not current guidance. For current frontend conventions see `frontend/src/features/README.md` and the per-feature `README.md` files.
+- The pre-cutover PWA frontend guides (`JWT_INTEGRATION_GUIDE.md`, `SCOUT_API_REQUEST_SCHEMAS.md`, `PWA_SETUP.md`, etc.) were **removed** in the 2026-06-15 doc-staleness cleanup — they described the old `src/lib`/`src/pages` layout, not current behavior (recoverable from git history / the `PWA-multi-tenancy` repo). For current frontend conventions see `frontend/src/features/README.md` and the per-feature `README.md` files.
 
 ## Technical Debt Register
 
