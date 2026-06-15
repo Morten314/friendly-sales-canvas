@@ -222,6 +222,7 @@ export const handlers = [
     HttpResponse.json({ success: true, data: { deleted_icp_id: "x", remaining_count: 0 } }),
   ),
   http.delete("/api/icp/recommended/:icpId", () => HttpResponse.json({ success: true })),
+  http.get("/api/v2/leads", () => HttpResponse.json({ items: [], total: 0, limit: 50, offset: 0 })),
 
   // ── signals ──────────────────────────────────────────────────────────────────
   // Shared by useSignalAsk / useSignalAction and the ContextChat substrate.
