@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -54,5 +54,21 @@ describe("useSignalLeadMap", () => {
 
   it("keys the cache by both orgId and userId (spec §8)", () => {
     expect(qk.signalLeadMap("org1", "u1")).toEqual(["signals", "lead-map", "org1", "u1"]);
+  });
+
+  it("sends refresh:true when refresh() is invoked", async () => {
+    let lastBody: unknown;
+    server.use(
+      http.post("/api/signal-lead-map_claude", async ({ request }) => {
+        lastBody = await request.json();
+        return HttpResponse.json({ data: { mapping: [] } });
+      }),
+    );
+    const { result } = renderHook(() => useSignalLeadMap("org1"), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    await act(async () => {
+      await result.current.refresh();
+    });
+    expect(lastBody).toMatchObject({ refresh: true });
   });
 });

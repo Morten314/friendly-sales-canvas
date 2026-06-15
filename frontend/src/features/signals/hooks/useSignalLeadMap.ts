@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 
 import type { SignalLeadMapEntry } from "../contracts";
@@ -47,5 +47,20 @@ export function useSignalLeadMap(orgId?: string | null) {
     [mapping],
   );
 
-  return { signalsForLead, leadsForSignal, isLoading: query.isLoading, isError: query.isError };
+  const queryClient = useQueryClient();
+
+  /** Force-recompute the signal↔lead mapping past the server cache. */
+  const refresh = useCallback(async () => {
+    if (!orgId || !userId) return;
+    const data = await fetchSignalLeadMap(userId, orgId, { refresh: true });
+    queryClient.setQueryData(qk.signalLeadMap(orgId, userId), data);
+  }, [orgId, userId, queryClient]);
+
+  return {
+    signalsForLead,
+    leadsForSignal,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    refresh,
+  };
 }
