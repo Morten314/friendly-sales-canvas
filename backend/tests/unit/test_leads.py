@@ -292,3 +292,21 @@ def test_create_lead_respects_explicit_source(mock_session):
     create_lead(mock_session._driver, request)
     call_data = mock_session.execute_write.call_args.args[4]
     assert call_data["source"] == "apollo"
+
+
+# ---------------------------------------------------------------------------
+# batch_upload_leads — source field stamping (Phase 36 Task 2)
+# ---------------------------------------------------------------------------
+
+def test_batch_upload_leads_stamps_source_csv(mock_session, mock_mongo_client):
+    coll = MagicMock()
+    mock_mongo_client["Profiler"].__getitem__.return_value = coll
+    csv_bytes = b"company_name\nAcme\n"
+
+    batch_upload_leads(
+        mock_session._driver, mock_mongo_client, csv_bytes, "leads.csv",
+        TEST_USER_ID, TEST_ORG_ID,
+    )
+    # one row → one execute_write; data dict is the 4th positional arg
+    call_data = mock_session.execute_write.call_args_list[0].args[4]
+    assert call_data["source"] == "csv"

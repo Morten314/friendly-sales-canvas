@@ -110,6 +110,9 @@ def batch_upload_leads(
                 lead_data["created_at"] = datetime.now(timezone.utc).isoformat()
                 lead_data["file_id"] = file_id
 
+                if "source" not in lead_data:
+                    lead_data["source"] = "csv"
+
                 # Set default stage if not provided
                 if "stage" not in lead_data and "status" not in lead_data and "Status" not in lead_data:
                     lead_data["stage"] = "Initial Outreach"
