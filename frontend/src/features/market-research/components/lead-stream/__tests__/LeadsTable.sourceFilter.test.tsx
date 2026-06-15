@@ -8,6 +8,7 @@
 // Driving a Radix Select selection reliably in jsdom (pointer-capture + portal
 // choreography) is impractical, so the end-to-end click is left to e2e (Playwright).
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeAll, describe, expect, it, vi } from "vitest";
@@ -29,6 +30,10 @@ beforeAll(() => {
 const STABLE_AUTH = { currentUser: null, orgId: "", fetchOrgId: undefined };
 vi.mock("@/shared/auth", () => ({ useAuthToken: () => STABLE_AUTH }));
 
+// LeadsTable now calls useSignalLeadMap (Task 15), which reads useAuth from AuthContext.
+// With no orgId/user the hook stays disabled (no fetch); it just needs the context to exist.
+vi.mock("@/shared/auth/AuthContext", () => ({ useAuth: () => ({ currentUser: null, orgId: "" }) }));
+
 const STABLE_TENANT = { selectedTenant: null };
 vi.mock("@/shared/tenant", () => ({ useTenant: () => STABLE_TENANT }));
 
@@ -43,10 +48,13 @@ vi.mock("@/shared/api/transport", () => ({
 }));
 
 function renderTable() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter>
-      <LeadsTable />
-    </MemoryRouter>,
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <LeadsTable />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
