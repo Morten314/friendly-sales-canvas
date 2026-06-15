@@ -80,6 +80,9 @@ Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases
 | TD-FE-68 | open | [below](#td-fe-68--production-routed-back-through-api-cold-start-batch-margin--residual-direct-backend-callsites) |
 | TD-FE-69 | open | [below](#td-fe-69--per-icp-lead-count-is-stubbed-to-0-suggestedicpcards-shows-0-leads) |
 | TD-FE-70 | open | [below](#td-fe-70--customers-lead-stream-is-first-page-only-no-pager) |
+| TD-FE-71 | open | [below](#td-fe-71--signallead-map-prompt-matches-on-data-the-payload-doesnt-send) |
+| TD-FE-72 | open | [below](#td-fe-72--signallead-map-refresh-escape-hatch-is-unreachable-from-the-ui) |
+| TD-FE-73 | open | [below](#td-fe-73--signal-lead-map_claude-fe-contract-derived-from-code-not-a-live-response) |
 
 ---
 
