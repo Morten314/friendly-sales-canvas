@@ -86,7 +86,7 @@ export async function runIcpResearchRefreshCascade(userId: string, orgId?: strin
 export async function fetchSuggestedIcps(
   userId: string,
   opts: { refresh?: boolean; orgId?: string } = {},
-): Promise<SuggestedIcpsResponse> {
+): Promise<SuggestedIcpsResponse & { total: number }> {
   const params = new URLSearchParams({ user_id: userId });
   if (opts.refresh) params.set("refresh", "true");
   if (opts.orgId) params.set("org_id", opts.orgId);
@@ -101,7 +101,10 @@ export async function fetchSuggestedIcps(
     );
   }
   const env = paginatedSchema(z.unknown()).parse(await res.json());
-  return SuggestedIcpsResponseSchema.parse({ suggestedICPs: env.items });
+  return {
+    ...SuggestedIcpsResponseSchema.parse({ suggestedICPs: env.items }),
+    total: env.total,
+  };
 }
 
 /** Refresh with fallback: if regenerate fails, load the last cached list instead. */

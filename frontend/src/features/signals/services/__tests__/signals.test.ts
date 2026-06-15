@@ -44,6 +44,16 @@ describe("fetchSignals", () => {
     );
     await expect(fetchSignals("u1")).rejects.toThrow(/not valid JSON/);
   });
+
+  it("surfaces total from the v2 envelope", async () => {
+    server.use(
+      http.get("/api/v2/fetch-signals", () =>
+        HttpResponse.json({ items: [{ id: "s1" }, { id: "s2" }], total: 2, limit: 10, offset: 0 }),
+      ),
+    );
+    const res = await fetchSignals("u1");
+    expect(res.total).toBe(2);
+  });
 });
 
 describe("generateSignalsBatch", () => {

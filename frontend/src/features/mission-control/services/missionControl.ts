@@ -8,19 +8,23 @@ import { firstPageParams, paginatedSchema } from "@/shared/api/pagination";
 
 /**
  * GET /api/v2/user-documents — the org's uploaded data-source documents.
- * Returns the raw document objects; DataSourcesManager maps them to
- * `DataSource[]` (mapping stays in the component this phase — stage 5).
+ * Returns `{ items, total }` from the v2 envelope; `useDataSources` selects
+ * `items` so its `.data` stays a bare array for existing consumers (TD-FE-67).
  */
-export async function fetchDataSources(orgId: string): Promise<unknown[]> {
+export async function fetchDataSources(
+  orgId: string,
+): Promise<{ items: unknown[]; total: number }> {
   const env = await apiGet(
     `v2/user-documents?org_id=${encodeURIComponent(orgId)}&${firstPageParams(500)}`,
     paginatedSchema(z.unknown()),
   );
-  const items = env.items ?? [];
-  if (items.length > 0) return items;
-  // Passthrough envelope may still carry a legacy v1 `files` array on some paths.
-  const legacy = env as { files?: unknown[]; documents?: unknown[]; data?: unknown[] };
-  return legacy.files ?? legacy.documents ?? legacy.data ?? [];
+  let items: unknown[] = env.items ?? [];
+  if (items.length === 0) {
+    // Passthrough envelope may still carry a legacy v1 `files` array on some paths.
+    const legacy = env as { files?: unknown[]; documents?: unknown[]; data?: unknown[] };
+    items = legacy.files ?? legacy.documents ?? legacy.data ?? [];
+  }
+  return { items, total: env.total ?? 0 };
 }
 
 /** GET /api/leads/stream/status — uploaded lead-stream files + processing stats. */
