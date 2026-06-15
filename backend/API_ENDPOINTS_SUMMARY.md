@@ -510,6 +510,52 @@ min 0), unless noted.
 
 ---
 
+## 🔌 Connector / Lead Discovery (Apollo)
+
+Apollo.io integration (Spec 35), mounted under the `/connectors` prefix in
+`app/routers/connectors.py` (frontend proxy form `/api/connectors/...`). The
+import / enrich / discover flows run as in-process `BackgroundTasks`, each paired
+with a `.../status` poll endpoint.
+
+### A1. **POST `/connectors/apollo/connect`** - Connect Apollo
+- **Description**: Store/validate the org's Apollo API key and open the connection
+- **Returns**: `ApolloConnectResponse`
+
+### A2. **GET `/connectors/apollo/status`** - Connection Status
+- **Returns**: `ApolloStatusResponse`
+
+### A3. **DELETE `/connectors/apollo/connect`** - Disconnect Apollo
+- **Returns**: `DisconnectResponse`
+
+### A4. **GET `/connectors/apollo/lists`** - List Apollo Lists
+- **Returns**: `ApolloListsResponse`
+
+### A5. **POST `/connectors/apollo/import`** - Import Contacts from a List
+- **Description**: Import contacts from an Apollo list into the CRM graph
+- **Returns**: `ApolloImportResponse`
+
+### A6. **POST `/connectors/apollo/enrich`** - Enrich Leads (background)
+- **Description**: Reveal/enrich contact details via Apollo `people/match`
+- **Returns**: `ApolloEnrichResponse`
+
+### A7. **GET `/connectors/apollo/enrich/status`** - Enrich Job Status
+- **Returns**: `ApolloEnrichStatusResponse`
+
+### A8. **POST `/connectors/apollo/discover`** - ICP-Driven Discovery (background)
+- **Description**: Discover net-new prospects from the active ICP (Qwen re-rank)
+- **Returns**: `ApolloDiscoverResponse`
+
+### A9. **GET `/connectors/apollo/discover/status`** - Discovery Job Status
+- **Returns**: `ApolloDiscoverStatusResponse`
+
+### A10. **GET `/connectors/apollo/warmup`** - Warm Apollo Client
+- **Returns**: `ApolloWarmupResponse`
+
+### A11. **GET `/connectors/apollo/leads/export`** - Export Connector Leads
+- **Description**: Export the connector's discovered/imported leads (no `response_model`)
+
+---
+
 ## 📝 Notes
 
 ### Multitenancy
