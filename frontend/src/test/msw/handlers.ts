@@ -222,6 +222,7 @@ export const handlers = [
     HttpResponse.json({ success: true, data: { deleted_icp_id: "x", remaining_count: 0 } }),
   ),
   http.delete("/api/icp/recommended/:icpId", () => HttpResponse.json({ success: true })),
+  http.get("/api/v2/leads", () => HttpResponse.json({ items: [], total: 0, limit: 50, offset: 0 })),
 
   // ── signals ──────────────────────────────────────────────────────────────────
   // Shared by useSignalAsk / useSignalAction and the ContextChat substrate.
@@ -279,6 +280,14 @@ export const handlers = [
       counts: { searched: 0, created: 0, matched: 0, errors: [] },
       credits_consumed: 0,
       progress_percent: 100,
+    }),
+  ),
+
+  // ── signals / lead-map ────────────────────────────────────────────────────────
+  http.post("/api/signal-lead-map_claude", () =>
+    HttpResponse.json({
+      status: "success",
+      data: { mapping: [], generated_at: "t", cached: false },
     }),
   ),
 ];

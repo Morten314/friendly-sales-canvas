@@ -41,6 +41,7 @@ from app.services.signals.persistence import (
     record_signal_action,
     fetch_signals,
 )
+from app.services.signals.lead_map import build_signal_lead_map_claude
 
 __all__ = [
     "search_signals",
@@ -51,4 +52,5 @@ __all__ = [
     "signal_ask_claude",
     "record_signal_action",
     "fetch_signals",
+    "build_signal_lead_map_claude",
 ]

@@ -45,3 +45,41 @@ export const CustomerProfileResponseSchema = z
     data: z.unknown().nullish(),
   })
   .passthrough();
+
+// ── Lead Stream (GET /api/v2/leads) ──────────────────────────────────────────
+
+/** Raw v2 lead node (flexible). Only the fields we read are declared; the rest pass through. */
+export const RawLeadSchema = z
+  .object({
+    lead_id: z.string(),
+    source: z.string().nullish(),
+    company_name: z.string().nullish(),
+    company: z.string().nullish(),
+    lead_name: z.string().nullish(),
+    name: z.string().nullish(),
+    email_status: z.string().nullish(),
+  })
+  .passthrough();
+
+export type RawLead = z.infer<typeof RawLeadSchema>;
+
+/** Display shape for the customers Lead Stream. */
+export interface CustomerLead {
+  id: string;
+  name: string;
+  company: string;
+  source: string | null;
+  emailStatus: string | null;
+}
+
+export function mapRawLead(raw: RawLead): CustomerLead {
+  const company = (raw.company_name ?? raw.company ?? "").trim() || "—";
+  const name = (raw.lead_name ?? raw.name ?? "").trim() || company;
+  return {
+    id: raw.lead_id,
+    name,
+    company,
+    source: raw.source ?? null,
+    emailStatus: raw.email_status ?? null,
+  };
+}

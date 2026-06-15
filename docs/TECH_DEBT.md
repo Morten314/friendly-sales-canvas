@@ -77,6 +77,9 @@ Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases
 | TD-FE-65 | open | [below](#td-fe-65--usemarketresearchdatats-decomposition-deferred-6034-loc-monster-file) |
 | TD-FE-66 | open | [below](#td-fe-66--usedocumentsync-cleanup-pre-existing-patterns-relocated-in-phase-13b) |
 | TD-FE-67 | open | [below](#td-fe-67--single-page-v2-reads-still-cap-items-at-500-total-not-surfaced) |
+| TD-FE-68 | open | [below](#td-fe-68--production-routed-back-through-api-cold-start-batch-margin--residual-direct-backend-callsites) |
+| TD-FE-69 | open | [below](#td-fe-69--per-icp-lead-count-is-stubbed-to-0-suggestedicpcards-shows-0-leads) |
+| TD-FE-70 | open | [below](#td-fe-70--customers-lead-stream-is-first-page-only-no-pager) |
 
 ---
 
@@ -1519,5 +1522,124 @@ and out of scope for the batch fix.
 
 **Pull-forward trigger:** a production 502 on a cold-start batch, a paid Render
 plan (no spin-down), or migrating the streaming `/chat/` path onto `/api`.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-69 — per-ICP lead count is stubbed to 0; `SuggestedICPCards` shows "0 leads"
+
+**Date logged:** 2026-06-15
+**Origin:** Plan 36 Task 17 (rewrite customers `LeadStream.tsx` to real leads). Task
+17 dropped the mock ICP segmentation — real v2 leads carry no `matchedICP` field,
+so `getLeadCountForICP` was left as a stub returning `0`. Ref: spec 36 §5.7-A2.
+
+**Current state:** `getLeadCountForICP` in
+`frontend/src/features/customers/components/lead-stream/LeadStream.tsx` returns
+`0` unconditionally. `SuggestedICPCards.tsx` calls it to populate the "N leads"
+badge on each suggested-ICP card — all cards therefore show "0 leads".
+
+**What it should be:** a real per-ICP lead count, derived from a backend endpoint
+that can cross-reference leads with ICP criteria and return a count per ICP id.
+
+**Why deferred:** the v2 leads list (`GET /api/v2/leads`) does not carry a
+`matchedICP` field; computing a per-ICP count needs a new dedicated endpoint,
+which is out of scope for plan 36. A client-side approximation without that
+signal would be misleading.
+
+**Pull-forward trigger:** a real per-ICP count endpoint exists on the backend, or
+the ICP cards surface is prioritised for accuracy (e.g. a stakeholder demo where
+"0 leads" is conspicuous).
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-70 — customers Lead Stream is first-page-only (no pager)
+
+**Date logged:** 2026-06-15
+**Origin:** Plan 36 Task 16 (`useLeads` / `fetchLeads`) + spec 36 §5.7-A2.
+
+**Current state:** `useLeads` calls `fetchLeads` which calls `GET /api/v2/leads`
+with `firstPageParams(50)` (`limit=50, offset=0`) and renders a flat list in
+`LeadStream.tsx`. There is no "load more" button, infinite scroll, or page
+controls. Matches the sibling `LeadsTable` single-fetch pattern (market-research).
+
+**What it should be:** paginated / "load more" per spec §5.7-A2. The v2 endpoint
+already accepts `limit` and `offset`; the `PaginatedResponse` envelope carries
+`total`. A "load more" affordance would fetch the next page and append to the
+list.
+
+**Why deferred:** 0 users; no org is near 50 leads; adding pagination UX would be
+disproportionate to current scale and out of plan 36 scope.
+
+**Pull-forward trigger:** an org's lead count approaches or exceeds 50, or real
+users land and the truncated list is noticed.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-71 — signal↔lead map prompt matches on data the payload doesn't send
+
+**Date logged:** 2026-06-15
+**Origin:** Plan 36 (signal↔lead relevance mapping). Impl-review round 1,
+finding 1. Ref: `docs/reviews/phase-36-signal-lead-mapping-impl-synthesis-1.md`.
+
+**Current state:** `_signals_for_prompt` in
+`backend/app/services/signals/lead_map.py` serializes only `{signal_id,
+headline}` per signal, but the `signals_lead_map.md.j2` MATCHING RULES instruct
+the model to match on "an explicit company mention in the signal" — those
+mentions live in the signal's `description`/`snippet`/`sourceLabel`, none of
+which are sent. The model is therefore restricted to headline-only matching;
+prompt and payload disagree. No error and id hygiene is unaffected (invented ids
+are still dropped) — a recall-quality gap, not a defect.
+
+**What it should be:** prompt and payload agree — either narrow the MATCHING
+RULES to headline-only (a 1-line prompt edit) or extend `_signals_for_prompt` to
+include a trimmed `snippet`/`description` slice so company mentions are actually
+available to match on.
+
+**Why deferred:** 0 users; the MVP Business State explicitly waives
+relevance-quality SLAs; and signal headlines routinely carry the company name,
+so headline matching already partially satisfies the rule. Tuning recall before
+there is real signal/lead data to measure against is premature.
+
+**Pull-forward trigger:** the first relevance-quality tuning pass against real
+signals + leads, or a report that the mapping misses obvious company matches.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-72 — signal↔lead map `refresh` escape hatch is unreachable from the UI
+
+**Date logged:** 2026-06-15
+**Origin:** Plan 36 (signal↔lead relevance mapping). Impl-review round 1, finding
+2 (refresh half); spec 36 §5.4. Ref:
+`docs/reviews/phase-36-signal-lead-mapping-impl-synthesis-1.md`.
+
+**Current state:** `useSignalLeadMap` calls `fetchSignalLeadMap(userId, orgId)`
+with no opts, so the request always sends `refresh: false`, and no UI surfaces a
+recompute action. The backend `refresh=true` path (force a recompute past the
+per-(org, user) fingerprint cache) is therefore inert end-to-end. A cached
+mapping — including a structurally-truncated partial recovered by
+`_recover_mapping_entries` — is served on every fingerprint hit and cannot be
+busted from the FE until the org's signal/lead id-set changes (edits to lead
+fields, with no id change, also do not bust it).
+
+**What it should be:** a recompute/refresh affordance on a surface that shows the
+mapping, calling `fetchSignalLeadMap(userId, orgId, { refresh: true })`, per spec
+36 §5.4's escape-hatch intent.
+
+**Why deferred:** 0 users; a mapping that is stale until the id-set changes is
+low-impact at MVP; a refresh control is a FE feature beyond plan 36's mapping
+scope. (Caching the recovered partial is itself intentional degrade-gracefully
+behavior — see the synthesis; the gap is the missing FE recompute, not the
+cache.)
+
+**Pull-forward trigger:** the first real org reports a stale or low-quality
+mapping that will not self-correct, or the mapping surfaces are prioritised for a
+demo.
 
 **Owner:** TBD.

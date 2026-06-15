@@ -621,3 +621,35 @@ def test_is_stale_run_terminal_statuses_never_stale():
     """Completed and failed runs are terminal — _is_stale_run always returns False."""
     assert _is_stale_run({"status": "completed", "updated_at": "2000-01-01T00:00:00+00:00"}) is False
     assert _is_stale_run({"status": "failed", "updated_at": "2000-01-01T00:00:00+00:00"}) is False
+
+
+# ---------------------------------------------------------------------------
+# source field threading — LeadMarketScoreRow + persist + read-back
+# ---------------------------------------------------------------------------
+
+def test_lead_to_score_row_maps_source():
+    from app.services.market_scoring.normalization import _lead_to_score_row
+    doc = {"lead_id": "l1", "org_id": "o1", "source": "apollo",
+           "component_scores": {}, "market_total_score": 0}
+    assert _lead_to_score_row(doc).source == "apollo"
+
+
+def test_lead_to_score_row_source_defaults_none():
+    from app.services.market_scoring.normalization import _lead_to_score_row
+    doc = {"lead_id": "l1", "org_id": "o1", "component_scores": {}, "market_total_score": 0}
+    assert _lead_to_score_row(doc).source is None
+
+
+def test_persist_market_score_writes_source(mock_session):
+    from unittest.mock import MagicMock
+    from app.services.market_scoring import orchestrator
+    score_coll = MagicMock()
+    orchestrator._persist_market_score_for_lead(
+        mock_session._driver, MagicMock(),
+        user_id="u1", org_id="o1",
+        lead={"lead_id": "l1", "source": "csv"},
+        scoring_payload={"component_scores": {}, "market_total_score": 1.0},
+        run_id="r1", scoring_status="completed", score_coll=score_coll,
+    )
+    set_doc = score_coll.update_one.call_args.args[1]["$set"]
+    assert set_doc["source"] == "csv"
