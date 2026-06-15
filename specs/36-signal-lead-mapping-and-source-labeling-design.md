@@ -20,9 +20,12 @@ This spec adds two cohesive lead-enrichment features:
    real taxonomy, stamp it on every ingest path, surface it everywhere the leads are shown
    with real `source` (a multi-valued filter + per-lead badges).
 
-Both features enrich the same entity (Lead). They share no code path, so the **plan phases
-Feature #2 first** (small, low-risk, independently shippable) and Feature #1 second; they
-remain one spec per the requesting decision.
+Both features enrich the same entity (Lead). They are independent on the data/contract layer;
+their **only shared surface is customers/LeadStream**, whose Feature #2 badge/filter stays inert
+(renders `unknown`) until Feature #1 rewires that component to real leads. The **plan phases
+Feature #2 first** (small, low-risk; genuinely independent on the market-research LeadsTable,
+which already has real data) and Feature #1 second; they remain one spec per the requesting
+decision.
 
 ### Key finding that shapes the design
 
@@ -77,19 +80,19 @@ Both surfaces consume the shared `features/connectors/lib/leadSource.ts` filter.
 - Surface, for each lead, the org's signals relevant to it (and the inverse: each signal's
   affected leads), computed by one LLM call over the whole org and reused across surfaces.
 - Stay faithful to how signals already work: reuse `fetch_signals`, `get_leads_for_org`, the
-  prompt loader, and the `_claude_budget` Claude-call path; reuse the *derived-doc storage*
-  idea (cf. `signal_track`) and the *cache-or-compute `refresh`* idea (cf.
-  `run_signals_research`). The input-set **fingerprint** in §5.4 is a **new** mechanism, not a
-  reuse. No signal-schema change; no persisted hard link.
+  prompt loader, and the research/batch Claude primitive `_llm_helpers._claude_messages_text`;
+  reuse the *derived-doc storage* idea (cf. `signal_track`) and the *cache-or-compute `refresh`*
+  idea (cf. `run_signals_research`). The input-set **fingerprint** in §5.4 is a **new**
+  mechanism, not a reuse. No signal-schema change; no persisted hard link.
 - Promote `Lead.source` to a real taxonomy stamped by every ingest path, surfaced (filter +
   badge) on every lead table that carries real `source`.
 
 **Acceptance criteria** (functional + verifiable; MVP-appropriate — no latency/quality SLAs
 while there are 0 users):
 1. `POST /signal-lead-map_claude` for an org with ≥ 1 signal and ≥ 1 lead returns a
-   `mapping` array; each entry has a `signal_id` and a `leads[]` list (possibly empty) whose
-   entries carry `lead_id`, `company`, `relevance`, and `why`. An org with no signals or no
-   leads returns `mapping: []` with `status: "success"`.
+   `mapping` array; each entry has a `signal_id`, an optional `headline` echo (§5.3), and a
+   `leads[]` list (possibly empty) whose entries carry `lead_id`, `company`, `relevance`, and
+   `why`. An org with no signals or no leads returns `mapping: []` with `status: "success"`.
 2. A second call with the same signal set and lead set and `refresh=false` returns the cached
    mapping (`cached: true`) without a new Claude call; `refresh=true` forces recompute
    (`cached: false`).
@@ -107,6 +110,11 @@ while there are 0 users):
 7. **market-research LeadsTable** and **customers/LeadStream** show per-lead "N relevant
    signals" (expandable) joined on real `lead_id`; each signal card on the Signals page shows
    "Affects N leads" — all driven by the single mapping and all quiet when zero.
+8. **customers/LeadStream** renders real leads from `GET /api/v2/leads` (no longer `mockLeads`),
+   with the real empty state restored when the org has no leads.
+9. Only the newest 50 signals are mapped (§5.2): a signal beyond that window has no `mapping[]`
+   entry, so all mapping-driven surfaces show zero for it — an accepted windowing limitation,
+   not a relevance claim.
 
 **Non-goals**
 - **No signal-document schema change** and **no persisted signal↔lead relationship** on either
@@ -136,25 +144,32 @@ while there are 0 users):
 - Read via v2 `GET /fetch-signals` (paginated, **user-scoped**) →
   `persistence.fetch_signals(mongo, user_id, limit, offset)`.
 - **Structured-JSON-from-Claude template:** `search_signals` / `run_signals_research`
-  (`search.py`) → Claude call via `_claude_budget` → parsed by `parsing.py`
-  (`_parse_search_signals_response` → `_extract_research_json`). **Note:** `signal_ask_claude`
-  (`ask.py`) is *not* this template — it joins Claude content blocks into **plain text**, has
-  **no cache/refresh**, and does **not** call `_extract_research_json`. We reuse `ask.py` only
-  for its `_claude_budget` call mechanism and its `_get_signal_ask_customer_profile` helper.
+  (`search.py`) → Claude call via `_llm_helpers._claude_messages_text` (raw `/v1/messages`) →
+  parsed by `parsing.py::_parse_search_signals_response`, which calls
+  `_llm_helpers._extract_research_json` (the JSON extractor is **owned by `_llm_helpers.py`**,
+  imported by `parsing.py`). **Note:** `signal_ask_claude` (`ask.py`) is *not* this template —
+  it joins Claude content blocks into **plain text**, has **no cache/refresh**, does **not**
+  call `_extract_research_json`, and is the **only** user of the `_claude_budget`
+  reserve/finalize pair (the batch/search path does not use it). We reuse `ask.py` only for its
+  `_get_signal_ask_customer_profile` helper.
 
 **Leads** (`app/services/leads/`, Neo4j `Lead` nodes):
 - `get_leads_for_org(driver, org_id, limit, offset)` → `(items, total)`, newest first; returns
   the **full node** (so `source`, `lead_id`, `company`, etc. are all present).
 - Exposed as `GET /leads` (`get_all_leads`, all leads) and paginated `GET /api/v2/leads`.
-- `Lead.source` ∈ `{"apollo", "csv", null}` set fill-only-empty via
-  `l.source = coalesce(l.source, $source)` in connector ingestion; `apollo_origin`,
+- `Lead.source` **stored values today are `{"apollo", null}`** — only connector ingestion
+  writes a value (`apollo`, fill-only-empty via `l.source = coalesce(l.source, $source)`);
+  `batch_upload_leads`/`create_lead` write none. `"csv"` is currently a **FE-only filter
+  bucket**, not a persisted value (§6.2 makes it a real stored value). `apollo_origin`,
   `discovery_run_id` further qualify Apollo leads.
 - `batch_upload_leads` (`app/services/leads/orchestrator.py`) sets **no** `source`;
   `create_lead` (`persistence.py`) sets **no** `source`. (Both are net-new assignments in §6.2,
   not refactors of an implicit value.)
 
 **Market scoring** (`app/services/market_scoring/`):
-- `POST /leads/market-scores` scores the org's leads (read via `get_leads_for_org`) and returns
+- `POST /leads/market-scores` scores the org's leads — the per-lead scoring loop
+  `_run_market_scoring_for_org` (`market_scoring/scoring.py`) reads leads via
+  `get_leads_for_org` (`orchestrator.py` calls it only for the status counter). Returns
   `LeadMarketScoreRow[]`: `lead_id, org_id, file_id?, company_name, lead_name, score_*,
   combined_score, …`. **No `source` field** (added in §6.2).
 
@@ -182,7 +197,7 @@ Feature #1 (signal↔lead mapping)
         ▼                                                                 ├─ get_leads_for_org(org_id, 100)
    ┌───────────────┬──────────────┬───────────────────┐                  ├─ ICP/company profile
    │ LeadsTable    │ LeadStream   │ Signals page      │                   ├─ cache check (fingerprint)
-   │ "N signals"   │ "N signals"  │ "Affects N leads" │                   ├─ 1× Claude call (_claude_budget, on miss)
+   │ "N signals"   │ "N signals"  │ "Affects N leads" │                   ├─ 1× Claude call (_claude_messages_text, on miss)
    └───────────────┴──────────────┴───────────────────┘                  └─ Signals.signal_lead_map (derived cache)
 
 Feature #2 (source labeling)
@@ -221,26 +236,30 @@ New module `app/services/signals/lead_map.py`. Public symbol re-exported from
 `app/services/signals/__init__.py`.
 
 `build_signal_lead_map_claude(driver, mongo, request)` — signature takes neither the Qwen
-`agent_chain` nor `pc` (both unused; the router does not depend on `get_agent_chain`). Steps:
-1. **Cache check** — `_get_cached_lead_map(mongo, request.org_id, request.user_id)`; compute
-   current fingerprint (§5.4); if `not request.refresh` and cached fingerprint matches → return
-   cached mapping with `cached: true`.
-2. **Fetch signals** — `persistence.fetch_signals(mongo, request.user_id, limit=50, offset=0)`
+`agent_chain` nor `pc` (both unused; the router does not depend on `get_agent_chain`). Steps
+(note the order: the fingerprint depends on the fetched ids, so the fetches come first):
+1. **Fetch signals** — `persistence.fetch_signals(mongo, request.user_id, limit=50, offset=0)`
    (same **user-scoped** read as the feed; `limit=50` caps how many signals enter one Claude
    call). If empty → return `mapping: []`. **Windowing:** only the newest 50 signals are
    mapped; an accepted limitation at MVP volume (see §5.6).
-3. **Fetch leads** — `get_leads_for_org(driver, request.org_id, limit=100)` (same call
+2. **Fetch leads** — `get_leads_for_org(driver, request.org_id, limit=100)` (same call
    generation uses). If empty → return `mapping: []`.
+3. **Fingerprint + cache check** — compute the fingerprint from the fetched signal/lead ids
+   (§5.4); read `_get_cached_lead_map(mongo, request.org_id, request.user_id)`; if
+   `not request.refresh` and the cached fingerprint matches → return the cached mapping with
+   `cached: true`. **A cache hit still pays the two DB fetches above** — the cache optimizes
+   out only the Claude call, not the input reads.
 4. **Context** — reuse `_get_signal_ask_customer_profile(mongo, org_id)` / ICP-config helpers
    for ICP/company-profile grounding.
 5. **Render + call** — render `prompts/signals/signals_lead_map.md.j2`, make **one** Claude
-   call via the `_claude_budget` path (the call mechanism `signal_ask_claude` and the batch
-   Claude path both use).
-6. **Parse** — extract JSON via `parsing.py`'s `_extract_research_json` (the helper
-   `search_signals` uses — *not* `ask.py`). Normalize to the §5.3 shape. Defensive cleanup:
-   (a) drop any `lead_id`/`signal_id` the LLM invents that isn't in the inputs; (b) tolerate a
-   **structurally-truncated** `mapping[]` by using the valid parsed prefix (a truncated tail is
-   discarded, not treated as a hard failure — see §5.6).
+   call via `_llm_helpers._claude_messages_text` (the raw `/v1/messages` primitive the
+   research/batch path uses; no Tavily, no `_claude_budget`).
+6. **Parse** — extract JSON via `_llm_helpers._extract_research_json` (the helper
+   `search_signals` uses via `parsing.py`; owned by `_llm_helpers.py`). Normalize to the §5.3
+   shape. Defensive cleanup: (a) drop any `lead_id`/`signal_id` the LLM invents that isn't in
+   the inputs; (b) tolerate a **structurally-truncated** `mapping[]` by using the valid parsed
+   prefix (extend the tolerance in `_llm_helpers.py` if needed; a truncated tail is discarded,
+   not treated as a hard failure — see §5.6).
 7. **Cache write** — `_save_lead_map(mongo, org_id, user_id, mapping, fingerprint)`; log +
    swallow on failure (still return the computed mapping).
 
@@ -293,7 +312,7 @@ cache:
   user-scoped feed and is accepted, not a bug.
 - **Not a hard link** — a disposable projection of (a user's signals × the org's leads). Safe
   to drop and recompute at any time.
-- **Fingerprint** = stable hash of `sorted(signal_ids) + sorted(lead_ids)` from steps 2–3.
+- **Fingerprint** = stable hash of `sorted(signal_ids) + sorted(lead_ids)` from steps 1–2.
   This invalidation mechanism is **new** (neither `run_signals_research`'s latest-write lookup
   nor `signal_track`'s headline-dedup has a content fingerprint). Any added/removed signal or
   lead changes it, recomputing on the next non-refresh call. Edits to a lead's fields without
@@ -314,8 +333,9 @@ Reuses `_shared/final_answer_json_directive.md.j2`.
 - **Token volume:** the input bound is 50 signals × 100 leads. The expected output is a
   `mapping[]` of ≤ 50 entries, each with a (typically short) `leads[]` subset — not a dense
   5,000-cell matrix, since most signals touch few leads. Typical MVP orgs are far below the
-  caps. Still, the prompt + output must fit the `_claude_budget` window; if the model truncates
-  the JSON, step 6 uses the valid parsed prefix (a partial mapping) rather than failing.
+  caps. Still, the prompt + output must fit `_claude_messages_text`'s token limit
+  (`CLAUDE_RESEARCH_MAX_TOKENS`); if the model truncates the JSON, step 6 uses the valid parsed
+  prefix (a partial mapping) rather than failing.
 - **Retries:** the Claude call retries twice (matching `_SIGNAL_BATCH_MAX_RETRIES` /
   `run_signals_research`'s `max_retries = 2`); on persistent failure → `mapping: []`,
   `status: "success"`. Cache **write** failure is logged + swallowed. The endpoint never
@@ -326,6 +346,11 @@ Reuses `_shared/final_answer_json_directive.md.j2`.
 - **Cache-miss double-spend:** two concurrent `refresh=false` calls on a cold/invalid cache
   both miss and both fire a Claude call (no inflight de-dup / lock). Accepted at 0 users; a
   guard is deferred (trigger: real concurrent users on one (org,user) key).
+- **Windowing across surfaces:** because only the newest 50 signals are mapped (step 1), *all*
+  mapping-driven surfaces are bounded by that window — the per-lead "N relevant signals" can
+  only reflect newest-50 relevance, and the Signals page "Affects N leads" reads zero for any
+  signal beyond the window. "Quiet when zero" there means "outside the window," not "no
+  relevance."
 
 ### 5.7 Frontend
 
@@ -346,11 +371,18 @@ Reuses `_shared/final_answer_json_directive.md.j2`.
   `LeadStreamPanel` to real leads** — fetch via the existing paginated `GET /api/v2/leads`
   (`get_leads_for_org`), replace `mockLeads` and the hardcoded `hasProspectData`, add `id`
   (real `lead_id`) and `source` to the row shape, restore the real empty state. Then add the
-  same per-row "N relevant signals" affordance. (This is FE-only; the endpoint exists.)
+  same per-row "N relevant signals" affordance. (FE-only; the endpoint exists.)
+  - **`filterByICP`/segmentation:** real leads carry no `matchedICP`, so the current
+    mock-only ICP-segment grouping and the `filterByICP` prop behavior are **dropped** — render
+    a flat, source-filterable list (the `filterByICP` prop becomes a no-op / is removed). Re-deriving
+    ICP membership for real leads is out of scope.
+  - **Pagination:** use the v2 `limit`/`offset` (first page on load + a "load more" / paged
+    control); do not assume a flat in-memory array.
 - **Surface B — Signals page** (`features/signals/components/SignalCard.tsx`): an **"Affects N
   leads"** section listing affected companies/leads from `leadsForSignal`. Quiet when zero. No
   dependency on either lead table.
-- All surfaces degrade silently on empty/loading mapping.
+- All surfaces degrade silently on empty/loading/**error** (the missing-key 500 of §5.1 reaches
+  TanStack Query as an error → `data` undefined → selectors return nothing → quiet).
 
 ---
 
@@ -377,8 +409,9 @@ uploads share the single file-upload path and are labeled `csv`.)
 - **Batch upload** (`app/services/leads/orchestrator.py::batch_upload_leads`) → **net-new
   assignment** of `source = "csv"` at ingest (it sets none today).
 - **Manual `create_lead`** (`app/services/leads/persistence.py`) → **net-new assignment** of
-  `source = "manual"` when the caller did not supply one (respect an explicit value if given,
-  matching the flexible-key philosophy).
+  `source = "manual"` when the request `data` dict carries no `source`. `create_lead` already
+  stores `request.data` as-is, so an explicit `data["source"]` is honored automatically — no
+  new request-model field is added; the change is only the default.
 - **Legacy leads** (null/absent source) → **no backfill write**; normalized to `unknown` at
   read (§6.3). The fill-only-empty `coalesce` ingestion semantics are preserved.
 - **Market-scores row** — add `source: Optional[str]` to `LeadMarketScoreRow`
@@ -391,18 +424,24 @@ uploads share the single file-upload path and are labeled `csv`.)
 ### 6.3 Frontend
 
 - `features/connectors/lib/leadSource.ts`:
-  - `LeadSourceFilter = "all" | "apollo" | "csv" | "manual" | "unknown"`.
+  - Define the type split explicitly: `LeadSource = "apollo" | "csv" | "manual" | "unknown"`
+    (a lead's normalized source) and `LeadSourceFilter = "all" | LeadSource` (the dropdown).
   - New `normalizeLeadSource(raw: string | null | undefined): LeadSource` — lowercases and maps
     known tokens to themselves; everything else (null, empty, legacy "HubSpot"/"Prospect List",
     etc.) → `"unknown"`.
   - `filterLeadsBySource` switches from catch-all to **exact match** on the normalized source.
   - `LEAD_SOURCE_OPTIONS` updated to the live values.
+- **Type retype** (`shared/lib/leadData.ts`): `HeatmapLead.source` is currently a **required**
+  `"HubSpot" | "Prospect List"` union — assigning `normalizeLeadSource` output there won't
+  typecheck. Retype it to raw `string | null` (the 40 sample rows' literals stay valid) and
+  apply `normalizeLeadSource` at the filter/badge boundary, so the legacy sample values
+  normalize to `unknown`. (Without this retype, preflight `tsc` fails.)
 - **Badge** — new `LeadSourceBadge` (sibling to `UnverifiedBadge` in
-  `features/connectors/components/`), color/icon per source; exposed via the connectors
+  `features/connectors/components/`), color/icon per `LeadSource`; exposed via the connectors
   `index.ts`. Shown on **both** lead tables' rows.
 - **market-research LeadsTable mapper** (`marketScoresHeatmap.ts`): stop hardcoding
   `source: "Prospect List"`; preserve the real `source` from the API row (added in §6.2),
-  normalized via `normalizeLeadSource`.
+  normalized via `normalizeLeadSource` at the badge/filter boundary.
 - **customers/LeadStream**: now renders real leads (§5.7 A2) carrying real `source` → badge +
   filter are real.
 
@@ -467,8 +506,12 @@ so it is not mistaken for a regression.
 
 No feature flag, no migration, no backfill. Legacy null sources normalize to `unknown` at read;
 the `Signals.signal_lead_map` cache self-populates on first call. **Plan phasing:** Feature #2
-(source taxonomy/stamping/badge/filter — small, low-risk, no LLM) lands first and independently;
-Feature #1 (mapping endpoint + cache + surfaces) second. Ship FE+BE as coordinated atomic
+(source taxonomy/stamping/badge/filter — small, low-risk, no LLM) lands first; it is genuinely
+independent on the **market-research LeadsTable** (which already has real data). On
+**customers/LeadStream**, Feature #2's badge/filter is **inert** (everything reads `unknown`)
+until Feature #1's §5.7-A2 rewire lands — an accepted ordering artifact, not a bug. Feature #1
+(mapping endpoint + cache + surfaces, incl. the LeadStream rewire) lands second. Ship FE+BE as
+coordinated atomic
 commits where they pair (e.g. the `LeadMarketScoreRow.source` add + its mapper consumer), and
 as separate commits otherwise, per the monorepo commit-granularity rules. Merge behind a green
 `frontend/ npm run preflight` and the relevant backend pytest module.
