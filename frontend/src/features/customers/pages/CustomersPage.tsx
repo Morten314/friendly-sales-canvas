@@ -9,11 +9,13 @@ import { LeadStreamPanel } from "../components/lead-stream/LeadStream";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Layout } from "@/features/shell";
+import { useAuth } from "@/shared/auth/AuthContext";
 import type { SignalsChatContext } from "@/shared/chat";
 import { usePageTitle } from "@/shared/hooks/usePageTitle";
 
 const CustomersPage = () => {
   usePageTitle("👤 Profiler - Brewra");
+  const { orgId } = useAuth();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState("icp-intelligence");
   const [signalsChatContext, setSignalsChatContext] = useState<SignalsChatContext | null>(null);
@@ -107,6 +109,7 @@ const CustomersPage = () => {
             <TabsContent value="lead-stream" className="h-full w-full m-0">
               <ErrorBoundary fallbackMessage="There was an error loading the Lead Stream">
                 <LeadStreamPanel
+                  orgId={orgId}
                   filterByICP={filteredICP}
                   onClearFilter={() => setFilteredICP(null)}
                 />
