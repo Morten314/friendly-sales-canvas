@@ -21,6 +21,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/components/ui/use-toast";
 import { Layout } from "@/features/shell";
 import { useAuth } from "@/shared/auth";
+import { writeSessionChatContext, type ChatContext } from "@/shared/chat";
 import { useSignalAction } from "@/shared/chat/useSignalAction";
 import { useSignalAsk } from "@/shared/chat/useSignalAsk";
 import type { UntypedBackendSignal } from "@/shared/types/escape-hatches";
@@ -320,7 +321,7 @@ const SignalsPage = () => {
     answer?: string,
   ) => {
     const contentHash = getSignalContentHash(signal);
-    const context = {
+    const context: ChatContext = {
       agent: signal.agent,
       signalId: signal.id,
       contentHash,
@@ -329,7 +330,7 @@ const SignalsPage = () => {
       prompt,
       answer: answer ?? undefined,
     };
-    sessionStorage.setItem("signalsChatContext", JSON.stringify(context));
+    writeSessionChatContext(context);
     if (signal.agent === "scout") {
       navigate("/your-ai-team/scout/chatwithscout");
     } else {

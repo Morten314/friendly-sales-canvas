@@ -10,7 +10,7 @@ import { LeadStreamPanel } from "../components/lead-stream/LeadStream";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Layout } from "@/features/shell";
 import { useAuth } from "@/shared/auth/AuthContext";
-import type { SignalsChatContext } from "@/shared/chat";
+import { readSessionChatContext, type ChatContext } from "@/shared/chat";
 import { usePageTitle } from "@/shared/hooks/usePageTitle";
 
 const CustomersPage = () => {
@@ -18,7 +18,7 @@ const CustomersPage = () => {
   const { orgId } = useAuth();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState("icp-intelligence");
-  const [signalsChatContext, setSignalsChatContext] = useState<SignalsChatContext | null>(null);
+  const [signalsChatContext, setSignalsChatContext] = useState<ChatContext | null>(null);
   const [filteredICP, setFilteredICP] = useState<string | null>(null);
 
   // When navigating from Signals with tab=chat-profiler, open that tab
@@ -32,19 +32,10 @@ const CustomersPage = () => {
   // When Chat with Profiler tab is active, check for context from Signals page
   useEffect(() => {
     if (activeTab !== "chat-profiler") return;
-    try {
-      const stored = sessionStorage.getItem("signalsChatContext");
-      if (stored) {
-        const parsed = JSON.parse(stored) as SignalsChatContext;
-        if (parsed?.agent === "profiler") {
-          setSignalsChatContext(parsed);
-        } else {
-          setSignalsChatContext(null);
-        }
-      } else {
-        setSignalsChatContext(null);
-      }
-    } catch {
+    const parsed = readSessionChatContext();
+    if (parsed?.agent === "profiler") {
+      setSignalsChatContext(parsed);
+    } else {
       setSignalsChatContext(null);
     }
   }, [activeTab]);

@@ -1,8 +1,13 @@
 // Cross-feature scout/profiler chat substrate. Consumed by market-research
 // (ScoutChatWithHistory) + customers (ProfilerChatWithHistory) via the shared
-// history shell. The substrate keeps the `SignalsChatContext` TYPE name (TD-FE-61).
-export { ContextChat } from "./ContextChat";
-export type { SignalsChatContext, ChatMessage } from "./ContextChat";
+// history shell. The substrate type is `ChatContext` (renamed from SignalsChatContext, TD-FE-61).
+export {
+  ContextChat,
+  CHAT_CONTEXT_SESSION_KEY,
+  readSessionChatContext,
+  writeSessionChatContext,
+} from "./ContextChat";
+export type { ChatContext, ChatMessage } from "./ContextChat";
 
 // Shared signal_Ask/signal_action TanStack hooks. Consumed by the
 // signals page + the substrate; live in shared/ because `shared ↛ features`.

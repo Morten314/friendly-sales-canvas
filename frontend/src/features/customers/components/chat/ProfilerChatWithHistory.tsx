@@ -1,14 +1,14 @@
 import { ChatWithHistory, ContextChat, type ChatWithHistoryConfig } from "@/shared/chat";
-import type { SignalsChatContext } from "@/shared/chat";
+import type { ChatContext } from "@/shared/chat";
 
 interface ProfilerChatWithHistoryProps {
   /** Incoming context from the Signals page (e.g. "Chat with Profiler" from a signal). */
-  initialContext: SignalsChatContext | null;
+  initialContext: ChatContext | null;
   onClearContext?: () => void;
 }
 
 /** Minimal context for general Profiler chat (no signal). */
-const EMPTY_PROFILER_CONTEXT: SignalsChatContext = { agent: "profiler", prompt: "" };
+const EMPTY_PROFILER_CONTEXT: ChatContext = { agent: "profiler", prompt: "" };
 
 const PROFILER_CHAT_CONFIG: ChatWithHistoryConfig = {
   agent: "profiler",

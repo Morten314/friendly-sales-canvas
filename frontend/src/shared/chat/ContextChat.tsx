@@ -21,7 +21,7 @@ import { useSignalAction } from "@/shared/chat/useSignalAction";
 import { useSignalAsk } from "@/shared/chat/useSignalAsk";
 import { sanitizeAnswerText } from "@/shared/lib/sanitizeAnswerText";
 
-export interface SignalsChatContext {
+export interface ChatContext {
   agent: "scout" | "profiler";
   signalId?: string; // for accept/reject API
   contentHash?: string; // for localStorage sync with Signals page
@@ -34,8 +34,27 @@ export interface SignalsChatContext {
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
+/** sessionStorage key for the cross-tab chat handoff. Kept stable — renaming it
+ *  would orphan in-flight entries (TD-FE-50). */
+export const CHAT_CONTEXT_SESSION_KEY = "signalsChatContext";
+
+/** Read the chat-context handoff (typed; replaces inline `as` casts). */
+export function readSessionChatContext(): ChatContext | null {
+  try {
+    const stored = sessionStorage.getItem(CHAT_CONTEXT_SESSION_KEY);
+    return stored ? (JSON.parse(stored) as ChatContext) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Write the chat-context handoff. */
+export function writeSessionChatContext(context: ChatContext): void {
+  sessionStorage.setItem(CHAT_CONTEXT_SESSION_KEY, JSON.stringify(context));
+}
+
 interface ContextChatProps {
-  context: SignalsChatContext;
+  context: ChatContext;
   onClearContext?: () => void;
   onClose?: () => void;
   initialMessages?: ChatMessage[];

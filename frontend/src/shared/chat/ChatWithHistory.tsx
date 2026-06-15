@@ -1,7 +1,7 @@
 import { MessageSquarePlus, PanelLeftClose, PanelLeft, MessageCircle, Trash2 } from "lucide-react";
 import { useState, useEffect, useRef, type ReactNode } from "react";
 
-import type { SignalsChatContext, ChatMessage } from "./ContextChat";
+import type { ChatContext, ChatMessage } from "./ContextChat";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/shared/auth";
@@ -10,7 +10,7 @@ import { useAuth } from "@/shared/auth";
 export interface ChatSession<TMeta = unknown> {
   id: string;
   title: string;
-  context: SignalsChatContext | null;
+  context: ChatContext | null;
   messages: ChatMessage[];
   createdAt: number;
   meta?: TMeta;
@@ -47,7 +47,7 @@ export interface ChatWithHistoryRenderState<TMeta = unknown> {
 export interface ChatWithHistoryProps<TMeta = unknown> {
   config: ChatWithHistoryConfig;
   /** Live parent handoff (e.g. signals → chat). Distinct from any per-session context. */
-  initialContext: SignalsChatContext | null;
+  initialContext: ChatContext | null;
   onClearContext?: () => void;
   /** Session-list title for null-context sessions. Default: () => session.title. Scout: meta.leadContext?.sessionTitle ?? session.title. */
   getSessionDisplayTitle?: (session: ChatSession<TMeta>) => string;
@@ -63,7 +63,7 @@ export interface ChatWithHistoryProps<TMeta = unknown> {
   renderExtras?: () => ReactNode;
 }
 
-function getSessionTitle(context: SignalsChatContext | null): string {
+function getSessionTitle(context: ChatContext | null): string {
   if (!context) return "New chat";
   const heading = context.signalHeading ?? context.recommendation ?? context.recommendations?.[0];
   if (heading && typeof heading === "string") {
