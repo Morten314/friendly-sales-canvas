@@ -316,3 +316,44 @@ def test_post_signal_action_missing_org_id(client):
     }
     response = client.post("/signal_action", json=payload)
     assert response.status_code == 422
+
+
+def test_signal_lead_map_endpoint_returns_mapping(client):
+    from unittest.mock import AsyncMock, MagicMock, patch
+    from app.main import app
+    from app.core.dependencies import get_mongo, get_neo4j_driver
+
+    fake = {"status": "success", "data": {
+        "mapping": [{"signal_id": "s1", "headline": "h", "leads": []}],
+        "generated_at": "t", "cached": False}}
+    # Both deps must be overridden — the suite's `_override_mongo` helper covers
+    # only get_mongo, and this route also depends on get_neo4j_driver.
+    app.dependency_overrides[get_mongo] = lambda: MagicMock()
+    app.dependency_overrides[get_neo4j_driver] = lambda: MagicMock()
+    try:
+        with patch("app.services._claude_budget.CLAUDE_API_KEY", "test-key"), \
+             patch("app.services.signals.build_signal_lead_map_claude",
+                   new_callable=AsyncMock, return_value=fake) as m:
+            resp = client.post("/signal-lead-map_claude", json={"user_id": "u1", "org_id": "o1"})
+    finally:
+        app.dependency_overrides.pop(get_mongo, None)
+        app.dependency_overrides.pop(get_neo4j_driver, None)
+    assert resp.status_code == 200
+    assert resp.json()["data"]["mapping"][0]["signal_id"] == "s1"
+    m.assert_awaited_once()
+
+
+def test_signal_lead_map_endpoint_missing_key_500(client):
+    from unittest.mock import MagicMock, patch
+    from app.main import app
+    from app.core.dependencies import get_mongo, get_neo4j_driver
+
+    app.dependency_overrides[get_mongo] = lambda: MagicMock()
+    app.dependency_overrides[get_neo4j_driver] = lambda: MagicMock()
+    try:
+        with patch("app.services._claude_budget.CLAUDE_API_KEY", ""):
+            resp = client.post("/signal-lead-map_claude", json={"user_id": "u1", "org_id": "o1"})
+    finally:
+        app.dependency_overrides.pop(get_mongo, None)
+        app.dependency_overrides.pop(get_neo4j_driver, None)
+    assert resp.status_code == 500

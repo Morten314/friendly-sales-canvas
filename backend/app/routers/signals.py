@@ -15,6 +15,7 @@ from app.models.signals import (
     SignalActionResponse,
     SignalAskRequest,
     SignalAskResponse,
+    SignalLeadMapRequest,
     SignalsResearchResponse,
 )
 from app.services import signals as signals_service
@@ -101,6 +102,20 @@ async def signal_ask(
     uploaded data sources, history, and WebSearch.
     """
     return await signals_service.signal_ask(driver, mongo, pc, agent_chain, request)
+
+
+@router.post("/signal-lead-map_claude")
+async def signal_lead_map_claude(
+    request: SignalLeadMapRequest,
+    driver=Depends(get_neo4j_driver),
+    mongo=Depends(get_mongo),
+):
+    """Read-time signal↔lead relevance mapping (Claude). One call over the org's
+    newest-50 signals × leads, cached per (org, user)."""
+    from app.services._claude_budget import CLAUDE_API_KEY
+    if not CLAUDE_API_KEY:
+        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY is not configured")
+    return await signals_service.build_signal_lead_map_claude(driver, mongo, request)
 
 
 @router.post("/signal_ask_claude", response_model=SignalAskResponse)
