@@ -1575,3 +1575,69 @@ disproportionate to current scale and out of plan 36 scope.
 users land and the truncated list is noticed.
 
 **Owner:** TBD.
+
+---
+
+## TD-FE-71 — signal↔lead map prompt matches on data the payload doesn't send
+
+**Date logged:** 2026-06-15
+**Origin:** Plan 36 (signal↔lead relevance mapping). Impl-review round 1,
+finding 1. Ref: `docs/reviews/phase-36-signal-lead-mapping-impl-synthesis-1.md`.
+
+**Current state:** `_signals_for_prompt` in
+`backend/app/services/signals/lead_map.py` serializes only `{signal_id,
+headline}` per signal, but the `signals_lead_map.md.j2` MATCHING RULES instruct
+the model to match on "an explicit company mention in the signal" — those
+mentions live in the signal's `description`/`snippet`/`sourceLabel`, none of
+which are sent. The model is therefore restricted to headline-only matching;
+prompt and payload disagree. No error and id hygiene is unaffected (invented ids
+are still dropped) — a recall-quality gap, not a defect.
+
+**What it should be:** prompt and payload agree — either narrow the MATCHING
+RULES to headline-only (a 1-line prompt edit) or extend `_signals_for_prompt` to
+include a trimmed `snippet`/`description` slice so company mentions are actually
+available to match on.
+
+**Why deferred:** 0 users; the MVP Business State explicitly waives
+relevance-quality SLAs; and signal headlines routinely carry the company name,
+so headline matching already partially satisfies the rule. Tuning recall before
+there is real signal/lead data to measure against is premature.
+
+**Pull-forward trigger:** the first relevance-quality tuning pass against real
+signals + leads, or a report that the mapping misses obvious company matches.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-72 — signal↔lead map `refresh` escape hatch is unreachable from the UI
+
+**Date logged:** 2026-06-15
+**Origin:** Plan 36 (signal↔lead relevance mapping). Impl-review round 1, finding
+2 (refresh half); spec 36 §5.4. Ref:
+`docs/reviews/phase-36-signal-lead-mapping-impl-synthesis-1.md`.
+
+**Current state:** `useSignalLeadMap` calls `fetchSignalLeadMap(userId, orgId)`
+with no opts, so the request always sends `refresh: false`, and no UI surfaces a
+recompute action. The backend `refresh=true` path (force a recompute past the
+per-(org, user) fingerprint cache) is therefore inert end-to-end. A cached
+mapping — including a structurally-truncated partial recovered by
+`_recover_mapping_entries` — is served on every fingerprint hit and cannot be
+busted from the FE until the org's signal/lead id-set changes (edits to lead
+fields, with no id change, also do not bust it).
+
+**What it should be:** a recompute/refresh affordance on a surface that shows the
+mapping, calling `fetchSignalLeadMap(userId, orgId, { refresh: true })`, per spec
+36 §5.4's escape-hatch intent.
+
+**Why deferred:** 0 users; a mapping that is stale until the id-set changes is
+low-impact at MVP; a refresh control is a FE feature beyond plan 36's mapping
+scope. (Caching the recovered partial is itself intentional degrade-gracefully
+behavior — see the synthesis; the gap is the missing FE recompute, not the
+cache.)
+
+**Pull-forward trigger:** the first real org reports a stale or low-quality
+mapping that will not self-correct, or the mapping surfaces are prioritised for a
+demo.
+
+**Owner:** TBD.
