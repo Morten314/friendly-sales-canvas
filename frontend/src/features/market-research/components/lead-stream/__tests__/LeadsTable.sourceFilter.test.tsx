@@ -3,7 +3,8 @@
 // The source-filter Select is rendered in the toolbar (render tests below), and the
 // filter BEHAVIOR is verified two ways: the pure `filterLeadsBySource` unit tests
 // (connectors/lib/__tests__/leadSource.test.ts) and, here, against the ACTUAL demo
-// leads the table renders (the G6 data-dependency — all demo leads are the CSV bucket).
+// leads the table renders (the G6 data-dependency — all demo leads carry legacy
+// sources that normalize to the "unknown" bucket).
 // Driving a Radix Select selection reliably in jsdom (pointer-capture + portal
 // choreography) is impractical, so the end-to-end click is left to e2e (Playwright).
 
@@ -64,11 +65,13 @@ describe("LeadsTable source filter (G6)", () => {
   });
 
   it("applies G6 source filtering to the actual demo leads the table renders", () => {
-    // Every demo lead carries source "HubSpot" | "Prospect List" — the CSV (non-apollo)
-    // bucket — so the Apollo filter empties the list while CSV/all keep every row.
+    // Every demo lead carries a legacy source ("HubSpot" | "Prospect List"), which the
+    // exact-match taxonomy normalizes to "unknown" — so apollo/csv/manual all empty the
+    // list while "unknown"/all keep every row.
     expect(heatmapLeads.length).toBeGreaterThan(0);
     expect(filterLeadsBySource(heatmapLeads, "all")).toHaveLength(heatmapLeads.length);
     expect(filterLeadsBySource(heatmapLeads, "apollo")).toHaveLength(0);
-    expect(filterLeadsBySource(heatmapLeads, "csv")).toHaveLength(heatmapLeads.length);
+    expect(filterLeadsBySource(heatmapLeads, "csv")).toHaveLength(0);
+    expect(filterLeadsBySource(heatmapLeads, "unknown")).toHaveLength(heatmapLeads.length);
   });
 });
