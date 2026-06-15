@@ -2,7 +2,7 @@
 
 Running list of debt items the team has consciously accepted. Each entry: what was done, what should be done, why we deferred, and the trigger that should pull it forward.
 
-Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases E and F) were removed on 2026-05-23; their IDs are not reused so commit/spec references stay traceable. TD-006 (market_scoring callers recomputing len(leads)) was resolved 2026-05-24 by Phase H Task 4. TD-007 (Phase G plan-verbatim cosmetic cruft) was resolved 2026-05-25 by Phase I commit 11/11. TD-008 (backend LOC reduction) and TD-009 (docstring/comment drift) were resolved 2026-05-25 by Phase L (audit + 7 K-tasks + I2 promotion, commit `7f169f9`). TD-010 (prompt management overhaul) was resolved 2026-05-26 by plan-13 (Phase 0 audit + render/registry infrastructure + 6 service migrations, commits `5238fb7..1c94e29`); the resolved entry is retained below with original context preserved.
+Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases E and F) were removed on 2026-05-23; their IDs are not reused so commit/spec references stay traceable. TD-006 (market_scoring callers recomputing len(leads)) was resolved 2026-05-24 by Phase H Task 4. TD-007 (Phase G plan-verbatim cosmetic cruft) was resolved 2026-05-25 by Phase I commit 11/11. TD-008 (backend LOC reduction) and TD-009 (docstring/comment drift) were resolved 2026-05-25 by Phase L (audit + 7 K-tasks + I2 promotion, commit `7f169f9`). TD-010 (prompt management overhaul) was resolved 2026-05-26 by plan-13 (Phase 0 audit + render/registry infrastructure + 6 service migrations, commits `5238fb7..1c94e29`); the resolved entry is retained below with original context preserved. TD-011 (stale Claude Sonnet model pin) was resolved 2026-06-15 — `backend/app/core/config.py` now defaults to `claude-sonnet-4-6` (the Render `CLAUDE_SONNET_MODEL` env matches); the resolved entry is retained below with original context preserved.
 
 ---
 
@@ -80,6 +80,9 @@ Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases
 | TD-FE-68 | open | [below](#td-fe-68--production-routed-back-through-api-cold-start-batch-margin--residual-direct-backend-callsites) |
 | TD-FE-69 | open | [below](#td-fe-69--per-icp-lead-count-is-stubbed-to-0-suggestedicpcards-shows-0-leads) |
 | TD-FE-70 | open | [below](#td-fe-70--customers-lead-stream-is-first-page-only-no-pager) |
+| TD-FE-71 | open | [below](#td-fe-71--signallead-map-prompt-matches-on-data-the-payload-doesnt-send) |
+| TD-FE-72 | open | [below](#td-fe-72--signallead-map-refresh-escape-hatch-is-unreachable-from-the-ui) |
+| TD-FE-73 | open | [below](#td-fe-73--signal-lead-map_claude-fe-contract-derived-from-code-not-a-live-response) |
 
 ---
 
@@ -251,6 +254,8 @@ Design questions to resolve during the spec session: (a) template engine choice 
 ---
 
 ## TD-011 — Backend pins a stale Claude Sonnet model snapshot (`claude-sonnet-4-20250514`)
+
+**Status:** ✅ RESOLVED 2026-06-15 — `backend/app/core/config.py:12` now defaults to `claude-sonnet-4-6` (the Render `CLAUDE_SONNET_MODEL` env matches; confirmed 2026-06-12). The standalone `backend`-repo reconciliation noted below is moot: the monorepo is the source of truth. Original context retained below.
 
 **Date logged:** 2026-05-29
 **Origin:** Incidental finding during the Claude Code Opus 4.8 upgrade. A sweep for outdated `claude-opus-*` IDs in config/scripts found none (every `claude-opus-4-7` hit was a historical `docs/reviews/` artifact), but surfaced this Sonnet pin as the only Claude model ID in runtime config.
@@ -429,7 +434,7 @@ orphaned prop flow then.
 **Origin:** Plan 20 Phase 3 (plans/20-frontend-phase-3-api-data-layer.md), Task 11.
 
 **Current state:**
-`TenantContext` (`src/contexts/TenantContext.tsx`) declares `availableTenants: Tenant[]` state and
+`TenantContext` (`src/shared/tenant/TenantContext.tsx`, relocated from `src/contexts/` in Phase 10) declares `availableTenants: Tenant[]` state and
 `setAvailableTenants`, and exposes both on its context value. After Phase 3, `TenantSelection` (the only
 reader/writer) renders from the `useTenants` query instead, so neither is populated or read anymore. They
 remain assigned into the context value, so there is no lint/knip break — just permanently dead state.

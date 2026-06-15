@@ -165,3 +165,30 @@ capped at 500). Common query params: `limit` (default 50), `offset` (default 0).
   Paginated document list (successor to `GET /user-documents`). Params: `org_id`.
 - `GET /v2/registration`  
   Paginated registration list (successor to `GET /registration`).
+
+## Connector / Lead Discovery (Apollo)
+
+Apollo.io integration (Spec 35), mounted at the `/connectors` prefix in `app/routers/connectors.py` (FE proxy form `/api/connectors/...`). The import/enrich/discover flows run as in-process `BackgroundTasks`, each with a companion `.../status` poll endpoint.
+
+- `POST /connectors/apollo/connect`  
+  Store/validate the org's Apollo API key and open the connection. → `ApolloConnectResponse`
+- `GET /connectors/apollo/status`  
+  Apollo connection status for the org. → `ApolloStatusResponse`
+- `DELETE /connectors/apollo/connect`  
+  Disconnect Apollo for the org. → `DisconnectResponse`
+- `GET /connectors/apollo/lists`  
+  List the org's Apollo lists / saved searches. → `ApolloListsResponse`
+- `POST /connectors/apollo/import`  
+  Import contacts from an Apollo list into the CRM graph. → `ApolloImportResponse`
+- `POST /connectors/apollo/enrich`  
+  Enrich/reveal contacts via Apollo `people/match` (background job). → `ApolloEnrichResponse`
+- `GET /connectors/apollo/enrich/status`  
+  Poll the enrich job. → `ApolloEnrichStatusResponse`
+- `POST /connectors/apollo/discover`  
+  ICP-driven discovery of net-new prospects (Qwen re-rank; background job). → `ApolloDiscoverResponse`
+- `GET /connectors/apollo/discover/status`  
+  Poll the discovery job. → `ApolloDiscoverStatusResponse`
+- `GET /connectors/apollo/warmup`  
+  Warm the Apollo client/cache. → `ApolloWarmupResponse`
+- `GET /connectors/apollo/leads/export`  
+  Export the connector's discovered/imported leads. *(No `response_model`.)*
