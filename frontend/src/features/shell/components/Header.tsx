@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
-import { useSidebar } from "../SidebarContext";
+import { useAppSidebar } from "../SidebarContext";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -50,7 +50,7 @@ export function Header() {
   // const [isAIViewActive, setIsAIViewActive] = useState(false); // Commented out - removed User/AI toggle
   const [isSignalsRefreshing, setIsSignalsRefreshing] = useState(false);
   const isMobile = useIsMobile();
-  const { setMobileOpen } = useSidebar();
+  const { setMobileOpen } = useAppSidebar();
   const { selectedTenant } = useTenant();
 
   // Listen for signals refresh state changes

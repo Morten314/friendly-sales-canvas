@@ -325,7 +325,7 @@ import {
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
-import { useSidebar } from "../SidebarContext";
+import { useAppSidebar } from "../SidebarContext";
 
 import { ProfileDialog } from "./ProfileDialog";
 
@@ -359,7 +359,7 @@ export function Sidebar() {
   const { logout, currentUser } = useAuth();
   const { clearTenant } = useTenant();
   const navigate = useNavigate();
-  const { mobileOpen, setMobileOpen } = useSidebar();
+  const { mobileOpen, setMobileOpen } = useAppSidebar();
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(false);
   const [fullName, setFullName] = useState<string>("");
