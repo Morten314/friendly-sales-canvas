@@ -57,6 +57,7 @@ import {
   type LeadSourceFilter,
   UnverifiedBadge,
 } from "@/features/connectors";
+import { useSignalLeadMap } from "@/features/signals";
 import { buildApiUrl } from "@/shared/api/transport";
 import { useAuthToken } from "@/shared/auth";
 import jwtManager from "@/shared/auth/jwt";
@@ -182,10 +183,12 @@ const LeadIntelligencePanel = ({
   lead,
   onChatWithScout: _onChatWithScout,
   detail,
+  relevantSignals = [],
 }: {
   lead: HeatmapLead;
   onChatWithScout?: (leads: HeatmapLead[], reportFilter?: string) => void;
   detail?: LeadScoreDetailState;
+  relevantSignals?: { signal_id: string; headline: string; relevance: string; why: string }[];
 }) => {
   const intel = TIER_INTELLIGENCE[lead.priority];
 
@@ -248,6 +251,22 @@ const LeadIntelligencePanel = ({
             })}
           </div>
         </>
+      )}
+
+      {relevantSignals.length > 0 && (
+        <div className="pt-2 border-t border-border/50">
+          <p className="text-[11px] font-semibold text-foreground mb-1">
+            {relevantSignals.length} relevant {relevantSignals.length === 1 ? "signal" : "signals"}
+          </p>
+          <ul className="space-y-1">
+            {relevantSignals.map((s) => (
+              <li key={s.signal_id} className="text-[11px] text-muted-foreground">
+                <span className="font-medium text-foreground">{s.headline}</span>
+                {s.why ? ` — ${s.why}` : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {/* View Segment Button — hidden per product request
@@ -334,6 +353,8 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
   const navigate = useNavigate();
   const { currentUser, orgId: authOrgId, fetchOrgId } = useAuthToken();
   const { selectedTenant } = useTenant();
+  const leadMapOrgId = selectedTenant?.id ?? authOrgId ?? "";
+  const { signalsForLead } = useSignalLeadMap(leadMapOrgId);
   const { toast } = useToast();
   const [apiHeatmapLeads, setApiHeatmapLeads] = useState<HeatmapLead[] | null>(null);
   const [marketScoresLoading, setMarketScoresLoading] = useState(false);
@@ -782,6 +803,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                           lead={lead}
                           onChatWithScout={onChatWithScout}
                           detail={scoreDetailByLeadId[lead.id]}
+                          relevantSignals={signalsForLead(lead.id)}
                         />
                       </TableCell>
                     </TableRow>,
