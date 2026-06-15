@@ -39,19 +39,23 @@ export function ComplianceVisualCard({
     onVisualDataCardsChange(updated);
   };
 
+  // Backend emits `chartType`; older/local cards use `type`. Read one normalized
+  // discriminator so both render (TD-FE-23).
+  const chartType = card.type ?? card.chartType;
+
   if (isExpanded) {
     return (
       <div key={cardIndex} className="bg-white border border-gray-200 rounded-lg p-4">
         <h5 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
-          {card.type === "pie-chart" && <Users className="h-4 w-4 mr-2 text-blue-600" />}
-          {card.type === "line-chart" && <TrendingUp className="h-4 w-4 mr-2 text-green-600" />}
-          {card.type === "bar-chart" && <BarChart3 className="h-4 w-4 mr-2 text-purple-600" />}
-          {!card.type && <Users className="h-4 w-4 mr-2 text-blue-600" />}
+          {chartType === "pie-chart" && <Users className="h-4 w-4 mr-2 text-blue-600" />}
+          {chartType === "line-chart" && <TrendingUp className="h-4 w-4 mr-2 text-green-600" />}
+          {chartType === "bar-chart" && <BarChart3 className="h-4 w-4 mr-2 text-purple-600" />}
+          {!chartType && <Users className="h-4 w-4 mr-2 text-blue-600" />}
           {card.title}
         </h5>
 
         {/* Render based on chart type */}
-        {card.type === "pie-chart" ? (
+        {chartType === "pie-chart" ? (
           <MiniPieChart
             data={card.data.map((item: UntypedBackendApiResponse) => ({
               name: item.label,
@@ -60,7 +64,7 @@ export function ComplianceVisualCard({
             }))}
             title={card.title}
           />
-        ) : card.type === "line-chart" ? (
+        ) : chartType === "line-chart" ? (
           <MiniLineChart
             data={card.data.map((item: UntypedBackendApiResponse) => ({
               name: item.label,
@@ -69,7 +73,7 @@ export function ComplianceVisualCard({
             title={card.title}
             color={`hsl(${cardIndex * 120}, 70%, 50%)`}
           />
-        ) : card.type === "bar-chart" ? (
+        ) : chartType === "bar-chart" ? (
           <div className="space-y-3">
             {(() => {
               // Find max value to normalize progress bars
@@ -107,7 +111,7 @@ export function ComplianceVisualCard({
               });
             })()}
           </div>
-        ) : card.type === "timeline" ? (
+        ) : chartType === "timeline" ? (
           <div className="space-y-3">
             {card.data.map((item: UntypedBackendApiResponse, index: number) => (
               <div key={index} className="flex items-start space-x-3">
@@ -123,7 +127,7 @@ export function ComplianceVisualCard({
               </div>
             ))}
           </div>
-        ) : card.type === "percentage" ? (
+        ) : chartType === "percentage" ? (
           <div className="space-y-3">
             {card.data.map((item: UntypedBackendApiResponse, index: number) => (
               <div key={index} className="flex items-center justify-between">
@@ -166,7 +170,7 @@ export function ComplianceVisualCard({
   }
 
   // Find card by type dynamically
-  if (card.type === "bar-chart") {
+  if (chartType === "bar-chart") {
     return (
       <div key={cardIndex} className="bg-white border border-gray-200 rounded-lg p-4">
         {isEditing ? (
@@ -285,7 +289,7 @@ export function ComplianceVisualCard({
         </div>
       </div>
     );
-  } else if (card.type === "timeline") {
+  } else if (chartType === "timeline") {
     return (
       <div key={cardIndex} className="bg-white border border-gray-200 rounded-lg p-4">
         {isEditing ? (
@@ -381,7 +385,7 @@ export function ComplianceVisualCard({
         </div>
       </div>
     );
-  } else if (card.type === "percentage") {
+  } else if (chartType === "percentage") {
     return (
       <div key={cardIndex} className="bg-white border border-gray-200 rounded-lg p-4">
         {isEditing ? (

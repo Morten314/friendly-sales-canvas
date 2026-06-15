@@ -61,4 +61,23 @@ describe("ComplianceVisualCard", () => {
 
     expect(screen.getByText("Adoption")).toBeInTheDocument();
   });
+
+  it("renders a backend card keyed on chartType (not card.type)", () => {
+    const card: UntypedVisualDataCard = {
+      chartType: "bar-chart",
+      title: "Backend Adoption Rates",
+      data: [{ name: "GDPR", value: 80 }],
+    };
+    render(
+      <ComplianceVisualCard
+        card={card}
+        cardIndex={0}
+        isEditing={false}
+        isExpanded={false}
+        localVisualDataCards={[card]}
+        onVisualDataCardsChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Backend Adoption Rates")).toBeInTheDocument();
+  });
 });
