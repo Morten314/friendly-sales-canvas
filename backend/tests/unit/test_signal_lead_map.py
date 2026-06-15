@@ -88,6 +88,7 @@ def _run(signals, leads, claude_return, *, mongo=None, refresh=False):
                return_value=(leads, len(leads))), \
          patch("app.services.signals.persistence._get_signal_ask_customer_profile",
                return_value={"icps": []}), \
+         patch("asyncio.sleep", new=AsyncMock()), \
          patch("app.services._llm_helpers._claude_messages_text") as claude:
         if isinstance(claude_return, Exception):
             claude.side_effect = claude_return

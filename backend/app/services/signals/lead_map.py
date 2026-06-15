@@ -11,6 +11,12 @@ import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+from app.core import prompts
+from app.core.logging import logger
+from app.services import _llm_helpers
+from app.services.signals import persistence
+from app.services.leads import persistence as leads_persistence
+
 _CACHE_DB = "Signals"
 _CACHE_COLL = "signal_lead_map"
 
@@ -55,12 +61,6 @@ def _save_lead_map(
 # ---------------------------------------------------------------------------
 # Task-10: parse helpers + async orchestration service
 # ---------------------------------------------------------------------------
-from app.core import prompts
-from app.core.logging import logger
-from app.services import _llm_helpers
-from app.services.signals import persistence
-from app.services.leads import persistence as leads_persistence
-
 _MAX_SIGNALS = 50
 _MAX_LEADS = 100
 _MAX_RETRIES = 2
@@ -121,13 +121,17 @@ def _parse_mapping(
 ) -> List[Dict[str, Any]]:
     sig_set = set(valid_signal_ids)
     lead_set = set(valid_lead_ids)
-    headline_by_id = {str(s.get("signal_id") or s.get("id")): s.get("headline", "") for s in signals}
+    headline_by_id = {
+        str(s.get("signal_id") or s.get("id")): s.get("headline", "")
+        for s in signals
+        if (s.get("signal_id") or s.get("id"))
+    }
     try:
         parsed = _llm_helpers._extract_research_json(
             raw, escape_keys=("why",), trim_braces=True, strip_final_answer=True
         )
         raw_mapping = parsed.get("mapping", []) if isinstance(parsed, dict) else []
-    except Exception:
+    except (ValueError, TypeError):
         raw_mapping = _recover_mapping_entries(raw)  # truncated-prefix tolerance
 
     out: List[Dict[str, Any]] = []
@@ -149,9 +153,9 @@ def _parse_mapping(
                 rel = "low"
             leads_out.append({
                 "lead_id": lid,
-                "company": str(lead.get("company", "")),
+                "company": str(lead.get("company") or ""),
                 "relevance": rel,
-                "why": str(lead.get("why", "")),
+                "why": str(lead.get("why") or ""),
             })
         out.append({"signal_id": sid, "headline": headline_by_id.get(sid, ""), "leads": leads_out})
     return out
