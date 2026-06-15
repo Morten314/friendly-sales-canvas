@@ -1643,3 +1643,35 @@ mapping that will not self-correct, or the mapping surfaces are prioritised for 
 demo.
 
 **Owner:** TBD.
+
+---
+
+## TD-FE-73 — `/signal-lead-map_claude` FE contract derived from code, not a live response
+
+**Date logged:** 2026-06-15
+**Origin:** Plan 36 (signal↔lead relevance mapping). `POST /signal-lead-map_claude`
+was not deployed when the FE contract was written, so `SignalLeadMapResponseSchema`
+(`frontend/src/features/signals/contracts.ts`) was derived from the backend's
+code-defined response envelope rather than a captured live response. Ref: plan 36
+Task 11 step 5.
+
+**Current state:** the zod contract is deliberately tolerant (`.passthrough()` /
+nullish / `.catch()` / `.default()`), so a shape drift degrades quietly instead of
+throwing — which also means a mismatch between the contract and the real deployed
+response could go unnoticed. No live-shape capture has confirmed the envelope.
+
+**What it should be:** confirm the contract against a keyed live backend once
+`/signal-lead-map_claude` is deployed — call it with a real `(user_id, org_id)`
+that has signals + leads, capture the JSON, and reconcile
+`SignalLeadMapResponseSchema` against it (tightening the permissive fields if the
+live shape proves stable).
+
+**Why deferred:** the endpoint is newly merged and not yet confirmed live; the
+tolerant schema degrades-never-throws in the interim, so there is no functional
+blocker at 0 users.
+
+**Pull-forward trigger:** `/signal-lead-map_claude` is confirmed deployed on
+Render, or any report that the signal↔lead surfaces render empty/odd in a live
+environment (a silent contract-vs-response drift).
+
+**Owner:** TBD.
