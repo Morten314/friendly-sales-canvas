@@ -4,16 +4,15 @@ import { ComplianceAnalyticsSection } from "./ComplianceAnalyticsSection";
 import { ExecutiveSummarySection } from "./ExecutiveSummarySection";
 import { KeyRegulatoryUpdatesSection } from "./KeyRegulatoryUpdatesSection";
 import { RegionalComplianceSection } from "./RegionalComplianceSection";
+import { DEFAULT_REGIONAL_DATA, DEFAULT_VISUAL_DATA_CARDS } from "./regulatoryDefaults";
 import { RegulatoryFooter } from "./RegulatoryFooter";
 import { RegulatoryHeader } from "./RegulatoryHeader";
-import { DEFAULT_REGIONAL_DATA, DEFAULT_VISUAL_DATA_CARDS } from "./regulatoryDefaults";
 import { deriveKeyDataPoints } from "./regulatoryHelpers";
 import { StrategicRecommendationsSection } from "./StrategicRecommendationsSection";
 import type { RegulatoryComplianceSectionProps } from "./types";
 import { useRegulatoryCompliance } from "./useRegulatoryCompliance";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { BACKEND_BASE_URL } from "@/shared/api/transport";
 import { useAuth } from "@/shared/auth";
 import { getUserLocalStorage, setUserLocalStorage } from "@/shared/lib/cacheUtils";
 import type {
@@ -439,7 +438,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
 
         // Fetch the latest company profile from backend (with org_id)
         try {
-          const profileUrl = `${BACKEND_BASE_URL}/profile/company?org_id=${orgIdToUse}`;
+          const profileUrl = `/api/profile/company?org_id=${orgIdToUse}`;
           const profileResponse = await fetch(profileUrl, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
