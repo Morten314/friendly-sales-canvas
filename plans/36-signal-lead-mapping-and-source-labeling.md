@@ -26,6 +26,19 @@
   - prettier on touched files: `npx prettier --check <paths>` (`npm run verify` omits format:check)
   - lint: `npx eslint <paths>`
 - **Cross-stack contract rule:** backend first, confirm the live JSON via `/docs`/`curl`, then the FE consumer. No generated client.
+- **Live-shape capture prerequisite:** Task 11 Step 5 (capturing the live mapping JSON) needs a **running backend with `ANTHROPIC_API_KEY` set** — `_claude_budget.CLAUDE_API_KEY` has no config fallback, so with no key the endpoint returns the designed 500 (AC #4) and the shape can't be captured. This is **not** a hard blocker for FE work: the FE zod contract (Task 12) is derived from the documented §5.3 shape; Step 5 is a confirmation. If no keyed backend is reachable, write the contract from §5.3 and confirm against live before merge.
+
+## Abort / escalation triggers
+
+Per-task failures have local mitigations; abandon or escalate the whole plan (report to the human, do not push through) if any of these hold:
+
+- The live mapping JSON (Task 11 Step 5) cannot be reconciled with `SignalLeadMapResponseSchema` and the divergence is more than a trivial field rename — the read-time contract is wrong; stop before Phase D.
+- Task 10's truncated-JSON prefix recovery proves unreliable against real model output (drops valid entries or accepts garbage) — the resilience design needs rework; stop before the FE surfaces depend on it.
+- A touched backend pytest module or `npm run typecheck` goes red after a task and the cause isn't an obvious local fix — do not stack further tasks on a red base.
+
+## Parallelization (optional)
+
+Default execution is single-agent, serial, one branch (matches the repo's surgical-commit discipline). For a fan-out executor: Tasks 1–3 (disjoint ingest paths) and Tasks 14–15 (independent surfaces, both gated only on Task 13) are mutually independent. In this shared sandbox, parallelize them only across **separate git worktrees** (per the repo's parallel topology) — never as concurrent edits on one branch/working tree.
 
 ---
 
@@ -115,8 +128,8 @@ Expected: `test_create_lead_stamps_source_manual_when_absent` FAILS with `KeyErr
 
 - [ ] **Step 4: Run to verify they pass**
 
-Run: `cd /projects/Brewra/brewra-gtm-intelligence/backend && .venv/bin/python -m pytest tests/unit/test_leads.py -q -k source`
-Expected: PASS.
+Run: `cd /projects/Brewra/brewra-gtm-intelligence/backend && .venv/bin/python -m pytest tests/unit/test_leads.py -q` (whole module — also catches regressions in existing `test_create_lead_*` cases)
+Expected: PASS (all of `test_leads.py`).
 
 - [ ] **Step 5: Commit**
 
@@ -168,8 +181,8 @@ Expected: FAIL with `KeyError: 'source'`.
 
 - [ ] **Step 4: Run to verify it passes**
 
-Run: `cd /projects/Brewra/brewra-gtm-intelligence/backend && .venv/bin/python -m pytest tests/unit/test_leads.py::test_batch_upload_leads_stamps_source_csv -q`
-Expected: PASS.
+Run: `cd /projects/Brewra/brewra-gtm-intelligence/backend && .venv/bin/python -m pytest tests/unit/test_leads.py -q` (whole module)
+Expected: PASS (all of `test_leads.py`).
 
 - [ ] **Step 5: Commit**
 
@@ -254,8 +267,8 @@ Expected: FAIL (`source` is not a field on `LeadMarketScoreRow` / not in the `$s
 
 - [ ] **Step 4: Run to verify they pass**
 
-Run: `cd /projects/Brewra/brewra-gtm-intelligence/backend && .venv/bin/python -m pytest tests/unit/test_market_scoring.py -q -k source`
-Expected: PASS.
+Run: `cd /projects/Brewra/brewra-gtm-intelligence/backend && .venv/bin/python -m pytest tests/unit/test_market_scoring.py -q` (whole module)
+Expected: PASS (all of `test_market_scoring.py`).
 
 - [ ] **Step 5: Commit**
 
@@ -440,9 +453,11 @@ export function LeadSourceBadge({ source }: { source?: string | null }) {
 }
 ```
 
-- [ ] **Step 4: Update the barrel** `frontend/src/features/connectors/index.ts` — replace the `leadSource` re-export line and add the badge:
+- [ ] **Step 4: Update the barrel** `frontend/src/features/connectors/index.ts` — **replace the whole file body**, dropping the stale `// … → Task 10/12/13/14` header comments (they map exports to a *prior* plan's task numbers and are misleading). New content:
 
 ```typescript
+// Public surface for the `connectors` feature (Apollo discovery + lead source).
+// Cross-feature consumers import from "@/features/connectors", never a deep path.
 export { ApolloTile } from "./components/ApolloTile";
 export { useApolloUnlockToast } from "./hooks/useApolloUnlockToast";
 export {
@@ -781,8 +796,8 @@ def _save_lead_map(
 
 - [ ] **Step 4: Run to verify they pass**
 
-Run: `cd /projects/Brewra/brewra-gtm-intelligence/backend && .venv/bin/python -m pytest tests/unit/test_signal_lead_map.py -q -k "fingerprint or extraction or roundtrip"`
-Expected: PASS.
+Run: `cd /projects/Brewra/brewra-gtm-intelligence/backend && .venv/bin/python -m pytest tests/unit/test_signal_lead_map.py -q` (whole module)
+Expected: PASS (all of `test_signal_lead_map.py`).
 
 - [ ] **Step 5: Commit**
 
@@ -1148,6 +1163,8 @@ def test_signal_lead_map_endpoint_returns_mapping(client):
     fake = {"status": "success", "data": {
         "mapping": [{"signal_id": "s1", "headline": "h", "leads": []}],
         "generated_at": "t", "cached": False}}
+    # Both deps must be overridden — the suite's `_override_mongo` helper covers
+    # only get_mongo, and this route also depends on get_neo4j_driver.
     app.dependency_overrides[get_mongo] = lambda: MagicMock()
     app.dependency_overrides[get_neo4j_driver] = lambda: MagicMock()
     try:
@@ -1217,8 +1234,8 @@ async def signal_lead_map_claude(
 
 - [ ] **Step 4: Run to verify they pass**
 
-Run: `cd /projects/Brewra/brewra-gtm-intelligence/backend && .venv/bin/python -m pytest tests/test_signals.py -q -k signal_lead_map`
-Expected: PASS.
+Run: `cd /projects/Brewra/brewra-gtm-intelligence/backend && .venv/bin/python -m pytest tests/test_signals.py -q` (whole module)
+Expected: PASS (all of `test_signals.py`).
 
 - [ ] **Step 5: Confirm the live shape** (cross-stack rule, before any FE work) — start/locate a backend with `ANTHROPIC_API_KEY` set and `curl` it, or inspect `/docs`, to confirm the envelope is `{"status","data":{"mapping":[…],"generated_at","cached"}}`. Record the captured JSON for the FE zod contract (Task 12).
 
@@ -1317,7 +1334,7 @@ export type SignalLeadMapResponse = z.infer<typeof SignalLeadMapResponseSchema>;
 
 (`z` is already imported at the top of `contracts.ts`.)
 
-- [ ] **Step 3b: Add the service** to `frontend/src/features/signals/services/signals.ts` (extend the contract import, add the function):
+- [ ] **Step 3b: Add the service** to `frontend/src/features/signals/services/signals.ts`. **Only extend the existing `../contracts` import** — do **not** re-add `apiGet, apiPost` (already imported at the top of the file; re-adding duplicates the import). The contract import becomes:
 
 ```typescript
 import {
@@ -1327,9 +1344,9 @@ import {
   type GenerateSignalsBatchResponse,
   type SignalLeadMapResponse,
 } from "../contracts";
-
-import { apiGet, apiPost } from "@/shared/api/client";
 ```
+
+Then add the function:
 
 ```typescript
 /**
@@ -1398,6 +1415,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { useSignalLeadMap } from "../useSignalLeadMap";
 
+import { qk } from "@/shared/api/queryKeys";
 import { server } from "@/test/msw/server";
 
 vi.mock("@/shared/auth/AuthContext", () => ({
@@ -1433,6 +1451,10 @@ describe("useSignalLeadMap", () => {
     const { result } = renderHook(() => useSignalLeadMap(""), { wrapper });
     expect(result.current.leadsForSignal("s1")).toEqual([]);
     expect(result.current.signalsForLead("l1")).toEqual([]);
+  });
+
+  it("keys the cache by both orgId and userId (spec §8)", () => {
+    expect(qk.signalLeadMap("org1", "u1")).toEqual(["signals", "lead-map", "org1", "u1"]);
   });
 });
 ```
@@ -1704,6 +1726,8 @@ git commit -m "feat(fe): show N relevant signals in the LeadsTable expanded pane
 
 No FE consumer of `/api/v2/leads` exists; create the contract, service, and hook. The backend endpoint already returns the paginated envelope with the full lead node (incl. `source`).
 
+> **Pagination deferred (MVP).** Spec §5.7-A2 asks for a "load more"/paged control. This plan fetches **first-page-only** (`firstPageParams(50)`) and renders a flat list — matching the sibling market-research LeadsTable's single-fetch and proportionate at 0 users. The v2 endpoint already accepts `limit`/`offset`, so a pager is an additive follow-up. **Trigger to implement:** an org exceeds the first page (~50 leads), or real users land. Recorded so the dropped directive is a conscious deferral, not a silent gap.
+
 **Files:**
 - Create: `frontend/src/features/customers/contracts.ts`
 - Create: `frontend/src/features/customers/services/leads.ts`
@@ -1879,6 +1903,9 @@ import { server } from "@/test/msw/server";
 vi.mock("@/shared/auth/AuthContext", () => ({
   useAuth: () => ({ orgId: "org1", currentUser: { uid: "u1" } }),
 }));
+vi.mock("@/shared/tenant", () => ({
+  useTenant: () => ({ selectedTenant: null }),
+}));
 
 function wrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -1953,6 +1980,7 @@ import {
   type LeadSourceFilter,
 } from "@/features/connectors";
 import { useAuth } from "@/shared/auth/AuthContext";
+import { useTenant } from "@/shared/tenant";
 
 interface LeadStreamPanelProps {
   orgId?: string | null;
@@ -1964,7 +1992,10 @@ interface LeadStreamPanelProps {
 
 export function LeadStreamPanel({ orgId: orgIdProp }: LeadStreamPanelProps) {
   const { orgId: authOrgId } = useAuth();
-  const orgId = orgIdProp ?? authOrgId ?? null;
+  const { selectedTenant } = useTenant();
+  // Resolve org the same way LeadsTable does (tenant-aware), so both surfaces
+  // feed useSignalLeadMap the same org under an active tenant selection.
+  const orgId = orgIdProp ?? selectedTenant?.id ?? authOrgId ?? null;
   const leadsQuery = useLeads(orgId);
   const leads = leadsQuery.data ?? [];
   const [sourceFilter, setSourceFilter] = useState<LeadSourceFilter>("all");
@@ -2069,18 +2100,18 @@ git commit -m "feat(fe): wire customers Lead Stream to real leads with source ba
 
 ---
 
-### Task 18: "N relevant signals" on the customers Lead Stream rows
+### Task 18: "N relevant signals" (expandable) on the customers Lead Stream rows
 
-LeadStream now has real `lead.id`s, so it can join the mapping. Add a count column and an expandable detail.
+LeadStream now has real `lead.id`s, so it can join the mapping. Add a "Signals" column whose count is a button that expands a detail row listing the relevant signal headlines + one-line `why` — the **same expandable affordance** as LeadsTable (Task 15), satisfying AC #7 on this surface.
 
 **Files:**
 - Modify: `frontend/src/features/customers/components/lead-stream/LeadStream.tsx`
 - Modify: `frontend/src/features/customers/components/lead-stream/__tests__/LeadStream.test.tsx` (add a case)
 
-- [ ] **Step 1: Add the failing test case** (append inside the existing `describe`)
+- [ ] **Step 1: Add the failing test case** (append inside the existing `describe`; add `fireEvent` to the `@testing-library/react` import at the top of the file)
 
 ```typescript
-  it("shows the relevant-signals count per lead", async () => {
+  it("expands a lead row to show the relevant signal headlines", async () => {
     server.use(
       http.get("/api/v2/leads", () =>
         HttpResponse.json({
@@ -2100,8 +2131,9 @@ LeadStream now has real `lead.id`s, so it can join the mapping. Add a count colu
       ),
     );
     render(<LeadStreamPanel />, { wrapper });
-    expect(await screen.findByText("Tom")).toBeTruthy();
-    await waitFor(() => expect(screen.getByText(/1 signal/)).toBeTruthy());
+    const toggle = await screen.findByRole("button", { name: /1 signal/ });
+    fireEvent.click(toggle);
+    expect(await screen.findByText("Hiring surge")).toBeTruthy();
   });
 ```
 
@@ -2110,28 +2142,68 @@ LeadStream now has real `lead.id`s, so it can join the mapping. Add a count colu
 Run: `cd /projects/Brewra/brewra-gtm-intelligence/frontend && npx vitest run src/features/customers/components/lead-stream/__tests__/LeadStream.test.tsx --no-file-parallelism`
 Expected: FAIL (no signals column yet).
 
-- [ ] **Step 3: Wire the mapping into LeadStream** — in `LeadStream.tsx`:
+- [ ] **Step 3: Wire the expandable mapping into LeadStream** — in `LeadStream.tsx`:
+  - Extend the react import to add `Fragment`: `import { Fragment, useMemo, useState } from "react";`
   - Add the import: `import { useSignalLeadMap } from "@/features/signals";`
-  - In the component, after `const orgId = …`: `const { signalsForLead } = useSignalLeadMap(orgId);`
-  - Add a header cell after "Source":
+  - In the component, after `const orgId = …`:
+
+```tsx
+  const { signalsForLead } = useSignalLeadMap(orgId);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+```
+
+  - Add a header cell after the "Source" header:
 
 ```tsx
               <TableHead className="text-xs">Source</TableHead>
               <TableHead className="text-xs">Signals</TableHead>
 ```
 
-  - Add the matching body cell in each row, after the source cell:
+  - Replace the `visibleLeads.map(...)` body with rows that carry a count button + an expandable detail row:
 
 ```tsx
-                <TableCell>
-                  <LeadSourceBadge source={lead.source} />
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {(() => {
-                    const n = signalsForLead(lead.id).length;
-                    return n > 0 ? `${n} ${n === 1 ? "signal" : "signals"}` : "—";
-                  })()}
-                </TableCell>
+            {visibleLeads.map((lead) => {
+              const signals = signalsForLead(lead.id);
+              const isExpanded = expandedId === lead.id;
+              return (
+                <Fragment key={lead.id}>
+                  <TableRow>
+                    <TableCell className="text-sm font-medium">{lead.name}</TableCell>
+                    <TableCell className="text-sm">{lead.company}</TableCell>
+                    <TableCell>
+                      <LeadSourceBadge source={lead.source} />
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {signals.length > 0 ? (
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                          onClick={() => setExpandedId(isExpanded ? null : lead.id)}
+                        >
+                          {signals.length} {signals.length === 1 ? "signal" : "signals"}
+                        </button>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                  {isExpanded && signals.length > 0 && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="bg-muted/30">
+                        <ul className="space-y-1 py-1">
+                          {signals.map((s) => (
+                            <li key={s.signal_id} className="text-[11px] text-muted-foreground">
+                              <span className="font-medium text-foreground">{s.headline}</span>
+                              {s.why ? ` — ${s.why}` : ""}
+                            </li>
+                          ))}
+                        </ul>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </Fragment>
+              );
+            })}
 ```
 
 - [ ] **Step 4: Run to verify it passes**
@@ -2166,7 +2238,7 @@ git commit -m "feat(fe): show relevant-signals count on customers Lead Stream ro
 - §5.4 derived cache, per-(org,user) key, new fingerprint → Tasks 9, 10. ✓
 - §5.5 prompt → Task 8. ✓
 - §5.6 truncated-prefix tolerance, graceful empty, windowing(50) → Task 10. ✓
-- §5.7 A1 LeadsTable / A2 LeadStream rewire (drop filterByICP, pagination first-page) / B Signals page; degrade silent → Tasks 14, 15, 16, 17, 18. ✓
+- §5.7 A1 LeadsTable / A2 LeadStream rewire (drop filterByICP; **pager deferred — first-page-only at MVP, see Task 16 note**) / B Signals page; degrade silent → Tasks 14, 15, 16, 17, 18. ✓
 - §6.1 taxonomy → Task 4. ✓
 - §6.2 stamp manual/csv + LeadMarketScoreRow.source (persist + read) → Tasks 1, 2, 3. ✓
 - §6.3 LeadSource/LeadSourceFilter split, normalizeLeadSource, HeatmapLead.source retype, LeadSourceBadge, mapper preserves source, both tables → Tasks 4, 5, 6, 7, 17. ✓
@@ -2176,6 +2248,6 @@ git commit -m "feat(fe): show relevant-signals count on customers Lead Stream ro
 - §9 phasing (Feature #2 first, Feature #1 second) → Phase A/B before C/D/E. ✓
 - AC #1–#9 → Tasks 11/10 (#1,#2,#3,#4,#9), 1/2/3 (#5), 7/17 (#6), 14/15/18 (#7), 17 (#8). ✓
 
-**Deferred (per spec, not implemented here):** cache-miss concurrency guard (§5.6, §10); HubSpot/Salesforce connectors (reserved only); Strategist wiring; numeric relevance; mapping precompute.
+**Deferred:** customers/LeadStream pager (§5.7-A2 — first-page-only at MVP, Task 16 note); cache-miss concurrency guard (§5.6, §10); HubSpot/Salesforce connectors (reserved only); Strategist wiring; numeric relevance; mapping precompute.
 
 **Type consistency:** `LeadSource`/`LeadSourceFilter`/`normalizeLeadSource` (Task 4) consumed identically in Tasks 5, 6, 7, 17. `SignalLeadMapResponse`/`SignalLeadMapEntry` (Task 12) consumed in Task 13; `signalsForLead`/`leadsForSignal` selector shapes match their consumers (Tasks 14, 15, 18). `CustomerLead` (Task 16) is what `useLeads`→LeadStream render against (Tasks 17, 18). Backend `build_signal_lead_map_claude(driver, mongo, request)` signature matches the router call (Task 11) and the re-export (Task 11). `_compute_fingerprint`/`_get_cached_lead_map`/`_save_lead_map` (Task 9) used by Task 10.
