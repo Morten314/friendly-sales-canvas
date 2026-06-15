@@ -11,8 +11,8 @@ import {
 } from "../components/signalCards";
 import { SignalChatPanel } from "../components/SignalChatPanel";
 import { SignalsEmptyState, SignalsLoadingState } from "../components/SignalsEmptyState";
-import { fetchSignals, generateSignalsBatch } from "../services/signals";
 import { useSignalLeadMap } from "../hooks/useSignalLeadMap";
+import { fetchSignals, generateSignalsBatch } from "../services/signals";
 import type { Agent, NBAItem, SignalCard as SignalCardType } from "../types";
 
 import { Badge } from "@/components/ui/badge";

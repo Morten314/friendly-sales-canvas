@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ZodType } from "zod";
 
 import {
   GenerateSignalsBatchResponseSchema,
@@ -63,6 +64,6 @@ export async function fetchSignalLeadMap(
   return apiPost(
     "signal-lead-map_claude",
     { user_id: userId, org_id: orgId, refresh: opts.refresh ?? false },
-    SignalLeadMapResponseSchema as import("zod").ZodType<SignalLeadMapResponse>,
+    SignalLeadMapResponseSchema as ZodType<SignalLeadMapResponse>,
   );
 }

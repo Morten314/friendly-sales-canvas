@@ -1,6 +1,6 @@
-import { Badge } from "@/components/ui/badge";
-
 import { normalizeLeadSource } from "../lib/leadSource";
+
+import { Badge } from "@/components/ui/badge";
 
 const LABELS: Record<string, string> = {
   apollo: "Apollo",
