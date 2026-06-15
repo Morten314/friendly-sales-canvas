@@ -32,6 +32,16 @@ export function StrategicRecommendationsSection({
 }: StrategicRecommendationsSectionProps) {
   const { toast } = useToast();
 
+  // Read-only: prefer in-session edits, then API, then defaults — matching the
+  // ExecutiveSummarySection `local || data || default` chain (TD-FE-25).
+  const readField = (
+    key: "mitigateRegulatoryRisks" | "competitivePositioning" | "goToMarketStrategy",
+  ): string[] | undefined => {
+    const local = localStrategicRecommendations?.[key];
+    if (Array.isArray(local) && local.length > 0) return local;
+    return regulatoryData?.strategicRecommendations?.[key];
+  };
+
   if (isEditing) {
     if (normalizedDeletedSections.has("strategic-recommendations")) {
       return null;
@@ -344,10 +354,10 @@ export function StrategicRecommendationsSection({
                   : "Mitigate Regulatory Risks"}
               </h5>
               <ul className="text-sm text-blue-700 space-y-1">
-                {regulatoryData?.strategicRecommendations?.mitigateRegulatoryRisks ? (
-                  regulatoryData.strategicRecommendations.mitigateRegulatoryRisks.map(
-                    (item: string, index: number) => <li key={index}>• {item}</li>,
-                  )
+                {readField("mitigateRegulatoryRisks")?.length ? (
+                  readField("mitigateRegulatoryRisks")!.map((item: string, index: number) => (
+                    <li key={index}>• {item}</li>
+                  ))
                 ) : (
                   <>
                     <li>• Implement privacy by design principles</li>
@@ -371,10 +381,10 @@ export function StrategicRecommendationsSection({
                   : "Competitive Positioning"}
               </h5>
               <ul className="text-sm text-green-700 space-y-1">
-                {regulatoryData?.strategicRecommendations?.competitivePositioning ? (
-                  regulatoryData.strategicRecommendations.competitivePositioning.map(
-                    (item: string, index: number) => <li key={index}>• {item}</li>,
-                  )
+                {readField("competitivePositioning")?.length ? (
+                  readField("competitivePositioning")!.map((item: string, index: number) => (
+                    <li key={index}>• {item}</li>
+                  ))
                 ) : (
                   <>
                     <li>• Market compliance as differentiator</li>
@@ -398,10 +408,10 @@ export function StrategicRecommendationsSection({
                   : "Go-to-Market Strategy"}
               </h5>
               <ul className="text-sm text-purple-700 space-y-1">
-                {regulatoryData?.strategicRecommendations?.goToMarketStrategy ? (
-                  regulatoryData.strategicRecommendations.goToMarketStrategy.map(
-                    (item: string, index: number) => <li key={index}>• {item}</li>,
-                  )
+                {readField("goToMarketStrategy")?.length ? (
+                  readField("goToMarketStrategy")!.map((item: string, index: number) => (
+                    <li key={index}>• {item}</li>
+                  ))
                 ) : (
                   <>
                     <li>• Regional deployment capabilities</li>
