@@ -11,6 +11,7 @@ export interface MarketScoresApiRow {
   lead_id: string;
   org_id: string;
   file_id?: string;
+  source?: string | null;
   company_name: string;
   score_market_size_opportunity: number;
   score_industry_trends_report: number;
@@ -108,7 +109,7 @@ export function mapMarketScoresRowToHeatmapLead(row: MarketScoresApiRow): Heatma
     id: String(row.lead_id),
     name,
     company,
-    source: "Prospect List",
+    source: row.source ?? null,
     ratings,
     totalScore,
     priority: getPriority(Math.round(combined)),
@@ -179,6 +180,7 @@ export function heatmapLeadFromUnknownRow(raw: Record<string, unknown>): Heatmap
       raw.score_market_entry_growth_strategy ?? raw.scoreMarketEntryGrowthStrategy,
     ),
     combined_score: num(raw.combined_score ?? raw.combinedScore),
+    source: typeof raw.source === "string" ? raw.source : null,
     scoring_status: raw.scoring_status != null ? String(raw.scoring_status) : undefined,
     scored_at: raw.scored_at != null ? String(raw.scored_at) : undefined,
     updated_at: raw.updated_at != null ? String(raw.updated_at) : undefined,

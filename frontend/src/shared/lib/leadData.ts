@@ -9,7 +9,7 @@ export interface HeatmapLead {
   id: string;
   name: string;
   company: string;
-  source: "HubSpot" | "Prospect List";
+  source: string | null;
   ratings: Record<string, Rating>;
   totalScore: number;
   priority: "Tier 1" | "Tier 2" | "Tier 3";

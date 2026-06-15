@@ -28,7 +28,7 @@ never a deep path. Today the surface is routes-only; exports are added lazily if
 - `components/icp-intelligence/icpMapping.ts` — pure flexible-`/icp` mappers/normalizers (T9).
 - `components/icp-intelligence/suggestedIcpStorage.ts` — pure optimistic-`localStorage` helpers (T10).
 - `components/icp-intelligence/ICPIntelligence.tsx` — thin wrapper; `profilerRefresh` header-event handler.
-- `components/lead-stream/LeadStream.tsx` — pure mock panel; exports `LeadStreamPanel` + `getLeadCountForICP`.
+- `components/lead-stream/LeadStream.tsx` — renders real org leads from `GET /api/v2/leads` (via `useLeads`); lead-source filter/badge; expandable per-row "N relevant signals" affordance (via `useSignalLeadMap`); exports `LeadStreamPanel` + `getLeadCountForICP` (stub, TD-FE-69).
 - `components/chat/ProfilerChatWithHistory.tsx` — relocated Profiler chat shell; imports the `ContextChat` substrate from `@/shared/chat` (relocated then renamed; TD-FE-45 resolved).
 - `contracts.ts` — permissive zod for `/icp` + `customer_profile` (T4).
 - `types.ts` — feature-local types (`ExistingICP`, `SuggestedICP`, `ICPCardStatus`, `ICPAnalysis`, …) (T8).

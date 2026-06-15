@@ -20,6 +20,12 @@ class SignalAskRequest(BaseModel):
     history: Optional[List[Dict[str, Any]]] = None  # Open-ended history format
 
 
+class SignalLeadMapRequest(BaseModel):
+    user_id: str
+    org_id: str
+    refresh: bool = False
+
+
 # ---------------------------------------------------------------------------
 # Response models
 # ---------------------------------------------------------------------------

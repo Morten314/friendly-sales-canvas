@@ -11,6 +11,7 @@ import {
 } from "../components/signalCards";
 import { SignalChatPanel } from "../components/SignalChatPanel";
 import { SignalsEmptyState, SignalsLoadingState } from "../components/SignalsEmptyState";
+import { useSignalLeadMap } from "../hooks/useSignalLeadMap";
 import { fetchSignals, generateSignalsBatch } from "../services/signals";
 import type { Agent, NBAItem, SignalCard as SignalCardType } from "../types";
 
@@ -28,6 +29,7 @@ type ActionType = "accept" | "dismiss" | "save" | "ask";
 
 const SignalsPage = () => {
   const { currentUser, orgId } = useAuth();
+  const { leadsForSignal } = useSignalLeadMap(orgId);
   const navigate = useNavigate();
   const askMutation = useSignalAsk();
   const actionMutation = useSignalAction();
@@ -743,6 +745,7 @@ const SignalsPage = () => {
                         return next;
                       });
                     }}
+                    affectedLeadCount={leadsForSignal(signal.id).length}
                   />
                 );
               })

@@ -18,4 +18,6 @@ export const qk = {
     ["connectors", "apollo", "warmup", orgId, userId] as const,
   apolloDiscoverStatus: (orgId: string, runId: string | null) =>
     ["connectors", "apollo", "discover-status", orgId, runId] as const,
+  signalLeadMap: (orgId: string, userId: string) => ["signals", "lead-map", orgId, userId] as const,
+  leads: (orgId: string) => ["leads", orgId] as const,
 };
