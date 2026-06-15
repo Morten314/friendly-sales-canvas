@@ -30,3 +30,6 @@ export const paginatedSchema = <T extends z.ZodTypeAny>(item: T) =>
 
 /** `limit=<n>&offset=0` — the single (first) page these reads request. */
 export const firstPageParams = (limit: number) => `limit=${limit}&offset=0`;
+
+/** `limit=<n>&offset=<m>` — an arbitrary page for offset-paged (infinite) reads. */
+export const pageParams = (limit: number, offset: number) => `limit=${limit}&offset=${offset}`;
