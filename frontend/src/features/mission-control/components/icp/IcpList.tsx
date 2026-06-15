@@ -44,6 +44,8 @@ const getFitConfidenceBadge = (confidence: FitConfidence) => {
           Low
         </Badge>
       );
+    default:
+      return null;
   }
 };
 
