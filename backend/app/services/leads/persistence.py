@@ -65,6 +65,8 @@ def create_lead(driver, request: LeadCreateRequest) -> Dict[str, Any]:
 
     # Prepare lead data - store everything as-is, just add multitenancy fields
     lead_data = request.data.copy()
+    if "source" not in lead_data:
+        lead_data["source"] = "manual"
     lead_data["user_id"] = request.user_id
     lead_data["org_id"] = request.org_id
     lead_data["lead_id"] = lead_id

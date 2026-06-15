@@ -268,3 +268,27 @@ def test_get_leads_for_org_default_limit_is_500():
     first_call_kwargs = session.run.call_args_list[0].kwargs
     assert first_call_kwargs["limit"] == 500
     assert first_call_kwargs["offset"] == 0
+
+
+# ---------------------------------------------------------------------------
+# create_lead — source field stamping (Phase 36 Task 1)
+# ---------------------------------------------------------------------------
+
+def test_create_lead_stamps_source_manual_when_absent(mock_session):
+    request = LeadCreateRequest(
+        user_id=TEST_USER_ID, org_id=TEST_ORG_ID, data={"company_name": "Acme Co"}
+    )
+    create_lead(mock_session._driver, request)
+    # execute_write(upsert_node, "Lead", "lead_id", lead_id, lead_data) → args[4] is lead_data
+    call_data = mock_session.execute_write.call_args.args[4]
+    assert call_data["source"] == "manual"
+
+
+def test_create_lead_respects_explicit_source(mock_session):
+    request = LeadCreateRequest(
+        user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
+        data={"company_name": "Acme Co", "source": "apollo"},
+    )
+    create_lead(mock_session._driver, request)
+    call_data = mock_session.execute_write.call_args.args[4]
+    assert call_data["source"] == "apollo"
