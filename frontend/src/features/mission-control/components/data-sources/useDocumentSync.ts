@@ -1,5 +1,5 @@
 import type { User } from "firebase/auth";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 
 import { useDataSources } from "../../hooks/useDataSources";
 import type { DataSource, DataSourceStatus } from "../../types";
@@ -62,6 +62,18 @@ export function useDocumentSync({
   // re-show the full-page overlay or production feels like an infinite loop.
   const isLoading = dataSourcesQuery.isLoading;
 
+  // Mirror dataSources into a ref so checkProcessingFilesStatus can read the
+  // current rows without abusing setDataSources as a getter (which fired its
+  // async side effects inside a state updater — re-running them on every set).
+  const dataSourcesRef = useRef<DataSource[]>([]);
+  useEffect(() => {
+    dataSourcesRef.current = dataSources;
+  }, [dataSources]);
+  // File ids whose /document-status check is currently in flight — guards against
+  // the 4s poll (and rapid back-to-back calls) firing a duplicate fetch for a row
+  // that is already being checked.
+  const inFlightStatusIds = useRef<Set<string>>(new Set());
+
   // Check processing status for a specific file
   const checkDocumentStatus = useCallback(
     async (
@@ -93,29 +105,31 @@ export function useDocumentSync({
     [currentUser?.uid, getAuthHeader],
   );
 
-  // Check status for processing files
+  // Check status for processing files. Reads the current rows from the ref (not
+  // via a setDataSources updater) and guards each file id so a check already in
+  // flight is not re-issued by the 4s poll or a rapid second call.
   const checkProcessingFilesStatus = useCallback(async () => {
-    setDataSources((currentSources) => {
-      const processingFiles = currentSources.filter(
-        (s) => s.status === "processing" && s.type === "file",
-      );
+    const processingFiles = dataSourcesRef.current.filter(
+      (s) => s.status === "processing" && s.type === "file",
+    );
 
-      processingFiles.forEach((file) => {
-        void (async () => {
-          try {
-            const statusPayload = await checkDocumentStatus(resolveDocumentStatusFileKey(file));
-            setDataSources((prev) =>
-              prev.map((s) =>
-                isSameDataSourceRow(s, file) ? { ...s, status: statusPayload.status } : s,
-              ),
-            );
-          } catch (err) {
-            console.error(`Error checking status for file ${file.id}:`, err);
-          }
-        })();
-      });
-
-      return currentSources;
+    processingFiles.forEach((file) => {
+      if (inFlightStatusIds.current.has(file.id)) return; // already checking this file
+      inFlightStatusIds.current.add(file.id);
+      void (async () => {
+        try {
+          const statusPayload = await checkDocumentStatus(resolveDocumentStatusFileKey(file));
+          setDataSources((prev) =>
+            prev.map((s) =>
+              isSameDataSourceRow(s, file) ? { ...s, status: statusPayload.status } : s,
+            ),
+          );
+        } catch (err) {
+          console.error(`Error checking status for file ${file.id}:`, err);
+        } finally {
+          inFlightStatusIds.current.delete(file.id);
+        }
+      })();
     });
   }, [checkDocumentStatus]);
 
