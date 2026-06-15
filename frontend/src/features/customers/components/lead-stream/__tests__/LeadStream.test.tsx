@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -46,5 +46,36 @@ describe("LeadStreamPanel (real leads)", () => {
     );
     render(<LeadStreamPanel />, { wrapper });
     await waitFor(() => expect(screen.getByText("No prospect data yet")).toBeTruthy());
+  });
+
+  it("expands a lead row to show the relevant signal headlines", async () => {
+    server.use(
+      http.get("/api/v2/leads", () =>
+        HttpResponse.json({
+          items: [{ lead_id: "l1", lead_name: "Tom", company_name: "Acme", source: "csv" }],
+          total: 1,
+          limit: 50,
+          offset: 0,
+        }),
+      ),
+      http.post("/api/signal-lead-map_claude", () =>
+        HttpResponse.json({
+          status: "success",
+          data: {
+            mapping: [
+              {
+                signal_id: "s1",
+                headline: "Hiring surge",
+                leads: [{ lead_id: "l1", company: "Acme", relevance: "high", why: "match" }],
+              },
+            ],
+          },
+        }),
+      ),
+    );
+    render(<LeadStreamPanel />, { wrapper });
+    const toggle = await screen.findByRole("button", { name: /1 signal/ });
+    fireEvent.click(toggle);
+    expect(await screen.findByText("Hiring surge")).toBeTruthy();
   });
 });

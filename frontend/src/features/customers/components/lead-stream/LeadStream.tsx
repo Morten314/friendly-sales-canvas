@@ -1,5 +1,5 @@
 import { ArrowUpRight, Database } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 
 import { useLeads } from "../../hooks/useLeads";
 
@@ -27,6 +27,7 @@ import {
   filterLeadsBySource,
   type LeadSourceFilter,
 } from "@/features/connectors";
+import { useSignalLeadMap } from "@/features/signals";
 import { useAuth } from "@/shared/auth/AuthContext";
 import { useTenant } from "@/shared/tenant";
 
@@ -45,7 +46,9 @@ export function LeadStreamPanel({ orgId: orgIdProp }: LeadStreamPanelProps) {
   // feed useSignalLeadMap the same org under an active tenant selection.
   const orgId = orgIdProp ?? selectedTenant?.id ?? authOrgId ?? null;
   const leadsQuery = useLeads(orgId);
+  const { signalsForLead } = useSignalLeadMap(orgId);
   const [sourceFilter, setSourceFilter] = useState<LeadSourceFilter>("all");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const leads = useMemo(() => leadsQuery.data ?? [], [leadsQuery.data]);
 
@@ -110,18 +113,52 @@ export function LeadStreamPanel({ orgId: orgIdProp }: LeadStreamPanelProps) {
               <TableHead className="text-xs">Name</TableHead>
               <TableHead className="text-xs">Company</TableHead>
               <TableHead className="text-xs">Source</TableHead>
+              <TableHead className="text-xs">Signals</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {visibleLeads.map((lead) => (
-              <TableRow key={lead.id}>
-                <TableCell className="text-sm font-medium">{lead.name}</TableCell>
-                <TableCell className="text-sm">{lead.company}</TableCell>
-                <TableCell>
-                  <LeadSourceBadge source={lead.source} />
-                </TableCell>
-              </TableRow>
-            ))}
+            {visibleLeads.map((lead) => {
+              const signals = signalsForLead(lead.id);
+              const isExpanded = expandedId === lead.id;
+              return (
+                <Fragment key={lead.id}>
+                  <TableRow>
+                    <TableCell className="text-sm font-medium">{lead.name}</TableCell>
+                    <TableCell className="text-sm">{lead.company}</TableCell>
+                    <TableCell>
+                      <LeadSourceBadge source={lead.source} />
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {signals.length > 0 ? (
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                          onClick={() => setExpandedId(isExpanded ? null : lead.id)}
+                        >
+                          {signals.length} {signals.length === 1 ? "signal" : "signals"}
+                        </button>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                  {isExpanded && signals.length > 0 && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="bg-muted/30">
+                        <ul className="space-y-1 py-1">
+                          {signals.map((s) => (
+                            <li key={s.signal_id} className="text-[11px] text-muted-foreground">
+                              <span className="font-medium text-foreground">{s.headline}</span>
+                              {s.why ? ` — ${s.why}` : ""}
+                            </li>
+                          ))}
+                        </ul>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </Fragment>
+              );
+            })}
           </TableBody>
         </Table>
       </CardContent>
