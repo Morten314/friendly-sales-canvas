@@ -4,7 +4,11 @@ Disposable derived cache in Signals.signal_lead_map, keyed per (org, user).
 No signal-schema change; no persisted hard link.
 """
 
+import asyncio
 import hashlib
+import json
+import re
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 _CACHE_DB = "Signals"
@@ -46,3 +50,176 @@ def _save_lead_map(
         {"$set": {"mapping": mapping, "fingerprint": fingerprint, "generated_at": generated_at}},
         upsert=True,
     )
+
+
+# ---------------------------------------------------------------------------
+# Task-10: parse helpers + async orchestration service
+# ---------------------------------------------------------------------------
+from app.core import prompts
+from app.core.logging import logger
+from app.services import _llm_helpers
+from app.services.signals import persistence
+from app.services.leads import persistence as leads_persistence
+
+_MAX_SIGNALS = 50
+_MAX_LEADS = 100
+_MAX_RETRIES = 2
+_RELEVANCE = {"high", "medium", "low"}
+
+
+def _build_result(mapping: List[Dict[str, Any]], generated_at: str, cached: bool) -> Dict[str, Any]:
+    return {"status": "success", "data": {"mapping": mapping, "generated_at": generated_at, "cached": cached}}
+
+
+def _signals_for_prompt(signals: List[Dict[str, Any]]) -> str:
+    rows = [{"signal_id": str(s.get("signal_id") or s.get("id")), "headline": s.get("headline", "")}
+            for s in signals if (s.get("signal_id") or s.get("id"))]
+    return json.dumps(rows, default=str)
+
+
+def _leads_for_prompt(leads: List[Dict[str, Any]]) -> str:
+    rows = []
+    for lead in leads:
+        if not lead.get("lead_id"):
+            continue
+        rows.append({
+            "lead_id": str(lead.get("lead_id")),
+            "company": lead.get("company_name") or lead.get("company") or "",
+            "industry": lead.get("industry", ""),
+            "region": lead.get("region", ""),
+        })
+    return json.dumps(rows, default=str)
+
+
+def _recover_mapping_entries(raw: str) -> List[Dict[str, Any]]:
+    """Best-effort recovery of a structurally-truncated mapping[] — decode whole
+    objects from the array prefix and stop at the first incomplete one."""
+    m = re.search(r'"mapping"\s*:\s*\[', raw)
+    if not m:
+        return []
+    decoder = json.JSONDecoder()
+    idx = m.end()
+    entries: List[Dict[str, Any]] = []
+    while idx < len(raw):
+        while idx < len(raw) and raw[idx] in " \t\r\n,":
+            idx += 1
+        if idx >= len(raw) or raw[idx] == "]":
+            break
+        try:
+            obj, end = decoder.raw_decode(raw, idx)
+        except ValueError:
+            break  # truncated tail
+        if isinstance(obj, dict):
+            entries.append(obj)
+        idx = end
+    return entries
+
+
+def _parse_mapping(
+    raw: str, signals: List[Dict[str, Any]],
+    valid_signal_ids: List[str], valid_lead_ids: List[str],
+) -> List[Dict[str, Any]]:
+    sig_set = set(valid_signal_ids)
+    lead_set = set(valid_lead_ids)
+    headline_by_id = {str(s.get("signal_id") or s.get("id")): s.get("headline", "") for s in signals}
+    try:
+        parsed = _llm_helpers._extract_research_json(
+            raw, escape_keys=("why",), trim_braces=True, strip_final_answer=True
+        )
+        raw_mapping = parsed.get("mapping", []) if isinstance(parsed, dict) else []
+    except Exception:
+        raw_mapping = _recover_mapping_entries(raw)  # truncated-prefix tolerance
+
+    out: List[Dict[str, Any]] = []
+    for entry in raw_mapping:
+        if not isinstance(entry, dict):
+            continue
+        sid = str(entry.get("signal_id", ""))
+        if sid not in sig_set:
+            continue  # drop invented signal ids
+        leads_out = []
+        for lead in entry.get("leads", []) or []:
+            if not isinstance(lead, dict):
+                continue
+            lid = str(lead.get("lead_id", ""))
+            if lid not in lead_set:
+                continue  # drop invented lead ids
+            rel = str(lead.get("relevance", "")).lower()
+            if rel not in _RELEVANCE:
+                rel = "low"
+            leads_out.append({
+                "lead_id": lid,
+                "company": str(lead.get("company", "")),
+                "relevance": rel,
+                "why": str(lead.get("why", "")),
+            })
+        out.append({"signal_id": sid, "headline": headline_by_id.get(sid, ""), "leads": leads_out})
+    return out
+
+
+async def build_signal_lead_map_claude(driver, mongo, request) -> Dict[str, Any]:
+    """One Claude call over (newest-50 signals × ≤100 leads) → mapping[]; cached
+    per (org, user) by an input-set fingerprint. Never raises to a 500: a Claude
+    failure degrades to an empty mapping (the router handles the missing-key 500)."""
+    now = datetime.now(timezone.utc).isoformat()
+
+    # 1. signals (user-scoped feed read; async)
+    signals, _ = await persistence.fetch_signals(mongo, request.user_id, limit=_MAX_SIGNALS, offset=0)
+    if not signals:
+        return _build_result([], now, False)
+
+    # 2. leads (org-scoped; sync → thread)
+    leads, _ = await asyncio.to_thread(
+        leads_persistence.get_leads_for_org, driver, request.org_id, _MAX_LEADS, 0
+    )
+    if not leads:
+        return _build_result([], now, False)
+
+    # 3. fingerprint + cache check (a hit still pays the two fetches above)
+    sig_ids = _signal_ids(signals)
+    ld_ids = _lead_ids(leads)
+    fingerprint = _compute_fingerprint(sig_ids, ld_ids)
+    if not request.refresh:
+        cached = await asyncio.to_thread(_get_cached_lead_map, mongo, request.org_id, request.user_id)
+        if cached and cached.get("fingerprint") == fingerprint:
+            return _build_result(cached.get("mapping", []), cached.get("generated_at", now), True)
+
+    # 4. context (ICP/company profile grounding)
+    context = await asyncio.to_thread(
+        persistence._get_signal_ask_customer_profile, mongo, request.org_id
+    ) or {}
+
+    # 5. render + 6. one Claude call (retries=2) + parse
+    rendered = prompts.render(
+        "signals_lead_map",
+        signals_json=_signals_for_prompt(signals),
+        leads_json=_leads_for_prompt(leads),
+        context_json=json.dumps(context, default=str),
+    )
+    mapping: List[Dict[str, Any]] = []
+    last_err: Optional[Exception] = None
+    for attempt in range(1, _MAX_RETRIES + 1):
+        try:
+            raw = await asyncio.to_thread(
+                _llm_helpers._claude_messages_text, rendered.body, _llm_helpers.CLAUDE_RESEARCH_MAX_TOKENS
+            )
+            mapping = _parse_mapping(raw, signals, sig_ids, ld_ids)
+            last_err = None
+            break
+        except Exception as e:  # degrade, never surface a 500
+            last_err = e
+            if attempt < _MAX_RETRIES:
+                await asyncio.sleep(1)
+    if last_err is not None:
+        logger.warning("signal_lead_map: claude failed after retries, empty mapping: %s", last_err)
+        return _build_result([], now, False)
+
+    # 7. cache write (log + swallow on failure)
+    try:
+        await asyncio.to_thread(
+            _save_lead_map, mongo, request.org_id, request.user_id, mapping, fingerprint, now
+        )
+    except Exception as e:
+        logger.warning("signal_lead_map: cache write failed: %s", e)
+
+    return _build_result(mapping, now, False)
