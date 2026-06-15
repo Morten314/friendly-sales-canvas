@@ -146,6 +146,7 @@ def _lead_to_score_row(lead_doc: Dict[str, Any]) -> LeadMarketScoreRow:
         lead_id=str(lead_doc.get("lead_id")),
         org_id=str(lead_doc.get("org_id")),
         file_id=lead_doc.get("file_id"),
+        source=lead_doc.get("source"),
         company_name=lead_doc.get("company_name"),
         lead_name=lead_doc.get("lead_name"),
         score_market_size_opportunity=float(component_scores.get("market size & opportunity", 0)),

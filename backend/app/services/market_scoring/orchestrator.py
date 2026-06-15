@@ -372,6 +372,7 @@ def _persist_market_score_for_lead(
                 "org_id": org_id,
                 "lead_id": lead_id,
                 "file_id": file_id,
+                "source": lead.get("source"),
                 "company_name": company_name,
                 "lead_name": lead_name,
                 "component_scores": component_scores,

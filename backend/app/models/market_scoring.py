@@ -22,6 +22,7 @@ class LeadMarketScoreRow(BaseModel):
     lead_id: str
     org_id: str
     file_id: Optional[str] = None
+    source: Optional[str] = None
     company_name: Optional[str] = None
     lead_name: Optional[str] = None
     score_market_size_opportunity: float
