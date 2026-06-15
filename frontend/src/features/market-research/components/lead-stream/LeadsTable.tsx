@@ -52,6 +52,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useToast } from "@/components/ui/use-toast";
 import {
   LEAD_SOURCE_OPTIONS,
+  LeadSourceBadge,
   filterLeadsBySource,
   type LeadSourceFilter,
   UnverifiedBadge,
@@ -740,6 +741,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                             )}
                           </button>
                           {lead.name}
+                          <LeadSourceBadge source={lead.source} />
                           <UnverifiedBadge emailStatus={lead.email_status} />
                         </div>
                       </TableCell>
