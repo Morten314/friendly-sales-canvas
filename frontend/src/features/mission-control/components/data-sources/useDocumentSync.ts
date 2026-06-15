@@ -54,7 +54,10 @@ export function useDocumentSync({
   const dataSourcesQuery = useDataSources(orgIdToUse, !!currentUser?.uid);
 
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
-  const [_isSaving, setIsSaving] = useState(false);
+  // The saving flag itself is owned by the consumer (DataSourcesManager); the hook
+  // only exposes a setter so callers can keep using a single api object. The value
+  // was never read here, so it is no longer stored — the setter is a no-op.
+  const setIsSaving: DocumentSyncApi["setIsSaving"] = () => {};
   // Initial load only — background refetches (tab refresh, polling) must not
   // re-show the full-page overlay or production feels like an infinite loop.
   const isLoading = dataSourcesQuery.isLoading;
@@ -124,11 +127,6 @@ export function useDocumentSync({
     (documents: unknown[]) => {
       if (Array.isArray(documents)) {
         {
-          console.log(
-            "📋 DataSourcesManager - Loading documents from backend:",
-            documents.length,
-            "documents",
-          );
           const dismissedKeys = getDismissedDataSourceKeys(currentUser?.uid ?? "");
           const loadedSources: DataSource[] = documents
             .map((doc: UntypedBackendDocument): DataSource => {
@@ -165,38 +163,15 @@ export function useDocumentSync({
                 (!hasFileKey && !hasFileKeyAlt && docType !== "file" && !!doc.file_id);
               const isFileSource = docType === "file" || hasFileKey || hasFileKeyAlt;
 
-              if (isUrlSource) {
-                console.log("🔗 DataSourcesManager - Identified as URL source:", {
-                  file_id: doc.file_id,
-                  file_key: doc.file_key,
-                  fileKey: doc.fileKey,
-                  name: doc.name || doc.file_name,
-                  hasFileKey,
-                  hasFileKeyAlt,
-                });
-              }
-
               // Extract file_id/document_id - backend returns file_id for both files and URLs
               // Priority: file_id > _id > extract from file_key (for files only)
               let fileId: string | undefined = undefined;
               if (doc.file_id) {
                 // file_id is the primary identifier for both files and URLs
                 fileId = doc.file_id;
-                console.log(
-                  "📋 DataSourcesManager - Using doc.file_id:",
-                  fileId,
-                  "type:",
-                  isUrlSource ? "URL" : "file",
-                );
               } else if (doc._id) {
                 // Fallback to _id if file_id is not present
                 fileId = doc._id;
-                console.log(
-                  "📋 DataSourcesManager - Using doc._id as fallback:",
-                  fileId,
-                  "type:",
-                  isUrlSource ? "URL" : "file",
-                );
               } else if (isFileSource) {
                 // For files only, extract UUID from file_key as fallback
                 const extracted = extractFileIdFromFileKey(doc.file_key || doc.fileKey);
@@ -205,18 +180,7 @@ export function useDocumentSync({
                   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
                 if (uuidPattern.test(extracted)) {
                   fileId = extracted;
-                  console.log("📋 DataSourcesManager - Extracted valid file_id from file_key:", {
-                    file_key: doc.file_key || doc.fileKey,
-                    extracted_fileId: fileId,
-                  });
                 } else {
-                  console.warn(
-                    "⚠️ DataSourcesManager - Extraction failed, got full path instead of UUID:",
-                    {
-                      file_key: doc.file_key || doc.fileKey,
-                      extracted: extracted,
-                    },
-                  );
                   // Try one more time with a more aggressive extraction
                   const fileKeyStr = doc.file_key || doc.fileKey;
                   if (fileKeyStr.includes("/")) {
@@ -225,15 +189,9 @@ export function useDocumentSync({
                     const uuidPart = afterSlash.split("_")[0];
                     if (uuidPattern.test(uuidPart)) {
                       fileId = uuidPart;
-                      console.log(
-                        "✅ DataSourcesManager - Successfully extracted UUID on retry:",
-                        fileId,
-                      );
                     }
                   }
                 }
-              } else {
-                console.warn("⚠️ DataSourcesManager - No file_id found in document:", doc);
               }
 
               if (isUrlSource) {
@@ -245,15 +203,6 @@ export function useDocumentSync({
                 // URL might be in doc.url, doc.source_url, or might need to be fetched separately
                 // For now, check multiple possible fields
                 const urlValue = doc.url || doc.source_url || doc.file_url || undefined;
-
-                console.log("📋 DataSourcesManager - Loading URL source:", {
-                  file_id: fileId,
-                  id: urlId,
-                  name: doc.name || doc.file_name,
-                  url: urlValue,
-                  hasUrl: !!urlValue,
-                  docKeys: Object.keys(doc),
-                });
 
                 return {
                   id: urlId,
@@ -298,15 +247,6 @@ export function useDocumentSync({
               }
             })
             .filter((source) => !isDataSourceDismissed(source, dismissedKeys));
-
-          // Log summary of loaded sources
-          const urlCount = loadedSources.filter((s) => s.type === "url").length;
-          const fileCount = loadedSources.filter((s) => s.type === "file").length;
-          console.log("📋 DataSourcesManager - Loaded sources summary:", {
-            total: loadedSources.length,
-            urls: urlCount,
-            files: fileCount,
-          });
 
           // Merge with existing sources: keep system types, update file and URL types from backend
           setDataSources((prev) => {
@@ -353,11 +293,6 @@ export function useDocumentSync({
                 existingFile = existingFilesByFileId.get(backendFile.fileId);
                 if (existingFile) {
                   matchedById = existingFile.id;
-                  console.log("✅ DataSourcesManager - Matched by fileId:", {
-                    fileId: backendFile.fileId,
-                    existingId: existingFile.id,
-                    backendId: backendFile.id,
-                  });
                 }
               }
 
@@ -366,10 +301,6 @@ export function useDocumentSync({
                 existingFile = existingFilesById.get(backendFile.id);
                 if (existingFile) {
                   matchedById = existingFile.id;
-                  console.log("✅ DataSourcesManager - Matched by ID:", {
-                    id: backendFile.id,
-                    existingId: existingFile.id,
-                  });
                 }
               }
 
@@ -379,11 +310,6 @@ export function useDocumentSync({
                 if (candidate && shouldMergeFileByFileName(candidate, backendFile)) {
                   existingFile = candidate;
                   matchedById = candidate.id;
-                  console.log("✅ DataSourcesManager - Matched by fileName:", {
-                    fileName: backendFile.fileName,
-                    existingId: candidate.id,
-                    backendId: backendFile.id,
-                  });
                 }
               }
 
@@ -422,11 +348,6 @@ export function useDocumentSync({
                 existingUrl = existingUrlsByFileId.get(backendUrl.fileId);
                 if (existingUrl) {
                   matchedById = existingUrl.id;
-                  console.log("✅ DataSourcesManager - Matched URL by fileId:", {
-                    fileId: backendUrl.fileId,
-                    existingId: existingUrl.id,
-                    backendId: backendUrl.id,
-                  });
                 }
               }
 
@@ -435,10 +356,6 @@ export function useDocumentSync({
                 existingUrl = existingUrlsById.get(backendUrl.id);
                 if (existingUrl) {
                   matchedById = existingUrl.id;
-                  console.log("✅ DataSourcesManager - Matched URL by ID:", {
-                    id: backendUrl.id,
-                    existingId: existingUrl.id,
-                  });
                 }
               }
 
@@ -507,19 +424,8 @@ export function useDocumentSync({
             });
 
             const result = Array.from(uniqueSourcesMap.values());
-            console.log("📋 DataSourcesManager - Merged data sources:", {
-              systemCount: systemSources.length,
-              mergedFileCount: mergedFileSources.length,
-              mergedUrlCount: mergedUrlSources.length,
-              unmatchedFileCount: unmatchedExistingFiles.length,
-              unmatchedUrlCount: unmatchedExistingUrls.length,
-              totalCount: result.length,
-              matchedIds: Array.from(matchedExistingIds),
-            });
-
             return result;
           });
-          console.log("Data sources loaded from dedicated backend:", loadedSources);
         }
       }
     },
