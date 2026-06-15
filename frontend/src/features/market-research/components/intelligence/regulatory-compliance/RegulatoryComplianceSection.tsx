@@ -160,33 +160,33 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   // Save local state to localStorage whenever it changes
   useEffect(() => {
     if (localExecutiveSummary) {
-      localStorage.setItem("regulatory_executiveSummary", localExecutiveSummary);
+      setUserLocalStorage("regulatory_executiveSummary", localExecutiveSummary, currentUser?.uid);
     }
-  }, [localExecutiveSummary]);
+  }, [localExecutiveSummary, currentUser?.uid]);
 
   useEffect(() => {
     if (localEuAiActDeadline) {
-      localStorage.setItem("regulatory_euAiActDeadline", localEuAiActDeadline);
+      setUserLocalStorage("regulatory_euAiActDeadline", localEuAiActDeadline, currentUser?.uid);
     }
-  }, [localEuAiActDeadline]);
+  }, [localEuAiActDeadline, currentUser?.uid]);
 
   useEffect(() => {
     if (localGdprCompliance) {
-      localStorage.setItem("regulatory_gdprCompliance", localGdprCompliance);
+      setUserLocalStorage("regulatory_gdprCompliance", localGdprCompliance, currentUser?.uid);
     }
-  }, [localGdprCompliance]);
+  }, [localGdprCompliance, currentUser?.uid]);
 
   useEffect(() => {
     if (localPotentialFines) {
-      localStorage.setItem("regulatory_potentialFines", localPotentialFines);
+      setUserLocalStorage("regulatory_potentialFines", localPotentialFines, currentUser?.uid);
     }
-  }, [localPotentialFines]);
+  }, [localPotentialFines, currentUser?.uid]);
 
   useEffect(() => {
     if (localDataLocalization) {
-      localStorage.setItem("regulatory_dataLocalization", localDataLocalization);
+      setUserLocalStorage("regulatory_dataLocalization", localDataLocalization, currentUser?.uid);
     }
-  }, [localDataLocalization]);
+  }, [localDataLocalization, currentUser?.uid]);
 
   // Sync local state with centralized regulatoryData and props (only on initial load)
   useEffect(() => {
@@ -462,32 +462,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       onPotentialFinesChange(localPotentialFines);
       onDataLocalizationChange(localDataLocalization);
 
-      // Prepare original data
-      const originalData = {
-        section: "regulatory-compliance",
-        executiveSummary: executiveSummary,
-        euAiActDeadline: euAiActDeadline,
-        gdprCompliance: gdprCompliance,
-        potentialFines: potentialFines,
-        dataLocalization: dataLocalization,
-      };
-
-      // Prepare modified data
-      const modifiedData = {
-        section: "regulatory-compliance",
-        executiveSummary: localExecutiveSummary,
-        euAiActDeadline: localEuAiActDeadline,
-        gdprCompliance: localGdprCompliance,
-        potentialFines: localPotentialFines,
-        dataLocalization: localDataLocalization,
-      };
-
-      // Prepare data for API according to schema
-
-      // Store data for /ask API
-      localStorage.setItem("regulatory-compliance_original_json", JSON.stringify(originalData));
-      localStorage.setItem("regulatory-compliance_modified_json", JSON.stringify(modifiedData));
-
       // Skip the /ask endpoint for now and focus on updating the UI
       // The local state variables are already updated with the edited values
       // Call the original save function to trigger chat panel
@@ -500,62 +474,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   };
 
   const handleSaveChangesClick = () => {
-    // Log original and modified JSON for debugging
-    const originalJson = {
-      executiveSummary: executiveSummary || "",
-      euAiActDeadline: euAiActDeadline || "",
-      gdprCompliance: gdprCompliance || "",
-      potentialFines: potentialFines || "",
-      dataLocalization: dataLocalization || "",
-      keyUpdates: regulatoryData?.keyUpdates || [],
-    };
-
-    const modifiedJson = {
-      executiveSummary: localExecutiveSummary,
-      euAiActDeadline: localEuAiActDeadline,
-      gdprCompliance: localGdprCompliance,
-      potentialFines: localPotentialFines,
-      dataLocalization: localDataLocalization,
-      keyUpdates:
-        (regulatoryData?.keyUpdates || [])
-          .filter(
-            (update: UntypedRegulatoryUpdate) =>
-              update && update?.title && typeof update.title === "string",
-          )
-          .map((update: UntypedRegulatoryUpdate) => {
-            const id = update.title.toLowerCase().replace(/\s+/g, "-");
-            let localValue = localKeyDataValues[id];
-
-            // Check for specific fixed fields that have their own local state
-            if (id === "eu-ai-act-deadline" || id === "eu-ai-act") {
-              localValue = localEuAiActDeadline;
-            } else if (id === "gdpr-compliance") {
-              localValue = localGdprCompliance;
-            } else if (id === "potential-fines") {
-              localValue = localPotentialFines;
-            } else if (id === "data-localization") {
-              localValue = localDataLocalization;
-            }
-
-            if (localValue !== undefined) {
-              return { ...update, description: localValue };
-            }
-            return update;
-          }) || [],
-    };
-
-    // Store JSON data in localStorage for Scout API (user-specific)
-    setUserLocalStorage(
-      "regulatory-compliance_original_json",
-      JSON.stringify(originalJson),
-      currentUser?.uid,
-    );
-    setUserLocalStorage(
-      "regulatory-compliance_modified_json",
-      JSON.stringify(modifiedJson),
-      currentUser?.uid,
-    );
-
     // First, call all the change handlers to update parent state with local values
     onExecutiveSummaryChange(localExecutiveSummary);
     onEuAiActDeadlineChange(localEuAiActDeadline);
