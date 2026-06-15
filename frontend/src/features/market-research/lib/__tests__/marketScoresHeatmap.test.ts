@@ -75,8 +75,11 @@ describe("mapMarketScoresRowToHeatmapLead", () => {
     expect(blank.name).toBe("—");
   });
 
-  it('assigns "Prospect List" as the source label', () => {
-    expect(mapMarketScoresRowToHeatmapLead(baseRow).source).toBe("Prospect List");
+  it("preserves the real source from the API row", () => {
+    expect(mapMarketScoresRowToHeatmapLead({ ...baseRow, source: "apollo" }).source).toBe("apollo");
+  });
+  it("passes through null when the row carries no source", () => {
+    expect(mapMarketScoresRowToHeatmapLead(baseRow).source).toBeNull();
   });
 
   it("stringifies lead_id (defensive against numeric IDs from JSON gateways)", () => {
