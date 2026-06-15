@@ -180,6 +180,7 @@ export function heatmapLeadFromUnknownRow(raw: Record<string, unknown>): Heatmap
       raw.score_market_entry_growth_strategy ?? raw.scoreMarketEntryGrowthStrategy,
     ),
     combined_score: num(raw.combined_score ?? raw.combinedScore),
+    source: typeof raw.source === "string" ? raw.source : null,
     scoring_status: raw.scoring_status != null ? String(raw.scoring_status) : undefined,
     scored_at: raw.scored_at != null ? String(raw.scored_at) : undefined,
     updated_at: raw.updated_at != null ? String(raw.updated_at) : undefined,

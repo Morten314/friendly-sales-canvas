@@ -228,4 +228,20 @@ describe("heatmapLeadFromUnknownRow", () => {
     expect(lead).not.toBeNull();
     expect(lead!.id).toBe("nested_id");
   });
+
+  it("forwards a real source string through the loose-schema path", () => {
+    expect(
+      heatmapLeadFromUnknownRow({ lead_id: "L1", company_name: "Acme", source: "apollo" })?.source,
+    ).toBe("apollo");
+  });
+
+  it("returns null for source when source is absent", () => {
+    expect(heatmapLeadFromUnknownRow({ lead_id: "L1", company_name: "Acme" })?.source).toBeNull();
+  });
+
+  it("returns null for source when source is a non-string (number)", () => {
+    expect(
+      heatmapLeadFromUnknownRow({ lead_id: "L1", company_name: "Acme", source: 42 })?.source,
+    ).toBeNull();
+  });
 });
