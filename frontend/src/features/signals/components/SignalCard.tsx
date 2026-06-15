@@ -49,6 +49,7 @@ interface SignalCardProps {
   onToggleRecommendation: (index: number) => void;
   onExpandAnswer: (key: string) => void;
   onCollapseAnswer: (key: string) => void;
+  affectedLeadCount?: number;
 }
 
 export const SignalCard = ({
@@ -69,6 +70,7 @@ export const SignalCard = ({
   onToggleRecommendation,
   onExpandAnswer,
   onCollapseAnswer,
+  affectedLeadCount,
 }: SignalCardProps) => {
   return (
     <div className="space-y-0">
@@ -409,6 +411,13 @@ export const SignalCard = ({
             </Tooltip>
           </div>
         </div>
+
+        {affectedLeadCount ? (
+          <div className="mt-3 text-xs text-muted-foreground">
+            Affects <span className="font-semibold text-foreground">{affectedLeadCount}</span>{" "}
+            {affectedLeadCount === 1 ? "lead" : "leads"}
+          </div>
+        ) : null}
 
         {/* Card Actions */}
         {/* <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
