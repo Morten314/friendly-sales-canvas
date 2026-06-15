@@ -138,12 +138,12 @@ describe("detectDelimiter", () => {
 // The replacement should be `'"'` (U+0022). Tests that assert the correct post-replacement
 // character are skipped until the bug is fixed in production.
 describe("normalizeCsvAsciiDoubleQuotes", () => {
-  it.skip("replaces U+201C / U+201D curly double-quotes with ASCII quote -- SKIPPED: bug in impl (replaces with U+201D not U+0022)", () => {
+  it("replaces U+201C / U+201D curly double-quotes with ASCII quote", () => {
     const input = String.fromCharCode(0x201c) + "hello" + String.fromCharCode(0x201d);
     expect(normalizeCsvAsciiDoubleQuotes(input)).toBe('"hello"');
   });
 
-  it.skip("replaces U+201E / U+201F low-9 double-quotes with ASCII quote -- SKIPPED: same bug", () => {
+  it("replaces U+201E / U+201F low-9 double-quotes with ASCII quote", () => {
     const input = String.fromCharCode(0x201e) + "value" + String.fromCharCode(0x201f);
     expect(normalizeCsvAsciiDoubleQuotes(input)).toBe('"value"');
   });
