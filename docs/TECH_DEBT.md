@@ -77,6 +77,9 @@ Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases
 | TD-FE-65 | open | [below](#td-fe-65--usemarketresearchdatats-decomposition-deferred-6034-loc-monster-file) |
 | TD-FE-66 | open | [below](#td-fe-66--usedocumentsync-cleanup-pre-existing-patterns-relocated-in-phase-13b) |
 | TD-FE-67 | open | [below](#td-fe-67--single-page-v2-reads-still-cap-items-at-500-total-not-surfaced) |
+| TD-FE-68 | open | [below](#td-fe-68--production-routed-back-through-api-cold-start-batch-margin--residual-direct-backend-callsites) |
+| TD-FE-69 | open | [below](#td-fe-69--per-icp-lead-count-is-stubbed-to-0-suggestedicpcards-shows-0-leads) |
+| TD-FE-70 | open | [below](#td-fe-70--customers-lead-stream-is-first-page-only-no-pager) |
 
 ---
 
@@ -1517,5 +1520,58 @@ and out of scope for the batch fix.
 
 **Pull-forward trigger:** a production 502 on a cold-start batch, a paid Render
 plan (no spin-down), or migrating the streaming `/chat/` path onto `/api`.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-69 — per-ICP lead count is stubbed to 0; `SuggestedICPCards` shows "0 leads"
+
+**Date logged:** 2026-06-15
+**Origin:** Plan 36 Task 17 (rewrite customers `LeadStream.tsx` to real leads). Task
+17 dropped the mock ICP segmentation — real v2 leads carry no `matchedICP` field,
+so `getLeadCountForICP` was left as a stub returning `0`. Ref: spec 36 §5.7-A2.
+
+**Current state:** `getLeadCountForICP` in
+`frontend/src/features/customers/components/lead-stream/LeadStream.tsx` returns
+`0` unconditionally. `SuggestedICPCards.tsx` calls it to populate the "N leads"
+badge on each suggested-ICP card — all cards therefore show "0 leads".
+
+**What it should be:** a real per-ICP lead count, derived from a backend endpoint
+that can cross-reference leads with ICP criteria and return a count per ICP id.
+
+**Why deferred:** the v2 leads list (`GET /api/v2/leads`) does not carry a
+`matchedICP` field; computing a per-ICP count needs a new dedicated endpoint,
+which is out of scope for plan 36. A client-side approximation without that
+signal would be misleading.
+
+**Pull-forward trigger:** a real per-ICP count endpoint exists on the backend, or
+the ICP cards surface is prioritised for accuracy (e.g. a stakeholder demo where
+"0 leads" is conspicuous).
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-70 — customers Lead Stream is first-page-only (no pager)
+
+**Date logged:** 2026-06-15
+**Origin:** Plan 36 Task 16 (`useLeads` / `fetchLeads`) + spec 36 §5.7-A2.
+
+**Current state:** `useLeads` calls `fetchLeads` which calls `GET /api/v2/leads`
+with `firstPageParams(50)` (`limit=50, offset=0`) and renders a flat list in
+`LeadStream.tsx`. There is no "load more" button, infinite scroll, or page
+controls. Matches the sibling `LeadsTable` single-fetch pattern (market-research).
+
+**What it should be:** paginated / "load more" per spec §5.7-A2. The v2 endpoint
+already accepts `limit` and `offset`; the `PaginatedResponse` envelope carries
+`total`. A "load more" affordance would fetch the next page and append to the
+list.
+
+**Why deferred:** 0 users; no org is near 50 leads; adding pagination UX would be
+disproportionate to current scale and out of plan 36 scope.
+
+**Pull-forward trigger:** an org's lead count approaches or exceeds 50, or real
+users land and the truncated list is noticed.
 
 **Owner:** TBD.
