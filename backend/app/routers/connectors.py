@@ -56,7 +56,7 @@ def apollo_lists(org_id: str = Query(...), mongo=Depends(get_mongo)):
 
 
 @router.post("/apollo/import", response_model=ApolloImportResponse)
-async def apollo_import(
+def apollo_import(
     request: ApolloImportRequest,
     background_tasks: BackgroundTasks,
     driver=Depends(get_neo4j_driver),
@@ -67,7 +67,7 @@ async def apollo_import(
 
 
 @router.post("/apollo/enrich", response_model=ApolloEnrichResponse)
-async def apollo_enrich(
+def apollo_enrich(
     request: ApolloEnrichRequest,
     background_tasks: BackgroundTasks,
     driver=Depends(get_neo4j_driver),
@@ -78,7 +78,7 @@ async def apollo_enrich(
 
 
 @router.get("/apollo/enrich/status", response_model=ApolloEnrichStatusResponse)
-async def apollo_enrich_status(
+def apollo_enrich_status(
     org_id: str = Query(...),
     run_id: Optional[str] = Query(None),
     mongo=Depends(get_mongo),
@@ -88,7 +88,7 @@ async def apollo_enrich_status(
 
 
 @router.post("/apollo/discover", response_model=ApolloDiscoverResponse)
-async def apollo_discover(
+def apollo_discover(
     request: ApolloDiscoverRequest,
     background_tasks: BackgroundTasks,
     driver=Depends(get_neo4j_driver),
@@ -100,7 +100,7 @@ async def apollo_discover(
 
 
 @router.get("/apollo/discover/status", response_model=ApolloDiscoverStatusResponse)
-async def apollo_discover_status(
+def apollo_discover_status(
     org_id: str = Query(...),
     run_id: Optional[str] = Query(None),
     mongo=Depends(get_mongo),
@@ -110,7 +110,7 @@ async def apollo_discover_status(
 
 
 @router.get("/apollo/warmup", response_model=ApolloWarmupResponse)
-async def apollo_warmup(
+def apollo_warmup(
     org_id: str = Query(...),
     user_id: str = Query(...),
     mongo=Depends(get_mongo),
@@ -120,7 +120,7 @@ async def apollo_warmup(
 
 
 @router.get("/apollo/leads/export")
-async def apollo_leads_export(
+def apollo_leads_export(
     org_id: str = Query(...),
     fmt: str = Query("json", alias="format"),
     driver=Depends(get_neo4j_driver),

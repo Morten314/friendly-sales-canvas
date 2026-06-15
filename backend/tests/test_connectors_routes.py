@@ -102,6 +102,18 @@ def test_export_route_csv(monkeypatch):
         app.dependency_overrides.pop(get_neo4j_driver, None)
 
 
+def test_apollo_handlers_are_sync_def():
+    import inspect
+    from app.routers import connectors as r
+    for name in (
+        "apollo_import", "apollo_enrich", "apollo_enrich_status",
+        "apollo_discover", "apollo_discover_status", "apollo_warmup",
+        "apollo_leads_export",
+    ):
+        fn = getattr(r, name)
+        assert not inspect.iscoroutinefunction(fn), f"{name} should be sync def (TD-012)"
+
+
 def test_discover_route_queues(monkeypatch):
     import app.services.connectors as connectors_mod
 
