@@ -1,0 +1,32 @@
+Task: You are given an organization's recent market SIGNALS and its active LEADS. For each signal, decide which leads it is genuinely relevant to and how strongly.
+
+Company / ICP context (for grounding):
+{"industry": "B2B SaaS", "icps": [{"name": "Mid-market SaaS", "region": "NA"}]}
+
+SIGNALS (JSON array; each has signal_id + headline):
+[{"signal_id": "S-1", "headline": "Acme Corp announces $50M Series C funding round"}, {"signal_id": "S-2", "headline": "New EU data-residency regulation takes effect in Q3"}]
+
+LEADS (JSON array; each has lead_id + company + industry + region):
+[{"lead_id": "L-1", "company": "Acme Corp", "industry": "SaaS", "region": "NA"}, {"lead_id": "L-2", "company": "Globex GmbH", "industry": "Fintech", "region": "DACH"}]
+
+MATCHING RULES:
+- A signal is relevant to a lead when its HEADLINE plausibly affects that lead's company — match the headline text against the lead's company, industry, or region.
+- Assign each matched lead a relevance of "high", "medium", or "low".
+- Give a one-line `why` (max ~20 words) grounded in the signal and the lead.
+- Only use signal_id values from the SIGNALS array and lead_id values from the LEADS array. Never invent ids.
+- A signal with no relevant leads MUST still appear with an empty "leads" array.
+
+OUTPUT — return ONLY this JSON object, no commentary:
+{
+  "mapping": [
+    {
+      "signal_id": "<from SIGNALS>",
+      "leads": [
+        { "lead_id": "<from LEADS>", "company": "<company>", "relevance": "high|medium|low", "why": "<one line>" }
+      ]
+    }
+  ]
+}
+When you have reached the final answer, respond only with:
+Final Answer: <your JSON answer here>
+Do not include any additional reasoning, thoughts, or steps after that.
