@@ -83,6 +83,9 @@ Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases
 | TD-FE-71 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-71--signallead-map-prompt-matches-on-data-the-payload-doesnt-send) |
 | TD-FE-72 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-72--signallead-map-refresh-escape-hatch-is-unreachable-from-the-ui) |
 | TD-FE-73 | open | [below](#td-fe-73--signal-lead-map_claude-fe-contract-derived-from-code-not-a-live-response) |
+| TD-FE-74 | open | [below](#td-fe-74--usedocumentsync-keeps-a-no-op-setissaving-shim-and-8-dead-datasourcesmanager-call-sites) |
+| TD-FE-75 | open | [below](#td-fe-75--settingspage-page-level-loading-gate-dropped-with-the-orphan-company-fetch) |
+| TD-FE-76 | open | [below](#td-fe-76--settings-profile-reads-bypass-the-apifetch-transport-and-rate-limiter) |
 
 ---
 
@@ -1123,3 +1126,54 @@ environment (a silent contract-vs-response drift).
 **Owner:** TBD.
 
 **Note (Phase 37, 2026-06-16):** `/signal-lead-map_claude` confirmed not deployed (2026-06-15); the contract reconciliation pulls forward when the endpoint ships.
+
+---
+
+## TD-FE-74 — `useDocumentSync` keeps a no-op `setIsSaving` shim and 8 dead `DataSourcesManager` call sites
+
+**Date logged:** 2026-06-16
+**Origin:** Phase 37 impl-review-1 (finding L1). Task 8 (TD-FE-66) removed the dead `_isSaving` state from `useDocumentSync`, but the consumer still calls the setter, so the hook exposes `setIsSaving` as a permanent no-op rather than dropping it.
+
+**Current state:** `useDocumentSync.ts` declares `const setIsSaving: DocumentSyncApi["setIsSaving"] = () => {};` and keeps `setIsSaving` on the `DocumentSyncApi` interface. `DataSourcesManager.tsx` calls `setIsSaving(true/false)` at 8 sites around upload/delete; `isSaving` is never read anywhere (grep-confirmed). Behaviour-preserving, but the 8 call sites are silently dead and imply a saving-state that does not exist. The misleading hook comment was corrected in the same review pass, so no active misinformation remains.
+
+**What it should be:** drop the `setIsSaving` field from `DocumentSyncApi`, delete the no-op shim, and remove the 8 `setIsSaving(...)` call sites in `DataSourcesManager`.
+
+**Why deferred:** the removal touches `DataSourcesManager.tsx` (~1k LOC) and sits outside Task 8's scope (which targeted `useDocumentSync`'s `_isSaving`, not the manager's call sites); the plan explicitly sanctioned the no-op branch.
+
+**Pull-forward trigger:** the next change that touches `DataSourcesManager.tsx`, or the mission-control write/mutation-hook pass (see TD-FE-34).
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-75 — SettingsPage page-level loading gate dropped with the orphan company fetch
+
+**Date logged:** 2026-06-16
+**Origin:** Phase 37 impl-review-1 (finding L3). Task 15 (TD-FE-11) gave `UserProfile`/`AgentProfile` their own query hooks and removed the orphan company fetch + `profileData` prop flow — which also removed the page-level `loading` gate that rendered "Loading profile data…" before the profile component.
+
+**Current state:** `SettingsPage.tsx` no longer gates on a `loading` state; on profile selection the form renders immediately seeded empty, then re-populates when `useUserProfile`/`useAgentProfile` resolve (brief empty-form flash).
+
+**What it should be:** a loading affordance at the component level, gating each form on its own hook's `isLoading` (the loading state now lives there), without restoring the page-level fetch coupling that was deliberately removed.
+
+**Why deferred:** acceptable MVP UX at 0 users — a sub-second flash on profile switch, not a functional defect. Restoring it is a component-local change, not a page-level concern.
+
+**Pull-forward trigger:** the flash is reported as annoying, or the next SettingsPage UX pass.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-76 — settings profile reads bypass the `apiFetch` transport and rate limiter
+
+**Date logged:** 2026-06-16
+**Origin:** Phase 37 impl-review-1 (finding L2). Task 15 extracted `fetchOwnProfile` from the original `SettingsPage`, preserving its raw `fetch` rather than routing through the shared transport.
+
+**Current state:** `features/settings/services/profile.ts` `fetchOwnProfile` uses raw `fetch`; the new `useUserProfile`/`useAgentProfile` hooks therefore sit outside `src/shared/api/transport.ts` (`apiFetch`), so they neither attach auth headers (harmless — the backend trusts `user_id` params) nor count against the 30 req/min rate limiter. Not a regression (the extracted code was already raw `fetch`); the sibling `useCompanyProfile` does route through `apiFetch`, so the settings reads are a transport exception.
+
+**What it should be:** route `fetchOwnProfile` through `apiFetch` so the settings reads share the one transport (headers + limiter), consistent with the rest of the data layer.
+
+**Why deferred:** not a regression, and harmless at 0 users; belongs with the broader raw-`fetch`→`apiFetch` migration debt (the TD-FE-19 family) rather than a one-off.
+
+**Pull-forward trigger:** the data-layer transport-consolidation pass (Spec 38 / the TD-FE-19/21 decomposition), or any settings read needing rate-limit/auth coverage.
+
+**Owner:** TBD.
