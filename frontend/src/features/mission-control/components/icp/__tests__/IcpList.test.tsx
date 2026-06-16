@@ -80,4 +80,11 @@ describe("IcpList", () => {
     renderList({ icps: [makeIcp({ fitConfidence: "high" })] });
     expect(screen.getByText("High")).toBeInTheDocument();
   });
+
+  it("renders no badge for an out-of-union fit confidence", () => {
+    renderList({ icps: [makeIcp({ fitConfidence: "unknown" as ICP["fitConfidence"] })] });
+    expect(screen.queryByText("High")).not.toBeInTheDocument();
+    expect(screen.queryByText("Medium")).not.toBeInTheDocument();
+    expect(screen.queryByText("Low")).not.toBeInTheDocument();
+  });
 });

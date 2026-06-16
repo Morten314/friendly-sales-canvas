@@ -1,5 +1,5 @@
 import type { User } from "firebase/auth";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 
 import { useDataSources } from "../../hooks/useDataSources";
 import type { DataSource, DataSourceStatus } from "../../types";
@@ -54,10 +54,26 @@ export function useDocumentSync({
   const dataSourcesQuery = useDataSources(orgIdToUse, !!currentUser?.uid);
 
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
-  const [_isSaving, setIsSaving] = useState(false);
+  // The former `_isSaving` state was removed (it was never read anywhere). `setIsSaving`
+  // is kept as a no-op shim so DataSourcesManager's existing call sites still type-check
+  // against this api object — no saving flag is tracked. Dropping the field + those call
+  // sites is deferred (TD-FE-74).
+  const setIsSaving: DocumentSyncApi["setIsSaving"] = () => {};
   // Initial load only — background refetches (tab refresh, polling) must not
   // re-show the full-page overlay or production feels like an infinite loop.
   const isLoading = dataSourcesQuery.isLoading;
+
+  // Mirror dataSources into a ref so checkProcessingFilesStatus can read the
+  // current rows without abusing setDataSources as a getter (which fired its
+  // async side effects inside a state updater — re-running them on every set).
+  const dataSourcesRef = useRef<DataSource[]>([]);
+  useEffect(() => {
+    dataSourcesRef.current = dataSources;
+  }, [dataSources]);
+  // File ids whose /document-status check is currently in flight — guards against
+  // the 4s poll (and rapid back-to-back calls) firing a duplicate fetch for a row
+  // that is already being checked.
+  const inFlightStatusIds = useRef<Set<string>>(new Set());
 
   // Check processing status for a specific file
   const checkDocumentStatus = useCallback(
@@ -90,29 +106,31 @@ export function useDocumentSync({
     [currentUser?.uid, getAuthHeader],
   );
 
-  // Check status for processing files
+  // Check status for processing files. Reads the current rows from the ref (not
+  // via a setDataSources updater) and guards each file id so a check already in
+  // flight is not re-issued by the 4s poll or a rapid second call.
   const checkProcessingFilesStatus = useCallback(async () => {
-    setDataSources((currentSources) => {
-      const processingFiles = currentSources.filter(
-        (s) => s.status === "processing" && s.type === "file",
-      );
+    const processingFiles = dataSourcesRef.current.filter(
+      (s) => s.status === "processing" && s.type === "file",
+    );
 
-      processingFiles.forEach((file) => {
-        void (async () => {
-          try {
-            const statusPayload = await checkDocumentStatus(resolveDocumentStatusFileKey(file));
-            setDataSources((prev) =>
-              prev.map((s) =>
-                isSameDataSourceRow(s, file) ? { ...s, status: statusPayload.status } : s,
-              ),
-            );
-          } catch (err) {
-            console.error(`Error checking status for file ${file.id}:`, err);
-          }
-        })();
-      });
-
-      return currentSources;
+    processingFiles.forEach((file) => {
+      if (inFlightStatusIds.current.has(file.id)) return; // already checking this file
+      inFlightStatusIds.current.add(file.id);
+      void (async () => {
+        try {
+          const statusPayload = await checkDocumentStatus(resolveDocumentStatusFileKey(file));
+          setDataSources((prev) =>
+            prev.map((s) =>
+              isSameDataSourceRow(s, file) ? { ...s, status: statusPayload.status } : s,
+            ),
+          );
+        } catch (err) {
+          console.error(`Error checking status for file ${file.id}:`, err);
+        } finally {
+          inFlightStatusIds.current.delete(file.id);
+        }
+      })();
     });
   }, [checkDocumentStatus]);
 
@@ -124,11 +142,6 @@ export function useDocumentSync({
     (documents: unknown[]) => {
       if (Array.isArray(documents)) {
         {
-          console.log(
-            "📋 DataSourcesManager - Loading documents from backend:",
-            documents.length,
-            "documents",
-          );
           const dismissedKeys = getDismissedDataSourceKeys(currentUser?.uid ?? "");
           const loadedSources: DataSource[] = documents
             .map((doc: UntypedBackendDocument): DataSource => {
@@ -165,38 +178,15 @@ export function useDocumentSync({
                 (!hasFileKey && !hasFileKeyAlt && docType !== "file" && !!doc.file_id);
               const isFileSource = docType === "file" || hasFileKey || hasFileKeyAlt;
 
-              if (isUrlSource) {
-                console.log("🔗 DataSourcesManager - Identified as URL source:", {
-                  file_id: doc.file_id,
-                  file_key: doc.file_key,
-                  fileKey: doc.fileKey,
-                  name: doc.name || doc.file_name,
-                  hasFileKey,
-                  hasFileKeyAlt,
-                });
-              }
-
               // Extract file_id/document_id - backend returns file_id for both files and URLs
               // Priority: file_id > _id > extract from file_key (for files only)
               let fileId: string | undefined = undefined;
               if (doc.file_id) {
                 // file_id is the primary identifier for both files and URLs
                 fileId = doc.file_id;
-                console.log(
-                  "📋 DataSourcesManager - Using doc.file_id:",
-                  fileId,
-                  "type:",
-                  isUrlSource ? "URL" : "file",
-                );
               } else if (doc._id) {
                 // Fallback to _id if file_id is not present
                 fileId = doc._id;
-                console.log(
-                  "📋 DataSourcesManager - Using doc._id as fallback:",
-                  fileId,
-                  "type:",
-                  isUrlSource ? "URL" : "file",
-                );
               } else if (isFileSource) {
                 // For files only, extract UUID from file_key as fallback
                 const extracted = extractFileIdFromFileKey(doc.file_key || doc.fileKey);
@@ -205,18 +195,7 @@ export function useDocumentSync({
                   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
                 if (uuidPattern.test(extracted)) {
                   fileId = extracted;
-                  console.log("📋 DataSourcesManager - Extracted valid file_id from file_key:", {
-                    file_key: doc.file_key || doc.fileKey,
-                    extracted_fileId: fileId,
-                  });
                 } else {
-                  console.warn(
-                    "⚠️ DataSourcesManager - Extraction failed, got full path instead of UUID:",
-                    {
-                      file_key: doc.file_key || doc.fileKey,
-                      extracted: extracted,
-                    },
-                  );
                   // Try one more time with a more aggressive extraction
                   const fileKeyStr = doc.file_key || doc.fileKey;
                   if (fileKeyStr.includes("/")) {
@@ -225,15 +204,9 @@ export function useDocumentSync({
                     const uuidPart = afterSlash.split("_")[0];
                     if (uuidPattern.test(uuidPart)) {
                       fileId = uuidPart;
-                      console.log(
-                        "✅ DataSourcesManager - Successfully extracted UUID on retry:",
-                        fileId,
-                      );
                     }
                   }
                 }
-              } else {
-                console.warn("⚠️ DataSourcesManager - No file_id found in document:", doc);
               }
 
               if (isUrlSource) {
@@ -245,15 +218,6 @@ export function useDocumentSync({
                 // URL might be in doc.url, doc.source_url, or might need to be fetched separately
                 // For now, check multiple possible fields
                 const urlValue = doc.url || doc.source_url || doc.file_url || undefined;
-
-                console.log("📋 DataSourcesManager - Loading URL source:", {
-                  file_id: fileId,
-                  id: urlId,
-                  name: doc.name || doc.file_name,
-                  url: urlValue,
-                  hasUrl: !!urlValue,
-                  docKeys: Object.keys(doc),
-                });
 
                 return {
                   id: urlId,
@@ -298,15 +262,6 @@ export function useDocumentSync({
               }
             })
             .filter((source) => !isDataSourceDismissed(source, dismissedKeys));
-
-          // Log summary of loaded sources
-          const urlCount = loadedSources.filter((s) => s.type === "url").length;
-          const fileCount = loadedSources.filter((s) => s.type === "file").length;
-          console.log("📋 DataSourcesManager - Loaded sources summary:", {
-            total: loadedSources.length,
-            urls: urlCount,
-            files: fileCount,
-          });
 
           // Merge with existing sources: keep system types, update file and URL types from backend
           setDataSources((prev) => {
@@ -353,11 +308,6 @@ export function useDocumentSync({
                 existingFile = existingFilesByFileId.get(backendFile.fileId);
                 if (existingFile) {
                   matchedById = existingFile.id;
-                  console.log("✅ DataSourcesManager - Matched by fileId:", {
-                    fileId: backendFile.fileId,
-                    existingId: existingFile.id,
-                    backendId: backendFile.id,
-                  });
                 }
               }
 
@@ -366,10 +316,6 @@ export function useDocumentSync({
                 existingFile = existingFilesById.get(backendFile.id);
                 if (existingFile) {
                   matchedById = existingFile.id;
-                  console.log("✅ DataSourcesManager - Matched by ID:", {
-                    id: backendFile.id,
-                    existingId: existingFile.id,
-                  });
                 }
               }
 
@@ -379,11 +325,6 @@ export function useDocumentSync({
                 if (candidate && shouldMergeFileByFileName(candidate, backendFile)) {
                   existingFile = candidate;
                   matchedById = candidate.id;
-                  console.log("✅ DataSourcesManager - Matched by fileName:", {
-                    fileName: backendFile.fileName,
-                    existingId: candidate.id,
-                    backendId: backendFile.id,
-                  });
                 }
               }
 
@@ -422,11 +363,6 @@ export function useDocumentSync({
                 existingUrl = existingUrlsByFileId.get(backendUrl.fileId);
                 if (existingUrl) {
                   matchedById = existingUrl.id;
-                  console.log("✅ DataSourcesManager - Matched URL by fileId:", {
-                    fileId: backendUrl.fileId,
-                    existingId: existingUrl.id,
-                    backendId: backendUrl.id,
-                  });
                 }
               }
 
@@ -435,10 +371,6 @@ export function useDocumentSync({
                 existingUrl = existingUrlsById.get(backendUrl.id);
                 if (existingUrl) {
                   matchedById = existingUrl.id;
-                  console.log("✅ DataSourcesManager - Matched URL by ID:", {
-                    id: backendUrl.id,
-                    existingId: existingUrl.id,
-                  });
                 }
               }
 
@@ -507,19 +439,8 @@ export function useDocumentSync({
             });
 
             const result = Array.from(uniqueSourcesMap.values());
-            console.log("📋 DataSourcesManager - Merged data sources:", {
-              systemCount: systemSources.length,
-              mergedFileCount: mergedFileSources.length,
-              mergedUrlCount: mergedUrlSources.length,
-              unmatchedFileCount: unmatchedExistingFiles.length,
-              unmatchedUrlCount: unmatchedExistingUrls.length,
-              totalCount: result.length,
-              matchedIds: Array.from(matchedExistingIds),
-            });
-
             return result;
           });
-          console.log("Data sources loaded from dedicated backend:", loadedSources);
         }
       }
     },

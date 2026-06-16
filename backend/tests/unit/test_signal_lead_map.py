@@ -17,7 +17,12 @@ def test_signals_lead_map_prompt_renders():
         context_json="{}",
     )
     assert rendered.body
-    assert "relevance" in rendered.body.lower()
+    body = rendered.body.lower()
+    assert "relevance" in body
+    assert "headline" in body
+    # The payload carries only signal_id + headline (TD-FE-71): rules must not
+    # instruct matching on fields that are never sent.
+    assert "company mention in the signal" not in body
 
 
 def test_compute_fingerprint_is_order_independent():

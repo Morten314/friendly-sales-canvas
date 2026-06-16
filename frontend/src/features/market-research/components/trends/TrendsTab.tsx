@@ -5,7 +5,7 @@ import { ChatWithScout } from "../ChatWithScout";
 import { ScoutChatWithHistory } from "../scout-chat/ScoutChatWithHistory";
 import type { EditRecord } from "../types";
 
-import type { SignalsChatContext } from "@/shared/chat";
+import { readSessionChatContext, type ChatContext } from "@/shared/chat";
 
 // trends = Scout chat (Spec 24 §9 delta 6), NOT an emerging-trends view. Feature-owned thin
 // router over the LEAVING Scout-chat components (scout / signals). The components it renders are legacy.
@@ -22,26 +22,17 @@ export default function TrendsTab({
   editHistory,
   onTabChange,
 }: TrendsTabProps) {
-  const [signalsChatContext, setSignalsChatContext] = useState<SignalsChatContext | null>(null);
+  const [signalsChatContext, setSignalsChatContext] = useState<ChatContext | null>(null);
 
   // When Chat with Scout tab is active, check for context from Signals page.
   // TrendsTab only mounts when activeTab === "trends" (ternary true branch in the shell),
   // so the legacy `if (activeTab !== "trends") return` guard is structurally implicit here;
   // the effect runs once on mount and reads sessionStorage a single time.
   useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem("signalsChatContext");
-      if (stored) {
-        const parsed = JSON.parse(stored) as SignalsChatContext;
-        if (parsed?.agent === "scout") {
-          setSignalsChatContext(parsed);
-        } else {
-          setSignalsChatContext(null);
-        }
-      } else {
-        setSignalsChatContext(null);
-      }
-    } catch {
+    const parsed = readSessionChatContext();
+    if (parsed?.agent === "scout") {
+      setSignalsChatContext(parsed);
+    } else {
       setSignalsChatContext(null);
     }
   }, []);

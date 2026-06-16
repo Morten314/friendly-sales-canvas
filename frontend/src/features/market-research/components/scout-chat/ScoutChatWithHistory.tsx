@@ -12,7 +12,7 @@ import ScoutChatPanel from "./ScoutChatPanel";
 import { SuggestedCompaniesSection } from "./SuggestedCompaniesSection";
 
 import { Button } from "@/components/ui/button";
-import type { SignalsChatContext, ChatSession, ChatWithHistoryConfig } from "@/shared/chat";
+import type { ChatContext, ChatSession, ChatWithHistoryConfig } from "@/shared/chat";
 import { ChatWithHistory, ContextChat } from "@/shared/chat";
 
 interface ScoutSessionMeta {
@@ -31,7 +31,7 @@ function stripSessionMeta(
 
 interface ScoutChatWithHistoryProps {
   /** Incoming context from Signals page (e.g. when user clicks "Chat with Scout" from a signal) */
-  initialContext: SignalsChatContext | null;
+  initialContext: ChatContext | null;
   onClearContext?: () => void;
   editHistory?: EditRecord[];
   onTabChange?: (tab: string) => void;

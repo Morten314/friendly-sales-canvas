@@ -23,10 +23,24 @@ describe("fetchLeads", () => {
         }),
       ),
     );
-    const rows = await fetchLeads("org1");
+    const { items: rows } = await fetchLeads("org1");
     expect(rows).toHaveLength(2);
     expect(rows[0]).toMatchObject({ id: "l1", name: "Tom", company: "Acme", source: "apollo" });
     expect(rows[1]).toMatchObject({ id: "l2", company: "Beta", source: null });
     expect(rows[1].name).toBe("Beta"); // falls back to company when no name
+  });
+
+  it("requests the given page offset and surfaces total", async () => {
+    let seenUrl = "";
+    server.use(
+      http.get("/api/v2/leads", ({ request }) => {
+        seenUrl = request.url;
+        return HttpResponse.json({ items: [{ lead_id: "l9" }], total: 120, limit: 50, offset: 50 });
+      }),
+    );
+    const page = await fetchLeads("org1", 50);
+    expect(seenUrl).toContain("offset=50");
+    expect(page.total).toBe(120);
+    expect(page.items).toHaveLength(1);
   });
 });

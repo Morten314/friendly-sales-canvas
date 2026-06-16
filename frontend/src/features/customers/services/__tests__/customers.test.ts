@@ -61,6 +61,15 @@ describe("fetchSuggestedIcps", () => {
     server.use(http.get("/api/v2/icp", () => new HttpResponse(null, { status: 500 })));
     await expect(fetchSuggestedIcps("u1")).rejects.toThrow(/GET \/icp failed: 500/);
   });
+
+  it("surfaces total from the v2 envelope", async () => {
+    server.use(
+      http.get("/api/v2/icp", () =>
+        HttpResponse.json({ items: [{ id: "r1" }, { id: "r2" }], total: 2, limit: 500, offset: 0 }),
+      ),
+    );
+    expect((await fetchSuggestedIcps("u1")).total).toBe(2);
+  });
 });
 
 describe("fetchCustomerProfileIcps", () => {

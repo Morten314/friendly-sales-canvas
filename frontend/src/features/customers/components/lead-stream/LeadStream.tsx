@@ -50,7 +50,11 @@ export function LeadStreamPanel({ orgId: orgIdProp }: LeadStreamPanelProps) {
   const [sourceFilter, setSourceFilter] = useState<LeadSourceFilter>("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const leads = useMemo(() => leadsQuery.data ?? [], [leadsQuery.data]);
+  const leads = useMemo(
+    () => leadsQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    [leadsQuery.data],
+  );
+  const total = leadsQuery.data?.pages[0]?.total ?? leads.length;
 
   const visibleLeads = useMemo(
     () => filterLeadsBySource(leads, sourceFilter),
@@ -88,7 +92,7 @@ export function LeadStreamPanel({ orgId: orgIdProp }: LeadStreamPanelProps) {
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-semibold text-foreground">Lead Stream</h3>
             <Badge variant="secondary" className="text-[10px]">
-              {leads.length} leads
+              {leads.length} of {total} leads
             </Badge>
           </div>
           <Select
@@ -161,6 +165,18 @@ export function LeadStreamPanel({ orgId: orgIdProp }: LeadStreamPanelProps) {
             })}
           </TableBody>
         </Table>
+        {leadsQuery.hasNextPage ? (
+          <div className="flex justify-center p-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={leadsQuery.isFetchingNextPage}
+              onClick={() => leadsQuery.fetchNextPage()}
+            >
+              {leadsQuery.isFetchingNextPage ? "Loading…" : "Load more"}
+            </Button>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

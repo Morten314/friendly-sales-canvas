@@ -22,7 +22,7 @@ describe("useFetchSignals", () => {
     );
     const { result } = renderHook(() => useFetchSignals("u1"), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5000 });
-    expect(result.current.data).toEqual({ signals: [{ id: "s1" }] });
+    expect(result.current.data).toEqual({ signals: [{ id: "s1" }], total: 1 });
   });
 
   it("is disabled without userId", () => {

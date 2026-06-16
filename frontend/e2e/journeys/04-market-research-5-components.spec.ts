@@ -48,4 +48,25 @@ test("market research page loads + auto-fetches first component", async ({ page 
   await expect(page).not.toHaveURL(/\/login/);
 
   await expect.poll(() => marketResearchRequestCount, { timeout: 15000 }).toBeGreaterThan(0);
+
+  await test.step("Chat with Scout (trends) tab renders the scout-chat surface", async () => {
+    await page.getByRole("tab", { name: "Chat with Scout" }).click();
+    await expect(page.getByRole("tab", { name: "Chat with Scout" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    // ChatWithHistory renders an <h3>Chat with Scout</h3> empty-state heading when no session
+    // is selected. This is always the initial state (no sessionStorage context in e2e).
+    await expect(page.getByRole("heading", { name: "Chat with Scout" })).toBeVisible();
+  });
+
+  await test.step("Your Lead Stream (analysis) tab renders the lead stream", async () => {
+    await page.getByRole("tab", { name: "Your Lead Stream" }).click();
+    await expect(page.getByRole("tab", { name: "Your Lead Stream" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    // OpportunityDashboard renders an <h2>Opportunity Dashboard</h2> unconditionally.
+    await expect(page.getByRole("heading", { name: "Opportunity Dashboard" })).toBeVisible();
+  });
 });

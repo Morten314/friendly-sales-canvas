@@ -36,6 +36,7 @@ describe("StrategicRecommendationsSection", () => {
       <StrategicRecommendationsSection
         {...buildProps({
           isEditing: false,
+          localStrategicRecommendations: {},
           regulatoryData: {
             strategicRecommendations: {
               mitigateRegulatoryRisks: ["Risk A"],
@@ -54,7 +55,11 @@ describe("StrategicRecommendationsSection", () => {
   it("(isEditing=false, regulatoryData undefined) renders hardcoded fallback items", () => {
     render(
       <StrategicRecommendationsSection
-        {...buildProps({ isEditing: false, regulatoryData: undefined })}
+        {...buildProps({
+          isEditing: false,
+          localStrategicRecommendations: {},
+          regulatoryData: undefined,
+        })}
       />,
     );
     expect(screen.getByText("• Implement privacy by design principles")).toBeInTheDocument();
@@ -113,5 +118,27 @@ describe("StrategicRecommendationsSection", () => {
       />,
     );
     expect(container.firstChild).toBeNull();
+  });
+
+  it("shows local edits in read-only mode (survives exiting edit)", () => {
+    render(
+      <StrategicRecommendationsSection
+        {...buildProps({
+          isEditing: false,
+          localStrategicRecommendations: {
+            mitigateRegulatoryRisks: ["Edited mitigation step"],
+            competitivePositioning: [],
+            goToMarketStrategy: [],
+          },
+          regulatoryData: {
+            strategicRecommendations: {
+              mitigateRegulatoryRisks: ["API value, should be overridden"],
+            },
+          },
+        })}
+      />,
+    );
+    expect(screen.getByText(/Edited mitigation step/)).toBeInTheDocument();
+    expect(screen.queryByText(/API value, should be overridden/)).not.toBeInTheDocument();
   });
 });

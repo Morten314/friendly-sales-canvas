@@ -14,15 +14,17 @@ import { firstPageParams, paginatedSchema } from "@/shared/api/pagination";
 
 /**
  * GET /api/v2/fetch-signals?user_id=&limit=10&offset=0 — page-only read.
- * Parses the v2 paginated envelope and re-wraps to { signals } for consumers.
- * The consumer (Task 12) normalizes via `buildSignalCardsFromFetchData`.
+ * Parses the v2 paginated envelope and re-wraps to { signals, total } for
+ * consumers. The consumer (Task 12) normalizes via `buildSignalCardsFromFetchData`.
  */
-export async function fetchSignals(userId: string): Promise<FetchSignalsResponse> {
+export async function fetchSignals(
+  userId: string,
+): Promise<FetchSignalsResponse & { signals: unknown[]; total: number }> {
   const env = await apiGet(
     `v2/fetch-signals?user_id=${encodeURIComponent(userId)}&${firstPageParams(10)}`,
     paginatedSchema(z.unknown()),
   );
-  return { signals: env.items };
+  return { signals: env.items ?? [], total: env.total ?? 0 };
 }
 
 /**

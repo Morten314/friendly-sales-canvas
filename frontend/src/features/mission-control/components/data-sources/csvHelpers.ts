@@ -8,7 +8,7 @@
  * those must become ASCII " or multiline quoted fields never merge and column counts break.
  */
 export const normalizeCsvAsciiDoubleQuotes = (text: string): string =>
-  text.replace(/[“”„‟＂]/g, "”");
+  text.replace(/[“”„‟＂]/g, '"');
 
 /** Split CSV into logical rows; newlines inside quoted fields do not end a row (RFC 4180). */
 export const splitCsvIntoLogicalRows = (text: string): string[] => {

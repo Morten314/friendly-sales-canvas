@@ -1,6 +1,8 @@
 import { Plus, X } from "lucide-react";
 import { useState, useEffect } from "react";
 
+import { useUserProfile } from "../hooks/useUserProfile";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +14,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/shared/auth";
-import type { UntypedBackendProfile } from "@/shared/types/escape-hatches";
 
 interface SocialMediaUrl {
   platform: string;
@@ -22,15 +23,11 @@ interface SocialMediaUrl {
 interface UserProfileProps {
   onProfileUpdate?: () => void;
   isEditMode?: boolean;
-  profileData?: UntypedBackendProfile;
 }
 
-export function UserProfile({
-  onProfileUpdate,
-  isEditMode = false,
-  profileData,
-}: UserProfileProps) {
+export function UserProfile({ onProfileUpdate, isEditMode = false }: UserProfileProps) {
   const { currentUser } = useAuth();
+  const { data: profileData } = useUserProfile(currentUser?.uid);
   const [formData, setFormData] = useState({
     name: "",
     role: "",

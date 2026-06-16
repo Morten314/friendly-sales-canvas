@@ -47,7 +47,7 @@ class DocumentStatusResponse(BaseModel):
 
 
 class UserDocumentEntry(BaseModel):
-    """Single entry in the files list returned by GET /user-documents."""
+    """Single entry in the files list returned by GET /v2/user-documents."""
     file_id: Optional[str] = None
     file_key: Optional[str] = None
     file_name: Optional[str] = None
@@ -58,13 +58,6 @@ class UserDocumentEntry(BaseModel):
     url: Optional[str] = None
     tags: Optional[List[Any]] = None
     description: Optional[str] = None
-
-
-class ListUserDocumentsResponse(BaseModel):
-    """Response from GET /user-documents."""
-    status: str
-    count: int
-    files: List[UserDocumentEntry]
 
 
 class DataSourceDeleteResponse(BaseModel):

@@ -27,8 +27,7 @@ def test_neo4j_mock_is_applied(client, mock_neo4j):
 
 
 def test_mongo_mock_is_applied(client, mock_mongo):
-    """Hit GET /fetch-signals which reads from Mongo."""
-    response = client.get("/fetch-signals",
-                          params={"user_id": "test", "org_id": "test"})
-    # Endpoint should respond, even if response shape varies.
-    assert response.status_code in (200, 422, 500)
+    """Hit GET /v2/fetch-signals which reads from Mongo (v2 envelope)."""
+    response = client.get("/v2/fetch-signals", params={"user_id": "test"})
+    assert response.status_code == 200
+    assert set(response.json().keys()) == {"items", "total", "limit", "offset"}

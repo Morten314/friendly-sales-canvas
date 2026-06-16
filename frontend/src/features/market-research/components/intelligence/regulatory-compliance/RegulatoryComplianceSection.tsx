@@ -4,6 +4,7 @@ import { ComplianceAnalyticsSection } from "./ComplianceAnalyticsSection";
 import { ExecutiveSummarySection } from "./ExecutiveSummarySection";
 import { KeyRegulatoryUpdatesSection } from "./KeyRegulatoryUpdatesSection";
 import { RegionalComplianceSection } from "./RegionalComplianceSection";
+import { DEFAULT_REGIONAL_DATA, DEFAULT_VISUAL_DATA_CARDS } from "./regulatoryDefaults";
 import { RegulatoryFooter } from "./RegulatoryFooter";
 import { RegulatoryHeader } from "./RegulatoryHeader";
 import { deriveKeyDataPoints } from "./regulatoryHelpers";
@@ -12,7 +13,6 @@ import type { RegulatoryComplianceSectionProps } from "./types";
 import { useRegulatoryCompliance } from "./useRegulatoryCompliance";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { BACKEND_BASE_URL } from "@/shared/api/transport";
 import { useAuth } from "@/shared/auth";
 import { getUserLocalStorage, setUserLocalStorage } from "@/shared/lib/cacheUtils";
 import type {
@@ -160,33 +160,33 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   // Save local state to localStorage whenever it changes
   useEffect(() => {
     if (localExecutiveSummary) {
-      localStorage.setItem("regulatory_executiveSummary", localExecutiveSummary);
+      setUserLocalStorage("regulatory_executiveSummary", localExecutiveSummary, currentUser?.uid);
     }
-  }, [localExecutiveSummary]);
+  }, [localExecutiveSummary, currentUser?.uid]);
 
   useEffect(() => {
     if (localEuAiActDeadline) {
-      localStorage.setItem("regulatory_euAiActDeadline", localEuAiActDeadline);
+      setUserLocalStorage("regulatory_euAiActDeadline", localEuAiActDeadline, currentUser?.uid);
     }
-  }, [localEuAiActDeadline]);
+  }, [localEuAiActDeadline, currentUser?.uid]);
 
   useEffect(() => {
     if (localGdprCompliance) {
-      localStorage.setItem("regulatory_gdprCompliance", localGdprCompliance);
+      setUserLocalStorage("regulatory_gdprCompliance", localGdprCompliance, currentUser?.uid);
     }
-  }, [localGdprCompliance]);
+  }, [localGdprCompliance, currentUser?.uid]);
 
   useEffect(() => {
     if (localPotentialFines) {
-      localStorage.setItem("regulatory_potentialFines", localPotentialFines);
+      setUserLocalStorage("regulatory_potentialFines", localPotentialFines, currentUser?.uid);
     }
-  }, [localPotentialFines]);
+  }, [localPotentialFines, currentUser?.uid]);
 
   useEffect(() => {
     if (localDataLocalization) {
-      localStorage.setItem("regulatory_dataLocalization", localDataLocalization);
+      setUserLocalStorage("regulatory_dataLocalization", localDataLocalization, currentUser?.uid);
     }
-  }, [localDataLocalization]);
+  }, [localDataLocalization, currentUser?.uid]);
 
   // Sync local state with centralized regulatoryData and props (only on initial load)
   useEffect(() => {
@@ -329,40 +329,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
 
     // Initialize regional data
-    const defaultRegionalData = [
-      {
-        region: "European Union",
-        framework: "GDPR + AI Act",
-        deadline: "Q1 2026",
-        impact: "High",
-        status: "Active",
-        requirements: "Data protection, AI governance",
-      },
-      {
-        region: "United States",
-        framework: "CCPA + State Laws",
-        deadline: "Ongoing",
-        impact: "Medium",
-        status: "Evolving",
-        requirements: "Privacy rights, data handling",
-      },
-      {
-        region: "China",
-        framework: "PIPL + Cybersecurity Law",
-        deadline: "Active",
-        impact: "High",
-        status: "Mandatory",
-        requirements: "Data localization, security",
-      },
-      {
-        region: "United Kingdom",
-        framework: "UK GDPR + DPA",
-        deadline: "Active",
-        impact: "Medium",
-        status: "Active",
-        requirements: "Data protection, transfers",
-      },
-    ];
+    const defaultRegionalData = DEFAULT_REGIONAL_DATA;
     const regionalDataToUse = regulatoryData?.regionalData || defaultRegionalData;
     setLocalRegionalData(
       regionalDataToUse && regionalDataToUse.length > 0
@@ -371,36 +338,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     );
 
     // Initialize visual data cards
-    const defaultVisualDataCards = [
-      {
-        title: "Compliance Adoption Rates",
-        type: "bar-chart",
-        data: [
-          { name: "GDPR", value: 68, color: "#10b981" },
-          { name: "CCPA", value: 45, color: "#3b82f6" },
-          { name: "SOC 2", value: 72, color: "#8b5cf6" },
-          { name: "ISO 27001", value: 38, color: "#f59e0b" },
-        ],
-      },
-      {
-        title: "Regulatory Timeline",
-        type: "timeline",
-        data: [
-          { date: "Q1 2025", event: "EU AI Act Phase 1", status: "upcoming" },
-          { date: "Q3 2025", event: "GDPR Updates", status: "upcoming" },
-          { date: "Q1 2026", event: "EU AI Act Full Enforcement", status: "critical" },
-        ],
-      },
-      {
-        title: "Risk Indicators",
-        type: "percentage",
-        data: [
-          { metric: "Data Breach Risk", value: 23, trend: "down" },
-          { metric: "Non-compliance Penalties", value: 15, trend: "up" },
-          { metric: "Audit Readiness", value: 67, trend: "up" },
-        ],
-      },
-    ];
+    const defaultVisualDataCards = DEFAULT_VISUAL_DATA_CARDS;
     const visualDataCardsToUse = regulatoryData?.visualDataCards || defaultVisualDataCards;
     setLocalVisualDataCards(
       visualDataCardsToUse && visualDataCardsToUse.length > 0
@@ -462,32 +400,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       onPotentialFinesChange(localPotentialFines);
       onDataLocalizationChange(localDataLocalization);
 
-      // Prepare original data
-      const originalData = {
-        section: "regulatory-compliance",
-        executiveSummary: executiveSummary,
-        euAiActDeadline: euAiActDeadline,
-        gdprCompliance: gdprCompliance,
-        potentialFines: potentialFines,
-        dataLocalization: dataLocalization,
-      };
-
-      // Prepare modified data
-      const modifiedData = {
-        section: "regulatory-compliance",
-        executiveSummary: localExecutiveSummary,
-        euAiActDeadline: localEuAiActDeadline,
-        gdprCompliance: localGdprCompliance,
-        potentialFines: localPotentialFines,
-        dataLocalization: localDataLocalization,
-      };
-
-      // Prepare data for API according to schema
-
-      // Store data for /ask API
-      localStorage.setItem("regulatory-compliance_original_json", JSON.stringify(originalData));
-      localStorage.setItem("regulatory-compliance_modified_json", JSON.stringify(modifiedData));
-
       // Skip the /ask endpoint for now and focus on updating the UI
       // The local state variables are already updated with the edited values
       // Call the original save function to trigger chat panel
@@ -500,62 +412,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   };
 
   const handleSaveChangesClick = () => {
-    // Log original and modified JSON for debugging
-    const originalJson = {
-      executiveSummary: executiveSummary || "",
-      euAiActDeadline: euAiActDeadline || "",
-      gdprCompliance: gdprCompliance || "",
-      potentialFines: potentialFines || "",
-      dataLocalization: dataLocalization || "",
-      keyUpdates: regulatoryData?.keyUpdates || [],
-    };
-
-    const modifiedJson = {
-      executiveSummary: localExecutiveSummary,
-      euAiActDeadline: localEuAiActDeadline,
-      gdprCompliance: localGdprCompliance,
-      potentialFines: localPotentialFines,
-      dataLocalization: localDataLocalization,
-      keyUpdates:
-        (regulatoryData?.keyUpdates || [])
-          .filter(
-            (update: UntypedRegulatoryUpdate) =>
-              update && update?.title && typeof update.title === "string",
-          )
-          .map((update: UntypedRegulatoryUpdate) => {
-            const id = update.title.toLowerCase().replace(/\s+/g, "-");
-            let localValue = localKeyDataValues[id];
-
-            // Check for specific fixed fields that have their own local state
-            if (id === "eu-ai-act-deadline" || id === "eu-ai-act") {
-              localValue = localEuAiActDeadline;
-            } else if (id === "gdpr-compliance") {
-              localValue = localGdprCompliance;
-            } else if (id === "potential-fines") {
-              localValue = localPotentialFines;
-            } else if (id === "data-localization") {
-              localValue = localDataLocalization;
-            }
-
-            if (localValue !== undefined) {
-              return { ...update, description: localValue };
-            }
-            return update;
-          }) || [],
-    };
-
-    // Store JSON data in localStorage for Scout API (user-specific)
-    setUserLocalStorage(
-      "regulatory-compliance_original_json",
-      JSON.stringify(originalJson),
-      currentUser?.uid,
-    );
-    setUserLocalStorage(
-      "regulatory-compliance_modified_json",
-      JSON.stringify(modifiedJson),
-      currentUser?.uid,
-    );
-
     // First, call all the change handlers to update parent state with local values
     onExecutiveSummaryChange(localExecutiveSummary);
     onEuAiActDeadlineChange(localEuAiActDeadline);
@@ -582,7 +438,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
 
         // Fetch the latest company profile from backend (with org_id)
         try {
-          const profileUrl = `${BACKEND_BASE_URL}/profile/company?org_id=${orgIdToUse}`;
+          const profileUrl = `/api/profile/company?org_id=${orgIdToUse}`;
           const profileResponse = await fetch(profileUrl, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
@@ -634,71 +490,9 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   // Moved above the early return below to satisfy rules-of-hooks (must run unconditionally)
   useEffect(() => {
     if (!isEditing) {
-      const defaultRegionalData = [
-        {
-          region: "European Union",
-          framework: "GDPR + AI Act",
-          deadline: "Q1 2026",
-          impact: "High",
-          status: "Active",
-          requirements: "Data protection, AI governance",
-        },
-        {
-          region: "United States",
-          framework: "CCPA + State Laws",
-          deadline: "Ongoing",
-          impact: "Medium",
-          status: "Evolving",
-          requirements: "Privacy rights, data handling",
-        },
-        {
-          region: "China",
-          framework: "PIPL + Cybersecurity Law",
-          deadline: "Active",
-          impact: "High",
-          status: "Mandatory",
-          requirements: "Data localization, security",
-        },
-        {
-          region: "United Kingdom",
-          framework: "UK GDPR + DPA",
-          deadline: "Active",
-          impact: "Medium",
-          status: "Active",
-          requirements: "Data protection, transfers",
-        },
-      ];
+      const defaultRegionalData = DEFAULT_REGIONAL_DATA;
 
-      const defaultVisualDataCards = [
-        {
-          title: "Compliance Adoption Rates",
-          type: "bar-chart",
-          data: [
-            { name: "GDPR", value: 68, color: "#10b981" },
-            { name: "CCPA", value: 45, color: "#3b82f6" },
-            { name: "SOC 2", value: 72, color: "#8b5cf6" },
-            { name: "ISO 27001", value: 38, color: "#f59e0b" },
-          ],
-        },
-        {
-          title: "Regulatory Timeline",
-          type: "timeline",
-          data: [
-            { date: "Q1 2025", event: "EU AI Act Phase 1", status: "upcoming" },
-            { date: "Q3 2025", event: "GDPR Updates", status: "upcoming" },
-            { date: "Q1 2026", event: "EU AI Act Full Enforcement", status: "critical" },
-          ],
-        },
-        {
-          title: "Risk Indicators",
-          type: "percentage",
-          data: [
-            { metric: "Data Breach Risk", value: 23, trend: "down" },
-            { metric: "Non-compliance Penalties", value: 15, trend: "up" },
-            { metric: "Audit Readiness", value: 67, trend: "up" },
-          ],
-        },
-      ];
+      const defaultVisualDataCards = DEFAULT_VISUAL_DATA_CARDS;
 
       const regionalDataToUse = regulatoryData?.regionalData || defaultRegionalData;
       if (regionalDataToUse && regionalDataToUse.length > 0) {
@@ -726,71 +520,9 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     dataLocalization,
   });
 
-  const visualDataCards = regulatoryData?.visualDataCards || [
-    {
-      title: "Compliance Adoption Rates",
-      type: "bar-chart",
-      data: [
-        { name: "GDPR", value: 68, color: "#10b981" },
-        { name: "CCPA", value: 45, color: "#3b82f6" },
-        { name: "SOC 2", value: 72, color: "#8b5cf6" },
-        { name: "ISO 27001", value: 38, color: "#f59e0b" },
-      ],
-    },
-    {
-      title: "Regulatory Timeline",
-      type: "timeline",
-      data: [
-        { date: "Q1 2025", event: "EU AI Act Phase 1", status: "upcoming" },
-        { date: "Q3 2025", event: "GDPR Updates", status: "upcoming" },
-        { date: "Q1 2026", event: "EU AI Act Full Enforcement", status: "critical" },
-      ],
-    },
-    {
-      title: "Risk Indicators",
-      type: "percentage",
-      data: [
-        { metric: "Data Breach Risk", value: 23, trend: "down" },
-        { metric: "Non-compliance Penalties", value: 15, trend: "up" },
-        { metric: "Audit Readiness", value: 67, trend: "up" },
-      ],
-    },
-  ];
+  const visualDataCards = regulatoryData?.visualDataCards || DEFAULT_VISUAL_DATA_CARDS;
 
-  const regionalData = regulatoryData?.regionalData || [
-    {
-      region: "European Union",
-      framework: "GDPR + AI Act",
-      deadline: "Q1 2026",
-      impact: "High",
-      status: "Active",
-      requirements: "Data protection, AI governance",
-    },
-    {
-      region: "United States",
-      framework: "CCPA + State Laws",
-      deadline: "Ongoing",
-      impact: "Medium",
-      status: "Evolving",
-      requirements: "Privacy rights, data handling",
-    },
-    {
-      region: "China",
-      framework: "PIPL + Cybersecurity Law",
-      deadline: "Active",
-      impact: "High",
-      status: "Mandatory",
-      requirements: "Data localization, security",
-    },
-    {
-      region: "United Kingdom",
-      framework: "UK GDPR + DPA",
-      deadline: "Active",
-      impact: "Medium",
-      status: "Active",
-      requirements: "Data protection, transfers",
-    },
-  ];
+  const regionalData = regulatoryData?.regionalData || DEFAULT_REGIONAL_DATA;
 
   const currentExecutiveSummary =
     localExecutiveSummary || regulatoryData?.executiveSummary || executiveSummary;

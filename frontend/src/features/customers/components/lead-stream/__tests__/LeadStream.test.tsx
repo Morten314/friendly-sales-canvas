@@ -78,4 +78,39 @@ describe("LeadStreamPanel (real leads)", () => {
     fireEvent.click(toggle);
     expect(await screen.findByText("Hiring surge")).toBeTruthy();
   });
+
+  it("loads the next page when 'Load more' is clicked", async () => {
+    server.use(
+      http.get("/api/v2/leads", ({ request }) => {
+        const offset = new URL(request.url).searchParams.get("offset");
+        const row =
+          offset === "1"
+            ? { lead_id: "l2", lead_name: "Pat", company_name: "Beta", source: "csv" }
+            : { lead_id: "l1", lead_name: "Tom", company_name: "Acme", source: "apollo" };
+        return HttpResponse.json({ items: [row], total: 2, limit: 1, offset: Number(offset ?? 0) });
+      }),
+    );
+    render(<LeadStreamPanel />, { wrapper });
+    expect(await screen.findByText("Tom")).toBeTruthy();
+    expect(screen.queryByText("Pat")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /load more/i }));
+    expect(await screen.findByText("Pat")).toBeTruthy();
+    expect(screen.getByText("Tom")).toBeTruthy(); // page 1 still shown
+  });
+
+  it("shows no 'Load more' button when a single page covers the total", async () => {
+    server.use(
+      http.get("/api/v2/leads", () =>
+        HttpResponse.json({
+          items: [{ lead_id: "l1", lead_name: "Tom", company_name: "Acme", source: "apollo" }],
+          total: 1,
+          limit: 50,
+          offset: 0,
+        }),
+      ),
+    );
+    render(<LeadStreamPanel />, { wrapper });
+    expect(await screen.findByText("Tom")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /load more/i })).toBeNull();
+  });
 });

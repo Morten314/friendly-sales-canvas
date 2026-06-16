@@ -3,7 +3,6 @@
 Endpoints:
   POST /upload-document     — upload file to S3, store status in Mongo
   GET  /document-status/{file_key:path}  — get processing status
-  GET  /user-documents      — list all docs/URLs for an org
 
 S3 is supplied by the `mock_s3` fixture; Mongo via the `_override_mongo`
 helper (both flow through `app.dependency_overrides`).
@@ -106,37 +105,6 @@ def test_post_document_upload_returns_file_id(client, mock_s3):
     assert "file_id" in body
     assert "file_key" in body
     assert body["file_name"] == "test_doc.pdf"
-
-
-# ---------------------------------------------------------------------------
-# GET /user-documents returns uploaded docs
-# ---------------------------------------------------------------------------
-
-def test_get_document_list_returns_uploaded_docs(client):
-    """GET /user-documents?org_id=... returns file list from Mongo."""
-    doc = {
-        "file_id": TEST_FILE_ID,
-        "file_key": TEST_FILE_KEY,
-        "file_name": "test.pdf",
-        "status": "completed",
-        "uploaded_at": "2026-05-08T10:00:00",
-        "org_id": TEST_ORG_ID,
-        "data_source_type": "file",
-    }
-    mc, _ = _make_doc_mc(find_results=[doc])
-
-    with _override_mongo(mc):
-        response = client.get(f"/user-documents?org_id={TEST_ORG_ID}")
-
-    assert response.status_code == 200
-    body = response.json()
-    assert body["status"] == "success"
-    assert body["count"] == 1
-    assert isinstance(body["files"], list)
-    assert body["files"][0]["file_id"] == TEST_FILE_ID
-    assert response.headers.get("Deprecation") == "true"
-    assert 'rel="successor-version"' in response.headers.get("Link", "")
-    assert "/api/v2/user-documents" in response.headers["Link"]
 
 
 # ---------------------------------------------------------------------------

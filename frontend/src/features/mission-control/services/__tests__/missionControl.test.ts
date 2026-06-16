@@ -17,7 +17,9 @@ describe("fetchDataSources", () => {
         }),
       ),
     );
-    expect(await fetchDataSources("org1")).toHaveLength(2);
+    const res = await fetchDataSources("org1");
+    expect(res.items).toHaveLength(2);
+    expect(typeof res.total).toBe("number");
   });
 
   it("returns env.items for a single-item envelope", async () => {
@@ -26,7 +28,10 @@ describe("fetchDataSources", () => {
         HttpResponse.json({ items: [{ file_id: "d1" }], total: 1, limit: 500, offset: 0 }),
       ),
     );
-    expect(await fetchDataSources("org1")).toHaveLength(1);
+    const res = await fetchDataSources("org1");
+    expect(Array.isArray(res.items)).toBe(true);
+    expect(res.items).toHaveLength(1);
+    expect(typeof res.total).toBe("number");
   });
 });
 

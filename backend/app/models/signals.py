@@ -51,14 +51,6 @@ class GenerateSignalsBatchResponse(BaseModel):
     data: List[Dict[str, Any]]
 
 
-class FetchSignalsResponse(BaseModel):
-    """Response for GET /fetch-signals."""
-
-    status: str
-    count: int
-    signals: List[Dict[str, Any]]
-
-
 class SignalActionResponse(BaseModel):
     """Response for POST /signal_action (accept or reject).
 

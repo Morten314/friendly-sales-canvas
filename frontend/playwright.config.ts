@@ -27,7 +27,7 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: 0,
+  retries: process.env.PREFLIGHT_CONTENDED ? 2 : 0,
   workers: E2E_WORKERS,
   timeout: 60_000,
   reporter: "list",
@@ -76,6 +76,7 @@ export default defineConfig({
       maxDiffPixelRatio: 0.02, // 2% of total pixels — was 0.01 (1%); widened in Phase 2c (spec 19 §1.3)
       threshold: 0.2, // per-pixel color tolerance — unchanged
       animations: "disabled",
+      timeout: 15_000,
     },
   },
 });

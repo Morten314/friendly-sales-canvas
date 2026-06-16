@@ -21,6 +21,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/components/ui/use-toast";
 import { Layout } from "@/features/shell";
 import { useAuth } from "@/shared/auth";
+import { writeSessionChatContext, type ChatContext } from "@/shared/chat";
 import { useSignalAction } from "@/shared/chat/useSignalAction";
 import { useSignalAsk } from "@/shared/chat/useSignalAsk";
 import type { UntypedBackendSignal } from "@/shared/types/escape-hatches";
@@ -29,7 +30,7 @@ type ActionType = "accept" | "dismiss" | "save" | "ask";
 
 const SignalsPage = () => {
   const { currentUser, orgId } = useAuth();
-  const { leadsForSignal } = useSignalLeadMap(orgId);
+  const { leadsForSignal, refresh: refreshLeadMap } = useSignalLeadMap(orgId);
   const navigate = useNavigate();
   const askMutation = useSignalAsk();
   const actionMutation = useSignalAction();
@@ -320,7 +321,7 @@ const SignalsPage = () => {
     answer?: string,
   ) => {
     const contentHash = getSignalContentHash(signal);
-    const context = {
+    const context: ChatContext = {
       agent: signal.agent,
       signalId: signal.id,
       contentHash,
@@ -329,7 +330,7 @@ const SignalsPage = () => {
       prompt,
       answer: answer ?? undefined,
     };
-    sessionStorage.setItem("signalsChatContext", JSON.stringify(context));
+    writeSessionChatContext(context);
     if (signal.agent === "scout") {
       navigate("/your-ai-team/scout/chatwithscout");
     } else {
@@ -686,6 +687,11 @@ const SignalsPage = () => {
       <div className="p-6">
         {currentTab === "signals" && (
           <div className="w-full max-w-5xl mx-auto space-y-4">
+            <div className="flex justify-end">
+              <Button variant="outline" size="sm" onClick={() => void refreshLeadMap()}>
+                Recompute lead mapping
+              </Button>
+            </div>
             {isLoading ? (
               <SignalsLoadingState />
             ) : signals.length === 0 ? (

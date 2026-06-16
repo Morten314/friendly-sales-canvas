@@ -1,7 +1,6 @@
 """Characterization tests for Signals endpoints.
 
 Endpoints covered:
-  GET  /fetch-signals             — list signals from Mongo
   POST /generate-signals-batch    — generate 4 signals via LLM
   POST /signal_action             — accept / reject a signal
   POST /signal_Ask                — ask AI about signals
@@ -80,46 +79,6 @@ def _base_market_request() -> dict:
         "data": {"industry": "SaaS", "company": "TestCo"},
         "refresh": True,
     }
-
-
-# ---------------------------------------------------------------------------
-# GET /fetch-signals returns list
-# ---------------------------------------------------------------------------
-
-def test_get_signals_returns_list(client):
-    """GET /fetch-signals?user_id=... returns signals list from Mongo."""
-    sig = _make_signal()
-    mc, coll = _make_mc_for_signals([sig])
-
-    with _override_mongo(mc):
-        response = client.get(f"/fetch-signals?user_id={TEST_USER_ID}")
-
-    assert response.status_code == 200
-    body = response.json()
-    assert body["status"] == "success"
-    assert body["count"] == 1
-    assert isinstance(body["signals"], list)
-    assert body["signals"][0]["signal_id"] == TEST_SIGNAL_ID_1
-    assert response.headers.get("Deprecation") == "true"
-    assert 'rel="successor-version"' in response.headers.get("Link", "")
-    assert "/api/v2/fetch-signals" in response.headers["Link"]
-
-
-# ---------------------------------------------------------------------------
-# GET /fetch-signals empty when no docs
-# ---------------------------------------------------------------------------
-
-def test_get_signals_empty_when_no_docs(client):
-    """GET /fetch-signals with empty Mongo → empty list."""
-    mc, _ = _make_mc_for_signals([])
-
-    with _override_mongo(mc):
-        response = client.get(f"/fetch-signals?user_id={TEST_USER_ID}")
-
-    assert response.status_code == 200
-    body = response.json()
-    assert body["count"] == 0
-    assert body["signals"] == []
 
 
 # ---------------------------------------------------------------------------

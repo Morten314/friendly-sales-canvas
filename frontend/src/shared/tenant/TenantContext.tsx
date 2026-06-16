@@ -12,10 +12,8 @@ export interface Tenant {
 
 interface TenantContextType {
   selectedTenant: Tenant | null;
-  availableTenants: Tenant[];
   selectTenant: (tenant: Tenant) => void;
   clearTenant: () => void;
-  setAvailableTenants: (tenants: Tenant[]) => void;
   loading: boolean;
 }
 
@@ -36,7 +34,6 @@ interface TenantProviderProps {
 export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
   const { currentUser, orgId, orgName, loading: authLoading } = useAuth();
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
-  const [availableTenants, setAvailableTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
 
   const selectTenant = (tenant: Tenant) => {
@@ -108,10 +105,8 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
 
   const value = {
     selectedTenant,
-    availableTenants,
     selectTenant,
     clearTenant,
-    setAvailableTenants,
     loading,
   };
 

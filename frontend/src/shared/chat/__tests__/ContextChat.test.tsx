@@ -4,7 +4,12 @@ import { http, HttpResponse } from "msw";
 import { MemoryRouter } from "react-router-dom";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
-import { ContextChat, type SignalsChatContext } from "@/shared/chat";
+import {
+  ContextChat,
+  readSessionChatContext,
+  writeSessionChatContext,
+  type ChatContext,
+} from "@/shared/chat";
 import { server } from "@/test/msw/server";
 
 // ContextChat reads currentUser/orgId from useAuth and calls useNavigate.
@@ -20,7 +25,7 @@ vi.mock("@/shared/auth", () => ({
 // not the fetch internals. The signal_Ask/signal_action calls now flow through
 // shared TanStack mutation hooks, so a QueryClientProvider is required; MSW still
 // intercepts at the network boundary, so the public-surface assertions are stable.
-function renderChat(context: SignalsChatContext) {
+function renderChat(context: ChatContext) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
@@ -49,7 +54,7 @@ describe("ContextChat (substrate)", () => {
     // bare prompt is only shown once the summary is expanded).
     server.use(http.post("/api/signal_ask_claude", () => HttpResponse.json({ answer: "" })));
 
-    const context: SignalsChatContext = {
+    const context: ChatContext = {
       agent: "scout",
       signalHeading: "ACME expanding into EU market",
       prompt: "Why this signal?",
@@ -59,5 +64,11 @@ describe("ContextChat (substrate)", () => {
 
     expect(screen.getByText(/ACME expanding into EU market/i)).toBeInTheDocument();
     expect(screen.getByRole("textbox")).toBeInTheDocument();
+  });
+
+  it("round-trips a chat context through sessionStorage", () => {
+    const ctx = { agent: "scout", prompt: "hi" } as const;
+    writeSessionChatContext(ctx);
+    expect(readSessionChatContext()).toEqual(ctx);
   });
 });

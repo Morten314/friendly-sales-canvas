@@ -77,29 +77,21 @@ const ICPManager: React.FC = () => {
   // Save customer profile (ICPs) to backend with retry logic
   const saveCustomerProfileToBackend = async (icpsToSave: ICP[], retryCount = 0) => {
     if (!currentUser?.uid) {
-      console.warn("Cannot save customer profile: User not authenticated");
       return false;
     }
 
     if (icpsToSave.length === 0) {
-      console.log("[ICPManager] Skipping POST customer_profile — no ICPs to persist");
       return true;
     }
 
     try {
       const payload = buildCustomerProfileSavePayload(icpsToApiRows(icpsToSave), orgIdToUse);
 
-      console.log("=== ICP MANAGER: Saving customer profile to backend ===");
-      console.log("User ID:", currentUser.uid);
-      console.log("Org ID:", orgIdToUse);
-      console.log("ICPs to save:", icpsToSave);
-      console.log("Payload:", JSON.stringify(payload, null, 2));
-
       try {
         setUserLocalStorage("customerProfile", JSON.stringify(icpsToSave), currentUser.uid);
         setUserLocalStorage("customerProfile_pending", JSON.stringify(payload), currentUser.uid);
-      } catch (e) {
-        console.warn("Failed to save to localStorage:", e);
+      } catch {
+        /* ignore */
       }
 
       const response = await apiFetch(`customer_profile?org_id=${encodeURIComponent(orgIdToUse)}`, {
@@ -107,15 +99,13 @@ const ICPManager: React.FC = () => {
         body: payload,
       });
 
-      const data = await response.json();
-      console.log("✅ Customer profile saved successfully to backend");
-      console.log("Response data:", JSON.stringify(data, null, 2));
+      await response.json();
 
       try {
         setUserLocalStorage("customerProfile", JSON.stringify(icpsToSave), currentUser.uid);
         removeUserLocalStorage("customerProfile_pending", currentUser.uid);
-      } catch (e) {
-        console.warn("Failed to update localStorage after save:", e);
+      } catch {
+        /* ignore */
       }
 
       await refreshIcpsFromServer();
@@ -124,11 +114,9 @@ const ICPManager: React.FC = () => {
       const isServerError =
         error instanceof Error && (error.message.includes("500") || error.message.includes("502"));
       if (isServerError && retryCount < 2) {
-        console.log(`Retrying save (attempt ${retryCount + 1}/2)...`);
         await new Promise((resolve) => setTimeout(resolve, 1000 * (retryCount + 1)));
         return saveCustomerProfileToBackend(icpsToSave, retryCount + 1);
       }
-      console.error("Error saving customer profile:", error);
 
       const isNetworkError = error instanceof TypeError && error.message.includes("fetch");
 
@@ -213,12 +201,7 @@ const ICPManager: React.FC = () => {
       if (!uniqueById.has(icp.id)) uniqueById.set(icp.id, icp);
     }
     const dedupedICPs = Array.from(uniqueById.values());
-    if (dedupedICPs.length !== loadedICPs.length) {
-      console.warn("ICPManager: Dropped duplicate ICP rows (same id) from API response.", {
-        before: loadedICPs.length,
-        after: dedupedICPs.length,
-      });
-    }
+    // Silently drop duplicate ICP rows (same id) from API response.
 
     setIcps(dedupedICPs);
   }, [icpRows]);
@@ -252,7 +235,6 @@ const ICPManager: React.FC = () => {
   // the container owns the optimistic list update, backend save, toast, and the
   // `customerProfileSaved` dispatch — byte-faithful to the legacy handleSaveICP.
   const handleWizardSaved = async (newICP: ICP, isEdit: boolean) => {
-    console.log("[ICPManager] handleWizardSaved", { id: newICP.id, isEdit });
     let updatedICPs: ICP[];
     if (isEdit) {
       updatedICPs = icps.map((icp) => (icp.id === newICP.id ? newICP : icp));
@@ -293,10 +275,6 @@ const ICPManager: React.FC = () => {
   };
 
   const handleDeleteICP = async (id: string) => {
-    console.log("[ICPManager] DELETE customer_profile/icp: request", {
-      icp_id: id,
-      org_id: orgIdToUse,
-    });
     const updatedICPs = icps.filter((icp) => icp.id !== id);
 
     skipServerSyncRef.current = true;
@@ -308,16 +286,7 @@ const ICPManager: React.FC = () => {
         `customer_profile/icp/${encodeURIComponent(id)}?org_id=${encodeURIComponent(orgIdToUse)}`,
         { method: "DELETE" },
       );
-      const deleteBody = await deleteRes.json();
-      console.log("[ICPManager] DELETE customer_profile/icp: response body", deleteBody);
-      if (deleteBody?.success && deleteBody?.data) {
-        console.log(
-          "[ICPManager] DELETE customer_profile/icp: deleted_icp_id=",
-          deleteBody.data.deleted_icp_id,
-          "remaining_count=",
-          deleteBody.data.remaining_count,
-        );
-      }
+      await deleteRes.json();
 
       if (updatedICPs.length > 0) {
         await saveCustomerProfileToBackend(updatedICPs);
@@ -330,8 +299,7 @@ const ICPManager: React.FC = () => {
         title: "ICP deleted",
         description: "The ICP has been removed.",
       });
-    } catch (e) {
-      console.warn("[ICPManager] DELETE customer_profile/icp: failed", e);
+    } catch {
       toast({
         title: "Delete failed",
         description: "Could not remove the ICP on the server. Refresh and try again.",
