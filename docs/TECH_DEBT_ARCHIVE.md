@@ -1051,3 +1051,118 @@ demo.
 **Resolved (Phase 37, 2026-06-16):** a recompute control was added that calls `fetchSignalLeadMap(..., { refresh: true })` to bust the per-(org, user) fingerprint cache. Commit `00c2021`. Operational caveat: code-complete but dormant in prod until `/signal-lead-map_claude` deploys (same gate as TD-FE-73).
 
 ---
+
+## TD-FE-16 — Sidebar export-name twins + `useAuth` name collision
+
+**Date logged:** 2026-05-29
+**Origin:** Plan 21b Phase 4b (plans/21b-frontend-phase-4b-shell-extraction.md), Task 5.
+
+**Current state:**
+Two name twins remain after the shell extraction:
+1. **Sidebar twins.** shadcn's `src/components/ui/sidebar.tsx` exports `SidebarProvider` (line 730) and
+   `useSidebar` (line 734) — the same names the app's own sidebar state (`src/features/shell/SidebarContext.tsx`)
+   exports. 4b resolves the hazard *at the shell's public surface*: the app hook is re-exported as
+   `useAppSidebar` from `@/features/shell`, and the app `SidebarProvider` flows through the shell barrel. The
+   **internal** `SidebarContext.tsx` symbol is still named `useSidebar` (internal rename deferred). The
+   collision stays *inactive* — nothing imports `useSidebar`/`SidebarProvider` from `@/components/ui/sidebar`.
+2. **`useAuth` collision.** `src/shared/auth/AuthContext.tsx` and `src/hooks/useAuth.ts` both export `useAuth`
+   with different behavior — the context hook vs. the composed JWT/session hook. `@/shared/auth` exposes the
+   *context* `useAuth`; the composed hook stays at `@/hooks/useAuth`. 4b does not worsen this.
+
+**What it should be:**
+Rename the internal `SidebarContext.tsx` hook to `useAppSidebar` (and drop the barrel alias) the next time the
+shell internals are touched. Rename the composed `hooks/useAuth.ts` to something unambiguous (e.g.
+`useSession`) when it finds its final home.
+
+**Pull-forward trigger:**
+`useAuth` collision → Phase 10/11, when `hooks/useAuth.ts` is rehomed (Spec 21 §8.2 item 6). Sidebar internal
+rename → whenever the shadcn twin becomes active, or the shell internals are next refactored.
+
+**Owner:** TBD.
+
+**Resolved (Phase 37, 2026-06-16):** both halves closed — the `useAuth` collision was resolved earlier by TD-FE-54 (Phase 11, the composed hook → `src/shared/auth/useAuthToken.ts`), and the sidebar internal `useSidebar`→`useAppSidebar` rename was done this phase (commit `f1178cc`). Original entry preserved above.
+
+---
+
+## TD-FE-40 — Phase 6 relocated-legacy cleanup nits in mission-control
+
+**Date logged:** 2026-06-04
+**Origin:** Phase 6 decompositions (Tasks 19, 20, 21). Known-dead/cosmetic bits that rode along in the parity extraction.
+
+**Current state:**
+- `ICPManager._isSaving` — **RESOLVED 2026-06-04** (phase-6 impl-review-1): the unread `useState` + its two `setIsSaving` calls + the now-purposeless `try/finally` wrapper (the `finally` only reset the dead flag) were removed.
+- `ICPManager` write handlers carry 21 `console.*` calls — relocated-legacy noise, identical to pre-Phase-6.
+- `IcpList.getFitConfidenceBadge` has no `default` branch (returns `undefined` for out-of-union values) — relocated legacy, safe under the `FitConfidence` param type.
+- `MissionControlPage.syncingProfilerCustomerProfile` — initialized `false`, only ever set `false` (line 161: `setSyncingProfilerCustomerProfile(false)`; no `true` call anywhere). The Dialog at line 333 is `open={isLoadingProfile || syncingProfilerCustomerProfile}`: the `isLoadingProfile` branch is live; the `syncingProfilerCustomerProfile` branch is a dead overlay — the "Syncing customer profile" text (lines 336–367) can never render.
+
+**What it should be:**
+- `_isSaving` state removed — **done** (2026-06-04).
+- Console noise cleaned up.
+- `getFitConfidenceBadge` given a `default` branch returning `null`.
+- `syncingProfilerCustomerProfile` state + all its Dialog branches removed; the Dialog simplified to `open={isLoadingProfile}`.
+
+**Why we deferred:**
+Parity refactor doesn't delete relocated legacy; these are below the bar for individual entries.
+
+**What we lose by staying as-is:**
+Minor dead state/console noise; the dead Dialog branch is harmless but misleading.
+
+**Pull-forward trigger:**
+A mission-control dead-code/console-noise sweep.
+
+**Owner:** TBD.
+
+**Resolved (Phase 37, 2026-06-16):** sub-items (c) `getFitConfidenceBadge` default branch and (d) `syncingProfilerCustomerProfile` dead overlay were already gone by this phase — a re-check found no `syncingProfilerCustomerProfile` in `MissionControlPage.tsx`, so the dead overlay had already been removed and the Dialog already reads `open={isLoadingProfile}`. Sub-items (a) `_isSaving` removal and (b) the 21 `console.*` calls + a total `getFitConfidenceBadge` were done this phase in commit `4b2abef`. All four sub-items now resolved. Original entry preserved above.
+
+---
+
+## TD-FE-45 — `ProfilerChatWithHistory` imports the `SignalsContextChat` substrate via the legacy path; Phase 8 relocates the substrate, Phase 9 dedups ProfilerChat↔ScoutChat
+
+**Date logged:** 2026-06-04
+**Origin:** Phase 7 (Task 2). `ProfilerChatWithHistory` was relocated into the customers feature but continues to import the `SignalsContextChat` substrate from its pre-Phase-8 location. Phase 8 will move the substrate; Phase 9 will deduplicate `ProfilerChatWithHistory` and `ScoutChatWithHistory`, which are ~90% identical.
+
+**Current state:**
+`ProfilerChatWithHistory` imports `SignalsContextChat` from the legacy substrate path. The component is a near-duplicate of `ScoutChatWithHistory` (shared in `docs/TECH_DEBT.md` as a known duplication since pre-Phase-6). No deduplication has been attempted because the substrate relocation and the chat-dedup are sequenced to Phases 8–9.
+
+**What it should be:**
+After Phase 8 relocates the `SignalsContextChat` substrate, `ProfilerChatWithHistory` should update its import path. After Phase 9, `ProfilerChatWithHistory` and `ScoutChatWithHistory` should be unified into a single parameterised chat component, eliminating the ~90% duplication.
+
+**Why we deferred:**
+Performing the substrate relocation or the chat dedup inside Phase 7 would violate the parity-extraction scope boundary. Both operations are sequenced as dedicated phase work.
+
+**What we lose by staying as-is:**
+Divergence risk between the two chat components grows with every fix or feature added to one but not the other. The stale import path will break when Phase 8 moves the substrate if the update is not tracked.
+
+**Pull-forward trigger:**
+Phase 8 (import path update) / Phase 9 (deduplication).
+
+**Owner:** TBD.
+
+**Resolved (substrate-relocation part only):** 2026-06-05 (Phase 8). The `SignalsContextChat` substrate was relocated from the legacy `@/components/signals/` path to `src/shared/chat/`, and all importers — including `ProfilerChatWithHistory` (in `src/features/customers/`) — were repointed off the legacy path onto the relocated substrate. The stale-import-path break risk this entry tracked is closed. The `ProfilerChatWithHistory` ↔ `ScoutChatWithHistory` ~90% duplication (the "Phase 9 dedups" half of this entry) remains a separate, still-open concern owned by Phase 9 — see Phase 9's chat-surface dedup scope. Original entry preserved below.
+
+**Resolved (Phase 37, 2026-06-16):** both halves now closed. The substrate relocation was done in Phase 8 (above); the ProfilerChat↔ScoutChat dedup was done in Phase 9 — both chat wrappers are now thin delegates to the shared `ChatWithHistory` shell at `src/shared/chat/ChatWithHistory.tsx` (verified present), eliminating the ~90% duplication. No Phase-37 commit: this entry was resolved by the prior phases; this line records the close.
+
+---
+
+## TD-FE-48 — `deals`/`Deals` naming: `Deals.tsx` is the Strategist page, not a Phase-12 small-page
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 8 (strategist relocation). The legacy `Deals.tsx` is in fact the Strategist page; Spec 14 §12 lists it as a Phase-12 small-page, which is stale.
+
+**Current state:**
+`Deals.tsx` is the Strategist page and was relocated to `features/strategist/pages/StrategistPage.tsx`. The `/deals` route is retained as a redirect to `/your-ai-team/strategist/workspace`. Spec 14 §12's small-pages-sweep source list still names `Deals.tsx` as Phase-12 territory — stale; it is Phase-8 strategist territory and has already moved.
+
+**What it should be:**
+Spec 14 §12 no longer lists `Deals.tsx` among the Phase-12 small pages (it has been claimed by Phase 8). This is a documentation-only correction; the code disposition is already done.
+
+**Why we deferred:**
+The §12 phase description is a frozen record of intent (CLAUDE.md spec-driven flow); rather than rewriting it, the divergence is annotated as a Phase 8 delta in Spec 14 and tracked here.
+
+**Pull-forward trigger:**
+Spec 14 §12 rescope (doc-only).
+
+**Owner:** TBD.
+
+**Resolved (Phase 37, 2026-06-16):** closed as a Phase-8 delta — the code disposition was already done (`Deals.tsx` → `features/strategist/pages/StrategistPage.tsx`, with `/deals` redirecting to `/your-ai-team/strategist/workspace`). The frozen Spec 14 §12 is intentionally left as-is (specs are a frozen record of intent); this entry is the standing record that `Deals.tsx` is Phase-8 strategist territory, not a Phase-12 small page. No Phase-37 commit. Original entry preserved above.
+
+---

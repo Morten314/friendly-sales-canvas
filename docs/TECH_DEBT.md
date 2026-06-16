@@ -25,7 +25,7 @@ Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases
 | TD-FE-13 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-13--repoint-hardcoded-backend-host-backend-11kr--brewra-gtm-intelligence) |
 | TD-FE-14 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-14--knip-ignore-on-srcsharedcomponents-until-phase-5-consumes-featureerrorboundary) |
 | TD-FE-15 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-15--cross-feature-index-only-lint-enforcement-deferred-zone-boundaries-only) |
-| TD-FE-16 | open | [below](#td-fe-16--sidebar-export-name-twins--useauth-name-collision) |
+| TD-FE-16 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-16--sidebar-export-name-twins--useauth-name-collision) |
 | TD-FE-17 | open | [below](#td-fe-17--market-research-has-no-visual-regression-baseline-phase-5-guards-with-behavioral-e2e--vitest) |
 | TD-FE-18 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-18--market-research-dead-code-8-files-no-live-importer-awaiting-the-5i-sweep) |
 | TD-FE-19 | open | [below](#td-fe-19--market-research-page-still-runs-raw-fetch--localstorage-cache-5b-page-rewire-deferred) |
@@ -49,15 +49,15 @@ Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases
 | TD-FE-37 | open | [below](#td-fe-37--datasourcesmanager-upload-helpers-shared-extraction-deferred) |
 | TD-FE-38 | open | [below](#td-fe-38--mission-control-escape-hatch-typings-retained) |
 | TD-FE-39 | open | [below](#td-fe-39--relocated-connector-cluster-is-dead-code-two-datasource-shapes-not-unified) |
-| TD-FE-40 | open | [below](#td-fe-40--phase-6-relocated-legacy-cleanup-nits-in-mission-control) |
+| TD-FE-40 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-40--phase-6-relocated-legacy-cleanup-nits-in-mission-control) |
 | TD-FE-41 | open | [below](#td-fe-41--suggestedicpcards-acceptrejectdismiss-optimism-stays-in-localstorage-not-modeled-in-the-tanstack-cache) |
 | TD-FE-42 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-42--customers-icp--customer_profile-read-overlaps-mission-control-useicps-two-independent-read-paths-with-nothing-to-catch-a-divergent-apiicp-shape-change) |
 | TD-FE-43 | open | [below](#td-fe-43--customers-read-orchestration-retains-imperative-loader-with-localstorage-fetch-cache--sessionstorage-session-cache--multi-tier-fallbacks-rather-than-going-cache-native) |
 | TD-FE-44 | open | [below](#td-fe-44--window-event-headerpage-bridge-profilerrefreshprofilercreateicpprofilerexportdatanavigatetoleadstreamicpaccepted-is-untyped-global-coupling) |
-| TD-FE-45 | open | [below](#td-fe-45--profilerchatwithhistory-imports-the-signalscontextchat-substrate-via-the-legacy-path-phase-8-relocates-the-substrate-phase-9-dedups-profilerchatscoutchat) |
+| TD-FE-45 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-45--profilerchatwithhistory-imports-the-signalscontextchat-substrate-via-the-legacy-path-phase-8-relocates-the-substrate-phase-9-dedups-profilerchatscoutchat) |
 | TD-FE-46 | open | [below](#td-fe-46--phase-7-stage-4-behavioral-test-covers-only-accept--reject-happy-paths-optimistic-edge-case-matrix-and-fake-timer-deadlock-unresolved) |
 | TD-FE-47 | open | [below](#td-fe-47--strategistworkspace-relocated-as-is-live-but-large-decomposition--get-chat-deferred) |
-| TD-FE-48 | open | [below](#td-fe-48--dealsdeals-naming-dealstsx-is-the-strategist-page-not-a-phase-12-small-page) |
+| TD-FE-48 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-48--dealsdeals-naming-dealstsx-is-the-strategist-page-not-a-phase-12-small-page) |
 | TD-FE-49 | open | [below](#td-fe-49--signals-acceptedrejected-localstorage-is-primary-state-not-cache) |
 | TD-FE-50 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-50--signalschatcontext-sessionstorage-handoff-is-untyped) |
 | TD-FE-51 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-51--componentsmarket-research-retains-scoutchatpaneltsx--typests-legacy-residue) |
@@ -402,36 +402,6 @@ typing (Phase ~10+) would unlock replacing these with proper types.
 
 ---
 
-## TD-FE-16 — Sidebar export-name twins + `useAuth` name collision
-
-**Date logged:** 2026-05-29
-**Origin:** Plan 21b Phase 4b (plans/21b-frontend-phase-4b-shell-extraction.md), Task 5.
-
-**Current state:**
-Two name twins remain after the shell extraction:
-1. **Sidebar twins.** shadcn's `src/components/ui/sidebar.tsx` exports `SidebarProvider` (line 730) and
-   `useSidebar` (line 734) — the same names the app's own sidebar state (`src/features/shell/SidebarContext.tsx`)
-   exports. 4b resolves the hazard *at the shell's public surface*: the app hook is re-exported as
-   `useAppSidebar` from `@/features/shell`, and the app `SidebarProvider` flows through the shell barrel. The
-   **internal** `SidebarContext.tsx` symbol is still named `useSidebar` (internal rename deferred). The
-   collision stays *inactive* — nothing imports `useSidebar`/`SidebarProvider` from `@/components/ui/sidebar`.
-2. **`useAuth` collision.** `src/shared/auth/AuthContext.tsx` and `src/hooks/useAuth.ts` both export `useAuth`
-   with different behavior — the context hook vs. the composed JWT/session hook. `@/shared/auth` exposes the
-   *context* `useAuth`; the composed hook stays at `@/hooks/useAuth`. 4b does not worsen this.
-
-**What it should be:**
-Rename the internal `SidebarContext.tsx` hook to `useAppSidebar` (and drop the barrel alias) the next time the
-shell internals are touched. Rename the composed `hooks/useAuth.ts` to something unambiguous (e.g.
-`useSession`) when it finds its final home.
-
-**Pull-forward trigger:**
-`useAuth` collision → Phase 10/11, when `hooks/useAuth.ts` is rehomed (Spec 21 §8.2 item 6). Sidebar internal
-rename → whenever the shadcn twin becomes active, or the shell internals are next refactored.
-
-**Owner:** TBD.
-
----
-
 ## TD-012 — Apollo connector router: async handlers do blocking Mongo I/O on the event loop
 
 **Status:** ✅ RESOLVED 2026-06-16 (Phase 37) — the blocking Apollo handlers (`/connectors/apollo/import`, `/enrich`, `/enrich/status`) were converted from `async def` to sync `def` so FastAPI dispatches them to the threadpool instead of running blocking PyMongo I/O on the event loop; `BackgroundTasks` still works from the sync handlers. Commit `7fe2818`. Original context retained below.
@@ -711,21 +681,23 @@ When the company-profile/connector writes migrate to mutations (TD-FE-34) or whe
 **Origin:** Phase 6 Task 15 (reused the existing `useCompanyProfile` for the company-profile read in mission-control). A market-research path duplicates equivalent company-profile fetching and lives in a non-shared location.
 
 **Current state:**
-`useCompanyProfile` is consumed by both settings and mission-control. A market-research path fetches equivalent company-profile data independently rather than reusing the hook. The hook is not yet in `@/shared/`.
+`useCompanyProfile` now lives in `@/shared/company-profile` with all consumers (settings, mission-control) repointed onto the shared hook — the shared-promotion + consumer-repoint half is done. The only remaining residue is the market-research duplicate company-profile fetch inside the imperative `smartRefresh` in `useMarketResearchData.ts`, which still fetches equivalent company-profile data independently rather than reusing the shared hook. Removing that duplicate is blocked on the data-layer split (Spec 38 / TD-FE-19/65): the fetch is entangled with the editable-state↔query coupling that pervades `useMarketResearchData.ts`.
 
 **What it should be:**
-`useCompanyProfile` promoted to `@/shared/` once a second+third consumer is confirmed, with the market-research duplicate removed.
+The market-research `smartRefresh` company-profile duplicate fetch removed, reusing the shared `@/shared/company-profile` hook so all company-profile reads share one caching/error path.
 
 **Why we deferred:**
-Cross-feature promotion belongs to a later consolidation phase; the two consumers discovered so far don't justify the move yet.
+The hook promotion itself is done; the remaining MR duplicate-fetch removal cannot land without the editable-state↔query decomposition (TD-FE-19/65) that blocks every `useMarketResearchData.ts` slice.
 
 **What we lose by staying as-is:**
-The market-research company-profile fetch remains a separate code path, potentially diverging from the canonical hook's caching/error behavior.
+The market-research company-profile fetch remains a separate code path, potentially diverging from the canonical shared hook's caching/error behavior.
 
 **Pull-forward trigger:**
-Phase 10/11 (settings/market-research consolidation), or whenever a third consumer confirms the promotion is warranted.
+With Spec 38 (the data-layer split that resolves TD-FE-19/65) — the MR duplicate-fetch removal lands once the editable-state↔query coupling is decomposed.
 
 **Owner:** TBD.
+
+**Resolved (Phase 37, partial):** the shared-promotion + consumer-repoint half is done (useCompanyProfile is in @/shared/company-profile). The remaining MR duplicate-fetch removal is blocked on the editable-state↔query decomposition (TD-FE-19/65) and is reclassified accordingly. Pull-forward: with Spec 38.
 
 ---
 
@@ -796,36 +768,6 @@ Phase 6 was a parity relocation — deleting or wiring connector functionality i
 
 **Pull-forward trigger:**
 When connectors become a real feature (wire + unify + test) or a dead-code sweep (delete).
-
-**Owner:** TBD.
-
----
-
-## TD-FE-40 — Phase 6 relocated-legacy cleanup nits in mission-control
-
-**Date logged:** 2026-06-04
-**Origin:** Phase 6 decompositions (Tasks 19, 20, 21). Known-dead/cosmetic bits that rode along in the parity extraction.
-
-**Current state:**
-- `ICPManager._isSaving` — **RESOLVED 2026-06-04** (phase-6 impl-review-1): the unread `useState` + its two `setIsSaving` calls + the now-purposeless `try/finally` wrapper (the `finally` only reset the dead flag) were removed.
-- `ICPManager` write handlers carry 21 `console.*` calls — relocated-legacy noise, identical to pre-Phase-6.
-- `IcpList.getFitConfidenceBadge` has no `default` branch (returns `undefined` for out-of-union values) — relocated legacy, safe under the `FitConfidence` param type.
-- `MissionControlPage.syncingProfilerCustomerProfile` — initialized `false`, only ever set `false` (line 161: `setSyncingProfilerCustomerProfile(false)`; no `true` call anywhere). The Dialog at line 333 is `open={isLoadingProfile || syncingProfilerCustomerProfile}`: the `isLoadingProfile` branch is live; the `syncingProfilerCustomerProfile` branch is a dead overlay — the "Syncing customer profile" text (lines 336–367) can never render.
-
-**What it should be:**
-- `_isSaving` state removed — **done** (2026-06-04).
-- Console noise cleaned up.
-- `getFitConfidenceBadge` given a `default` branch returning `null`.
-- `syncingProfilerCustomerProfile` state + all its Dialog branches removed; the Dialog simplified to `open={isLoadingProfile}`.
-
-**Why we deferred:**
-Parity refactor doesn't delete relocated legacy; these are below the bar for individual entries.
-
-**What we lose by staying as-is:**
-Minor dead state/console noise; the dead Dialog branch is harmless but misleading.
-
-**Pull-forward trigger:**
-A mission-control dead-code/console-noise sweep.
 
 **Owner:** TBD.
 
@@ -903,32 +845,6 @@ A typed event-bus / header-action redesign.
 
 ---
 
-## TD-FE-45 — `ProfilerChatWithHistory` imports the `SignalsContextChat` substrate via the legacy path; Phase 8 relocates the substrate, Phase 9 dedups ProfilerChat↔ScoutChat
-
-**Date logged:** 2026-06-04
-**Origin:** Phase 7 (Task 2). `ProfilerChatWithHistory` was relocated into the customers feature but continues to import the `SignalsContextChat` substrate from its pre-Phase-8 location. Phase 8 will move the substrate; Phase 9 will deduplicate `ProfilerChatWithHistory` and `ScoutChatWithHistory`, which are ~90% identical.
-
-**Current state:**
-`ProfilerChatWithHistory` imports `SignalsContextChat` from the legacy substrate path. The component is a near-duplicate of `ScoutChatWithHistory` (shared in `docs/TECH_DEBT.md` as a known duplication since pre-Phase-6). No deduplication has been attempted because the substrate relocation and the chat-dedup are sequenced to Phases 8–9.
-
-**What it should be:**
-After Phase 8 relocates the `SignalsContextChat` substrate, `ProfilerChatWithHistory` should update its import path. After Phase 9, `ProfilerChatWithHistory` and `ScoutChatWithHistory` should be unified into a single parameterised chat component, eliminating the ~90% duplication.
-
-**Why we deferred:**
-Performing the substrate relocation or the chat dedup inside Phase 7 would violate the parity-extraction scope boundary. Both operations are sequenced as dedicated phase work.
-
-**What we lose by staying as-is:**
-Divergence risk between the two chat components grows with every fix or feature added to one but not the other. The stale import path will break when Phase 8 moves the substrate if the update is not tracked.
-
-**Pull-forward trigger:**
-Phase 8 (import path update) / Phase 9 (deduplication).
-
-**Owner:** TBD.
-
-**Resolved (substrate-relocation part only):** 2026-06-05 (Phase 8). The `SignalsContextChat` substrate was relocated from the legacy `@/components/signals/` path to `src/shared/chat/`, and all importers — including `ProfilerChatWithHistory` (in `src/features/customers/`) — were repointed off the legacy path onto the relocated substrate. The stale-import-path break risk this entry tracked is closed. The `ProfilerChatWithHistory` ↔ `ScoutChatWithHistory` ~90% duplication (the "Phase 9 dedups" half of this entry) remains a separate, still-open concern owned by Phase 9 — see Phase 9's chat-surface dedup scope. Original entry preserved below.
-
----
-
 ## TD-FE-46 — Phase 7 stage-4 behavioral test covers only accept + reject happy paths; optimistic edge-case matrix and fake-timer deadlock unresolved
 
 **Date logged:** 2026-06-04
@@ -991,27 +907,6 @@ Phase 8's scope was relocation, not rewrite. The component works as-is; decompos
 
 **Pull-forward trigger:**
 Phase 13 (monster-file decomposition, Spec 14 §6.2).
-
-**Owner:** TBD.
-
----
-
-## TD-FE-48 — `deals`/`Deals` naming: `Deals.tsx` is the Strategist page, not a Phase-12 small-page
-
-**Date logged:** 2026-06-05
-**Origin:** Phase 8 (strategist relocation). The legacy `Deals.tsx` is in fact the Strategist page; Spec 14 §12 lists it as a Phase-12 small-page, which is stale.
-
-**Current state:**
-`Deals.tsx` is the Strategist page and was relocated to `features/strategist/pages/StrategistPage.tsx`. The `/deals` route is retained as a redirect to `/your-ai-team/strategist/workspace`. Spec 14 §12's small-pages-sweep source list still names `Deals.tsx` as Phase-12 territory — stale; it is Phase-8 strategist territory and has already moved.
-
-**What it should be:**
-Spec 14 §12 no longer lists `Deals.tsx` among the Phase-12 small pages (it has been claimed by Phase 8). This is a documentation-only correction; the code disposition is already done.
-
-**Why we deferred:**
-The §12 phase description is a frozen record of intent (CLAUDE.md spec-driven flow); rather than rewriting it, the divergence is annotated as a Phase 8 delta in Spec 14 and tracked here.
-
-**Pull-forward trigger:**
-Spec 14 §12 rescope (doc-only).
 
 **Owner:** TBD.
 
@@ -1226,3 +1121,5 @@ Render, or any report that the signal↔lead surfaces render empty/odd in a live
 environment (a silent contract-vs-response drift).
 
 **Owner:** TBD.
+
+**Note (Phase 37, 2026-06-16):** `/signal-lead-map_claude` confirmed not deployed (2026-06-15); the contract reconciliation pulls forward when the endpoint ships.
