@@ -20,8 +20,8 @@ Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases
 | TD-FE-8 | open | [below](#td-fe-8--knip-ignoredependencies-for-two-untraceable-packages) |
 | TD-FE-9 | open | [below](#td-fe-9--phase-2a-escape-hatches-threshold-reached-6-entries) |
 | TD-FE-10 | open | [below](#td-fe-10--phase-2b-escape-hatches-threshold-reached-5-new-entries) |
-| TD-FE-11 | open | [below](#td-fe-11--orphaned-settings-company-profile-fetch-after-companyprofile-tanstack-migration) |
-| TD-FE-12 | open | [below](#td-fe-12--dead-tenantcontextavailabletenantssetavailabletenants-after-tenantselection-migration) |
+| TD-FE-11 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-11--orphaned-settings-company-profile-fetch-after-companyprofile-tanstack-migration) |
+| TD-FE-12 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-12--dead-tenantcontextavailabletenantssetavailabletenants-after-tenantselection-migration) |
 | TD-FE-13 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-13--repoint-hardcoded-backend-host-backend-11kr--brewra-gtm-intelligence) |
 | TD-FE-14 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-14--knip-ignore-on-srcsharedcomponents-until-phase-5-consumes-featureerrorboundary) |
 | TD-FE-15 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-15--cross-feature-index-only-lint-enforcement-deferred-zone-boundaries-only) |
@@ -29,16 +29,16 @@ Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases
 | TD-FE-17 | open | [below](#td-fe-17--market-research-has-no-visual-regression-baseline-phase-5-guards-with-behavioral-e2e--vitest) |
 | TD-FE-18 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-18--market-research-dead-code-8-files-no-live-importer-awaiting-the-5i-sweep) |
 | TD-FE-19 | open | [below](#td-fe-19--market-research-page-still-runs-raw-fetch--localstorage-cache-5b-page-rewire-deferred) |
-| TD-FE-20 | open | [below](#td-fe-20--market-research-trendsscout-chat-tab-has-no-e2e-behavioral-coverage) |
+| TD-FE-20 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-20--market-research-trendsscout-chat-tab-has-no-e2e-behavioral-coverage) |
 | TD-FE-21 | open | [below](#td-fe-21--market-entry-edit-write-path-get-apiask-with-json-in-query-params--write-path-localstorage--swot-fake-defaults) |
 | TD-FE-22 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-22--marketentrysection-owns-a-data-fetch-but-has-no-featureerrorboundary-wrapping) |
-| TD-FE-23 | open | [below](#td-fe-23--compliance-analytics-cards-key-on-cardtype-but-backend-emits-charttype) |
-| TD-FE-24 | open | [below](#td-fe-24--regulatory-default-data-duplicated-across-5-sites) |
-| TD-FE-25 | open | [below](#td-fe-25--read-only-strategic-recommendations-ignores-localstrategicrecommendations-state-coherence-quirk) |
-| TD-FE-26 | open | [below](#td-fe-26--dead-non-user-scoped-localstorage-writes-in-regulatorycompliancesection) |
+| TD-FE-23 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-23--compliance-analytics-cards-key-on-cardtype-but-backend-emits-charttype) |
+| TD-FE-24 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-24--regulatory-default-data-duplicated-across-5-sites) |
+| TD-FE-25 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-25--read-only-strategic-recommendations-ignores-localstrategicrecommendations-state-coherence-quirk) |
+| TD-FE-26 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-26--dead-non-user-scoped-localstorage-writes-in-regulatorycompliancesection) |
 | TD-FE-27 | open | [below](#td-fe-27--competitor-landscape-edit-write-path-raw-apiask--apimarket_intelligence-fetches-survive-read-migration) |
 | TD-FE-28 | open | [below](#td-fe-28--industry-trends-page-level-fetchstatecache-slice-retained-in-usemarketresearchdatats) |
-| TD-FE-29 | open | [below](#td-fe-29--full-preflight-gate-stays-serial-parallel-runner-is-opt-in-flakes-e2e-under-concurrent-session-load) |
+| TD-FE-29 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-29--full-preflight-gate-stays-serial-parallel-runner-is-opt-in-flakes-e2e-under-concurrent-session-load) |
 | TD-FE-30 | open | [below](#td-fe-30--market-size-page-level-fetchstatecache-slice-the-cascade-root-retained-in-usemarketresearchdatats) |
 | TD-FE-31 | open | [below](#td-fe-31--market-size-edit-save-retains-the-legacy-apiask-get-write-path) |
 | TD-FE-32 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-32--feature-phase-number-disagreement-master-spec-14-4-vs-featuresreadme-naming-map) |
@@ -51,7 +51,7 @@ Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases
 | TD-FE-39 | open | [below](#td-fe-39--relocated-connector-cluster-is-dead-code-two-datasource-shapes-not-unified) |
 | TD-FE-40 | open | [below](#td-fe-40--phase-6-relocated-legacy-cleanup-nits-in-mission-control) |
 | TD-FE-41 | open | [below](#td-fe-41--suggestedicpcards-acceptrejectdismiss-optimism-stays-in-localstorage-not-modeled-in-the-tanstack-cache) |
-| TD-FE-42 | open | [below](#td-fe-42--customers-icp--customer_profile-read-overlaps-mission-control-useicps-two-independent-read-paths-with-nothing-to-catch-a-divergent-apiicp-shape-change) |
+| TD-FE-42 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-42--customers-icp--customer_profile-read-overlaps-mission-control-useicps-two-independent-read-paths-with-nothing-to-catch-a-divergent-apiicp-shape-change) |
 | TD-FE-43 | open | [below](#td-fe-43--customers-read-orchestration-retains-imperative-loader-with-localstorage-fetch-cache--sessionstorage-session-cache--multi-tier-fallbacks-rather-than-going-cache-native) |
 | TD-FE-44 | open | [below](#td-fe-44--window-event-headerpage-bridge-profilerrefreshprofilercreateicpprofilerexportdatanavigatetoleadstreamicpaccepted-is-untyped-global-coupling) |
 | TD-FE-45 | open | [below](#td-fe-45--profilerchatwithhistory-imports-the-signalscontextchat-substrate-via-the-legacy-path-phase-8-relocates-the-substrate-phase-9-dedups-profilerchatscoutchat) |
@@ -59,29 +59,29 @@ Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases
 | TD-FE-47 | open | [below](#td-fe-47--strategistworkspace-relocated-as-is-live-but-large-decomposition--get-chat-deferred) |
 | TD-FE-48 | open | [below](#td-fe-48--dealsdeals-naming-dealstsx-is-the-strategist-page-not-a-phase-12-small-page) |
 | TD-FE-49 | open | [below](#td-fe-49--signals-acceptedrejected-localstorage-is-primary-state-not-cache) |
-| TD-FE-50 | open | [below](#td-fe-50--signalschatcontext-sessionstorage-handoff-is-untyped) |
+| TD-FE-50 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-50--signalschatcontext-sessionstorage-handoff-is-untyped) |
 | TD-FE-51 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-51--componentsmarket-research-retains-scoutchatpaneltsx--typests-legacy-residue) |
-| TD-FE-52 | open | [below](#td-fe-52--no-strategist-playwrightvr-journey-coverage-is-behavioral-only) |
+| TD-FE-52 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-52--no-strategist-playwrightvr-journey-coverage-is-behavioral-only) |
 | TD-FE-53 | open | [below](#td-fe-53--signals-page-data-flow-not-migrated-to-tanstack-phase-8-was-structure-only) |
 | TD-FE-54 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-54--libjwtts--hooksuseauthts-still-live-in-legacy-srclibsrchooks-rather-than-sharedauth) |
 | TD-FE-55 | open | [below](#td-fe-55--featurestenanthooksusetenantsts-serves-a-hardcoded-mock_tenants-list-no-real-list-tenants-backend-endpoint-exists) |
-| TD-FE-56 | open | [below](#td-fe-56--featuressettingscomponentsagentprofiletsx-and-featuresscoutcomponentsscoutdeploymenttsx-are-near-duplicate-forms) |
+| TD-FE-56 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-56--featuressettingscomponentsagentprofiletsx-and-featuresscoutcomponentsscoutdeploymenttsx-are-near-duplicate-forms) |
 | TD-FE-57 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-57--phase-12-features-still-import-legacy-hooksusepagetitle) |
 | TD-FE-58 | open | [below](#td-fe-58--artefacts-cross-component-coupling-via-untyped-window-customevents) |
 | TD-FE-59 | open | [below](#td-fe-59--small-page-surfaces-are-mockplaceholder-no-backend) |
 | TD-FE-60 | open | [below](#td-fe-60--no-featuresprofiler-folder-profiler-distributed-across-three-areas) |
-| TD-FE-61 | open | [below](#td-fe-61--signalschatcontext-type-name-retained-after-component-renamed-to-contextchat) |
+| TD-FE-61 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-61--signalschatcontext-type-name-retained-after-component-renamed-to-contextchat) |
 | TD-FE-62 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-62--srcutilsleadstreamchatcontextts-remains-in-utils) |
 | TD-FE-63 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-63--componentsmarket-research-retains-6-files-after-phase-9s-partial-drain) |
-| TD-FE-64 | open | [below](#td-fe-64--csv-smart-quote-normalization-is-a-no-op-normalizecsvasciidoublequotes) |
+| TD-FE-64 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-64--csv-smart-quote-normalization-is-a-no-op-normalizecsvasciidoublequotes) |
 | TD-FE-65 | open | [below](#td-fe-65--usemarketresearchdatats-decomposition-deferred-6034-loc-monster-file) |
-| TD-FE-66 | open | [below](#td-fe-66--usedocumentsync-cleanup-pre-existing-patterns-relocated-in-phase-13b) |
-| TD-FE-67 | open | [below](#td-fe-67--single-page-v2-reads-still-cap-items-at-500-total-not-surfaced) |
+| TD-FE-66 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-66--usedocumentsync-cleanup-pre-existing-patterns-relocated-in-phase-13b) |
+| TD-FE-67 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-67--single-page-v2-reads-still-cap-items-at-500-total-not-surfaced) |
 | TD-FE-68 | open | [below](#td-fe-68--production-routed-back-through-api-cold-start-batch-margin--residual-direct-backend-callsites) |
 | TD-FE-69 | open | [below](#td-fe-69--per-icp-lead-count-is-stubbed-to-0-suggestedicpcards-shows-0-leads) |
-| TD-FE-70 | open | [below](#td-fe-70--customers-lead-stream-is-first-page-only-no-pager) |
-| TD-FE-71 | open | [below](#td-fe-71--signallead-map-prompt-matches-on-data-the-payload-doesnt-send) |
-| TD-FE-72 | open | [below](#td-fe-72--signallead-map-refresh-escape-hatch-is-unreachable-from-the-ui) |
+| TD-FE-70 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-70--customers-lead-stream-is-first-page-only-no-pager) |
+| TD-FE-71 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-71--signallead-map-prompt-matches-on-data-the-payload-doesnt-send) |
+| TD-FE-72 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-72--signallead-map-refresh-escape-hatch-is-unreachable-from-the-ui) |
 | TD-FE-73 | open | [below](#td-fe-73--signal-lead-map_claude-fe-contract-derived-from-code-not-a-live-response) |
 
 ---
@@ -115,6 +115,8 @@ Run `cd backend && python tests/capture_fixtures.py` on a machine with all three
 ---
 
 ## TD-005 — v1 list endpoints expose `count` as page size, not DB total
+
+**Status:** ✅ RESOLVED 2026-06-16 (Phase 37) — the deprecated v1 `/user-documents` and `/fetch-signals` routes (the only two carrying the capped-`count` envelope) were deleted; the `count`-lie wire field is gone with them, and consumers read the v2 `PaginatedResponse` `total`. Commit `77c7e9d`. Original context retained below.
 
 **Date logged:** 2026-05-23
 **Origin:** Phase G code review on Task 3 (`feat(be): add /v2/user-documents paginated endpoint + deprecate v1 [phase G, commit 3/8]`).
@@ -400,57 +402,6 @@ typing (Phase ~10+) would unlock replacing these with proper types.
 
 ---
 
-## TD-FE-11 — Orphaned Settings company-profile fetch after CompanyProfile TanStack migration
-
-**Date logged:** 2026-05-29
-**Origin:** Plan 20 Phase 3 (plans/20-frontend-phase-3-api-data-layer.md), Task 9.
-
-**Current state:**
-`Settings.tsx` fetches profile data generically via `fetchProfileData(profileType)` (`:105`), called on
-profile selection (`:193`) and user change (`:181`), and passes the result to the rendered profile
-component via `commonProps.profileData` (`:218,:224`). After Phase 3, `CompanyProfile` reads its data from
-`useCompanyProfile` (a TanStack query keyed on `org_id`) and ignores the `profileData` prop, so for the
-"company" selection `fetchProfileData("company")` (a `GET /api/profile/company?user_id=…`) still runs but
-its result is discarded — a redundant network call. The same generic prop still feeds the non-migrated
-`UserProfile`/`AgentProfile`, so `Settings.tsx` is left unchanged.
-
-**Why deferred:**
-Removing the company branch / lifting it into the shared query requires `UserProfile` and `AgentProfile` to
-also migrate off the shared `profileData` prop — out of Phase 3's stated scope (CompanyProfile/tenant/auth/
-Login only). Behavior is correct, only wasteful; at MVP scale (0 users) the cost is negligible.
-
-**Pull-forward trigger:**
-Settings extraction (Phase 4), or the phase that migrates `UserProfile`/`AgentProfile` — collapse the
-duplicate fetch (Settings `user_id` GET vs CompanyProfile `org_id` GET) into the shared query and drop the
-orphaned prop flow then.
-
-**Owner:** TBD.
-
----
-
-## TD-FE-12 — Dead TenantContext.availableTenants/setAvailableTenants after TenantSelection migration
-
-**Date logged:** 2026-05-29
-**Origin:** Plan 20 Phase 3 (plans/20-frontend-phase-3-api-data-layer.md), Task 11.
-
-**Current state:**
-`TenantContext` (`src/shared/tenant/TenantContext.tsx`, relocated from `src/contexts/` in Phase 10) declares `availableTenants: Tenant[]` state and
-`setAvailableTenants`, and exposes both on its context value. After Phase 3, `TenantSelection` (the only
-reader/writer) renders from the `useTenants` query instead, so neither is populated or read anymore. They
-remain assigned into the context value, so there is no lint/knip break — just permanently dead state.
-
-**Why deferred:**
-Removing the field from `TenantContextType` + the provider is a context-API change owned by the shell/auth
-phases, not Phase 3 (which only migrates the read pattern). Harmless until then.
-
-**Pull-forward trigger:**
-Phase 10 (introduces the real tenant endpoint — it will repopulate `availableTenants` from the API or drop
-the field) or Phase 4 (shell extraction). Remove the dead field then.
-
-**Owner:** TBD.
-
----
-
 ## TD-FE-16 — Sidebar export-name twins + `useAuth` name collision
 
 **Date logged:** 2026-05-29
@@ -482,6 +433,8 @@ rename → whenever the shadcn twin becomes active, or the shell internals are n
 ---
 
 ## TD-012 — Apollo connector router: async handlers do blocking Mongo I/O on the event loop
+
+**Status:** ✅ RESOLVED 2026-06-16 (Phase 37) — the blocking Apollo handlers (`/connectors/apollo/import`, `/enrich`, `/enrich/status`) were converted from `async def` to sync `def` so FastAPI dispatches them to the threadpool instead of running blocking PyMongo I/O on the event loop; `BackgroundTasks` still works from the sync handlers. Commit `7fe2818`. Original context retained below.
 
 **Date logged:** 2026-05-30
 **Origin:** Apollo lead-integration impl review round 1 (`docs/reviews/apollo-lead-integration-backend-impl-review-1.md`, finding E) + the triage synthesis. Deliberately deferred during the post-merge hardening pass on `fix/backend-impl-review-followups` (the other agreed fixes A/B/C/F/H/J landed there).
@@ -542,24 +495,6 @@ The page-level raw `fetch` + localStorage-cache removal moves to **5c (page deco
 
 ---
 
-## TD-FE-20 — market-research trends/scout-chat tab has no e2e behavioral coverage
-
-**Date logged:** 2026-06-01
-**Origin:** Plan 24c Phase 5c (plans/24c-frontend-phase-5c-page-decomposition.md), Task 5 — surfaced during the TrendsTab extraction review.
-
-**Current state:**
-`frontend/e2e/journeys/04-market-research-5-components.spec.ts` only `page.goto("/your-ai-team/scout/marketintelligence")` and asserts the 5-component market-intelligence load. It never clicks the `trends` (`chatwithscout`) `TabsTrigger` and never lands on the scout-chat surface, nor the `analysis` (`leadstream`) tab. So `journeys/04` is a behavioral parity guard for the **intelligence** tab only — the `trends` and `analysis` branches have no e2e coverage. This gap **pre-dates Phase 5** (the journey never covered those tabs) and was confirmed non-regressive at the 5c TrendsTab extraction (Task 5 verified by tsc + byte-identical lift + the unchanged controlled `TabsTrigger`). Both the spec-compliance and code-quality reviewers judged it LOW / non-blocking for the structural-only move.
-
-**What it should be:**
-A small trends-trigger click-through assertion in `journeys/04` (click the `chatwithscout` tab → assert the Scout-chat surface renders) — and ideally an analysis-tab assertion — closing the parity gap on the two legacy-routing tabs. Adding behavioral e2e is out of structural-only 5c scope; the natural home is Phase 7 (customers/scout claim the lead-stream + scout-chat components and migrate their data layer), or sooner if a trends/analysis regression is suspected.
-
-**Pull-forward trigger:**
-Phase 7 (scout-chat / lead-stream migration), or earlier if a trends/analysis-tab regression is suspected. Note: this is advisory per the repo's pre-launch gate posture (advisory-over-hard-fail at 0 users) — not a merge blocker for 5c.
-
-**Owner:** TBD.
-
----
-
 ## TD-FE-21 — market-entry edit-write path: GET `/api/ask` with JSON-in-query-params + write-path localStorage + SWOT fake-defaults
 
 **Date logged:** 2026-06-01
@@ -587,109 +522,6 @@ Migrate the market-entry edit-write path to a mutation hook (a `useMutation` POS
 **Pull-forward trigger:**
 - The market-entry edit-write migration phase (a future 5d+ / Phase 7-era mutation-hook pass), or 24i's phase-close check (zero raw `fetch` + zero `CACHE_DURATION` in the feature — this `/ask` GET is one of the remaining raw fetches; see TD-FE-19). — **UPDATE 2026-06-03:** Phase 5 closed (24i) with this gate RELAXED to advisory (CTO pre-launch posture); this item was NOT retired and is carried forward — Phase 7 lead-stream-era mutation pass / Phase 13 audit. See Spec 24 §9 delta 11.
 - Earlier if an edit-save URL-length failure or a SWOT fake-default appearing in saved data is observed.
-
-**Owner:** TBD.
-
----
-
-## TD-FE-23 — Compliance Analytics cards key on `card.type` but backend emits `chartType`
-
-**Date logged:** 2026-06-02
-**Origin:** Plan 24e Phase 5e final holistic impl review — surfaced (not introduced) when `ComplianceVisualCard` was extracted into an isolated, testable unit.
-
-**Current state:**
-`ComplianceVisualCard.tsx` (and the original inline code it was lifted from) switches the chart renderer on `card.type` (`"bar-chart"` / `"pie-chart"` / `"line-chart"` / `"timeline"` / `"percentage"`). The live backend (`POST /market-research`, `component_name = "regulatory & compliance highlights"`, confirmed 2026-06-02 against `https://brewra-gtm-intelligence.onrender.com`) returns `visualDataCards[]` whose chart-type field is named **`chartType`**, not `type`. With `card.type === undefined`, every backend card falls through to the `!card.type` icon + the bar-chart-style default render — so the Compliance Analytics section has effectively always rendered its hardcoded default cards rather than the backend's `visualDataCards`. This is **pre-existing** behavior (the container's `visualDataCards = regulatoryData?.visualDataCards || [defaults]` fallback + the `type` switch were byte-identical before 5e); the decomposition only made it visible and unit-testable.
-
-**What it should be:**
-Normalize the field in `ComplianceVisualCard` (e.g. `const chartType = card.type ?? card.chartType;` and switch on that), or adapt the shape in `useRegulatoryCompliance` / `regulatoryHelpers` (a `deriveVisualDataCards` mapper). Confirm the exact backend field set first (live `/market-research` call — no auto-generated client per CLAUDE.md). Add a `ComplianceVisualCard` unit test asserting a `chartType`-keyed card renders the right chart once normalized.
-
-**Why we deferred:**
-- Out of scope for 5e, whose mandate was a byte-identical structural decomposition (visual parity guarded by behavioral E2E + Vitest, NOT pixel VR) — changing the chart-type resolution would be a behavior change, explicitly disallowed mid-extraction (Plan 24e abort criterion 3).
-- It is pre-existing and not a regression; the section renders coherent (default) cards today.
-
-**What we lose by staying as-is:**
-- The Compliance Analytics charts show hardcoded defaults instead of the backend's real `visualDataCards`, even when the backend returns populated data.
-
-**Pull-forward trigger:**
-- When real `visualDataCards` need to render (pre-launch data-fidelity pass), or the 24i market-research phase-close sweep, or alongside any backend market-research contract typing work.
-
-**Owner:** TBD.
-
----
-
-## TD-FE-24 — Regulatory default data duplicated across ~5 sites
-
-**Date logged:** 2026-06-02
-**Origin:** Plan 24e Phase 5e impl review round 1 (`docs/reviews/phase-5e-regulatory-compliance-impl-review-1.md`, finding #1) + synthesis round 1.
-
-**Current state:**
-The hardcoded fallback datasets in the regulatory feature are copy-pasted verbatim across multiple code sites:
-- Default **regional data** (EU/US/China/UK rows) and default **visual data cards** (Compliance Adoption Rates / Regulatory Timeline / Risk Indicators) appear in `RegulatoryComplianceSection.tsx` in three places — the render-time `regionalData`/`visualDataCards = regulatoryData?.* || [defaults]` derivations, inside `handleModify`, and inside the init `useEffect`.
-- Default **strategic recommendations** lists are hardcoded in `StrategicRecommendationsSection.tsx` non-editing fallbacks (the three `mitigateRegulatoryRisks`/`competitivePositioning`/`goToMarketStrategy` `<li>` blocks).
-A default change must be made in 3–5 places simultaneously. This is **pre-existing** (byte-identical to the `master` monolith) and was an explicit Plan 24e Task 2 scope decision (the plan considered lifting `deriveVisualDataCards`/`deriveRegionalData` into `regulatoryHelpers.ts` and declined, to keep the decomposition a pure structural move).
-
-**What it should be:**
-A single source for the defaults — a `regulatoryDefaults.ts` constants module (or `deriveVisualDataCards`/`deriveRegionalData`/`deriveStrategicRecommendations` in `regulatoryHelpers.ts`) consumed by every fallback site, with unit tests asserting the default shape.
-
-**Why we deferred:**
-- Pre-existing duplication, not introduced by 5e; consolidating it would be a behavior-touching change beyond 5e's byte-identical decomposition mandate (abort criterion 3).
-- Plan 24e Task 2 deliberately scoped it out.
-
-**What we lose by staying as-is:**
-- A maintenance trap: editing one default and missing the other 2–4 copies yields inconsistent fallbacks across edit/non-edit/init paths.
-
-**Pull-forward trigger:**
-- A defaults-consolidation follow-up, or the 24i market-research phase-close sweep, or whenever a regulatory default actually needs to change.
-
-**Owner:** TBD.
-
----
-
-## TD-FE-25 — Read-only Strategic Recommendations ignores `localStrategicRecommendations` (state-coherence quirk)
-
-**Date logged:** 2026-06-02
-**Origin:** Plan 24e Phase 5e impl review round 1 (finding #2) + synthesis round 1.
-
-**Current state:**
-`StrategicRecommendationsSection.tsx` renders the three recommendation lists from `regulatoryData?.strategicRecommendations?.{mitigateRegulatoryRisks,competitivePositioning,goToMarketStrategy}` (or hardcoded fallbacks) in **non-editing** mode, and from `localStrategicRecommendations` only in **editing** mode. After a user edits the recommendations and exits edit mode, the read-only view can revert to the API/default data, visually discarding the local edits. This is **pre-existing** and byte-identical to the `master` monolith (verified: read-only read `regulatoryData?.strategicRecommendations?.X` at 3 sites; `localStrategicRecommendations` used only in the edit path). It is also **inconsistent** with `ExecutiveSummarySection`, which correctly falls back through `currentExecutiveSummary = localExecutiveSummary || regulatoryData?.executiveSummary || executiveSummary` in both modes.
-
-**Open question (resolve before fixing):** unlike the five editable string fields (which each have an `on*Change` parent callback), `localStrategicRecommendations` appears to have **no parent-bound change callback**, so strategic edits may never round-trip to the parent/API even via `handleRegulatoryComplianceSaveChanges`. This determines whether the correct fix is "read `localStrategicRecommendations` first in the read-only path" or "wire a persist callback so edits survive a real save+refetch" (or both).
-
-**What it should be:**
-Align the read-only fallback chain with `ExecutiveSummarySection` (`local* || regulatoryData?.* || defaults`), and/or wire strategic-recommendation edits to a parent callback so they persist.
-
-**Why we deferred:**
-- Pre-existing behavior; changing the read-only data source is a behavior change disallowed mid-decomposition (Plan 24e abort criterion 3 / byte-identical mandate).
-
-**What we lose by staying as-is:**
-- Edited strategic recommendations can silently disappear from the read-only view after save; the section behaves inconsistently with the sibling Executive Summary section.
-
-**Pull-forward trigger:**
-- Pre-launch data-fidelity pass (alongside TD-FE-23's `visualDataCards`/`chartType` gap — same theme), or the 24i sweep.
-
-**Owner:** TBD.
-
----
-
-## TD-FE-26 — Dead non-user-scoped `localStorage` writes in RegulatoryComplianceSection
-
-**Date logged:** 2026-06-02
-**Origin:** Plan 24e Phase 5e impl review round 1 (finding #4) + synthesis round 1.
-
-**Current state:**
-The container runs five effects writing `localStorage.setItem("regulatory_executiveSummary"/"regulatory_euAiActDeadline"/…, value)` — **non-user-scoped** raw keys. But the `useState` initializers read these values via `getUserLocalStorage("regulatory_executiveSummary", currentUser?.uid)` — **user-scoped** keys (a different keyspace). The raw writes can therefore never be read back; they write to dead keys. (The JSON-blob writes for the Scout API at save time correctly use `setUserLocalStorage(..., currentUser?.uid)`.) This is **pre-existing** (5 occurrences on `master`), carried forward byte-identically by 5e.
-
-**What it should be:**
-Either route the five write effects through `setUserLocalStorage(key, value, currentUser?.uid)` (so they share the keyspace the initializers read), or delete them if the cache-rehydrate-on-mount behavior isn't wanted. Removing them is behavior-neutral (they're already dead).
-
-**Why we deferred:**
-- Pre-existing dead writes, not introduced by 5e; 5e carried the effects forward unchanged as part of the byte-identical decomposition.
-
-**What we lose by staying as-is:**
-- Misleading code (five effects that look like they persist editable fields but write to keys nothing reads); minor wasted writes on every edit keystroke.
-
-**Pull-forward trigger:**
-- A localStorage/caching cleanup pass or the 24i market-research phase-close sweep.
 
 **Owner:** TBD.
 
@@ -741,25 +573,6 @@ Industry-trends page-level fetch/state/cache slice retained in `useMarketResearc
 
 **Pull-forward trigger:**
 - When 5h is decomposed (or the cascade is retired), remove the industry-trends slice from `useMarketResearchData.ts`; this also feeds 24i's zero-raw-fetch gate. — **UPDATE 2026-06-03:** Phase 5 closed (24i) with this gate RELAXED to advisory (CTO pre-launch posture); this item was NOT retired and is carried forward — Phase 7 lead-stream-era mutation pass / Phase 13 audit. See Spec 24 §9 delta 11.
-
-**Owner:** TBD.
-
----
-
-## TD-FE-29 — Full preflight gate stays serial; parallel runner is opt-in (flakes e2e under concurrent-session load)
-
-**Date logged:** 2026-06-02
-**Origin:** Preflight perf items 4–5 (follow-on to the merged perf quick-wins). `frontend/scripts/preflight.mjs` parallelizes the gate but is wired as `npm run preflight:par` (opt-in), NOT the default `npm run preflight`.
-
-**Current state:**
-Three commands: `npm run preflight` = serial `&&` chain (the merge gate); `npm run verify` = typecheck+lint+test (the fast inner loop); `npm run preflight:par` = full gate parallelized via `scripts/preflight.mjs` (dependency-aware build→bundle/e2e, bounded by `PREFLIGHT_JOBS`, fail-fast). Parallel is opt-in by measurement: it runs build + vitest (4 workers) + e2e + lint concurrently, and stacked on a second worktree's preflight it pushed box load to ~20/23 cores — inflating every task 3–4× and **flaking the e2e visual snapshot** (`02-post-login-state.png`: 86% pixel diff + render timeout), a false failure that would block a merge. In the same back-to-back run the SERIAL gate passed e2e 14/14 at load ~8, isolating the cause to the parallel load-spike, not a regression. Parallel-full only wins on an idle box (~1.5–2×).
-
-**Why we deferred (serial stays the default gate):**
-- The team runs concurrent worktree sessions; a gate that's fast solo but flaky-under-concurrency is a net loss — a false e2e failure costs more (a wasted full re-run + investigation) than the serial gate's extra minutes.
-- Hardening the VR e2e against contention is its own focused change, separate from the gate-structure work.
-
-**What it should be / pull-forward trigger:**
-- Make the VR e2e contention-robust — Playwright retries on the VR specs, a higher `toHaveScreenshot` stabilization timeout, a lower default `PREFLIGHT_JOBS`, or scheduling e2e in its own non-concurrent wave so it never renders under a CPU spike — then flip `preflight` → `preflight:par`. Trigger: the serial merge-gate wall-clock becomes a real bottleneck, or concurrent-worktree development ends (single-session steady state).
 
 **Owner:** TBD.
 
@@ -1042,30 +855,6 @@ The cache-native optimism pass / Phase 13.
 
 ---
 
-## TD-FE-42 — Customers `/icp` + `customer_profile` read overlaps mission-control `useICPs`; two independent read paths with nothing to catch a divergent `/api/icp` shape change
-
-**Date logged:** 2026-06-04
-**Origin:** Phase 7 (Tasks 5–7). The customers feature introduced its own `/icp` and `customer_profile` read service + hooks alongside the mission-control `useICPs` hook, which also reads `/api/icp`. No shared contract layer exists to catch a divergent backend shape change.
-
-**Current state:**
-`services/customers.ts` + `useCustomerProfile` + `useSuggestedIcps` form one read path for `/icp` and `customer_profile`. `useICPs` in mission-control is a second independent read path for `/api/icp`. Both use the same endpoint but define their own zod schemas independently; a shape change in the backend breaks one without necessarily surfacing in the other's types.
-
-**What it should be:**
-A single canonical zod schema + service function for `/api/icp` shared by both consumers, so a shape change is caught at one definition site and propagates to all callers.
-
-**Why we deferred:**
-Consolidation would require touching mission-control during a customers-scoped extraction phase — out of scope for Phase 7. Pre-launch velocity posture.
-
-**What we lose by staying as-is:**
-Silent divergence risk: a `/api/icp` response shape change may break one consumer but not the other's TypeScript, delaying detection until runtime.
-
-**Pull-forward trigger:**
-Phase 9 consolidation / Phase 13.
-
-**Owner:** TBD.
-
----
-
 ## TD-FE-43 — Customers read orchestration retains imperative loader with `localStorage` fetch-cache + `sessionStorage` session-cache + multi-tier fallbacks rather than going cache-native
 
 **Date logged:** 2026-06-04
@@ -1186,30 +975,6 @@ Product decision on multi-org support, or a real list-tenants backend endpoint b
 
 ---
 
-## TD-FE-56 — `features/settings/components/AgentProfile.tsx` and `features/scout/components/ScoutDeployment.tsx` are near-duplicate forms
-
-**Date logged:** 2026-06-05
-**Origin:** Phase 10 (Task 5). `AgentProfile.tsx` was relocated into `features/settings/components/` during Phase 10; `ScoutDeployment.tsx` remains in the legacy `src/components/settings/` location. Both render agent/deployment configuration forms with substantial structural overlap but no shared base component.
-
-**Current state:**
-`src/features/settings/components/AgentProfile.tsx` and `src/features/scout/components/ScoutDeployment.tsx` are near-duplicate form components. They share field layout, save/cancel patterns, and profile-data binding logic but are maintained as independent files with no shared abstraction. (Phase 9 relocated `ScoutDeployment.tsx` from `src/components/settings/` into `features/scout/components/`; the forms are still not unified.)
-
-**What it should be:**
-Phase 9 relocated `ScoutDeployment.tsx` into `features/scout/components/` (the relocation half of this item is **done**). The two components should now be evaluated for unification into a single parameterised form component (or a shared form primitive), eliminating the remaining duplication.
-
-**Why we deferred:**
-Deduplication requires Phase 9's scout extraction to be complete so the correct home for the unified component is clear. Merging them before Phase 9 would land the result in the wrong directory.
-
-**What we lose by staying as-is:**
-Fixes or UI changes to one form must be manually mirrored to the other. Divergence risk grows with every modification.
-
-**Pull-forward trigger:**
-Phase 9 relocated the form into `features/scout/` (done); the remaining trigger is a settings/scout form-unification pass.
-
-**Owner:** TBD.
-
----
-
 ## TD-FE-47 — `StrategistWorkspace` relocated as-is; live but large, decomposition + `GET /chat/` deferred
 
 **Date logged:** 2026-06-05
@@ -1273,50 +1038,6 @@ A "signal decisions sync across devices" product requirement.
 
 ---
 
-## TD-FE-50 — `signalsChatContext` sessionStorage handoff is untyped
-
-**Date logged:** 2026-06-05
-**Origin:** Phase 8 (signals relocation). The signals → scout/profiler chat handoff writes `sessionStorage.setItem("signalsChatContext", JSON.stringify(...))` with no shared type contract.
-
-**Current state:**
-The signals-to-chat handoff serialises an untyped payload via `sessionStorage.setItem("signalsChatContext", JSON.stringify(...))`; the consuming chat surface reads and parses it with no shared TypeScript type describing the shape.
-
-**What it should be:**
-A shared, typed contract for the `signalsChatContext` payload (a named interface/type imported by both the producer and consumer), so the handoff shape is statically checkable.
-
-**Why we deferred:**
-The untyped handoff works at MVP scale; introducing the shared contract is best done alongside the chat-surface work where both ends are touched.
-
-**Pull-forward trigger:**
-When the signals→chat handoff is given a typed contract (deferred beyond Phase 9; Phase 9 chose not to type it to stay behavior-preserving).
-
-**Note:** Phase 9 deliberately did not add the typed contract — the shared-chat dedup was behavior-preserving and typing the handoff is a contract addition beyond that scope.
-
-**Owner:** TBD.
-
----
-
-## TD-FE-52 — No strategist Playwright/VR journey; coverage is behavioral-only
-
-**Date logged:** 2026-06-05
-**Origin:** Phase 8 (strategist relocation). Strategist shipped with Vitest render tests only; no Playwright journey or visual-regression baseline was added (Spec 27 §8 gap).
-
-**Current state:**
-Strategist coverage is behavioral-only (Vitest render tests). The workspace is visually rich — a two-panel dashboard plus chat plus a sequence timeline — and has no Playwright end-to-end journey and no pixel/VR baseline.
-
-**What it should be:**
-A strategist Playwright journey and a visual-regression baseline covering the two-panel workspace, chat, and sequence timeline, so visual regressions are caught.
-
-**Why we deferred:**
-Behavioral-only coverage is the accepted pre-launch advisory-gate default; pixel/VR baselines are added when a surface churns visually or during a dedicated pre-launch VR sweep.
-
-**Pull-forward trigger:**
-Strategist visual churn or a pre-launch VR sweep.
-
-**Owner:** TBD.
-
----
-
 ## TD-FE-53 — Signals page data flow NOT migrated to TanStack (Phase 8 was structure-only)
 
 **Date logged:** 2026-06-05
@@ -1361,27 +1082,6 @@ Profiler grows a standalone surface that is not naturally customers or mission-c
 
 ---
 
-## TD-FE-61 — `SignalsChatContext` type name retained after component renamed to `ContextChat`
-
-**Date logged:** 2026-06-05
-**Origin:** Phase 9 (Task 1 — rename `SignalsContextChat` → `ContextChat`). The component was renamed but the context-shape type was deliberately left as `SignalsChatContext` to avoid a wide consumer churn.
-
-**Current state:**
-`src/shared/chat/ContextChat.tsx` exports the component as `ContextChat` and the context-shape type as `SignalsChatContext`. The type name reflects the old component name and carries a "Signals" prefix that no longer matches the generic shared substrate.
-
-**What it should be:**
-The type should be renamed to `ChatContext` (or similar) so the exported type name matches the component name and the generic-substrate framing.
-
-**Why we deferred:**
-Renaming the type requires touching all consumers (`SignalsChatContext` is the prop type at every `ContextChat` call site + the `signalsChatContext` sessionStorage key). Phase 9 chose not to widen scope beyond behavior-preserving moves.
-
-**Pull-forward trigger:**
-Next time `src/shared/chat` types are touched (e.g. when typing the `signalsChatContext` sessionStorage handoff — TD-FE-50).
-
-**Owner:** TBD.
-
----
-
 ## TD-FE-58 — Artefacts cross-component coupling via untyped `window` CustomEvents
 
 **Current state:**
@@ -1412,27 +1112,6 @@ _Phase 12 note: these entries were authored as provisional TD-FE-47–49 and ren
 
 ---
 
-## TD-FE-64 — CSV smart-quote normalization is a no-op (`normalizeCsvAsciiDoubleQuotes`)
-
-**Date logged:** 2026-06-06
-**Origin:** Discovered during the Phase 13b seam-test pass (extraction of `csvHelpers.ts` from `DataSourcesManager`). Pre-existing — the code was moved verbatim; the bug predates Phase 13.
-
-**Current state:**
-`frontend/src/features/mission-control/components/data-sources/csvHelpers.ts` (the `normalizeCsvAsciiDoubleQuotes` helper, ~line 11) replaces curly/smart double-quotes with the codepoint U+201D (RIGHT DOUBLE QUOTATION MARK) instead of the ASCII straight double-quote U+0022. The function's own docstring states the intent is to convert curly quotes to ASCII `"` so RFC-4180 quote handling works. Because the replacement target is itself a curly quote, the normalization is effectively a no-op: downstream delimiter detection and quoted-field splitting (which look for U+0022) never see a straight quote, so CSVs containing curly quotes (e.g. Excel/Word exports) can have multiline quoted fields fail to merge and column counts break.
-
-**Why deferred:**
-Phase 13b is behavior-preserving structural decomposition only (Spec 32 §5.2). Fixing this is a logic change that alters CSV-parsing behavior and warrants its own deliberate change + validation, not a slip-in during a structural split. The decomposition preserved the (buggy) behavior exactly.
-
-**Fix:**
-Change the replacement string in `csvHelpers.ts` from the U+201D character to an ASCII U+0022 `"`; then un-skip the two documenting tests in `__tests__/csvHelpers.test.ts` (added in Phase 13b, commit `0e8ffec`) that already assert the corrected behavior.
-
-**Pull-forward trigger:**
-A CSV-import correctness pass, or any report of curly-quoted CSV fields mis-parsing on upload.
-
-**Owner:** TBD.
-
----
-
 ## TD-FE-65 — `useMarketResearchData.ts` decomposition deferred (6,034 LOC monster file)
 
 **Date logged:** 2026-06-07
@@ -1449,46 +1128,6 @@ Resolve TD-FE-19/21 first — move fetch results into a query layer and let edit
 
 **Pull-forward trigger:**
 A data-layer pass that resolves TD-FE-19/21, or a renewed effort to reduce this file's size after that decoupling lands.
-
-**Owner:** TBD.
-
-## TD-FE-66 — useDocumentSync cleanup (pre-existing patterns relocated in Phase 13b)
-
-**Date logged:** 2026-06-07
-**Origin:** impl-review-2 of Phase 13 (docs/reviews/phase-13-loc-reduction-pass-2-impl-review-2.md + synthesis-2). Pre-existing code relocated verbatim during the 13b DataSourcesManager decomposition; deferred because fixing it is a logic change, out of scope for behavior-preserving decomposition.
-
-**Current state (`frontend/src/features/mission-control/components/data-sources/useDocumentSync.ts`):**
-1. `checkProcessingFilesStatus` wraps its body in `setDataSources((cur) => {...})` purely to READ current state, returns `cur` unchanged (forcing an unnecessary re-render), and fires `forEach` + `void (async () => ...)` `checkDocumentStatus` calls with NO concurrency control — N concurrent status checks can race on `setDataSources`. The idiomatic fix is a ref/query-cache read + a concurrency guard.
-2. `_isSaving` (~line 48): `const [_isSaving, setIsSaving] = useState(false)` — the value is never read anywhere in the tree (only `setIsSaving` is called by the parent's `handleSaveSource`); the isSaving mechanism is dead state.
-3. Debug `console.log` density in this module (~18 calls) — kept verbatim (removing them is a behavior change; thin them in a logging-audit pass).
-
-**Why deferred:** Phase 13 decomposition was behavior-preserving only (Spec 32 §5.2); all three are pre-existing and relocating them verbatim was correct. The hook boundary is now the natural fix site.
-
-**Pull-forward trigger:** the next change that touches `useDocumentSync` (e.g. a data-source processing-status bug, or a render-perf pass), or a TD-FE-19/21 data-layer pass.
-
-## TD-FE-67 — single-page v2 reads still cap items at 500; `total` not surfaced
-
-**Date logged:** 2026-06-08
-**Origin:** Spec 34 (frontend v1→v2 API migration). The three migrated reads
-(`fetchDataSources`, `fetchSignals`, `fetchSuggestedIcps`) request a single page
-(`limit=500`/`10`, `offset=0`) and consume only `items`.
-
-**Current state:** items are still capped at the page `limit`; `total` is present
-on the v2 wire but is not extracted, typed, or rendered (no consumer renders a
-count). The v1 `count` lie is gone (the FE no longer reads it), but the >500
-truncation is exposed-not-eliminated.
-
-**What it should be:** when a count display or a list exceeding 500 rows is
-needed, widen the service return types to carry `total` and add either fetch-all
-looping or real pagination UX (page controls / infinite scroll), keyed on the
-v2 `limit`/`offset`.
-
-**Why deferred:** 0 users; nothing renders a count today; threading an unused
-`total` would either break the bare-array consumer or add untyped dead surface
-(Spec 34 §2, review synthesis round 1).
-
-**Pull-forward trigger:** a count needs rendering, or an org approaches 500
-documents / signals / ICPs.
 
 **Owner:** TBD.
 
@@ -1553,97 +1192,6 @@ signal would be misleading.
 **Pull-forward trigger:** a real per-ICP count endpoint exists on the backend, or
 the ICP cards surface is prioritised for accuracy (e.g. a stakeholder demo where
 "0 leads" is conspicuous).
-
-**Owner:** TBD.
-
----
-
-## TD-FE-70 — customers Lead Stream is first-page-only (no pager)
-
-**Date logged:** 2026-06-15
-**Origin:** Plan 36 Task 16 (`useLeads` / `fetchLeads`) + spec 36 §5.7-A2.
-
-**Current state:** `useLeads` calls `fetchLeads` which calls `GET /api/v2/leads`
-with `firstPageParams(50)` (`limit=50, offset=0`) and renders a flat list in
-`LeadStream.tsx`. There is no "load more" button, infinite scroll, or page
-controls. Matches the sibling `LeadsTable` single-fetch pattern (market-research).
-
-**What it should be:** paginated / "load more" per spec §5.7-A2. The v2 endpoint
-already accepts `limit` and `offset`; the `PaginatedResponse` envelope carries
-`total`. A "load more" affordance would fetch the next page and append to the
-list.
-
-**Why deferred:** 0 users; no org is near 50 leads; adding pagination UX would be
-disproportionate to current scale and out of plan 36 scope.
-
-**Pull-forward trigger:** an org's lead count approaches or exceeds 50, or real
-users land and the truncated list is noticed.
-
-**Owner:** TBD.
-
----
-
-## TD-FE-71 — signal↔lead map prompt matches on data the payload doesn't send
-
-**Date logged:** 2026-06-15
-**Origin:** Plan 36 (signal↔lead relevance mapping). Impl-review round 1,
-finding 1. Ref: `docs/reviews/phase-36-signal-lead-mapping-impl-synthesis-1.md`.
-
-**Current state:** `_signals_for_prompt` in
-`backend/app/services/signals/lead_map.py` serializes only `{signal_id,
-headline}` per signal, but the `signals_lead_map.md.j2` MATCHING RULES instruct
-the model to match on "an explicit company mention in the signal" — those
-mentions live in the signal's `description`/`snippet`/`sourceLabel`, none of
-which are sent. The model is therefore restricted to headline-only matching;
-prompt and payload disagree. No error and id hygiene is unaffected (invented ids
-are still dropped) — a recall-quality gap, not a defect.
-
-**What it should be:** prompt and payload agree — either narrow the MATCHING
-RULES to headline-only (a 1-line prompt edit) or extend `_signals_for_prompt` to
-include a trimmed `snippet`/`description` slice so company mentions are actually
-available to match on.
-
-**Why deferred:** 0 users; the MVP Business State explicitly waives
-relevance-quality SLAs; and signal headlines routinely carry the company name,
-so headline matching already partially satisfies the rule. Tuning recall before
-there is real signal/lead data to measure against is premature.
-
-**Pull-forward trigger:** the first relevance-quality tuning pass against real
-signals + leads, or a report that the mapping misses obvious company matches.
-
-**Owner:** TBD.
-
----
-
-## TD-FE-72 — signal↔lead map `refresh` escape hatch is unreachable from the UI
-
-**Date logged:** 2026-06-15
-**Origin:** Plan 36 (signal↔lead relevance mapping). Impl-review round 1, finding
-2 (refresh half); spec 36 §5.4. Ref:
-`docs/reviews/phase-36-signal-lead-mapping-impl-synthesis-1.md`.
-
-**Current state:** `useSignalLeadMap` calls `fetchSignalLeadMap(userId, orgId)`
-with no opts, so the request always sends `refresh: false`, and no UI surfaces a
-recompute action. The backend `refresh=true` path (force a recompute past the
-per-(org, user) fingerprint cache) is therefore inert end-to-end. A cached
-mapping — including a structurally-truncated partial recovered by
-`_recover_mapping_entries` — is served on every fingerprint hit and cannot be
-busted from the FE until the org's signal/lead id-set changes (edits to lead
-fields, with no id change, also do not bust it).
-
-**What it should be:** a recompute/refresh affordance on a surface that shows the
-mapping, calling `fetchSignalLeadMap(userId, orgId, { refresh: true })`, per spec
-36 §5.4's escape-hatch intent.
-
-**Why deferred:** 0 users; a mapping that is stale until the id-set changes is
-low-impact at MVP; a refresh control is a FE feature beyond plan 36's mapping
-scope. (Caching the recovered partial is itself intentional degrade-gracefully
-behavior — see the synthesis; the gap is the missing FE recompute, not the
-cache.)
-
-**Pull-forward trigger:** the first real org reports a stale or low-quality
-mapping that will not self-correct, or the mapping surfaces are prioritised for a
-demo.
 
 **Owner:** TBD.
 
