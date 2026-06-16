@@ -57,9 +57,7 @@ test("market research page loads + auto-fetches first component", async ({ page 
     );
     // ChatWithHistory renders an <h3>Chat with Scout</h3> empty-state heading when no session
     // is selected. This is always the initial state (no sessionStorage context in e2e).
-    await expect(
-      page.getByRole("heading", { name: "Chat with Scout" }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Chat with Scout" })).toBeVisible();
   });
 
   await test.step("Your Lead Stream (analysis) tab renders the lead stream", async () => {
@@ -69,8 +67,6 @@ test("market research page loads + auto-fetches first component", async ({ page 
       "true",
     );
     // OpportunityDashboard renders an <h2>Opportunity Dashboard</h2> unconditionally.
-    await expect(
-      page.getByRole("heading", { name: "Opportunity Dashboard" }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Opportunity Dashboard" })).toBeVisible();
   });
 });
