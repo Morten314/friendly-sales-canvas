@@ -18,12 +18,7 @@ export async function fetchDataSources(
     `v2/user-documents?org_id=${encodeURIComponent(orgId)}&${firstPageParams(500)}`,
     paginatedSchema(z.unknown()),
   );
-  let items: unknown[] = env.items ?? [];
-  if (items.length === 0) {
-    // Passthrough envelope may still carry a legacy v1 `files` array on some paths.
-    const legacy = env as { files?: unknown[]; documents?: unknown[]; data?: unknown[] };
-    items = legacy.files ?? legacy.documents ?? legacy.data ?? [];
-  }
+  const items: unknown[] = env.items ?? [];
   return { items, total: env.total ?? 0 };
 }
 

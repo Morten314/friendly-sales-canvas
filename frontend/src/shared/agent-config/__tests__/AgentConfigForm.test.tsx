@@ -63,7 +63,7 @@ describe("AgentConfigForm", () => {
         showAgentNameSelect={false}
       />,
     );
-    expect(screen.queryByText("Agent")).not.toBeInTheDocument();
+    expect(screen.queryByText("Agent Name")).not.toBeInTheDocument();
     rerender(
       <AgentConfigForm
         title="t"
@@ -77,7 +77,7 @@ describe("AgentConfigForm", () => {
         showAgentNameSelect
       />,
     );
-    expect(screen.getByText("Agent")).toBeInTheDocument();
+    expect(screen.getByText("Agent Name")).toBeInTheDocument();
   });
   it("fires onFieldChange when the domain input changes", () => {
     const { props } = renderForm({ readOnly: false });

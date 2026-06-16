@@ -54,9 +54,10 @@ export function useDocumentSync({
   const dataSourcesQuery = useDataSources(orgIdToUse, !!currentUser?.uid);
 
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
-  // The saving flag itself is owned by the consumer (DataSourcesManager); the hook
-  // only exposes a setter so callers can keep using a single api object. The value
-  // was never read here, so it is no longer stored — the setter is a no-op.
+  // The former `_isSaving` state was removed (it was never read anywhere). `setIsSaving`
+  // is kept as a no-op shim so DataSourcesManager's existing call sites still type-check
+  // against this api object — no saving flag is tracked. Dropping the field + those call
+  // sites is deferred (TD-FE-74).
   const setIsSaving: DocumentSyncApi["setIsSaving"] = () => {};
   // Initial load only — background refetches (tab refresh, polling) must not
   // re-show the full-page overlay or production feels like an infinite loop.

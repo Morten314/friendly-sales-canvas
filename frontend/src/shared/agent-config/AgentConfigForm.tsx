@@ -89,7 +89,7 @@ export function AgentConfigForm({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {showAgentNameSelect ? (
             <div className="space-y-2">
-              <Label htmlFor="agentName">Agent</Label>
+              <Label htmlFor="agentName">Agent Name</Label>
               <Select
                 value={values.agentName}
                 onValueChange={(value) => onFieldChange("agentName", value)}

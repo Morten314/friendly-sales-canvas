@@ -52,8 +52,16 @@ export function useSignalLeadMap(orgId?: string | null) {
   /** Force-recompute the signal↔lead mapping past the server cache. */
   const refresh = useCallback(async () => {
     if (!orgId || !userId) return;
-    const data = await fetchSignalLeadMap(userId, orgId, { refresh: true });
-    queryClient.setQueryData(qk.signalLeadMap(orgId, userId), data);
+    try {
+      const data = await fetchSignalLeadMap(userId, orgId, { refresh: true });
+      queryClient.setQueryData(qk.signalLeadMap(orgId, userId), data);
+    } catch (err) {
+      // The recompute endpoint (/signal-lead-map_claude) is not yet deployed
+      // (TD-FE-73), so a click on the dormant control 404s. Swallow to a clean
+      // no-op instead of an unhandled rejection; full loading/error UX lands
+      // when the endpoint ships.
+      console.warn("signal-lead-map refresh failed", err);
+    }
   }, [orgId, userId, queryClient]);
 
   return {

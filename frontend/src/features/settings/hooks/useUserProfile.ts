@@ -4,10 +4,10 @@ import { fetchOwnProfile } from "../services/profile";
 
 import { qk } from "@/shared/api/queryKeys";
 
-export function useUserProfile(userId: string | undefined, enabled = true) {
+export function useUserProfile(userId: string | undefined) {
   return useQuery({
     queryKey: qk.userProfile(userId ?? ""),
-    enabled: enabled && !!userId,
+    enabled: !!userId,
     queryFn: () => fetchOwnProfile("user", userId as string),
   });
 }
