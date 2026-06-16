@@ -46,7 +46,6 @@ class DocumentStatusResponse(BaseModel):
     data: DocumentStatusData
 
 
-
 class UserDocumentEntry(BaseModel):
     """Single entry in the files list returned by GET /v2/user-documents."""
     file_id: Optional[str] = None

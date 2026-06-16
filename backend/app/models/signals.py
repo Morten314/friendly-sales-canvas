@@ -51,7 +51,6 @@ class GenerateSignalsBatchResponse(BaseModel):
     data: List[Dict[str, Any]]
 
 
-
 class SignalActionResponse(BaseModel):
     """Response for POST /signal_action (accept or reject).
 
