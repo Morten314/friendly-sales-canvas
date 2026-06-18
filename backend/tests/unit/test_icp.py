@@ -6,6 +6,7 @@ run_icp_research), list_icps, delete_recommended_icp, and the ICP-id registry
 helpers. Includes the preserved-ICPIdRegistryError test mentioned in spec §4.
 """
 import asyncio
+import json
 from unittest.mock import MagicMock
 
 import pytest
@@ -312,3 +313,31 @@ def test_delete_recommended_icp_happy_path(mocker, mock_mongo_client):
     assert result["success"] is True
     assert result["data"]["remaining_count"] == 1
     release_mock.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Regression — icp_research_1 Claude path must parse wrapped output
+# ---------------------------------------------------------------------------
+
+def test_icp_research_1_claude_parses_wrapped_output(mocker):
+    """Regression for the production /icp-research_claude 500 on the
+    'icp summary & market opportunity' component.
+
+    icp_research_1 parsed the raw Claude response with the default parser
+    (trim_braces=False, strip_final_answer=False), so prose/fence-wrapped JSON
+    raised JSONDecodeError -> HTTP 500. Its siblings icp_research_2..4 already
+    pass trim_braces=True / strip_final_answer=True and were unaffected.
+    """
+    payload = {"title": "ICP Summary", "currentData": {"segments": ["mid-market"]}}
+    wrapped = f"Here is the ICP summary you requested:\n```json\n{json.dumps(payload)}\n```"
+    mocker.patch(
+        "app.services.icp.orchestrator._icp_research_agent_output",
+        return_value=wrapped,
+    )
+
+    from app.services.icp.orchestrator import icp_research_1
+
+    parsed_json, prompt_meta = icp_research_1(MagicMock(), "{}", "claude")
+
+    assert parsed_json["title"] == "ICP Summary"
+    assert prompt_meta["name"] == "icp_research_1"

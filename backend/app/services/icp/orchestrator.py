@@ -78,8 +78,14 @@ def icp_research_1(agent_chain, pre_data: str, llm_backend: str = "qwen") -> tup
 
     response = _icp_research_agent_output(agent_chain, rendered.body, pre_data, llm_backend)
 
-    # Parse cleaned JSON (strips ``` fences, escapes \\n in 'description' values)
-    parsed_json = _extract_icp_json(response)
+    # Parse cleaned JSON. The Claude path returns prose/fence-wrapped JSON, so
+    # trim_braces + strip_final_answer are required (matches icp_research_2..4) —
+    # the bare defaults raised JSONDecodeError and 500'd this component.
+    parsed_json = _extract_icp_json(
+        response,
+        trim_braces=True,
+        strip_final_answer=True,
+    )
 
     return parsed_json, prompt_meta
 
