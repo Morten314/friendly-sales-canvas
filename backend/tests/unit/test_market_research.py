@@ -6,6 +6,7 @@ _run_research_component dispatch (post-K3 collapse). LLM calls are mocked
 using captured fixtures from tests/fixtures/captured/.
 """
 import asyncio
+import json
 from unittest.mock import MagicMock
 
 import pytest
@@ -248,3 +249,34 @@ def test_run_market_research_propagates_budget_exhausted_error(
     )
     with pytest.raises(BudgetExhaustedError, match="budget exhausted"):
         asyncio.run(run_market_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend="claude"))
+
+
+# ---------------------------------------------------------------------------
+# Regression — Claude path must parse the prompt-mandated "Final Answer:" framing
+# ---------------------------------------------------------------------------
+
+def test_run_research_component_claude_parses_final_answer_wrapped_output(mocker):
+    """Regression for the production /market-research_claude 500s (all 5 components).
+
+    Every research_market_* prompt ends with the shared
+    final_answer_json_directive, which instructs the model to reply
+    ``Final Answer: <JSON>``. The Claude path returns that text verbatim, so the
+    parser must strip the 'Final Answer:' framing (and code fences) before
+    json.loads. market_research previously parsed with the default settings
+    (strip_final_answer=False, trim_braces=False) and raised JSONDecodeError on
+    every component, surfacing as HTTP 500. Mirrors the robust signals path.
+    """
+    payload = {"executiveSummary": "Large and growing", "tamValue": "$4.2B"}
+    wrapped = f"Final Answer:\n```json\n{json.dumps(payload)}\n```"
+    mocker.patch(
+        "app.services.market_research.orchestrator._market_research_agent_output",
+        return_value=wrapped,
+    )
+
+    from app.services.market_research.orchestrator import _run_research_component
+
+    parsed_json, prompt_meta = _run_research_component(1, MagicMock(), "{}", "claude")
+
+    assert parsed_json["tamValue"] == "$4.2B"
+    assert parsed_json["executiveSummary"] == "Large and growing"
+    assert prompt_meta["name"] == "research_market_1"
