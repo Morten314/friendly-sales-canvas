@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CreatableCombobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -24,7 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { qk } from "@/shared/api/queryKeys";
 import { useAuthToken } from "@/shared/auth";
-import { useCompanyProfile } from "@/shared/company-profile";
+import { INDUSTRY_OPTIONS, useCompanyProfile } from "@/shared/company-profile";
 import {
   ensureMissionProfilerScope,
   isMissionControlCacheValid,
@@ -427,21 +428,14 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
           </div>
           <div className="space-y-2">
             <Label htmlFor="industry">Industry</Label>
-            <Select
+            <CreatableCombobox
+              id="industry"
               value={companyProfile.industry}
-              onValueChange={(value) => setCompanyProfile((prev) => ({ ...prev, industry: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select industry" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="saas">SaaS</SelectItem>
-                <SelectItem value="fintech">FinTech</SelectItem>
-                <SelectItem value="healthcare">Healthcare</SelectItem>
-                <SelectItem value="ecommerce">E-commerce</SelectItem>
-                <SelectItem value="enterprise">Enterprise Software</SelectItem>
-              </SelectContent>
-            </Select>
+              onChange={(value) => setCompanyProfile((prev) => ({ ...prev, industry: value }))}
+              options={INDUSTRY_OPTIONS}
+              placeholder="Select industry"
+              searchPlaceholder="Search or add an industry…"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="revenue">Revenue Band</Label>

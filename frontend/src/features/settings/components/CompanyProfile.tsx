@@ -4,6 +4,7 @@ import { Plus, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { CreatableCombobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -16,7 +17,11 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import type { CompanyProfileResponse } from "@/shared/api/contracts";
 import { useAuth } from "@/shared/auth";
-import { useCompanyProfile, useSaveCompanyProfile } from "@/shared/company-profile";
+import {
+  INDUSTRY_OPTIONS,
+  useCompanyProfile,
+  useSaveCompanyProfile,
+} from "@/shared/company-profile";
 import { setUserLocalStorage } from "@/shared/lib/cacheUtils";
 
 interface SocialMediaUrl {
@@ -231,24 +236,14 @@ export function CompanyProfile(_props: CompanyProfileProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <Label htmlFor="industry">Industry</Label>
-            <Select
+            <CreatableCombobox
+              id="industry"
               value={formData.industry}
-              onValueChange={(value) => handleInputChange("industry", value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select your industry" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="saas">SaaS</SelectItem>
-                <SelectItem value="b2b-tech">B2B Tech</SelectItem>
-                <SelectItem value="healthcare">Healthcare</SelectItem>
-                <SelectItem value="fintech">Fintech</SelectItem>
-                <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                <SelectItem value="e-commerce">E-commerce</SelectItem>
-                <SelectItem value="consulting">Consulting</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
+              onChange={(value) => handleInputChange("industry", value)}
+              options={INDUSTRY_OPTIONS}
+              placeholder="Select your industry"
+              searchPlaceholder="Search or add an industry…"
+            />
           </div>
 
           <div className="space-y-2">

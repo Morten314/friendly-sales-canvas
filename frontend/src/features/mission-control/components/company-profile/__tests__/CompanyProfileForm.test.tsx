@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import CompanyProfileForm from "../CompanyProfileForm";
 
@@ -14,6 +14,22 @@ import { server } from "@/test/msw/server";
 vi.mock("@/shared/auth", () => ({
   useAuthToken: () => ({ currentUser: { uid: "u1" }, orgId: "brewra" }),
 }));
+
+// The Industry combobox renders a `cmdk` popover; `cmdk` + Radix Popper use
+// ResizeObserver and Element.scrollIntoView, which jsdom lacks. Polyfill locally
+// (scoped to this file) so the popover mounts — mirrors IcpWizard.test.tsx.
+beforeAll(() => {
+  if (!("ResizeObserver" in globalThis)) {
+    (globalThis as { ResizeObserver?: unknown }).ResizeObserver = class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+  }
+  if (!Element.prototype.scrollIntoView) {
+    Element.prototype.scrollIntoView = () => {};
+  }
+});
 
 function renderForm(onSavedChange?: (saved: boolean) => void) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -126,5 +142,44 @@ describe("CompanyProfileForm", () => {
     await waitFor(() => expect(postedBody).not.toBeNull());
     expect(postedBody).toMatchObject({ company_name: "Globex", profile_type: "company" });
     await waitFor(() => expect(onSavedChange).toHaveBeenCalledWith(true));
+  });
+
+  it("includes a custom typed industry in the save payload", async () => {
+    const realSetTimeout = globalThis.setTimeout;
+    vi.spyOn(globalThis, "setTimeout").mockImplementation(((
+      fn: (...a: unknown[]) => void,
+      ms?: number,
+      ...rest: unknown[]
+    ) => {
+      if (ms === 2000) return 0 as unknown as ReturnType<typeof setTimeout>;
+      return realSetTimeout(fn, ms, ...rest);
+    }) as typeof setTimeout);
+
+    let postedBody: Record<string, unknown> | null = null;
+    server.use(
+      http.get("/api/profile/company", () => new HttpResponse(null, { status: 404 })),
+      http.post("/api/profile/company", async ({ request }) => {
+        postedBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ company_name: postedBody.company_name });
+      }),
+    );
+
+    renderForm();
+
+    // Company name is required for the save to proceed.
+    fireEvent.change(screen.getByLabelText(/Company Name/i), { target: { value: "Globex" } });
+
+    // Enter an industry that is NOT one of the suggestions via the creatable
+    // combobox (its trigger is labelled "Industry").
+    fireEvent.click(screen.getByRole("combobox", { name: "Industry" }));
+    fireEvent.change(screen.getByPlaceholderText(/search/i), {
+      target: { value: "Defense Logistics" },
+    });
+    fireEvent.click(screen.getByText(/Add "Defense Logistics"/));
+
+    fireEvent.click(screen.getByRole("button", { name: /Save Changes/i }));
+
+    await waitFor(() => expect(postedBody).not.toBeNull());
+    expect(postedBody).toMatchObject({ company_name: "Globex", industry: "Defense Logistics" });
   });
 });
