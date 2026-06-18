@@ -163,4 +163,16 @@ describe("sanitizeSourceUrl", () => {
       "https://www.gartner.com/report",
     );
   });
+
+  it("preserves a balanced trailing ')' in the path (e.g. Wikipedia disambiguation links)", () => {
+    expect(sanitizeSourceUrl("https://en.wikipedia.org/wiki/Python_(programming_language)")).toBe(
+      "https://en.wikipedia.org/wiki/Python_(programming_language)",
+    );
+  });
+
+  it("strips only the unbalanced wrapping ')' and trailing sentence punctuation", () => {
+    expect(sanitizeSourceUrl("https://en.wikipedia.org/wiki/Foo_(bar)).")).toBe(
+      "https://en.wikipedia.org/wiki/Foo_(bar)",
+    );
+  });
 });
