@@ -77,12 +77,13 @@ def test_research_agent_output_qwen_extracts_urls_from_string_observation():
     assert "https://d.com/y" in urls
 
 
-def test_research_agent_output_qwen_regex_fallback_when_no_intermediate_urls():
-    """extract_intermediate_urls=True falls back to regex on the response text
-    only when intermediate_steps yields no URLs."""
+def test_research_agent_output_qwen_does_not_scrape_response_when_no_genuine_urls():
+    """When intermediate_steps yields no genuine retrieved URLs, the model's OWN
+    answer must NOT be scraped for URLs — that self-corroborates fabricated links.
+    tavily_urls stays empty so downstream _validate_url drops uncorroborated sources."""
     agent_chain = MagicMock()
     agent_chain.invoke.return_value = {
-        "output": "see https://x.com and https://y.com here",
+        "output": "see https://openviewpartners.com/fabricated-2026 and more",
         "intermediate_steps": [],
     }
 
@@ -91,8 +92,8 @@ def test_research_agent_output_qwen_regex_fallback_when_no_intermediate_urls():
         search_query_template="q {seed}",
         extract_intermediate_urls=True,
     )
-    assert "https://x.com" in urls
-    assert "https://y.com" in urls
+    assert text == "see https://openviewpartners.com/fabricated-2026 and more"
+    assert urls == []
 
 
 # ---------------------------------------------------------------------------
@@ -163,6 +164,27 @@ def test_research_agent_output_claude_uses_custom_suffix_template(mocker):
     assert augmented.startswith("PROMPT")
     assert "--CUSTOM--" in augmented
     assert "WEBCTX" in augmented
+
+
+def test_research_agent_output_claude_does_not_scrape_response_when_tavily_empty(mocker):
+    """LIVE PROD PATH regression: when Tavily returns no genuine URLs, the model's
+    OWN answer must NOT be scraped for URLs. That self-corroboration hole is what
+    let fabricated (e.g. openviewpartners) citation URLs reach the UI and 404.
+    tavily_urls must stay empty so _normalize_search_signals_result drops them."""
+    mocker.patch(
+        "app.services._llm_helpers._tavily_context_and_urls",
+        return_value=("(web search unavailable: timeout)", []),
+    )
+    mocker.patch(
+        "app.services._llm_helpers._claude_messages_text",
+        return_value='{"sourceUrl": "https://openviewpartners.com/blog/fabricated-2026/"}',
+    )
+
+    text, urls = _research_agent_output(
+        MagicMock(), prompt="P", seed_text="s", llm_backend="claude",
+        search_query_template="q {seed}",
+    )
+    assert urls == []
 
 
 # ---------------------------------------------------------------------------

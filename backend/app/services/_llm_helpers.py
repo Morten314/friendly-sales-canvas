@@ -202,10 +202,11 @@ def _research_agent_output(
         Appended to prompt before sending to Claude. Default matches the signals
         framing; icp + market_research pass custom triple-quoted templates.
       extract_intermediate_urls: when True (signals path), walks
-        agent_chain response's intermediate_steps to collect tavily URLs from
-        the agent_chain path; falls back to regex over the text if empty. When
-        False (icp/market_research paths), the returned url list is empty for
-        the agent_chain path.
+        agent_chain response's intermediate_steps to collect genuine retrieved
+        tavily URLs. If none are found the list stays empty — we deliberately do
+        NOT scrape URLs from the model's own answer (that self-corroborates
+        fabricated citation URLs). When False (icp/market_research paths), the
+        returned url list is empty for the agent_chain path.
 
     Returns:
       (response_text, tavily_urls) tuple. Callers that don't need URLs unpack
@@ -243,10 +244,11 @@ def _research_agent_output(
                                 tavily_urls.extend(_filter_source_urls(re.findall(_URL_PATTERN, result)))
                     elif isinstance(observation, str):
                         tavily_urls.extend(_filter_source_urls(re.findall(_URL_PATTERN, observation)))
+                # Do NOT fall back to scraping URLs from the model's own answer
+                # (`response`) when no genuine retrieved URLs were found — that
+                # self-corroborates fabricated links. Leave tavily_urls empty so
+                # _validate_url drops uncorroborated citations.
                 tavily_urls = _filter_source_urls(tavily_urls)[:10]
-                if not tavily_urls:
-                    found_urls = re.findall(_URL_PATTERN, response)
-                    tavily_urls = _filter_source_urls(found_urls)[:5]
             except Exception:
                 pass
         return response, tavily_urls
@@ -258,9 +260,10 @@ def _research_agent_output(
     )
     augmented = prompt + claude_prompt_suffix_template.format(web_ctx=web_ctx)
     response = _claude_messages_text(augmented, max_tokens=CLAUDE_RESEARCH_MAX_TOKENS)
-    if not tavily_urls:
-        found_urls = re.findall(_URL_PATTERN, response)
-        tavily_urls = _filter_source_urls(found_urls)[:5]
+    # When Tavily returns nothing, tavily_urls stays empty — we deliberately do
+    # NOT scrape URLs from Claude's own answer (that self-corroborates fabricated
+    # links); _validate_url then drops uncorroborated citations rather than
+    # surfacing an unverified, possibly-404 URL.
     return response, tavily_urls
 
 
