@@ -70,7 +70,7 @@ IMPORTANT RESEARCH GUIDELINES:
 - The signal must be REAL and ACTIONABLE - not generic
 - Extract industry, ICP segments, and target markets from the provided data
 - Cross-reference multiple sources to verify signal accuracy
-- Find 1-2 different source URLs for the signal (preferably from different publications/sources)
+- Provide 1-2 source URLs for the signal, COPIED VERBATIM from your WebSearch tool results (preferably from different publications). Do NOT invent, guess, shorten, normalize, or reconstruct a URL from memory — use only URLs that appear EXACTLY in the search results you retrieved. If you have no real retrieved URL, omit that source rather than fabricating one.
 - Prioritize signals that are relevant to the company's specific ICP segments and target customers
 - If ICP data is available, use it to make the signal more specific and relevant
 - Generate 3 thoughtful NBA questions that help users dive deeper into the signal's implications for their ICP and sales strategy
@@ -82,16 +82,16 @@ Return your findings in the following exact JSON format (use exact keys as shown
   "headline": "[Compelling, specific headline about the ICP/customer signal - must be real and recent]",
   "snippet": "[Brief 1-2 sentence summary of the signal]",
   "description": "[One full paragraph (4-6 sentences) providing detailed context about the signal. Explain what the signal means for the company's ICP and target customers, why it matters for customer acquisition and sales strategy, what opportunities or challenges it presents for reaching the target ICP, and how the sales/profiling team should respond. Make it descriptive and actionable.]",
-  "sourceUrl": "[Real source URL where this signal was found]",
+  "sourceUrl": "[A source URL copied EXACTLY from your WebSearch results — never invented]",
   "sourceLabel": "[Source type: Market research, Customer research, Sales report, ICP analysis, etc.]",
   "source": [
     {
       "citation": "[Publication name - Article title - Date if available, e.g., 'Market Research Report - Customer Buying Trends - January 15, 2026']. Use actual dates from 2026 or recent past, NOT future dates.",
-      "url": "[First source URL where this signal was found]"
+      "url": "[First source URL, copied EXACTLY from your WebSearch results]"
     },
     {
       "citation": "[Publication name - Article title - Date if available, e.g., 'Sales Report - ICP Analysis - January 2026']",
-      "url": "[Second source URL (if available from different source)]"
+      "url": "[Second source URL, copied EXACTLY from your WebSearch results (only if a second was actually found)]"
     }
   ],
   "nextBestMoves": [
@@ -122,12 +122,12 @@ Return your findings in the following exact JSON format (use exact keys as shown
 - headline must be REAL and SPECIFIC - include actual numbers, dates, or ICP segment details when available
 - snippet should be concise (1-2 sentences)
 - description must be ONE FULL PARAGRAPH (4-6 sentences) with detailed context about ICP/customer implications
-- sourceUrl must be a REAL, accessible URL
+- sourceUrl must be copied VERBATIM from a WebSearch result — never invented, guessed, shortened, or modified
 - sourceLabel should accurately describe the source type
 - source must be an array with 1-2 objects, each containing "citation" and "url" fields
 - citation should include publication name, article title, and date if available (e.g., "Market Research Report - Customer Buying Trends - January 15, 2026")
 - IMPORTANT: Use actual dates from 2026 or recent past. Do NOT use future dates like 2027. Current year is 2026.
-- url must be a REAL, accessible URL
+- every url must be copied VERBATIM from a WebSearch result you retrieved; if you have no real retrieved URL for a source, OMIT that source entirely — do NOT fabricate a plausible-looking link
 - If only one source found, include one object in the array; if two sources found, include both
 - nextBestMoves should be actionable questions related to the specific ICP signal
 - NBAs must contain exactly 3 suggested questions with detailed prompts for LLM queries

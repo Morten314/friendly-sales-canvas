@@ -4,10 +4,39 @@ import type { UntypedBackendSignal } from "@/shared/types/escape-hatches";
 
 const BLOCKED_SOURCE_HOSTS = new Set(["api.tavily.com"]);
 
+/**
+ * Trim trailing prose/markdown punctuation without dropping characters that
+ * belong to the URL. Always-junk trailing chars (' " . , ;) are removed; a
+ * closing ')' or ']' is removed only when UNBALANCED (more closers than
+ * openers), so a balanced pair inside the path — e.g. a Wikipedia
+ * 'Foo_(bar)' link — survives instead of being mangled into a 404 URL.
+ */
+function stripTrailingUrlPunct(url: string): string {
+  const count = (s: string, ch: string) => s.split(ch).length - 1;
+  let s = url;
+  while (s.length > 0) {
+    const last = s[s.length - 1];
+    if (`'".,;`.includes(last)) {
+      s = s.slice(0, -1);
+      continue;
+    }
+    if (last === ")" && count(s, ")") > count(s, "(")) {
+      s = s.slice(0, -1);
+      continue;
+    }
+    if (last === "]" && count(s, "]") > count(s, "[")) {
+      s = s.slice(0, -1);
+      continue;
+    }
+    break;
+  }
+  return s;
+}
+
 /** Strip junk punctuation and block non-article Tavily API endpoints. */
 export function sanitizeSourceUrl(url: string | undefined | null): string {
   if (!url || typeof url !== "string") return "";
-  const cleaned = url.trim().replace(/['")\],.;]+$/g, "");
+  const cleaned = stripTrailingUrlPunct(url.trim());
   if (!/^https?:\/\//i.test(cleaned)) return "";
   try {
     const host = new URL(cleaned).hostname.toLowerCase();

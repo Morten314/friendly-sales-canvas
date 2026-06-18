@@ -33,20 +33,54 @@ def _parse_search_signals_response(response: str) -> Dict[str, Any]:
     )
 
 
-def _validate_url(url: str, tavily_urls_list: List[str]) -> str:
-    """Return the LLM's citation URL when it is valid; otherwise fall back to a
-    verified Tavily search URL.
+def _registrable_host(url: str) -> str:
+    """Best-effort host for same-source matching: the netloc minus a leading
+    'www.'. Not a full public-suffix parse — enough to treat www.x.com and
+    x.com (and blog.x.com, via _same_site) as the same publication."""
+    from urllib.parse import urlparse
 
-    A valid (sanitized) URL is kept as-is — including when it shares a domain with
-    a Tavily result — so the LLM's specific article link is preserved. Only
-    invalid/blocked URLs (empty, non-http, or api.tavily.com endpoints) are
-    replaced with the first verified Tavily URL.
+    host = urlparse(url).netloc.lower()
+    return host[4:] if host.startswith("www.") else host
+
+
+def _same_site(a: str, b: str) -> bool:
+    """True when two URLs belong to the same publication (equal host, or one is
+    a subdomain of the other), ignoring a leading 'www.'."""
+    ha, hb = _registrable_host(a), _registrable_host(b)
+    if not ha or not hb:
+        return False
+    return ha == hb or ha.endswith("." + hb) or hb.endswith("." + ha)
+
+
+def _validate_url(
+    url: str, tavily_urls_list: List[str], allow_unrelated_fallback: bool = True
+) -> str:
+    """Return a citation URL corroborated by the verified Tavily search results.
+
+    A syntactically-valid LLM URL may still be fabricated (a plausible but
+    non-existent article path), so it is trusted ONLY when corroborated by what
+    the agent actually retrieved:
+      1. Exact match in the verified Tavily set -> keep the LLM's URL as-is.
+      2. Same publication (same-site) as a verified result -> substitute that
+         verified URL (the article is real, the exact path is unverified).
+      3. Otherwise -> fall back to the first verified Tavily URL, or — when
+         allow_unrelated_fallback is False (labeled source[] entries) or no
+         verified URL exists — drop it ("") rather than show an unverified link.
+
+    Blocked/invalid URLs (empty, non-http, api.tavily.com) sanitize to "" and
+    take the same fallback path.
     """
     valid_tavily = _filter_source_urls(tavily_urls_list)
     sanitized = _sanitize_source_url(url)
     if sanitized:
-        return sanitized
-    return valid_tavily[0] if valid_tavily else ""
+        if sanitized in valid_tavily:
+            return sanitized
+        same = next((u for u in valid_tavily if _same_site(u, sanitized)), None)
+        if same:
+            return same
+    if allow_unrelated_fallback:
+        return valid_tavily[0] if valid_tavily else ""
+    return ""
 
 
 def _normalize_search_signals_result(
@@ -65,11 +99,13 @@ def _normalize_search_signals_result(
 
     validated_sources = []
     seen_source_urls: set[str] = set()
-    for i, src in enumerate(parsed_json.get("source", [])[:2]):
+    for src in parsed_json.get("source", [])[:2]:
         if isinstance(src, dict) and "url" in src:
+            # Labeled citations must be corroborated against the FULL verified
+            # set; an uncorroborated URL is dropped (not relabeled onto an
+            # unrelated verified URL) so the citation text never mismatches.
             validated_url = _validate_url(
-                src["url"],
-                valid_tavily_urls[i:] if i < len(valid_tavily_urls) else valid_tavily_urls,
+                src["url"], valid_tavily_urls, allow_unrelated_fallback=False
             )
             if validated_url and validated_url not in seen_source_urls:
                 seen_source_urls.add(validated_url)
@@ -90,7 +126,9 @@ def _normalize_search_signals_result(
         "description": parsed_json.get("description", ""),
         "sourceUrl": source_url if source_url else (validated_sources[0]["url"] if validated_sources else ""),
         "sourceLabel": parsed_json.get("sourceLabel", ""),
-        "source": validated_sources if validated_sources else parsed_json.get("source", []),
+        # Only corroborated sources — never the raw, unvalidated parsed_json["source"],
+        # which would re-introduce uncorroborated/hallucinated citation URLs.
+        "source": validated_sources,
         "nextBestMoves": parsed_json.get("nextBestMoves", []),
         "NBAs": parsed_json.get("NBAs", []),
         "contextualSuggestions": parsed_json.get("contextualSuggestions", []),
