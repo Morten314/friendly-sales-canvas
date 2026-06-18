@@ -39,20 +39,47 @@ from app.core.exceptions import ServiceError
 
 CLAUDE_RESEARCH_MAX_TOKENS = int(os.getenv("CLAUDE_RESEARCH_MAX_TOKENS") or "8192")
 
-# Matches http(s) URLs in free-form text. Keep the negated class permissive so
-# multi-label domains aren't truncated at the first dot. Trailing punctuation
-# captured from prose/markdown (e.g. https://api.tavily.com/search') ) is trimmed
+# Matches http(s) URLs in free-form text. The negated class stops only at
+# whitespace and the delimiters that wrap URLs in HTML/markdown/JSON (< > " `),
+# so URLs containing brackets, pipes, carets, braces or IPv6 hosts
+# (e.g. http://[::1]/, ?q=[a|b]) are NOT truncated mid-URL. Trailing prose/markdown
+# punctuation captured this way (a wrapping ')' or sentence '.') is trimmed
 # downstream by _sanitize_source_url(), which also drops api.tavily.com endpoints.
-_URL_PATTERN = r'https?://[^\s<>"{}|\\^`\[\]]+'
+_URL_PATTERN = r'https?://[^\s<>"`]+'
 
 _BLOCKED_SOURCE_HOSTS = frozenset({"api.tavily.com"})
+
+
+def _strip_trailing_url_punct(url: str) -> str:
+    """Trim trailing prose/markdown punctuation a URL picked up from free text,
+    without dropping characters that belong to the URL.
+
+    Always-junk trailing chars (' " . , ;) are removed. A closing ')' or ']' is
+    removed only when it is UNBALANCED (more closers than openers), so a
+    balanced pair inside the path — e.g. a Wikipedia 'Foo_(bar)' link — is
+    preserved instead of being mangled into a different, often 404, URL.
+    """
+    s = url
+    while s:
+        last = s[-1]
+        if last in "'\".,;":
+            s = s[:-1]
+            continue
+        if last == ")" and s.count(")") > s.count("("):
+            s = s[:-1]
+            continue
+        if last == "]" and s.count("]") > s.count("["):
+            s = s[:-1]
+            continue
+        break
+    return s
 
 
 def _sanitize_source_url(url: str) -> str:
     """Normalize a citation URL and drop Tavily API / junk endpoints."""
     if not url or not isinstance(url, str):
         return ""
-    cleaned = url.strip().rstrip("')\"],.;")
+    cleaned = _strip_trailing_url_punct(url.strip())
     if not cleaned.startswith(("http://", "https://")):
         return ""
     try:
@@ -191,14 +218,32 @@ def _research_agent_output(
         response = raw_response["output"]
         if extract_intermediate_urls:
             try:
-                if hasattr(raw_response, "intermediate_steps"):
-                    for step in raw_response.intermediate_steps:
-                        if len(step) > 1 and isinstance(step[1], list):
-                            for result in step[1]:
-                                if isinstance(result, dict) and "url" in result:
-                                    cleaned = _sanitize_source_url(result["url"])
-                                    if cleaned:
-                                        tavily_urls.append(cleaned)
+                # AgentExecutor.invoke returns a DICT; intermediate_steps is a KEY
+                # (present when the agent is built with return_intermediate_steps=True),
+                # not an attribute. Read it as a dict key, with an attribute fallback
+                # for non-dict responses.
+                steps = (
+                    raw_response.get("intermediate_steps")
+                    if isinstance(raw_response, dict)
+                    else getattr(raw_response, "intermediate_steps", None)
+                ) or []
+                for step in steps:
+                    if len(step) <= 1:
+                        continue
+                    observation = step[1]
+                    # Tavily observations arrive either as a list of result dicts
+                    # ({"url": ...}) or as a flat string; collect genuine URLs from both.
+                    if isinstance(observation, list):
+                        for result in observation:
+                            if isinstance(result, dict) and "url" in result:
+                                cleaned = _sanitize_source_url(result["url"])
+                                if cleaned:
+                                    tavily_urls.append(cleaned)
+                            elif isinstance(result, str):
+                                tavily_urls.extend(_filter_source_urls(re.findall(_URL_PATTERN, result)))
+                    elif isinstance(observation, str):
+                        tavily_urls.extend(_filter_source_urls(re.findall(_URL_PATTERN, observation)))
+                tavily_urls = _filter_source_urls(tavily_urls)[:10]
                 if not tavily_urls:
                     found_urls = re.findall(_URL_PATTERN, response)
                     tavily_urls = _filter_source_urls(found_urls)[:5]

@@ -31,14 +31,21 @@ def test_research_agent_output_qwen_returns_text_and_empty_urls_by_default():
 
 
 def test_research_agent_output_qwen_extracts_intermediate_urls_when_flagged():
-    """extract_intermediate_urls=True walks intermediate_steps for tavily URLs."""
+    """extract_intermediate_urls=True walks intermediate_steps for tavily URLs.
+
+    Regression guard: AgentExecutor.invoke returns a plain DICT (with an
+    'intermediate_steps' KEY when return_intermediate_steps=True), NOT an object
+    with an .intermediate_steps attribute. A prior MagicMock-based test set the
+    attribute and so passed against `hasattr(raw, 'intermediate_steps')` while
+    the real dict path silently fell through. This uses the real dict shape.
+    """
     agent_chain = MagicMock()
-    raw = MagicMock()
-    raw.__getitem__.side_effect = lambda k: "response text" if k == "output" else None
-    raw.intermediate_steps = [
-        ("step1", [{"url": "https://a.com"}, {"url": "https://b.com"}])
-    ]
-    agent_chain.invoke.return_value = raw
+    agent_chain.invoke.return_value = {
+        "output": "response text",
+        "intermediate_steps": [
+            ("action", [{"url": "https://a.com"}, {"url": "https://b.com"}]),
+        ],
+    }
 
     text, urls = _research_agent_output(
         agent_chain, prompt="x", seed_text="s", llm_backend="qwen",
@@ -50,13 +57,34 @@ def test_research_agent_output_qwen_extracts_intermediate_urls_when_flagged():
     assert "https://b.com" in urls
 
 
-def test_research_agent_output_qwen_regex_fallback_when_no_intermediate_urls():
-    """extract_intermediate_urls=True falls back to regex on the response text."""
+def test_research_agent_output_qwen_extracts_urls_from_string_observation():
+    """A Tavily tool observation can arrive as a STRING (not a list of dicts);
+    URLs in it must still be collected from intermediate_steps, not the answer."""
     agent_chain = MagicMock()
-    raw = MagicMock()
-    raw.__getitem__.side_effect = lambda k: "see https://x.com and https://y.com here" if k == "output" else None
-    raw.intermediate_steps = []
-    agent_chain.invoke.return_value = raw
+    agent_chain.invoke.return_value = {
+        "output": "final answer with no links",
+        "intermediate_steps": [
+            ("action", "Tavily results: https://c.com/x , https://d.com/y"),
+        ],
+    }
+
+    text, urls = _research_agent_output(
+        agent_chain, prompt="x", seed_text="s", llm_backend="qwen",
+        search_query_template="q {seed}",
+        extract_intermediate_urls=True,
+    )
+    assert "https://c.com/x" in urls
+    assert "https://d.com/y" in urls
+
+
+def test_research_agent_output_qwen_regex_fallback_when_no_intermediate_urls():
+    """extract_intermediate_urls=True falls back to regex on the response text
+    only when intermediate_steps yields no URLs."""
+    agent_chain = MagicMock()
+    agent_chain.invoke.return_value = {
+        "output": "see https://x.com and https://y.com here",
+        "intermediate_steps": [],
+    }
 
     text, urls = _research_agent_output(
         agent_chain, prompt="x", seed_text="s", llm_backend="qwen",
@@ -135,6 +163,27 @@ def test_research_agent_output_claude_uses_custom_suffix_template(mocker):
     assert augmented.startswith("PROMPT")
     assert "--CUSTOM--" in augmented
     assert "WEBCTX" in augmented
+
+
+# ---------------------------------------------------------------------------
+# _URL_PATTERN — free-text URL extraction must not truncate real URLs
+# ---------------------------------------------------------------------------
+
+def test_url_pattern_does_not_truncate_bracket_or_pipe_urls():
+    """The pattern feeds tavily_urls on the regex paths; it must not stop at
+    brackets/pipes/IPv6 host chars that appear in real URLs. Trailing prose
+    punctuation is trimmed downstream by _sanitize_source_url, not here."""
+    import re
+
+    from app.services._llm_helpers import _URL_PATTERN
+
+    text = (
+        "query https://example.com/search?q=[term]&op=a|b then "
+        "ipv6 http://[2001:db8::1]:8080/status end"
+    )
+    found = re.findall(_URL_PATTERN, text)
+    assert "https://example.com/search?q=[term]&op=a|b" in found
+    assert "http://[2001:db8::1]:8080/status" in found
 
 
 # ---------------------------------------------------------------------------

@@ -32,12 +32,14 @@ def build_llm_config(clients_bundle: ClientBundle) -> LLMBundle:
     `chain`/`chain2` need `clients.graph` to be either real or None — exactly
     matching today's conditional construction.
 
-    Initialization arguments match the legacy module-level construction line
-    for line (Together Qwen3-235B with the `-tput` model suffix — the single
+    Initialization arguments match the legacy module-level construction
+    (Together Qwen3-235B with the `-tput` model suffix — the single
     chat model, also driving the graph transformer; GraphCypherQAChain with
     `verbose=True`, agent with
     `verbose=False`, `handle_parsing_errors=True`, `max_iterations=20`,
-    `max_execution_time=120`, Tavily `k=10`).
+    `max_execution_time=120`, Tavily `k=10`), plus `return_intermediate_steps=True`
+    so the signals path can read the WebSearch tool's retrieved URLs from
+    `invoke()["intermediate_steps"]` (see `_research_agent_output`).
 
     Cypher and QA `PromptTemplate`s are sourced from the prompt registry
     via `prompts.as_langchain(...)`. The registry must be initialized
@@ -97,6 +99,12 @@ def build_llm_config(clients_bundle: ClientBundle) -> LLMBundle:
         handle_parsing_errors=True,
         max_iterations=20,
         max_execution_time=120,
+        # Expose the WebSearch tool observations so the signals path can collect
+        # the genuine retrieved URLs from invoke()["intermediate_steps"]
+        # (see _research_agent_output). Without this, invoke() returns only
+        # input/output and the signals citation grounding falls back to scraping
+        # URLs out of the model's own answer text.
+        return_intermediate_steps=True,
     )
 
     return LLMBundle(

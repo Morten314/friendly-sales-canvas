@@ -9,6 +9,25 @@ def test_sanitize_source_url_strips_trailing_junk_and_blocks_tavily_api():
     assert _sanitize_source_url("not-a-url") == ""
 
 
+def test_sanitize_source_url_preserves_balanced_trailing_parens():
+    """A load-bearing trailing ')' that closes a '(' inside the path (e.g. a
+    Wikipedia disambiguation link) must NOT be stripped — stripping it yields a
+    different, often 404, URL."""
+    assert (
+        _sanitize_source_url("https://en.wikipedia.org/wiki/Python_(programming_language)")
+        == "https://en.wikipedia.org/wiki/Python_(programming_language)"
+    )
+
+
+def test_sanitize_source_url_strips_only_unbalanced_trailing_wrappers():
+    """Prose/markdown wrapping adds an UNbalanced ')' plus sentence punctuation;
+    strip those down to the balanced URL, not into the path."""
+    assert (
+        _sanitize_source_url("https://en.wikipedia.org/wiki/Foo_(bar)).")
+        == "https://en.wikipedia.org/wiki/Foo_(bar)"
+    )
+
+
 def test_filter_source_urls_dedupes_and_drops_invalid():
     urls = _filter_source_urls(
         [
