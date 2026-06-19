@@ -1,3 +1,6 @@
+import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
+
 import {
   Bot,
   MessageCircle,
@@ -8,9 +11,9 @@ import {
   ThumbsUp,
   ThumbsDown,
 } from "lucide-react";
-import type { ReactNode } from "react";
 
 import type { Agent, NBAItem, SignalCard as SignalCardType } from "../types";
+import type { SignalLeadMapLead } from "../contracts";
 
 import { sanitizeSourceUrl } from "./signalCards";
 
@@ -50,6 +53,19 @@ interface SignalCardProps {
   onExpandAnswer: (key: string) => void;
   onCollapseAnswer: (key: string) => void;
   affectedLeadCount?: number;
+  /** Matched leads for this signal (from leadsForSignal(signal.id)). */
+  matchedLeads: SignalLeadMapLead[];
+  /** Org-level map fetch state (drives the four-state leads section). */
+  leadsLoading: boolean;
+  leadsError: boolean;
+  /** Page-held: whether this card's leads section is open. */
+  isLeadsExpanded: boolean;
+  /** Toggle the leads section, or show the lock message when not accepted. */
+  onFindMatchedLeads: () => void;
+  /** Build + download + deliver the briefing. */
+  onSaveAsArtefact: () => void;
+  /** Offered in the error state; wraps the page's refreshLeadMap. */
+  onRecomputeLeadMap?: () => void;
 }
 
 export const SignalCard = ({
@@ -71,7 +87,102 @@ export const SignalCard = ({
   onExpandAnswer,
   onCollapseAnswer,
   affectedLeadCount,
+  matchedLeads,
+  leadsLoading,
+  leadsError,
+  isLeadsExpanded,
+  onFindMatchedLeads,
+  onSaveAsArtefact,
+  onRecomputeLeadMap,
 }: SignalCardProps) => {
+  const [showLockMessage, setShowLockMessage] = useState(false);
+  const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearLockTimer = () => {
+    if (lockTimerRef.current) {
+      clearTimeout(lockTimerRef.current);
+      lockTimerRef.current = null;
+    }
+  };
+
+  // Clear the lock timer on card collapse and on unmount (Spec §2).
+  useEffect(() => {
+    if (!isDescriptionExpanded) {
+      clearLockTimer();
+      setShowLockMessage(false);
+    }
+  }, [isDescriptionExpanded]);
+  useEffect(() => () => clearLockTimer(), []);
+
+  const handleFindClick = () => {
+    if (!isAccepted) {
+      // Functionally enabled (not native disabled) so it can explain itself.
+      clearLockTimer();
+      setShowLockMessage(true);
+      lockTimerRef.current = setTimeout(() => setShowLockMessage(false), 3000);
+      return;
+    }
+    setShowLockMessage(false);
+    clearLockTimer();
+    onFindMatchedLeads();
+  };
+
+  const relevanceBadgeClass = (relevance: SignalLeadMapLead["relevance"]): string => {
+    if (relevance === "high") return "bg-green-100 text-green-800 border-green-200";
+    if (relevance === "medium") return "bg-amber-100 text-amber-800 border-amber-200";
+    return "bg-gray-100 text-gray-700 border-gray-200";
+  };
+  const titleCase = (s: string): string => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+
+  const leadsSection: ReactNode = isLeadsExpanded ? (
+    <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+      {leadsLoading ? (
+        <div className="flex items-center gap-2 py-1 text-sm text-gray-600">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Finding matched leads…</span>
+        </div>
+      ) : leadsError ? (
+        <div className="flex items-center justify-between gap-3 py-1">
+          <span className="text-sm text-red-600">Could not load matched leads.</span>
+          <Button variant="outline" size="sm" onClick={() => onRecomputeLeadMap?.()}>
+            Recompute lead mapping
+          </Button>
+        </div>
+      ) : matchedLeads.length === 0 ? (
+        <p className="py-1 text-sm text-gray-500">No matched leads found for this signal yet.</p>
+      ) : (
+        <>
+          <div className="space-y-2">
+            {matchedLeads.map((lead) => (
+              <div
+                key={lead.lead_id}
+                className="flex items-center justify-between gap-3 rounded-md bg-white px-3 py-2 border border-gray-100"
+              >
+                <span className="text-sm text-gray-800">{lead.company || "Unknown company"}</span>
+                <Badge
+                  variant="secondary"
+                  className={`text-xs ${relevanceBadgeClass(lead.relevance)}`}
+                >
+                  {titleCase(lead.relevance)}
+                </Badge>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex justify-end">
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-blue-700 border-blue-300 hover:bg-blue-50"
+              onClick={onSaveAsArtefact}
+            >
+              Save as Artefact
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  ) : null;
+
   return (
     <div className="space-y-0">
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-lg transition-all duration-200">
@@ -96,6 +207,7 @@ export const SignalCard = ({
                   ? "text-green-600 bg-green-50"
                   : "text-gray-500 hover:text-green-600 hover:bg-green-50"
               }`}
+              aria-label={isAccepted ? "Unaccept signal" : "Accept signal"}
               onClick={(e) => {
                 e.stopPropagation();
                 void onAccept(signal.id);
@@ -107,6 +219,7 @@ export const SignalCard = ({
               variant="ghost"
               size="sm"
               className="h-8 w-8 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50"
+              aria-label="Reject signal"
               onClick={(e) => {
                 e.stopPropagation();
                 onReject(signal.id);
@@ -196,6 +309,29 @@ export const SignalCard = ({
                           })}
                         </div>
                       )}
+                      {/* Spec 38 CTA: Find Matched Leads → leads section */}
+                      <div className="mt-4">
+                        <Button
+                          variant="outline"
+                          size="default"
+                          role="button"
+                          aria-disabled={!isAccepted}
+                          className={
+                            isAccepted
+                              ? "text-sm border-green-600 text-green-700 hover:bg-green-50"
+                              : "text-sm border-gray-300 text-gray-400 cursor-not-allowed"
+                          }
+                          onClick={handleFindClick}
+                        >
+                          Find Matched Leads
+                        </Button>
+                        {showLockMessage && (
+                          <p className="mt-2 text-xs text-amber-700">
+                            Accept this signal to unlock matched leads
+                          </p>
+                        )}
+                        {leadsSection}
+                      </div>
                       {/* Recommendations - click to show corresponding prompt */}
                       {(() => {
                         const recommendationsList: NBAItem[] =

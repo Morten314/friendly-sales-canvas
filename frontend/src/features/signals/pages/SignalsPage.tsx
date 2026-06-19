@@ -752,6 +752,12 @@ const SignalsPage = () => {
                       });
                     }}
                     affectedLeadCount={leadsForSignal(signal.id).length}
+                    matchedLeads={[]}
+                    leadsLoading={false}
+                    leadsError={false}
+                    isLeadsExpanded={false}
+                    onFindMatchedLeads={() => undefined}
+                    onSaveAsArtefact={() => undefined}
                   />
                 );
               })
