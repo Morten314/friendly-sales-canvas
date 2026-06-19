@@ -1,15 +1,31 @@
 import type { ArtefactItem } from "../types";
 
+// LLM free-text rides into the PDF content stream. Two classes of breakage:
+//   structural — an unbalanced ( ) or a \ corrupts the PDF;
+//   encoding   — em/en-dashes, smart quotes, and bullets mojibake under
+//                Helvetica/WinAnsi even after structural escaping.
+// Fold the common offenders to ASCII, then escape the structural characters.
+// (Residual non-ASCII such as accented names is an accepted limitation — see TD.)
+export const escapePdfText = (input: string): string =>
+  (input ?? "")
+    .replace(/[–—]/g, "-") // en/em dash → hyphen
+    .replace(/[‘’]/g, "'") // smart single quotes → '
+    .replace(/[“”]/g, '"') // smart double quotes → "
+    .replace(/•/g, "-") // bullet → hyphen
+    .replace(/\\/g, "\\\\") // escape backslash FIRST
+    .replace(/\(/g, "\\(") // escape open paren
+    .replace(/\)/g, "\\)"); // escape close paren
+
 export const createSimplePDF = (artefact: ArtefactItem): string => {
   // Create a minimal PDF structure
-  const title = artefact.fullReport.title;
-  const agentName = artefact.agentName;
-  const timestamp = artefact.timestamp;
-  const taskId = artefact.taskNumber;
-  const executiveSummary = artefact.fullReport.executiveSummary;
-  const keyFindings = artefact.fullReport.keyFindings;
-  const analysis = artefact.fullReport.analysis;
-  const recommendations = artefact.fullReport.recommendations;
+  const title = escapePdfText(artefact.fullReport.title);
+  const agentName = escapePdfText(artefact.agentName);
+  const timestamp = escapePdfText(artefact.timestamp);
+  const taskId = escapePdfText(artefact.taskNumber);
+  const executiveSummary = escapePdfText(artefact.fullReport.executiveSummary);
+  const keyFindings = artefact.fullReport.keyFindings.map(escapePdfText);
+  const analysis = escapePdfText(artefact.fullReport.analysis);
+  const recommendations = artefact.fullReport.recommendations.map(escapePdfText);
   const date = new Date().toLocaleDateString();
 
   // Simple PDF content structure
@@ -135,7 +151,9 @@ export const generateAndDownloadPDF = (artefact: ArtefactItem): void => {
   // Create a temporary link element and trigger download
   const link = document.createElement("a");
   link.href = url;
-  link.download = `${artefact.fullReport.title.replace(/[^a-z0-9]/gi, "_").toLowerCase()}.pdf`;
+  const slug = artefact.fullReport.title.replace(/[^a-z0-9]/gi, "_").toLowerCase();
+  // Short uniquifier so re-saving the same signal doesn't overwrite the prior file.
+  link.download = `${slug}-${Date.now()}.pdf`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
