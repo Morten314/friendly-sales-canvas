@@ -21,7 +21,7 @@ describe("useGenerateSignalsBatch", () => {
       ),
     );
     const { result } = renderHook(() => useGenerateSignalsBatch(), { wrapper });
-    await result.current.mutateAsync("u1");
+    await result.current.mutateAsync({ userId: "u1", profile: null });
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5000 });
     expect(result.current.data).toEqual({ signals: [{ id: "g1" }] });
   });

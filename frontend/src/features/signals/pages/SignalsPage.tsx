@@ -1,5 +1,5 @@
 import { Bookmark, MessageCircle, Share2, Bot } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { SignalCard } from "../components/SignalCard";
@@ -22,10 +22,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/components/ui/use-toast";
 import { enqueueArtefact, generateAndDownloadPDF } from "@/features/artifacts";
 import { Layout } from "@/features/shell";
+import type { CompanyProfileResponse } from "@/shared/api/contracts";
 import { useAuth } from "@/shared/auth";
 import { writeSessionChatContext, type ChatContext } from "@/shared/chat";
 import { useSignalAction } from "@/shared/chat/useSignalAction";
 import { useSignalAsk } from "@/shared/chat/useSignalAsk";
+import { useCompanyProfile } from "@/shared/company-profile";
 import type { UntypedBackendSignal } from "@/shared/types/escape-hatches";
 
 type ActionType = "accept" | "dismiss" | "save" | "ask";
@@ -38,6 +40,17 @@ const SignalsPage = () => {
     isError: leadsError,
     refresh: refreshLeadMap,
   } = useSignalLeadMap(orgId);
+  // The org's real company profile (Settings → Company Profile). Generated
+  // signals are personalised against these firmographics instead of the old
+  // hardcoded placeholders. A ref mirrors the latest value so the header-driven
+  // refresh — a window-event listener whose handleRefresh closure is captured at
+  // mount, when the profile query is still in flight — reads the resolved profile
+  // rather than the stale initial value.
+  const { data: companyProfile } = useCompanyProfile(orgId ?? "", Boolean(orgId));
+  const companyProfileRef = useRef<CompanyProfileResponse | null>(null);
+  useEffect(() => {
+    companyProfileRef.current = companyProfile ?? null;
+  }, [companyProfile]);
   const navigate = useNavigate();
   const askMutation = useSignalAsk();
   const actionMutation = useSignalAction();
@@ -272,7 +285,7 @@ const SignalsPage = () => {
     window.dispatchEvent(new CustomEvent("signalsRefreshStart"));
 
     try {
-      await generateSignalsBatch(currentUser.uid);
+      await generateSignalsBatch(currentUser.uid, companyProfileRef.current);
       await loadSignals();
       toast({
         title: "Success",
