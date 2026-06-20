@@ -732,6 +732,7 @@ const SignalsPage = () => {
               signals.map((signal) => {
                 const contentHash = getSignalContentHash(signal);
                 const isAccepted = acceptedSignals.has(contentHash);
+                const leads = leadsForSignal(signal.id);
                 return (
                   <SignalCard
                     key={signal.id}
@@ -783,8 +784,8 @@ const SignalsPage = () => {
                         return next;
                       });
                     }}
-                    affectedLeadCount={leadsForSignal(signal.id).length}
-                    matchedLeads={leadsForSignal(signal.id)}
+                    affectedLeadCount={leads.length}
+                    matchedLeads={leads}
                     leadsLoading={leadsLoading}
                     leadsError={leadsError}
                     isLeadsExpanded={expandedLeadsSignalId === signal.id}
