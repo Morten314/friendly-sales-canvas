@@ -1,5 +1,5 @@
 ---
-synthesizes_review: 38-signals-cta-impl-review-1-glm-5.2.md
+synthesizes_review: 38-signals-cta-impl-review-1-opus.md
 artifact: 38-signals-cta
 artifact_type: impl
 reactor_model: claude-opus-4-8

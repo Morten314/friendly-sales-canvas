@@ -2,8 +2,8 @@
 artifact: 38-signals-cta
 artifact_type: impl
 verdict: findings
-reviewer_model: claude-opus-4-8
-date: 2026-06-20
+reviewer_model: glm-5.2
+date: 2026-06-19
 round: 1
 base_ref: master
 spec_loaded: true
@@ -12,51 +12,33 @@ plan_loaded: true
 
 ## Context
 
-- **Repo layout:** this monorepo keeps specs/plans at root (`specs/38-signals-cta-design.md`, `plans/38-signals-cta.md`), not under `docs/`. Both were loaded for adherence checking.
-- **Reviewed diff:** the implementation range `ba44d01..3c5753a` (12 commits — the 10 task commits + 2 `import-x/order` fix commits). The three baseline commits (`spec`, `plan`, `reviews` markdown) at `edcf069..ba44d01` are excluded from critique as already-reviewed intent artifacts; `base_ref` is recorded as `master` (= `edcf069`) per the command.
-- **Reviewer attribution:** the filename carries a `-glm-5.2` suffix (the operator's chosen path), but this review was actually produced by **Claude Opus 4.8** — an independent fresh-eyes pass (a subagent with no implementation-orchestration context, over the full diff + spec + plan) plus controller verification of the headline finding against the spec text. `reviewer_model` reflects the true reviewer. Re-run under GLM-5.2 if a second model's perspective is wanted.
-- **Overall:** solid branch. The queue hand-off, once-only drain, four-state leads section, degrade-never-throw contract, PDF free-text escaping (correct backslash-first order), the barrel-only cross-feature boundary, and the `why`-never-on-screen rule are all implemented correctly and backed by genuinely behavioral tests. Nothing Critical or High. Findings below are real but minor.
+- **Change context:** `git log -p master..38-signals-cta` (15 commits, ~218 KB combined). The combined patch marginally exceeds the ~200 KB budget, but the overflow is entirely the doc artifacts committed alongside the code (`plans/38-signals-cta.md` 1571 lines, `specs/38-signals-cta-design.md` 224 lines, and the 7 spec/plan review+synthesis files). **No code-bearing commit bodies were dropped** — every commit message was retained and the code diff was read in full (frontend + `docs/TECH_DEBT.md`); the doc bodies are loaded separately above for adherence checking.
+- **Config files loaded (from the branch ref):** `frontend/package.json` (engines `node >=21.2.0`; scripts incl. `preflight`, `verify`, `knip --strict`), `frontend/knip.json` (`src/**/*.{ts,tsx}!` entry with `__tests__`/test-file exclusions), `frontend/tsconfig.json` (path alias `@/*`). These stop the false premises "crashes on Node 18" and "knip flags the new modules."
+- **Adherence:** implementation is a near 1:1 realization of plan 38 / spec 38 (all 9 tasks landed as 9 commits + 2 import-order hygiene commits + 1 TD commit). Deviations from the plan's literal code are *corrections*, not gaps — e.g. `SignalsPage.cta.test.tsx` uses the correct `../../hooks/`, `../../services/`, `../../components/` mock paths (the plan draft had `../hooks/…`, which would have failed to resolve and produced false greens). Coverage is behavior-oriented and deliberately anti-false-green (accessible-name selection over positional indexing; rendered-DOM membership over array membership).
 
 ## Findings
 
-### [Medium] Lock message does not dismiss "on the next interaction" — only half of Spec §2 is implemented
-**Location:** `frontend/src/features/signals/components/SignalCard.tsx:97-124` (`showLockMessage` / `handleFindClick`); spec `specs/38-signals-cta-design.md:49`
+### [Low] Lock message does not dismiss "on the next interaction" as spec §2 requires; it can persist confusingly after the signal is accepted
 
-Spec §2 (line 49) requires the lock message to auto-dismiss "after ~3 s **or** on the next interaction (any click on this card or its controls)." The implementation covers the 3 s timer (`setTimeout(..., 3000)`), clears on collapse (the `isDescriptionExpanded` effect) and on unmount, and re-hides when the now-accepted `Find Matched Leads` button is clicked. But no path dismisses the message when the user clicks anything *else* on the card — accept, reject, the bot icon, a recommendation. A user who clicks the locked CTA and then interacts elsewhere sees the amber lock line linger for the full 3 s rather than clearing on that next interaction. No test covers this clause (the CTA tests assert only the 3 s timeout and the not-accepted no-op).
+**Location:** `frontend/src/features/signals/components/SignalCard.tsx:108-125` (the two mount effects + `handleFindClick`); render at `SignalCard.tsx:327-329`.
 
-Note the spec is internally inconsistent here: its own acceptance-criteria summary (line 189) lists only "lock message auto-dismisses (timer cleared on collapse/unmount)" and omits the "next interaction" clause — so the spec's testable acceptance list *is* satisfied, while its prose §2 is not. Low user impact. Fix options: (a) clear `showLockMessage` + the timer from a card-level `onClick`, or (b) accept the deviation explicitly and reconcile the spec prose to its acceptance list. This is a plan/spec-text decision for the synthesis step, not an unambiguous defect.
+Spec §2 specifies the lock message auto-dismisses "after ~3 s **or** on the next interaction (any click on this card or its controls)." The implementation only clears it on (a) the 3 s timer, (b) card collapse (`isDescriptionExpanded` → false, `SignalCard.tsx:108-113`), and (c) unmount (`:114`). There is no handler that clears `showLockMessage` when the user interacts with *other* controls on the card — most notably the accept (thumbs-up) toggle, which lives in `SignalsPage` and only flows back to the card as the `isAccepted` prop. No effect watches `isAccepted`.
 
-### [Medium] `leadsForSignal(signal.id)` recomputed multiple times per card render
-**Location:** `frontend/src/features/signals/pages/SignalsPage.tsx:786-787`
+Concrete consequence: a user clicks `[Find Matched Leads]` while not accepted → the amber *"Accept this signal to unlock matched leads"* appears. They then click 👍 to accept. `isAccepted` flips true, the CTA turns green/active — but the now-stale amber lock message stays rendered for up to 3 s, since nothing dismisses it on the accept interaction. Two contradictory affordances ("locked, accept to unlock" + an active green CTA) are shown simultaneously.
 
-Each rendered card calls the selector twice in the same render — `affectedLeadCount={leadsForSignal(signal.id).length}` and `matchedLeads={leadsForSignal(signal.id)}` — and the selector does `mapping.find(...)` (O(mapping)). Across a feed of N signals that is 2·N linear scans per render (≈O(N²) overall), plus a fresh array instance handed to `matchedLeads` every render. Negligible at today's small feeds, but it is exactly the "map-data lookup called multiple times per card" anti-pattern, and trivially avoidable: hoist `const leads = leadsForSignal(signal.id)` once at the top of the `.map` callback and pass `leads` to both props (`affectedLeadCount={leads.length}`). The save handler's separate call at `SignalsPage.tsx:509` is on click, so that one is fine.
+Suggested fix: clear the lock message when the card becomes accepted, e.g. add a small effect `useEffect(() => { if (isAccepted) { clearLockTimer(); setShowLockMessage(false); } }, [isAccepted]);` (and/or dismiss on any header-button click). Low because it self-heals in ≤3 s and the underlying CTA gating is correct.
 
-### [Low] `titleCase` duplicated verbatim within the signals feature
-**Location:** `frontend/src/features/signals/components/SignalCard.tsx:134` and `frontend/src/features/signals/lib/signalBriefing.ts:27`
+### [Low] PDF footer literal `•` is not routed through `escapePdfText`, so the briefing footer mojibakes — the same defect class the in-scope fold addressed
 
-The identical `const titleCase = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s)` appears in both files. Both live inside `features/signals`, so there is no cross-feature-barrel obstacle to sharing — a single helper in `features/signals/lib` consumed by both removes the duplication without violating the import boundary. (Contrast `resolveSignalAgentPresentation`, which is correctly duplicated-by-design to avoid deep-importing artefacts internals.) Fold into one helper.
+**Location:** `frontend/src/features/artifacts/lib/artefactPdf.ts:101` (footer `(Generated by Brewra AI • ${date}) Tj`); the fold that handles `•` is at `artefactPdf.ts:14` (`.replace(/•/g, "-")`).
 
-### [Low] Recompute failure-path test emits an intentional `console.warn` — confirm pristine output
-**Location:** `frontend/src/features/signals/hooks/useSignalLeadMap.ts:70` and `hooks/__tests__/useSignalLeadMap.test.tsx` ("recompute surfaces the error state when the refetch fails")
+`createSimplePDF` now routes every free-text field through `escapePdfText`, which folds `•` → `-` precisely because bullets mojibake under the generator's Helvetica/WinAnsi font (spec §5 "PDF escaping"). The footer line, however, carries a literal `•` (source byte `U+2022`, UTF-8 `E2 80 A2`) directly into the `Tj` content stream without escaping. Under WinAnsi that byte sequence renders as `â€¢` (or similar), so every generated briefing footer reads *"Generated by Brewra AI â€¢ 6/19/2026"* instead of a bullet.
 
-The `refresh` catch logs `console.warn("signal-lead-map recompute failed", err)`. The discriminating failure-path test deliberately drives a 500 through `fetchQuery` on recompute and asserts `isError` becomes true — so that test path executes the `console.warn`, and the full Vitest run shows the line. This is benign (the warn is real production behavior, and `fetchQuery` correctly propagates into query state — the actual fix being verified), but the suite's output is not strictly pristine. If a future gate enforces pristine console output, guard the case with `vi.spyOn(console, "warn")`. Harmless today.
+This is **not** covered by the deferred TD-FE-78 "residual non-ASCII beyond the common fold" caveat — `•` is explicitly *in* the common fold set the branch added, so it is a missed application of the in-scope escaping, not a deferred generator issue. The line is pre-existing on `master` (`artefactPdf.ts:85`) and the diff didn't touch it, but it sits inside the exact generator this branch hardened and is the only constant/free-text content-stream string not passed through `escapePdfText`. Trivial fix: route the footer through `escapePdfText` (or replace the literal `•` with a `-`).
 
-### [Nit] PDF footer bullet is the one un-escaped mojibake offender
-**Location:** `frontend/src/features/artifacts/lib/artefactPdf.ts` — the `(Generated by Brewra AI • ${date}) Tj` footer literal
+## Observations (no action)
 
-`escapePdfText` folds `•` → `-` for all interpolated free-text, but the hardcoded footer still contains a literal `•` (U+2022), exactly the WinAnsi mojibake the fold was added to eliminate. It is a constant (not LLM input), so it is cosmetic and pre-existing — and it is already captured under TD-FE-78 (deeper generator non-compliance). One-character fix if touched (`-`, or run the constant through `escapePdfText`). Tracked, not blocking.
-
-### [Nit] `escapePdfText`'s `(input ?? "")` guard is dead under the current typed call sites
-**Location:** `frontend/src/features/artifacts/lib/artefactPdf.ts` — `escapePdfText = (input: string) => (input ?? "")...`
-
-The parameter is typed `string` and every caller passes a non-nullable `string` (the `ArtefactItem` fields are required `string`/`string[]`). The `?? ""` defends against a `null`/`undefined` the type system already forbids. Harmless defensive coding; either drop it or widen the parameter to `string | undefined` if the guard is meant to be real.
-
-### [Nit] Minor test-coverage gaps (carried from per-task reviews)
-**Location:** multiple test files
-
-A handful of small assertions are unpinned — none are correctness defects (the implementations are verified correct), only regression-safety gaps: (1) the queue drain's multi-item reverse-ordering path is untested (`artifacts/pages/__tests__/ArtifactsPage.test.tsx` — only the single-item, identity case is exercised); (2) `signalBriefing.test.ts` does not assert `actionDelegated`/`contextRationale` or the `agentIcon` identity (`toMatchObject` checks only name + color); (3) `contracts.test.ts` does not regression-pin the top-level `mapping` `.default([])` guard (the hook's `?? []` backstops it). (4) `escapePdfText` has no unit-level adversarial backslash+paren combined case, though the `createSimplePDF` integration test exercises that invariant. Add assertions opportunistically.
-
-### [Nit] `resetArtefactQueue` JSDoc says "test-only" but it is part of the public barrel
-**Location:** `frontend/src/features/artifacts/lib/artefactQueue.ts` (`resetArtefactQueue` JSDoc) + `index.ts` barrel re-export
-
-The doc comment frames `resetArtefactQueue` as "test-only," yet it is re-exported through `@/features/artifacts` (consumed by `ArtifactsPage.test.tsx` via the barrel). The dual framing is harmless but mildly contradictory; soften the wording to "test-support / teardown reset" or keep it intra-feature if it is genuinely not meant for cross-feature use.
+- `resetArtefactQueue` is described as test-only yet is re-exported on the public `@/features/artifacts` barrel (`artifacts/index.ts`). This is spec-directed (spec §5 / plan Task 1 require it on the barrel) and harmless; flagging only because test-only helpers ideally wouldn't ship on a feature's public surface. No change recommended (would diverge from the approved spec).
+- Hardcoded `/Length 2000` (`artefactPdf.ts:65`), placeholder xref offsets, and the single-page `MediaBox` with no pagination are accepted limitations, now tracked as TD-FE-78 (Task 9). No action.
+- `escapePdfText` is applied to constant FE fields (`agentName`, `taskNumber`, `timestamp`) that are always ASCII; defensive and cheap, not a defect. No action.
+- `useSignalLeadMap.refresh()` still `console.warn`s on recompute failure (`useSignalLeadMap.ts:73`). Intentional degrade-logging (replaces the prior swallowed-error no-op) and the error *state* now propagates via `fetchQuery` as designed. No action.
