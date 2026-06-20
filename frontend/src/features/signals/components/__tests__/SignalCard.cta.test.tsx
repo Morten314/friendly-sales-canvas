@@ -72,6 +72,10 @@ describe("SignalCard — Find Matched Leads CTA", () => {
     expect(btn.getAttribute("aria-disabled")).toBe("true");
     fireEvent.click(btn);
     expect(screen.getByText(/Accept this signal to unlock matched leads/i)).toBeInTheDocument();
+    // Lock message must be a polite live region so screen readers announce it.
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /Accept this signal to unlock matched leads/i,
+    );
     expect(props.onFindMatchedLeads).not.toHaveBeenCalled();
   });
 

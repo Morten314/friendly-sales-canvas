@@ -320,7 +320,6 @@ export const SignalCard = ({
                         <Button
                           variant="outline"
                           size="default"
-                          role="button"
                           aria-disabled={!isAccepted}
                           className={
                             isAccepted
@@ -332,7 +331,7 @@ export const SignalCard = ({
                           Find Matched Leads
                         </Button>
                         {showLockMessage && (
-                          <p className="mt-2 text-xs text-amber-700">
+                          <p role="status" className="mt-2 text-xs text-amber-700">
                             Accept this signal to unlock matched leads
                           </p>
                         )}
