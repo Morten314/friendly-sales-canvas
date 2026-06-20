@@ -86,6 +86,8 @@ Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases
 | TD-FE-74 | open | [below](#td-fe-74--usedocumentsync-keeps-a-no-op-setissaving-shim-and-8-dead-datasourcesmanager-call-sites) |
 | TD-FE-75 | open | [below](#td-fe-75--settingspage-page-level-loading-gate-dropped-with-the-orphan-company-fetch) |
 | TD-FE-76 | open | [below](#td-fe-76--settings-profile-reads-bypass-the-apifetch-transport-and-rate-limiter) |
+| TD-FE-77 | open | [below](#td-fe-77--signal-briefings-delivered-to-the-artefacts-library-do-not-survive-navigation) |
+| TD-FE-78 | open | [below](#td-fe-78--shared-pdf-generator-emits-structurally-non-compliant-output-and-mojibakes-non-winansi-glyphs) |
 
 ---
 
@@ -1127,6 +1129,17 @@ environment (a silent contract-vs-response drift).
 
 **Note (Phase 37, 2026-06-16):** `/signal-lead-map_claude` confirmed not deployed (2026-06-15); the contract reconciliation pulls forward when the endpoint ships.
 
+**Note (Plan 38, 2026-06-19):** endpoint confirmed **live** — a real account returns
+`200 {status, data:{mapping, generated_at, cached}}`, matching the envelope. The FE
+contract was tightened in-branch (`contracts.ts`: modeled `status`/`generated_at`/
+`cached`, dropped `.passthrough()` on stable shapes, kept `.default("")`/`.catch("low")`),
+grounded on the backend's server-normalized `_parse_mapping` plus the live envelope. A
+golden fixture was added to `__tests__/contracts.test.ts`. **TD stays open:** the only
+account checked has 3 signals / **0 leads**, so a *populated* `mapping[]` could not be
+captured. **Remaining required action narrowed to:** re-capture a populated response
+once an org has both signals and leads (leads arrive via Apollo discovery / upload) to
+confirm the per-entry/per-lead sub-shapes empirically.
+
 ---
 
 ## TD-FE-74 — `useDocumentSync` keeps a no-op `setIsSaving` shim and 8 dead `DataSourcesManager` call sites
@@ -1175,5 +1188,58 @@ environment (a silent contract-vs-response drift).
 **Why deferred:** not a regression, and harmless at 0 users; belongs with the broader raw-`fetch`→`apiFetch` migration debt (the TD-FE-19 family) rather than a one-off.
 
 **Pull-forward trigger:** the data-layer transport-consolidation pass (Spec 38 / the TD-FE-19/21 decomposition), or any settings read needing rate-limit/auth coverage.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-77 — Signal briefings delivered to the Artefacts library do not survive navigation
+
+**Date logged:** 2026-06-19
+**Origin:** Plan 38 (Signals CTA). The Save-as-Artefact flow delivers a briefing via a
+module-level queue drained on `ArtifactsPage` mount, but the library list is
+`useState(mockArtefacts)` with no data layer.
+
+**Current state:** a delivered briefing is visible only until the user **navigates away
+from `/artifacts`** (unmount discards the list; the queue has already drained). Same class
+as the existing Strategist artefacts. Delivery is reliable; retention is not durable.
+
+**What it should be:** the Artefacts library backed by a real store (server or persistent
+client state) so saved briefings survive navigation/reload.
+
+**Why deferred:** lifting the library to a real store is a separate effort; at 0 users the
+in-session delivery is sufficient to demo the flow. Same TD class as Strategist's artefacts.
+
+**Pull-forward trigger:** the Artefacts library gets a data layer, or users report that
+saved briefings vanish.
+
+**Owner:** TBD.
+
+**Follow-up:** if this shared `enqueueArtefact` queue proves out, Strategist's two broken
+dispatch-then-navigate sites (`StrategistWorkspace.tsx`) should adopt it (their saves
+currently fire `addArtefact` into the void).
+
+---
+
+## TD-FE-78 — Shared PDF generator emits structurally non-compliant output and mojibakes non-WinAnsi glyphs
+
+**Date logged:** 2026-06-19
+**Origin:** Plan 38 (Signals CTA). Hardened the briefing path's free-text (structural
+escaping + common-punctuation ASCII fold) but left the generator's deeper issues.
+
+**Current state:** `artefactPdf.ts::createSimplePDF` has a hardcoded `/Length 2000`,
+placeholder xref offsets, and a single-page `MediaBox` with no pagination — lead-heavy
+briefings clip past one page. Residual non-ASCII (accented company names, non-Latin
+scripts beyond the common fold) still mojibakes under Helvetica/WinAnsi. Shared with the
+Strategist artefact download path.
+
+**What it should be:** a real PDF library (e.g. jsPDF/pdf-lib) with correct xref, multi-page
+flow, and Unicode-capable font embedding.
+
+**Why deferred:** the in-scope escaping/fold makes typical LLM briefings render correctly;
+a correct generator is a larger, shared effort beyond this branch.
+
+**Pull-forward trigger:** the PDF path is prioritized, or garbled/clipped briefings are
+reported in practice.
 
 **Owner:** TBD.
