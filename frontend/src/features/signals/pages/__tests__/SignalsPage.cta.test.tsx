@@ -52,6 +52,9 @@ vi.mock("../../components/signalCards", () => ({
 vi.mock("@/features/shell", () => ({
   Layout: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
+vi.mock("@/shared/company-profile", () => ({
+  useCompanyProfile: () => ({ data: null }),
+}));
 vi.mock("@/shared/chat", () => ({
   writeSessionChatContext: vi.fn(),
 }));

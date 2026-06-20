@@ -10,6 +10,7 @@ import {
 } from "../contracts";
 
 import { apiGet, apiPost } from "@/shared/api/client";
+import type { CompanyProfileResponse } from "@/shared/api/contracts";
 import { firstPageParams, paginatedSchema } from "@/shared/api/pagination";
 
 /**
@@ -28,25 +29,32 @@ export async function fetchSignals(
 }
 
 /**
- * POST /api/generate-signals-batch_claude — page-only. The body shape is lifted
- * verbatim from SignalsPage (a hardcoded `component_name: "test"` probe with a
- * fixed firmographics `data` block and `refresh: true`).
+ * POST /api/generate-signals-batch_claude — page-only. The firmographics `data`
+ * block is now sourced from the org's real company profile (Settings → Company
+ * Profile) rather than the old hardcoded SaaS/example.com placeholders. A null
+ * profile (none saved yet, or query not resolved) sends empty fields — never the
+ * dummy values — so signals are generated against the org's actual business.
+ * `component_name: "test"` remains a fixed probe label (a separate concern from
+ * the firmographics, unrelated to company-profile personalisation).
  */
-export async function generateSignalsBatch(userId: string): Promise<GenerateSignalsBatchResponse> {
+export async function generateSignalsBatch(
+  userId: string,
+  profile: CompanyProfileResponse | null,
+): Promise<GenerateSignalsBatchResponse> {
   return apiPost(
     "generate-signals-batch_claude",
     {
       user_id: userId,
       component_name: "test",
       data: {
-        industry: "SaaS",
-        companySize: "50-200 employees",
-        companyUrl: "https://example.com",
-        strategicGoals: "Market expansion",
-        primaryGTMModel: "Direct sales",
-        revenueStage: "Growth",
-        keyBuyerPersona: "CTO",
-        targetMarkets: ["North America", "Europe"],
+        industry: profile?.industry ?? "",
+        companySize: profile?.companySize ?? "",
+        companyUrl: profile?.companyUrl ?? profile?.website ?? "",
+        strategicGoals: profile?.strategicGoals ?? "",
+        primaryGTMModel: profile?.primaryGTMModel ?? profile?.gtmModel ?? "",
+        revenueStage: profile?.revenueStage ?? "",
+        keyBuyerPersona: profile?.keyBuyerPersona ?? "",
+        targetMarkets: profile?.targetMarkets ?? [],
       },
       refresh: true,
     },

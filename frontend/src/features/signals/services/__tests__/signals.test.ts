@@ -57,21 +57,68 @@ describe("fetchSignals", () => {
 });
 
 describe("generateSignalsBatch", () => {
-  it("parses the response and sends the lifted body shape", async () => {
-    let body: unknown;
+  function captureBody() {
+    const captured: { body: Record<string, unknown> | null } = { body: null };
     server.use(
       http.post("/api/generate-signals-batch_claude", async ({ request }) => {
-        body = await request.json();
+        captured.body = (await request.json()) as Record<string, unknown>;
         return HttpResponse.json({ signals: [] });
       }),
     );
-    const res = await generateSignalsBatch("u1");
+    return captured;
+  }
+
+  it("sends the org's real company profile in the data block", async () => {
+    const captured = captureBody();
+    const res = await generateSignalsBatch("u1", {
+      industry: "Renewable Energy",
+      companySize: "500-1000 employees",
+      companyUrl: "https://acme.example",
+      strategicGoals: "EU expansion",
+      primaryGTMModel: "Partner-led",
+      revenueStage: "Scale-up",
+      keyBuyerPersona: "VP Engineering",
+      targetMarkets: ["DACH", "Nordics"],
+    });
     expect(res).toMatchObject({ signals: [] });
-    expect(body).toMatchObject({
+    expect(captured.body).toMatchObject({
       user_id: "u1",
       component_name: "test",
       refresh: true,
-      data: { industry: "SaaS", companySize: "50-200 employees" },
+      data: {
+        industry: "Renewable Energy",
+        companySize: "500-1000 employees",
+        companyUrl: "https://acme.example",
+        strategicGoals: "EU expansion",
+        primaryGTMModel: "Partner-led",
+        revenueStage: "Scale-up",
+        keyBuyerPersona: "VP Engineering",
+        targetMarkets: ["DACH", "Nordics"],
+      },
+    });
+  });
+
+  it("sends empty firmographics (never dummy placeholders) when no profile exists", async () => {
+    const captured = captureBody();
+    await generateSignalsBatch("u1", null);
+    expect(captured.body?.data).toEqual({
+      industry: "",
+      companySize: "",
+      companyUrl: "",
+      strategicGoals: "",
+      primaryGTMModel: "",
+      revenueStage: "",
+      keyBuyerPersona: "",
+      targetMarkets: [],
+    });
+  });
+
+  it("falls back to website / gtmModel aliases when the primary fields are absent", async () => {
+    const captured = captureBody();
+    await generateSignalsBatch("u1", { website: "https://w.example", gtmModel: "PLG" });
+    expect(captured.body?.data).toMatchObject({
+      companyUrl: "https://w.example",
+      primaryGTMModel: "PLG",
     });
   });
 
@@ -82,6 +129,6 @@ describe("generateSignalsBatch", () => {
         () => new HttpResponse(null, { status: 500 }),
       ),
     );
-    await expect(generateSignalsBatch("u1")).rejects.toThrow(/HTTP error! status: 500/);
+    await expect(generateSignalsBatch("u1", null)).rejects.toThrow(/HTTP error! status: 500/);
   });
 });
