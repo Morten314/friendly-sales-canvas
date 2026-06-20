@@ -71,7 +71,11 @@ Two checks run in order on clicking Connect:
 
 ## 4. Apollo Tile States
 
-Apollo lives as a tile in Mission Control → Data Sources. It has five states:
+Apollo lives as a tile in Mission Control → Data Sources. It has five states.
+
+A **settings (gear) icon** is present on the tile in all states, giving the user access to:
+- **Update API key** — input field pre-filled masked (e.g. `••••••••3a9f`), user clears and enters a new key, same two-check validation runs on save (profile complete → key valid)
+- **Disconnect Apollo** — removes the connection entirely with a confirmation prompt: *"Existing Apollo-sourced leads will remain in your pool but discovery will be unavailable until you reconnect."*
 
 ### 4.1 Locked
 Apollo is connected but the warmup sequence is not yet complete.
