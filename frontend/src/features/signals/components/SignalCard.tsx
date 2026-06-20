@@ -1,6 +1,3 @@
-import { useEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
-
 import {
   Bot,
   MessageCircle,
@@ -11,9 +8,11 @@ import {
   ThumbsUp,
   ThumbsDown,
 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 
-import type { Agent, NBAItem, SignalCard as SignalCardType } from "../types";
 import type { SignalLeadMapLead } from "../contracts";
+import type { Agent, NBAItem, SignalCard as SignalCardType } from "../types";
 
 import { sanitizeSourceUrl } from "./signalCards";
 
