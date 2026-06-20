@@ -111,6 +111,13 @@ export const SignalCard = ({
       setShowLockMessage(false);
     }
   }, [isDescriptionExpanded]);
+  // Clear the lock message immediately when the signal is accepted (Spec §3).
+  useEffect(() => {
+    if (isAccepted) {
+      clearLockTimer();
+      setShowLockMessage(false);
+    }
+  }, [isAccepted]);
   useEffect(() => () => clearLockTimer(), []);
 
   const handleFindClick = () => {

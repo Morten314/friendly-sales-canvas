@@ -93,6 +93,50 @@ describe("SignalCard — Find Matched Leads CTA", () => {
     expect(props.onFindMatchedLeads).toHaveBeenCalledTimes(1);
     expect(screen.queryByText(/Accept this signal to unlock matched leads/i)).toBeNull();
   });
+
+  it("clears the lock message immediately when the signal is accepted", () => {
+    const baseProps: React.ComponentProps<typeof SignalCard> = {
+      signal,
+      isAccepted: false,
+      getAgentBadge: () => <span>From scout</span>,
+      isDescriptionExpanded: true,
+      expandedRecommendationIndex: null,
+      recommendationAnswers: {},
+      recommendationAnswerLoading: null,
+      answerExpandedKeys: new Set<string>(),
+      onAccept: vi.fn(),
+      onReject: vi.fn(),
+      onBotIconClick: vi.fn(),
+      onNavigateToAgentChat: vi.fn(),
+      onExpandDescription: vi.fn(),
+      onCollapseDescription: vi.fn(),
+      onToggleRecommendation: vi.fn(),
+      onExpandAnswer: vi.fn(),
+      onCollapseAnswer: vi.fn(),
+      matchedLeads: [],
+      leadsLoading: false,
+      leadsError: false,
+      isLeadsExpanded: false,
+      onFindMatchedLeads: vi.fn(),
+      onSaveAsArtefact: vi.fn(),
+      onRecomputeLeadMap: vi.fn(),
+    };
+    const { rerender } = render(
+      <TooltipProvider>
+        <SignalCard {...baseProps} />
+      </TooltipProvider>,
+    );
+    // Show the lock message by clicking while not accepted.
+    fireEvent.click(screen.getByRole("button", { name: /Find Matched Leads/i }));
+    expect(screen.getByText(/Accept this signal to unlock matched leads/i)).toBeInTheDocument();
+    // Re-render the same card with isAccepted flipped — lock message must vanish immediately.
+    rerender(
+      <TooltipProvider>
+        <SignalCard {...baseProps} isAccepted={true} />
+      </TooltipProvider>,
+    );
+    expect(screen.queryByText(/Accept this signal to unlock matched leads/i)).toBeNull();
+  });
 });
 
 describe("SignalCard — leads section states", () => {
