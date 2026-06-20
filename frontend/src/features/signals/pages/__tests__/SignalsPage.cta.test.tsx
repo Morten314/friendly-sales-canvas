@@ -6,8 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import SignalsPage from "../SignalsPage";
 
-import { enqueueArtefact, generateAndDownloadPDF } from "@/features/artifacts";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { enqueueArtefact, generateAndDownloadPDF } from "@/features/artifacts";
 
 const SIGNAL = {
   id: "sig-1",

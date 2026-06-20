@@ -5,8 +5,8 @@ import { ArtefactStats } from "../components/ArtefactStats";
 import { FolderGrid } from "../components/FolderGrid";
 import { LibraryCard } from "../components/LibraryCard";
 import { mockArtefacts } from "../data/mockArtefacts";
-import { drainArtefactQueue } from "../lib/artefactQueue";
 import { generateAndDownloadPDF } from "../lib/artefactPdf";
+import { drainArtefactQueue } from "../lib/artefactQueue";
 import type { ArtefactItem } from "../types";
 
 import { Card, CardContent } from "@/components/ui/card";

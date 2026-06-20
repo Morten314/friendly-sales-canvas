@@ -1,10 +1,10 @@
 import { Satellite, Target } from "lucide-react";
 import type { ComponentType } from "react";
 
-import type { ArtefactItem } from "@/features/artifacts";
-
 import type { SignalLeadMapLead } from "../contracts";
 import type { SignalCard } from "../types";
+
+import type { ArtefactItem } from "@/features/artifacts";
 
 interface AgentPresentation {
   agentName: string;
