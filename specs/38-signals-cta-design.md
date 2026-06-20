@@ -46,7 +46,7 @@ Existing content: description, sources/citations, recommendations.
 
 - Implementation: render it visually-disabled with `aria-disabled={!isAccepted}` and an `onClick` guard — **not** a native `<button disabled>` (which would not fire `onClick`, making the explanatory click impossible).
 - Clicking while not accepted → inline message *"Accept this signal to unlock matched leads"*. No navigation, no toast.
-- The message auto-dismisses after ~3 s **or** on the next interaction (any click on this card or its controls). The 3 s timer is cleared on card collapse and on unmount.
+- The message auto-dismisses after ~3 s, and clears immediately when the signal is accepted (the CTA unlocks). The 3 s timer is cleared on card collapse and on unmount.
 
 **Placement (within the expanded block):** description → sources/citations → `[Find Matched Leads]` button → (leads section, when open) → recommendations → "Show less".
 
