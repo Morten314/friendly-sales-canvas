@@ -6,34 +6,34 @@ export type FetchSignalsResponse = z.infer<typeof FetchSignalsResponseSchema>;
 export const GenerateSignalsBatchResponseSchema = z.object({}).passthrough();
 export type GenerateSignalsBatchResponse = z.infer<typeof GenerateSignalsBatchResponseSchema>;
 
-export const SignalLeadMapLeadSchema = z
-  .object({
-    lead_id: z.string(),
-    company: z.string().optional().default(""),
-    relevance: z.enum(["high", "medium", "low"]).catch("low"),
-    why: z.string().optional().default(""),
-  })
-  .passthrough();
+// Sub-shapes grounded on the backend's server-normalized _parse_mapping
+// (lead_map.py): each lead is rebuilt as {lead_id, company, relevance, why} and
+// each entry as {signal_id, headline, leads[]}. KEEP the degrade-never-throw
+// guards — the feature depends on them (company || "Unknown company", omit-empty
+// why, and avoiding one odd lead throwing an org-wide parse error). No .strict():
+// a plain z.object strips FE-ignored extras; .strict() would throw on them.
+export const SignalLeadMapLeadSchema = z.object({
+  lead_id: z.string(),
+  company: z.string().optional().default(""),
+  relevance: z.enum(["high", "medium", "low"]).catch("low"),
+  why: z.string().optional().default(""),
+});
 
-export const SignalLeadMapEntrySchema = z
-  .object({
-    signal_id: z.string(),
-    headline: z.string().optional().default(""),
-    leads: z.array(SignalLeadMapLeadSchema).default([]),
-  })
-  .passthrough();
+export const SignalLeadMapEntrySchema = z.object({
+  signal_id: z.string(),
+  headline: z.string().optional().default(""),
+  leads: z.array(SignalLeadMapLeadSchema).default([]),
+});
 
-export const SignalLeadMapResponseSchema = z
-  .object({
-    data: z
-      .object({
-        mapping: z.array(SignalLeadMapEntrySchema).default([]),
-        generated_at: z.string().optional(),
-        cached: z.boolean().optional(),
-      })
-      .passthrough(),
-  })
-  .passthrough();
+export const SignalLeadMapResponseSchema = z.object({
+  // _build_result always returns status:"success" — modeled, not passthrough-tolerated.
+  status: z.string().optional(),
+  data: z.object({
+    mapping: z.array(SignalLeadMapEntrySchema).default([]),
+    generated_at: z.string().optional(),
+    cached: z.boolean().optional(),
+  }),
+});
 
 export type SignalLeadMapEntry = z.infer<typeof SignalLeadMapEntrySchema>;
 export type SignalLeadMapLead = z.infer<typeof SignalLeadMapLeadSchema>;
