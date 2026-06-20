@@ -6,6 +6,7 @@ import { FolderGrid } from "../components/FolderGrid";
 import { LibraryCard } from "../components/LibraryCard";
 import { mockArtefacts } from "../data/mockArtefacts";
 import { generateAndDownloadPDF } from "../lib/artefactPdf";
+import { drainArtefactQueue } from "../lib/artefactQueue";
 import type { ArtefactItem } from "../types";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -49,6 +50,24 @@ const ArtifactsPage = () => {
     return () => {
       window.removeEventListener("addArtefact", handleAddArtefact as EventListener);
     };
+  }, []);
+
+  // Drain any artefacts enqueued before this page mounted (e.g. a Signal
+  // Briefing saved from /signals). Mirrors the live addArtefact listener:
+  // prepend, open the item's folder, and expand it — the folder step is
+  // load-bearing because filteredArtefacts hides foldered items at the root.
+  // Once-only: drainArtefactQueue() clears the queue, so a remount sees nothing.
+  useEffect(() => {
+    const queued = drainArtefactQueue();
+    if (queued.length === 0) return;
+    // Reverse so the most-recently-enqueued item ends up first, matching the
+    // per-event prepend semantics of the live listener.
+    setArtefacts((prev) => [...queued.slice().reverse(), ...prev]);
+    const mostRecent = queued[queued.length - 1];
+    if (mostRecent.folder) {
+      setActiveFolder(mostRecent.folder);
+    }
+    setExpandedArtefact(mostRecent.id);
   }, []);
 
   // Get unique folders

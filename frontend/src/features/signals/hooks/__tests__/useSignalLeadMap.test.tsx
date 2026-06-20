@@ -71,4 +71,45 @@ describe("useSignalLeadMap", () => {
     });
     expect(lastBody).toMatchObject({ refresh: true });
   });
+
+  it("recompute exits the error state on a successful refetch", async () => {
+    let calls = 0;
+    server.use(
+      http.post("/api/signal-lead-map_claude", () => {
+        calls += 1;
+        if (calls === 1) return new HttpResponse(null, { status: 500 });
+        return HttpResponse.json(RESPONSE);
+      }),
+    );
+    const { result } = renderHook(() => useSignalLeadMap("org1"), { wrapper });
+    await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 5000 });
+    await act(async () => {
+      await result.current.refresh();
+    });
+    await waitFor(() => expect(result.current.isError).toBe(false), { timeout: 5000 });
+    expect(result.current.leadsForSignal("s1")).toHaveLength(1);
+  });
+
+  it("recompute surfaces the error state when the refetch fails (old setQueryData path swallowed it)", async () => {
+    let calls = 0;
+    server.use(
+      http.post("/api/signal-lead-map_claude", () => {
+        calls += 1;
+        if (calls === 1) return HttpResponse.json(RESPONSE);
+        return new HttpResponse(null, { status: 500 });
+      }),
+    );
+    const { result } = renderHook(() => useSignalLeadMap("org1"), { wrapper });
+    // initial load succeeds
+    await waitFor(() => expect(result.current.leadsForSignal("s1")).toHaveLength(1), {
+      timeout: 5000,
+    });
+    expect(result.current.isError).toBe(false);
+    // recompute hits 500 — fetchQuery propagates the error into the query state
+    await act(async () => {
+      await result.current.refresh();
+    });
+    // fetchQuery drives the query into error state; setQueryData would have left isError=false
+    await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 5000 });
+  });
 });

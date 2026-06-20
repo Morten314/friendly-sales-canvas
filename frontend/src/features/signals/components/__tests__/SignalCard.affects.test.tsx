@@ -39,6 +39,13 @@ const props: SignalCardProps = {
   onToggleRecommendation: noop,
   onExpandAnswer: noop,
   onCollapseAnswer: noop,
+  matchedLeads: [],
+  leadsLoading: false,
+  leadsError: false,
+  isLeadsExpanded: false,
+  onFindMatchedLeads: noop,
+  onSaveAsArtefact: noop,
+  onRecomputeLeadMap: noop,
 };
 
 describe("SignalCard — Affects N leads", () => {

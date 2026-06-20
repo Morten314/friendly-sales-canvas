@@ -43,6 +43,13 @@ function renderCard(overrides: Partial<React.ComponentProps<typeof SignalCard>> 
     onToggleRecommendation: vi.fn(),
     onExpandAnswer: vi.fn(),
     onCollapseAnswer: vi.fn(),
+    matchedLeads: [],
+    leadsLoading: false,
+    leadsError: false,
+    isLeadsExpanded: false,
+    onFindMatchedLeads: vi.fn(),
+    onSaveAsArtefact: vi.fn(),
+    onRecomputeLeadMap: vi.fn(),
     ...overrides,
   };
   render(

@@ -49,18 +49,24 @@ export function useSignalLeadMap(orgId?: string | null) {
 
   const queryClient = useQueryClient();
 
-  /** Force-recompute the signal↔lead mapping past the server cache. */
+  /**
+   * Force-recompute the signal↔lead mapping past the server cache. Routed
+   * through fetchQuery (staleTime:0) so the shared query's own state updates:
+   * isFetching → success on a good response (which clears a prior error state),
+   * or error on failure. A bare setQueryData left a stuck error UI silently.
+   * The /signal-lead-map_claude endpoint is deployed; SignalsPage renders a
+   * visible "Recompute lead mapping" control wired here.
+   */
   const refresh = useCallback(async () => {
     if (!orgId || !userId) return;
     try {
-      const data = await fetchSignalLeadMap(userId, orgId, { refresh: true });
-      queryClient.setQueryData(qk.signalLeadMap(orgId, userId), data);
+      await queryClient.fetchQuery({
+        queryKey: qk.signalLeadMap(orgId, userId),
+        queryFn: () => fetchSignalLeadMap(userId, orgId, { refresh: true }),
+        staleTime: 0,
+      });
     } catch (err) {
-      // The recompute endpoint (/signal-lead-map_claude) is not yet deployed
-      // (TD-FE-73), so a click on the dormant control 404s. Swallow to a clean
-      // no-op instead of an unhandled rejection; full loading/error UX lands
-      // when the endpoint ships.
-      console.warn("signal-lead-map refresh failed", err);
+      console.warn("signal-lead-map recompute failed", err);
     }
   }, [orgId, userId, queryClient]);
 
