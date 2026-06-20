@@ -11,6 +11,7 @@ import {
 } from "../components/signalCards";
 import { SignalChatPanel } from "../components/SignalChatPanel";
 import { SignalsEmptyState, SignalsLoadingState } from "../components/SignalsEmptyState";
+import { buildSignalBriefingArtefact } from "../lib/signalBriefing";
 import { useSignalLeadMap } from "../hooks/useSignalLeadMap";
 import { fetchSignals, generateSignalsBatch } from "../services/signals";
 import type { Agent, NBAItem, SignalCard as SignalCardType } from "../types";
@@ -19,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/components/ui/use-toast";
+import { enqueueArtefact, generateAndDownloadPDF } from "@/features/artifacts";
 import { Layout } from "@/features/shell";
 import { useAuth } from "@/shared/auth";
 import { writeSessionChatContext, type ChatContext } from "@/shared/chat";
@@ -30,7 +32,12 @@ type ActionType = "accept" | "dismiss" | "save" | "ask";
 
 const SignalsPage = () => {
   const { currentUser, orgId } = useAuth();
-  const { leadsForSignal, refresh: refreshLeadMap } = useSignalLeadMap(orgId);
+  const {
+    leadsForSignal,
+    isLoading: leadsLoading,
+    isError: leadsError,
+    refresh: refreshLeadMap,
+  } = useSignalLeadMap(orgId);
   const navigate = useNavigate();
   const askMutation = useSignalAsk();
   const actionMutation = useSignalAction();
@@ -68,6 +75,8 @@ const SignalsPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [, setIsRefreshing] = useState(false);
   const [expandedDescriptions, setExpandedDescriptions] = useState<Set<string>>(new Set());
+  /** Only one signal's leads section is open at a time. */
+  const [expandedLeadsSignalId, setExpandedLeadsSignalId] = useState<string | null>(null);
   // Track pending rejections for undo functionality
   const [pendingRejections, setPendingRejections] = useState<
     Map<
@@ -427,6 +436,9 @@ const SignalsPage = () => {
       newAccepted.delete(contentHash);
       setAcceptedSignals(newAccepted);
 
+      // If this signal's leads section is open, collapse it — the CTA re-locks.
+      setExpandedLeadsSignalId((prev) => (prev === signalId ? null : prev));
+
       // Save to localStorage
       const storageKey = `signals_${currentUser.uid}`;
       try {
@@ -487,6 +499,26 @@ const SignalsPage = () => {
         }
       }
     }
+  };
+
+  const handleFindMatchedLeads = (signalId: string) => {
+    setExpandedLeadsSignalId((prev) => (prev === signalId ? null : signalId));
+  };
+
+  const handleSaveAsArtefact = (signal: SignalCardType) => {
+    const leads = leadsForSignal(signal.id);
+    const item = buildSignalBriefingArtefact(signal, leads);
+    generateAndDownloadPDF(item);
+    enqueueArtefact(item);
+    toast({
+      title: "Saved to Artefacts",
+      description: "Your signal briefing was downloaded and added to the Artefacts library.",
+      action: (
+        <Button variant="outline" size="sm" onClick={() => navigate("/artifacts")}>
+          View →
+        </Button>
+      ),
+    });
   };
 
   const handleRejectSignal = (signalId: string) => {
@@ -752,12 +784,13 @@ const SignalsPage = () => {
                       });
                     }}
                     affectedLeadCount={leadsForSignal(signal.id).length}
-                    matchedLeads={[]}
-                    leadsLoading={false}
-                    leadsError={false}
-                    isLeadsExpanded={false}
-                    onFindMatchedLeads={() => undefined}
-                    onSaveAsArtefact={() => undefined}
+                    matchedLeads={leadsForSignal(signal.id)}
+                    leadsLoading={leadsLoading}
+                    leadsError={leadsError}
+                    isLeadsExpanded={expandedLeadsSignalId === signal.id}
+                    onFindMatchedLeads={() => handleFindMatchedLeads(signal.id)}
+                    onSaveAsArtefact={() => handleSaveAsArtefact(signal)}
+                    onRecomputeLeadMap={() => void refreshLeadMap()}
                   />
                 );
               })
