@@ -1,7 +1,7 @@
 # Spec 39 — Label retrieved supporting documents as their own prompt section
 
 Status: design (intent) · Stack: backend · Author: Claude (RCA-driven)
-Revised after spec-review rounds 1–2 (see `docs/reviews/39-…-spec-review-{1,2}*.md` + syntheses); `signal_ask` confirmed in scope by user (2026-06-22). One open decision remains: §1 "M2" content↔`metadata.text` de-duplication (recommended; pending user confirm).
+Revised after spec-review rounds 1–2 (see `docs/reviews/39-…-spec-review-{1,2}*.md` + syntheses); `signal_ask` confirmed in scope and M2 de-dupe confirmed by user (2026-06-22). No open decisions.
 
 ## Context
 
@@ -73,9 +73,9 @@ needs a separate edit, but both are exercised in tests.
 - WS1 (the `org_id` wire fix) — already done on `fix-signals-batch-org-id`.
 - Retrieval, embedding, the document write path (`/upload-document` →
   `process_file_to_embeddings` → Pinecone) — verified healthy; untouched.
-- Prose/summarised rendering of the docs — decision is **raw JSON rows** (no
-  trimming of the distinct `query/id/score/content`+metadata fields; see §1 "M2"
-  for the content↔`metadata.text` de-duplication decision).
+- Prose/summarised rendering of the docs — decision is **raw JSON rows**; the
+  distinct `query/id/score/content` + other-metadata fields are kept, with only
+  the redundant `metadata.text`/`page_content` stripped (see §1 "M2").
 - `icp_generator` — does not fetch retrieval context.
 - The `pinecone_context_queries` (retrieval *query strings*) — never useful model
   context; **dropped from the prompt** on every generation surface. Confirmed no
@@ -95,16 +95,15 @@ format_supporting_documents(rows) -> str | None
 - Output: `json.dumps(<rows>, indent=2, default=str)` when the list is
   non-empty; `None` when empty/`None`. Rows keep their distinct fields
   (`query/id/score/content` + metadata) — no trimming of those.
-- **Redundancy decision (M2 — pending user confirm):** `_retrieval.py` sets
-  `content = metadata.get("text") or metadata.get("page_content")` *and* carries
-  the full `metadata`, so dumping rows verbatim repeats each chunk's text twice
-  (`content` + `metadata.text`/`page_content`) — up to ~6 chunks × 2 per call, an
-  avoidable per-call token/cost increase on every Scout/Profiler generation
-  surface (and net-new payload on the profiler path, which currently drops docs).
-  **Recommended (and the behaviour specified here pending the user's call):**
-  strip only the redundant `text`/`page_content` keys from each row's `metadata`
-  before serialising — keeps `query/id/score/content` + all other metadata,
-  removing the literal duplication. Alternative: accept the doubling.
+- **De-duplication (M2 — settled, user-confirmed 2026-06-22):** `_retrieval.py`
+  sets `content = metadata.get("text") or metadata.get("page_content")` *and*
+  carries the full `metadata`, so dumping rows verbatim would repeat each chunk's
+  text twice (`content` + `metadata.text`/`page_content`) — an avoidable per-call
+  token cost on every Scout/Profiler generation surface. The helper therefore
+  **strips the `text` and `page_content` keys from each row's `metadata`** before
+  serialising, keeping `query/id/score/content` + all *other* metadata. The
+  stripping is non-destructive (operates on a shallow copy; does not mutate the
+  rows returned by `_fetch_pinecone_supporting_context`).
 - Pure, total, never raises. `default=str` is load-bearing: the Pinecone `score`
   can be a non-JSON-native type (e.g. a numpy float) depending on the client, and
   `metadata` is arbitrary — the helper must serialise these without raising.
@@ -244,10 +243,10 @@ collaborators patched (extending the existing `test_market_research.py` /
 not by calling `search_signals` with a hand-built dict.
 
 - **Helper:** non-empty rows → JSON string containing the row content; `[]`/`None`
-  → `None`; distinct fields retained; per the M2 decision, the redundant
-  `metadata.text`/`page_content` is absent when de-dupe is confirmed; a row whose
-  `score` is a non-JSON-native type (numpy float / `Decimal`) serialises without
-  raising.
+  → `None`; distinct fields retained but the redundant `metadata.text`/
+  `page_content` is stripped (M2 de-dupe) while `content` and other metadata
+  survive; the input rows are not mutated; a row whose `score` is a
+  non-JSON-native type (numpy float / `Decimal`) serialises without raising.
 - **Per generation surface (retrieval patched to fixed rows, via the orchestrator
   / entry point):**
   - assembled prompt **contains** the labeled SUPPORTING DOCUMENTS section with
@@ -297,8 +296,8 @@ not by calling `search_signals` with a hand-built dict.
   either report (it already labels its docs); it is included for Goal-4
   consistency — a light change (shared helper + aligned label wording in
   `ask.py`, no partial), per §4.
-- **Doc shape:** raw JSON rows; distinct fields untrimmed. Open: content↔
-  `metadata.text` de-duplication (M2) — recommended de-dupe, pending user confirm
-  (see §1).
+- **Doc shape:** raw JSON rows; distinct fields kept, with redundant
+  `metadata.text`/`page_content` stripped (M2 de-dupe, user-confirmed 2026-06-22;
+  see §1).
 - **Verification:** unit-level pytest (deterministic prompt assembly); no prod
   seeding.
