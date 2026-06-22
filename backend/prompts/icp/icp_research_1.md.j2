@@ -1,11 +1,12 @@
 ---
 name: icp_research_1
-version: 1.0.0
+version: 1.1.0
 description: ICP research worker 1 — agent-chain prompt (summary & market opportunity)
 model: Qwen/Qwen3-235B-A22B-Instruct-2507-tput
 response_format: json
 inputs:
   - pre_data
+  - supporting_documents
 ---
 Task: Research and compile an updated overview of icp  in the exact format given at end, based on the data below based on this ( follow this strictly and do research based on what all provided here - {{ pre_data }}.
 
@@ -84,5 +85,7 @@ Pie chart data under marketSizeBySegment must sum to ~100%.
 Keep bullet point recommendations short and actionable.
 
 give only json , nothing else , nothing at all
+
+{% include '_shared/supporting_documents_section.md.j2' %}
 
 {% include '_shared/final_answer_directive.md.j2' %}

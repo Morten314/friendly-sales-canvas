@@ -1,11 +1,12 @@
 ---
 name: icp_research_4
-version: 1.0.0
+version: 1.1.0
 description: ICP research worker 4 — agent-chain prompt (regulatory, compliance & recommended ICP)
 model: Qwen/Qwen3-235B-A22B-Instruct-2507-tput
 response_format: json
 inputs:
   - pre_data
+  - supporting_documents
 ---
 Task: Research and compile a detailed "Regulatory, Compliance & Recommended ICP" analysis based on the provided company profile and ICP data.
 
@@ -17,6 +18,8 @@ IMPORTANT: This is DIFFERENT from the Buyer Map component. This component focuse
 
 Company Profile and ICP Data Context:
 {{ pre_data }}
+
+{% include '_shared/supporting_documents_section.md.j2' %}
 
 Based on the information provided in the context data above, research regulatory and compliance requirements and provide ICP refinement recommendations.
 
