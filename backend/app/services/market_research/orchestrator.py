@@ -17,6 +17,7 @@ from app.services._neo4j_helpers import fetch_company_profile as _fetch_company_
 from app.services._retrieval import (
     _build_market_context_queries,
     _fetch_pinecone_supporting_context,
+    format_supporting_documents,
 )
 from app.services.market_research.persistence import (
     _find_latest_market_research_report,
@@ -51,6 +52,7 @@ def _run_research_component(
     agent_chain,
     pre_data,
     llm_backend: str = "qwen",
+    supporting_documents: "str | None" = None,
 ) -> tuple[dict, dict]:
     """Run one of the 5 market-research components via prompted LLM agent.
 
@@ -77,6 +79,7 @@ def _run_research_component(
     rendered = prompts.render(
         COMPONENT_PROMPT_NAMES[component_n],
         company_profile_json=company_profile_json,
+        supporting_documents=supporting_documents,
     )
     prompt_meta = prompts.prompt_meta_from(rendered)
 
@@ -90,19 +93,19 @@ def _run_research_component(
 
 
 COMPONENT_FUNCTIONS = {
-    "market size & opportunity": lambda agent_chain, d: _run_research_component(1, agent_chain, d),
-    "industry trends report": lambda agent_chain, d: _run_research_component(2, agent_chain, d),
-    "competitor landscape": lambda agent_chain, d: _run_research_component(3, agent_chain, d),
-    "regulatory & compliance highlights": lambda agent_chain, d: _run_research_component(4, agent_chain, d),
-    "market entry & growth strategy": lambda agent_chain, d: _run_research_component(5, agent_chain, d),
+    "market size & opportunity": lambda agent_chain, d, supporting_documents=None: _run_research_component(1, agent_chain, d, supporting_documents=supporting_documents),
+    "industry trends report": lambda agent_chain, d, supporting_documents=None: _run_research_component(2, agent_chain, d, supporting_documents=supporting_documents),
+    "competitor landscape": lambda agent_chain, d, supporting_documents=None: _run_research_component(3, agent_chain, d, supporting_documents=supporting_documents),
+    "regulatory & compliance highlights": lambda agent_chain, d, supporting_documents=None: _run_research_component(4, agent_chain, d, supporting_documents=supporting_documents),
+    "market entry & growth strategy": lambda agent_chain, d, supporting_documents=None: _run_research_component(5, agent_chain, d, supporting_documents=supporting_documents),
 }
 
 COMPONENT_FUNCTIONS_CLAUDE = {
-    "market size & opportunity": lambda agent_chain, d: _run_research_component(1, agent_chain, d, "claude"),
-    "industry trends report": lambda agent_chain, d: _run_research_component(2, agent_chain, d, "claude"),
-    "competitor landscape": lambda agent_chain, d: _run_research_component(3, agent_chain, d, "claude"),
-    "regulatory & compliance highlights": lambda agent_chain, d: _run_research_component(4, agent_chain, d, "claude"),
-    "market entry & growth strategy": lambda agent_chain, d: _run_research_component(5, agent_chain, d, "claude"),
+    "market size & opportunity": lambda agent_chain, d, supporting_documents=None: _run_research_component(1, agent_chain, d, "claude", supporting_documents=supporting_documents),
+    "industry trends report": lambda agent_chain, d, supporting_documents=None: _run_research_component(2, agent_chain, d, "claude", supporting_documents=supporting_documents),
+    "competitor landscape": lambda agent_chain, d, supporting_documents=None: _run_research_component(3, agent_chain, d, "claude", supporting_documents=supporting_documents),
+    "regulatory & compliance highlights": lambda agent_chain, d, supporting_documents=None: _run_research_component(4, agent_chain, d, "claude", supporting_documents=supporting_documents),
+    "market entry & growth strategy": lambda agent_chain, d, supporting_documents=None: _run_research_component(5, agent_chain, d, "claude", supporting_documents=supporting_documents),
 }
 
 
@@ -151,15 +154,14 @@ async def run_market_research(driver, mongo, pc, agent_chain, request: MarketReq
         request.org_id,
         3,
     )
-    company_profile["pinecone_context_queries"] = market_context_queries
-    company_profile["pinecone_supporting_context"] = pinecone_context
+    supporting_documents = format_supporting_documents(pinecone_context)
 
     max_retries = 2
     research_result = None
     prompt_meta: dict = {}
     for attempt in range(1, max_retries + 1):
         try:
-            research_result, prompt_meta = await asyncio.to_thread(research_function, agent_chain, company_profile)
+            research_result, prompt_meta = await asyncio.to_thread(research_function, agent_chain, company_profile, supporting_documents)
             break
         except BudgetExhaustedError:
             # Re-raise immediately — caller (router) catches and maps to HTTP 429
