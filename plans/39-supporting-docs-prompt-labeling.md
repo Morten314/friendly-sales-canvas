@@ -19,6 +19,7 @@
 - **Label single-source caveat:** the label text lives in the Jinja partial for the 11 template surfaces (the single source for those) and is duplicated once as a Python constant in `ask.py` (the Jinja/Python boundary makes true single-source impractical — AC4 scopes "single source" to template surfaces). The two copies **must be byte-identical**; the exact string is given verbatim in Task 2 and Task 5.
 - **Version bump:** bump each of the 11 edited templates' `version:` from `1.0.0` to `1.1.0`; the new partial stays `1.0.0`.
 - **Spec divergence (verified against code, encode here):** Spec §"Testing" says to regenerate `captured/signal_ask_{qwen,claude}.json` because they "embed the runtime context string carrying the old label." **This premise is false** — those captured files are LLM-**output** stubs (`{"output": "...", "_stub": true}`) that contain no context string and no label; all 24 `captured/*.json` are hand-written stubs pending live API keys. Therefore **no `captured/` fixture is regenerated** in this plan (and `tests/capture_fixtures.py` requires live keys we do not use). Only the deterministic `rendered/` golden fixtures for the 11 edited templates are regenerated (Task 6).
+- **Failure handling:** execution is delegated to a report-and-wait failure-stop sub-skill (`subagent-driven-development` / `executing-plans`). If a step's test does not reach its stated expected result, **stop and report** rather than improvising a fix or skipping; per-step recovery is the red→green cycle. No step performs a destructive/irreversible operation — commits are additive, by path, on a short-lived branch.
 
 ---
 
@@ -41,7 +42,7 @@
 - `backend/prompts/icp/icp_research_1..4.md.j2` (Task 4).
 
 **Modified — tests:**
-- `backend/tests/unit/test_signals.py` — update 2 version asserts; add 2 run_signals_research tests (Task 2).
+- `backend/tests/unit/test_signals.py` — update 2 version asserts; add 3 signals tests (scout label+D1, profiler D3, scout empty-retrieval) (Task 2); add 3 ask/label tests (qwen-align, claude-align, partial-vs-constant drift guard) (Task 5).
 - `backend/tests/unit/test_market_research.py` — add 1 through-orchestrator test (Task 3).
 - `backend/tests/unit/test_icp.py` — add 1 through-orchestrator test (Task 4).
 
@@ -348,7 +349,7 @@ In `backend/tests/unit/test_signals.py`, the two leaf tests render the real prom
 
 - [ ] **Step 5: Write the failing signals tests**
 
-In `backend/tests/unit/test_signals.py`, add a module-level sample-rows constant near the top (after the imports) and two new tests. The label + content assertions will fail until Steps 1–3 land; run after writing to confirm they pass (Steps 1–3 are already implemented above, so this is a confirm-green step — if you are doing strict red-first, stage Steps 1–3 after this).
+In `backend/tests/unit/test_signals.py`, add a module-level sample-rows constant near the top (after the imports) and three new tests (scout label+D1, profiler D3, and the empty-retrieval/section-absent case). The label + content assertions will fail until Steps 1–3 land; run after writing to confirm they pass (Steps 1–3 are already implemented above, so this is a confirm-green step — if you are doing strict red-first, stage Steps 1–3 after this).
 
 ```python
 SUPPORTING_DOC_ROWS = [
@@ -431,6 +432,37 @@ def test_run_signals_research_profiler_includes_supporting_documents(
     assert "SUPPORTING DOCUMENTS" in prompt
     assert "ACME Corp announced 30% revenue growth" in prompt
     assert "pinecone_supporting_context" not in prompt
+
+
+def test_run_signals_research_scout_omits_section_when_no_docs(
+    mocker, mock_session, mock_mongo_client,
+):
+    """AC1 / spec empty-retrieval case: with no retrieved docs the
+    {% if supporting_documents %} guard omits the section entirely — no empty
+    'SUPPORTING DOCUMENTS' header in the rendered prompt."""
+    captured = load_captured("search_signals_scout_qwen")
+    chain_mock = MagicMock()
+    chain_mock.invoke.return_value = {"output": json.dumps(captured)}
+    mocker.patch(
+        "app.services.signals.search._fetch_pinecone_supporting_context",
+        return_value=[],
+    )
+    mocker.patch("app.services.signals.search.get_leads_for_org", return_value=([], 0))
+    mocker.patch("app.services.signals.persistence._get_existing_headlines", return_value=[])
+    mocker.patch("app.services.signals.persistence._get_user_icp_config", return_value=None)
+    mocker.patch("app.services.signals.persistence._save_signal_and_track_headline", return_value=None)
+
+    request = MarketRequest(
+        user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
+        component_name="scout", data={"industry": "SaaS"}, refresh=True,
+    )
+    result = asyncio.run(
+        run_signals_research(mock_session._driver, mock_mongo_client, MagicMock(), chain_mock, request)
+    )
+
+    assert result["status"] == "success"
+    prompt = chain_mock.invoke.call_args[0][0]["input"]
+    assert "SUPPORTING DOCUMENTS" not in prompt
 ```
 
 - [ ] **Step 6: Run signals tests + the prompt loader/golden boot**
@@ -530,19 +562,19 @@ New:
 
 ```python
 COMPONENT_FUNCTIONS = {
-    "market size & opportunity": lambda agent_chain, d, supporting_documents: _run_research_component(1, agent_chain, d, supporting_documents=supporting_documents),
-    "industry trends report": lambda agent_chain, d, supporting_documents: _run_research_component(2, agent_chain, d, supporting_documents=supporting_documents),
-    "competitor landscape": lambda agent_chain, d, supporting_documents: _run_research_component(3, agent_chain, d, supporting_documents=supporting_documents),
-    "regulatory & compliance highlights": lambda agent_chain, d, supporting_documents: _run_research_component(4, agent_chain, d, supporting_documents=supporting_documents),
-    "market entry & growth strategy": lambda agent_chain, d, supporting_documents: _run_research_component(5, agent_chain, d, supporting_documents=supporting_documents),
+    "market size & opportunity": lambda agent_chain, d, supporting_documents=None: _run_research_component(1, agent_chain, d, supporting_documents=supporting_documents),
+    "industry trends report": lambda agent_chain, d, supporting_documents=None: _run_research_component(2, agent_chain, d, supporting_documents=supporting_documents),
+    "competitor landscape": lambda agent_chain, d, supporting_documents=None: _run_research_component(3, agent_chain, d, supporting_documents=supporting_documents),
+    "regulatory & compliance highlights": lambda agent_chain, d, supporting_documents=None: _run_research_component(4, agent_chain, d, supporting_documents=supporting_documents),
+    "market entry & growth strategy": lambda agent_chain, d, supporting_documents=None: _run_research_component(5, agent_chain, d, supporting_documents=supporting_documents),
 }
 
 COMPONENT_FUNCTIONS_CLAUDE = {
-    "market size & opportunity": lambda agent_chain, d, supporting_documents: _run_research_component(1, agent_chain, d, "claude", supporting_documents=supporting_documents),
-    "industry trends report": lambda agent_chain, d, supporting_documents: _run_research_component(2, agent_chain, d, "claude", supporting_documents=supporting_documents),
-    "competitor landscape": lambda agent_chain, d, supporting_documents: _run_research_component(3, agent_chain, d, "claude", supporting_documents=supporting_documents),
-    "regulatory & compliance highlights": lambda agent_chain, d, supporting_documents: _run_research_component(4, agent_chain, d, "claude", supporting_documents=supporting_documents),
-    "market entry & growth strategy": lambda agent_chain, d, supporting_documents: _run_research_component(5, agent_chain, d, "claude", supporting_documents=supporting_documents),
+    "market size & opportunity": lambda agent_chain, d, supporting_documents=None: _run_research_component(1, agent_chain, d, "claude", supporting_documents=supporting_documents),
+    "industry trends report": lambda agent_chain, d, supporting_documents=None: _run_research_component(2, agent_chain, d, "claude", supporting_documents=supporting_documents),
+    "competitor landscape": lambda agent_chain, d, supporting_documents=None: _run_research_component(3, agent_chain, d, "claude", supporting_documents=supporting_documents),
+    "regulatory & compliance highlights": lambda agent_chain, d, supporting_documents=None: _run_research_component(4, agent_chain, d, "claude", supporting_documents=supporting_documents),
+    "market entry & growth strategy": lambda agent_chain, d, supporting_documents=None: _run_research_component(5, agent_chain, d, "claude", supporting_documents=supporting_documents),
 }
 ```
 
@@ -604,17 +636,21 @@ SUPPORTING_DOC_ROWS = [
 ]
 
 
+@pytest.mark.parametrize("llm_backend", ["qwen", "claude"])
 def test_run_market_research_labels_supporting_documents(
-    mocker, mock_session, mock_mongo_client,
+    mocker, mock_session, mock_mongo_client, llm_backend,
 ):
     """The market-research prompt carries a labeled SUPPORTING DOCUMENTS
     section (threaded through the real dispatch lambda + _run_research_component
-    + prompts.render), and the pinecone keys no longer ride inside the
-    company_profile JSON blob (D1)."""
-    captured_body = {}
+    + prompts.render), the pinecone keys no longer ride inside the
+    company_profile JSON blob (D1), and — on the `claude` param, which runs the
+    real COMPONENT_FUNCTIONS_CLAUDE lambda — the positional `"claude"` survives
+    the threading (the exact keyword/positional hazard the plan warns about)."""
+    captured = {}
 
-    def _capture(agent_chain, body, profile_json, llm_backend):
-        captured_body["body"] = body
+    def _capture(agent_chain, body, profile_json, backend):
+        captured["body"] = body
+        captured["backend"] = backend
         return 'Final Answer: {"executiveSummary": "ok", "tamValue": "$1B"}'
 
     mocker.patch(
@@ -633,11 +669,13 @@ def test_run_market_research_labels_supporting_documents(
         component_name="market size & opportunity", data={}, refresh=True,
     )
     result = asyncio.run(
-        run_market_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend="qwen")
+        run_market_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend=llm_backend)
     )
 
     assert result["status"] == "success"
-    body = captured_body["body"]
+    # claude path: the positional "claude" reached the leaf un-clobbered by docs
+    assert captured["backend"] == llm_backend
+    body = captured["body"]
     assert "SUPPORTING DOCUMENTS" in body
     assert "ACME Corp announced 30% revenue growth" in body
     assert "pinecone_supporting_context" not in body
@@ -647,7 +685,7 @@ def test_run_market_research_labels_supporting_documents(
 - [ ] **Step 4: Run the test (red → green)**
 
 Run: `.venv/bin/python -m pytest tests/unit/test_market_research.py -q`
-Expected: the new test PASS and the existing per-component tests (which patch the dispatch dicts with `MagicMock` fakes that tolerate the extra positional arg) still PASS.
+Expected: the new test PASS for **both** `llm_backend` params — the `qwen` param exercises `COMPONENT_FUNCTIONS`; the `claude` param exercises the real `COMPONENT_FUNCTIONS_CLAUDE` lambda and asserts `"claude"` survives. The existing per-component tests (which patch the dispatch dicts with `MagicMock` fakes that tolerate the extra positional arg) still PASS.
 
 - [ ] **Step 5: Commit**
 
@@ -812,16 +850,20 @@ SUPPORTING_DOC_ROWS = [
 ]
 
 
+@pytest.mark.parametrize("llm_backend", ["qwen", "claude"])
 def test_run_icp_research_labels_supporting_documents(
-    mocker, mock_session, mock_mongo_client,
+    mocker, mock_session, mock_mongo_client, llm_backend,
 ):
     """The ICP prompt carries a labeled SUPPORTING DOCUMENTS section (threaded
-    through the real ICP_FUNCTIONS dispatch + icp_research_1 + prompts.render),
-    and the pinecone keys no longer ride inside the context_json blob (D1)."""
-    captured_body = {}
+    through the real dispatch + icp_research_1 + prompts.render), the pinecone
+    keys no longer ride inside the context_json blob (D1), and — on the `claude`
+    param, which runs the real ICP_FUNCTIONS_CLAUDE lambda — the positional
+    `"claude"` survives the threading."""
+    captured = {}
 
-    def _capture(agent_chain, body, pre_data, llm_backend):
-        captured_body["body"] = body
+    def _capture(agent_chain, body, pre_data, backend):
+        captured["body"] = body
+        captured["backend"] = backend
         return 'Final Answer: {"title": "ICP Summary", "currentData": {"segments": ["mid-market"]}}'
 
     mocker.patch(
@@ -845,11 +887,12 @@ def test_run_icp_research_labels_supporting_documents(
         component_name="icp summary & market opportunity", data={}, refresh=True,
     )
     result = asyncio.run(
-        run_icp_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend="qwen")
+        run_icp_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend=llm_backend)
     )
 
     assert result["status"] == "success"
-    body = captured_body["body"]
+    assert captured["backend"] == llm_backend
+    body = captured["body"]
     assert "SUPPORTING DOCUMENTS" in body
     assert "ACME Corp announced 30% revenue growth" in body
     assert "pinecone_supporting_context" not in body
@@ -859,7 +902,7 @@ def test_run_icp_research_labels_supporting_documents(
 - [ ] **Step 4: Run the test (red → green)**
 
 Run: `.venv/bin/python -m pytest tests/unit/test_icp.py -q`
-Expected: the new test PASS; existing ICP tests (which patch `ICP_FUNCTIONS`/`icp_research_2` with `MagicMock` fakes that tolerate the new keyword) still PASS.
+Expected: the new test PASS for **both** params — the `claude` param exercises the real `ICP_FUNCTIONS_CLAUDE` lambda and asserts `"claude"` survives; existing ICP tests (which patch `ICP_FUNCTIONS`/`icp_research_2` with `MagicMock` fakes that tolerate the new keyword) still PASS.
 
 - [ ] **Step 5: Commit**
 
@@ -890,7 +933,7 @@ git -C /projects/Brewra/brewra-gtm-intelligence/.claude/worktrees/fix-supporting
 
 - [ ] **Step 1: Write the failing test**
 
-In `backend/tests/unit/test_signals.py`, add a test asserting the aligned label appears and the old label does not:
+In `backend/tests/unit/test_signals.py`, add three tests: the qwen and claude `signal_ask` alignment tests (aligned label present, old label absent, content preserved) and the label-drift guard (partial label line == `_SUPPORTING_DOCS_LABEL`):
 
 ```python
 def test_signal_ask_qwen_uses_aligned_supporting_docs_label(
@@ -917,12 +960,60 @@ def test_signal_ask_qwen_uses_aligned_supporting_docs_label(
     assert "SUPPORTING DOCUMENTS" in prompt
     assert "DATA SOURCES (uploaded documents)" not in prompt
     assert "DATA_SOURCE_SENTINEL_ALIGN" in prompt
+
+
+def test_signal_ask_claude_uses_aligned_supporting_docs_label(
+    mocker, mock_session, mock_mongo_client,
+):
+    """signal_ask_claude (the path the FE actually calls) also labels uploaded
+    docs with the aligned 'SUPPORTING DOCUMENTS' wording via the shared helper."""
+    mocker.patch("app.services.signals.ask.CLAUDE_API_KEY", "valid-key")
+    mocker.patch("app.services.signals.ask._reserve_claude_signal_budget", return_value={"run_id": "rid"})
+    mocker.patch("app.services.signals.ask._estimate_token_count", return_value=10)
+    mocker.patch(
+        "app.services.signals.ask._finalize_claude_signal_budget",
+        return_value={"window_tokens_5m": 10, "run_count_5m": 1, "run_count_total": 1},
+    )
+    mocker.patch(
+        "app.services.signals.ask._fetch_pinecone_supporting_context",
+        return_value=[{"content": "DATA_SOURCE_SENTINEL_CLAUDE", "score": 0.8}],
+    )
+    mock_session.run.return_value.single.return_value = None
+    mock_mongo_client.__getitem__.return_value.__getitem__.return_value.find_one.return_value = None
+
+    captured_payload: dict = {}
+    mocker.patch("app.services.signals.ask.requests.post", side_effect=_fake_claude_post(captured_payload))
+
+    request = SignalAskRequest(user_id=TEST_USER_ID, org_id=TEST_ORG_ID, question="What changed?")
+    result = asyncio.run(signal_ask_claude(mock_session._driver, mock_mongo_client, MagicMock(), request))
+
+    assert result["status"] == "success"
+    prompt = captured_payload["json"]["messages"][0]["content"]
+    assert "SUPPORTING DOCUMENTS" in prompt
+    assert "DATA SOURCES (uploaded documents)" not in prompt
+    assert "DATA_SOURCE_SENTINEL_CLAUDE" in prompt
+
+
+def test_supporting_docs_label_matches_partial():
+    """Goal-4 drift guard: ask.py's _SUPPORTING_DOCS_LABEL must stay
+    byte-identical to the Jinja partial's label line (the two are the only
+    copies of the wording — a future edit to either would silently diverge)."""
+    from pathlib import Path
+    from app.services.signals.ask import _SUPPORTING_DOCS_LABEL
+
+    partial = (
+        Path(__file__).resolve().parents[2]
+        / "prompts" / "_shared" / "supporting_documents_section.md.j2"
+    )
+    lines = partial.read_text().splitlines()
+    label_line = lines[lines.index("{% if supporting_documents %}") + 1]
+    assert label_line == _SUPPORTING_DOCS_LABEL
 ```
 
 - [ ] **Step 2: Run it to verify it fails**
 
-Run: `.venv/bin/python -m pytest "tests/unit/test_signals.py::test_signal_ask_qwen_uses_aligned_supporting_docs_label" -q`
-Expected: FAIL (`"SUPPORTING DOCUMENTS" in prompt` is False; the old label still present).
+Run: `.venv/bin/python -m pytest tests/unit/test_signals.py -k "aligned_supporting_docs_label or supporting_docs_label_matches_partial" -q`
+Expected: FAIL — the qwen + claude alignment tests fail (`"SUPPORTING DOCUMENTS"` absent, old label present), and the drift-guard test fails with `ImportError` (no `_SUPPORTING_DOCS_LABEL` yet).
 
 - [ ] **Step 3: Implement the alignment**
 
@@ -959,9 +1050,9 @@ New:
 
 Run:
 ```bash
-.venv/bin/python -m pytest tests/unit/test_signals.py -k "signal_ask" -q
+.venv/bin/python -m pytest tests/unit/test_signals.py -k "signal_ask or supporting_docs_label_matches_partial" -q
 ```
-Expected: PASS — the new alignment test, plus the existing `test_signal_ask_qwen_includes_data_source_context` and `test_signal_ask_claude_*` tests (which assert on the content sentinel `DATA_SOURCE_SENTINEL_*`, preserved by `format_supporting_documents`).
+Expected: PASS — the new qwen + claude alignment tests and the label-drift guard, plus the existing `test_signal_ask_qwen_includes_data_source_context` and `test_signal_ask_claude_*` tests (which assert on the content sentinel `DATA_SOURCE_SENTINEL_*`, preserved by `format_supporting_documents`).
 
 - [ ] **Step 5: Commit**
 
@@ -982,9 +1073,16 @@ git -C /projects/Brewra/brewra-gtm-intelligence/.claude/worktrees/fix-supporting
 
 **Interfaces:** none (fixtures only).
 
-- [ ] **Step 1: Add `supporting_documents` to the 11 `_inputs` skeletons**
+- [ ] **Step 1: Confirm the captured-fixture skip premise, then add `supporting_documents` to the 11 `_inputs` skeletons**
 
-Each edited template now declares `supporting_documents` in `inputs:`, so `prompts.render(name, **inputs)` (used by the regen script and by `test_prompts_golden.py`) requires it as an exact-set kwarg — a missing key raises `MissingInputs`. Add a top-level `"supporting_documents"` key to each of the 11 `_inputs/<name>.json` with a representative value. Use this same value in all 11 (it renders verbatim into the section):
+First, confirm the Global-Constraints "Spec divergence" premise that `captured/signal_ask_*` carry no embedded label (so no `captured/` regen is needed). Run (from `backend/`):
+```bash
+grep -l '"_stub"' tests/fixtures/captured/signal_ask_qwen.json tests/fixtures/captured/signal_ask_claude.json
+grep -L 'DATA SOURCES' tests/fixtures/captured/signal_ask_qwen.json tests/fixtures/captured/signal_ask_claude.json
+```
+Expected: the first `grep -l` lists **both** files (they are `_stub` LLM-output fixtures); the second `grep -L` also lists **both** (neither embeds the `DATA SOURCES` / `SUPPORTING DOCUMENTS` label). If either expectation fails, the premise is wrong — STOP and regenerate the affected `captured/*` per Spec §Testing instead of skipping.
+
+Then add the `supporting_documents` key. Each edited template now declares `supporting_documents` in `inputs:`, so `prompts.render(name, **inputs)` (used by the regen script and by `test_prompts_golden.py`) requires it as an exact-set kwarg — a missing key raises `MissingInputs`. Add a top-level `"supporting_documents"` key to each of the 11 `_inputs/<name>.json` with a representative value. Use this same value in all 11 (it renders verbatim into the section):
 
 For each file `backend/tests/fixtures/prompts/_inputs/<name>.json`, add the key (keeping existing keys). Example for `research_market_1.json`:
 
@@ -1044,7 +1142,7 @@ git -C /projects/Brewra/brewra-gtm-intelligence/.claude/worktrees/fix-supporting
 
 ## Acceptance criteria (from Spec 39 §"Acceptance criteria")
 
-1. **Each surface family renders the labeled section when docs are present and omits it when absent.** Covered: signals scout (Task 2), profiler (Task 2 D3), market-research (Task 3), ICP (Task 4) tests assert `"SUPPORTING DOCUMENTS"` + content present; the `{% if supporting_documents %}` guard + `format_supporting_documents(...) -> None` on empty omit it (helper test in Task 1 + the dict-guard returning `None`).
+1. **Each surface family renders the labeled section when docs are present and omits it when absent.** Covered: signals scout (Task 2), profiler (Task 2 D3), market-research (Task 3, both backends), ICP (Task 4, both backends) tests assert `"SUPPORTING DOCUMENTS"` + content present; the **absent** case is asserted at the integration level by the scout empty-retrieval test (Task 2), which exercises the `{% if supporting_documents %}` guard (no empty header), plus the `format_supporting_documents(...) -> None` helper unit test (Task 1).
 2. **No generation surface leaves `pinecone_*` keys inside the profile/context JSON.** Covered: Task 2 widens the signals exclude lists; Task 3/4 remove the `company_profile`/`context_data` pinecone stamps; each surface test asserts the keys are absent from the rendered prompt.
 3. **Profiler signals include retrieved docs; the `ask` path uses the shared helper + aligned label.** Covered: Task 2 (D3 profiler test) + Task 5.
 4. **`format_supporting_documents` + the partial are the single source of formatting/label wording for the template surfaces.** Covered: Task 1 helper + Task 2 partial; `ask.py` keeps a byte-identical Python copy of the label (documented Jinja/Python-boundary exception).
@@ -1056,3 +1154,4 @@ git -C /projects/Brewra/brewra-gtm-intelligence/.claude/worktrees/fix-supporting
 - **Version-bump fallout:** only `test_signals.py:58,82` assert the real-loader version (`signals_scout_search` / `signals_profiler_search`) and are updated in Task 2; market/ICP version asserts use fake `prompt_meta` and are untouched.
 - **Existing dispatch-dict tests survive the threading change:** market/ICP per-component tests patch the dict entries (or `_run_research_component`/`icp_research_N`) with `MagicMock` fakes that absorb the new arg/kwarg.
 - **`as_langchain` callers:** none for the 11 prompt names (verified) — adding required `inputs:` only affects `prompts.render` callers, all of which this plan updates (orchestrators + regen + golden test inputs).
+- **Plan-review round 1 (glm-5.2) incorporated:** M1 (Claude-dispatch coverage) → the market (Task 3) and ICP (Task 4) through-orchestrator tests are parametrized over `llm_backend ∈ {qwen, claude}`, running the real `*_CLAUDE` lambdas and asserting `"claude"` survives, plus a `signal_ask_claude` alignment test (Task 5); L1 (empty-retrieval) → scout section-absent test (Task 2); L2 (captured premise) → explicit verification step (Task 6 Step 1); L3 (label drift) → partial-vs-constant equality test (Task 5); L4 (kill criteria) → Global-Constraints "Failure handling" note. Synthesis: `docs/reviews/39-supporting-docs-prompt-labeling-plan-synthesis-1-glm-5.2.md`.
