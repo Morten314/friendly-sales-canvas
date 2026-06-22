@@ -111,3 +111,33 @@ def _fetch_pinecone_supporting_context(
     except Exception as e:
         logger.warning(f"Pinecone support context unavailable, continuing without it: {e}")
         return []
+
+
+def format_supporting_documents(rows: Optional[List[Dict[str, Any]]]) -> Optional[str]:
+    """Format Pinecone supporting-document rows into a labeled-section body.
+
+    Turns the rows returned by ``_fetch_pinecone_supporting_context`` into a
+    pretty-printed JSON array string, or ``None`` when there is nothing to
+    show. Each row's ``metadata.text`` / ``metadata.page_content`` is stripped
+    before serialising because it duplicates ``content`` (avoids emitting each
+    chunk's text twice per generation call). Distinct fields
+    (``query``/``id``/``score``/``content`` + all other metadata) are kept.
+
+    Pure and total: never raises (``default=str`` tolerates numpy/Decimal
+    ``score`` and arbitrary metadata) and never mutates the input rows.
+    """
+    if not rows:
+        return None
+    cleaned: List[Dict[str, Any]] = []
+    for row in rows:
+        new_row = dict(row)
+        metadata = row.get("metadata")
+        if isinstance(metadata, dict):
+            new_row["metadata"] = {
+                k: v for k, v in metadata.items() if k not in ("text", "page_content")
+            }
+        cleaned.append(new_row)
+    try:
+        return json.dumps(cleaned, indent=2, default=str)
+    except Exception:
+        return None
