@@ -1,7 +1,7 @@
 # Spec 39 — Label retrieved supporting documents as their own prompt section
 
 Status: design (intent) · Stack: backend · Author: Claude (RCA-driven)
-Revised after spec-review round 1 (see `docs/reviews/39-…-spec-review-1.md` + synthesis-1).
+Revised after spec-review round 1 (see `docs/reviews/39-…-spec-review-1.md` + synthesis-1); `signal_ask` confirmed in scope by user (2026-06-22).
 
 ## Context
 
@@ -240,11 +240,15 @@ assert all five `research_market_*` or all four `icp_research_*` individually.
   suite (`backend/tests/`, incl. regenerated fixtures) plus review — there is no
   backend preflight runner.
 
-## Open decision (for the user spec-review gate)
+## Decisions (settled)
 
-`signal_ask` was added as a 4th surface after review round 1. It is **not**
-implicated by either report (it already labels its docs) — its inclusion is
-purely Goal-4 consistency (shared helper + aligned wording, a light change). The
-user may keep it in scope (recommended, honors the "all surfaces" intent) or
-descope it to a tracked follow-up. Everything else is settled (scope, raw-JSON
-shape untrimmed, unit-level pytest).
+- **Scope:** all four Scout/Profiler retrieval surfaces — signals scout+profiler,
+  market-research, ICP, and `signal_ask` (user-confirmed in scope, 2026-06-22).
+  The first three are *generation* surfaces with the D1/D3 defects, fixed via the
+  shared helper + the Jinja partial (§5). `signal_ask` is **not** implicated by
+  either report (it already labels its docs); it is included for Goal-4
+  consistency — a light change (shared helper + aligned label wording in
+  `ask.py`, no partial), per §4.
+- **Doc shape:** raw JSON rows, full fidelity (untrimmed).
+- **Verification:** unit-level pytest (deterministic prompt assembly); no prod
+  seeding.
