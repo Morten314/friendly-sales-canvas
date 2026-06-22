@@ -70,7 +70,7 @@ describe("generateSignalsBatch", () => {
 
   it("sends the org's real company profile in the data block", async () => {
     const captured = captureBody();
-    const res = await generateSignalsBatch("u1", {
+    const res = await generateSignalsBatch("u1", null, {
       industry: "Renewable Energy",
       companySize: "500-1000 employees",
       companyUrl: "https://acme.example",
@@ -100,7 +100,7 @@ describe("generateSignalsBatch", () => {
 
   it("sends empty firmographics (never dummy placeholders) when no profile exists", async () => {
     const captured = captureBody();
-    await generateSignalsBatch("u1", null);
+    await generateSignalsBatch("u1", null, null);
     expect(captured.body?.data).toEqual({
       industry: "",
       companySize: "",
@@ -115,11 +115,23 @@ describe("generateSignalsBatch", () => {
 
   it("falls back to website / gtmModel aliases when the primary fields are absent", async () => {
     const captured = captureBody();
-    await generateSignalsBatch("u1", { website: "https://w.example", gtmModel: "PLG" });
+    await generateSignalsBatch("u1", null, { website: "https://w.example", gtmModel: "PLG" });
     expect(captured.body?.data).toMatchObject({
       companyUrl: "https://w.example",
       primaryGTMModel: "PLG",
     });
+  });
+
+  it("sends org_id in the body when an org is provided (so the backend can scope tenant retrieval)", async () => {
+    const captured = captureBody();
+    await generateSignalsBatch("u1", "org-42", null);
+    expect(captured.body).toMatchObject({ user_id: "u1", org_id: "org-42" });
+  });
+
+  it("omits org_id when no org is available", async () => {
+    const captured = captureBody();
+    await generateSignalsBatch("u1", null, null);
+    expect(captured.body).not.toHaveProperty("org_id");
   });
 
   it("throws on a non-ok response", async () => {
@@ -129,6 +141,6 @@ describe("generateSignalsBatch", () => {
         () => new HttpResponse(null, { status: 500 }),
       ),
     );
-    await expect(generateSignalsBatch("u1", null)).rejects.toThrow(/HTTP error! status: 500/);
+    await expect(generateSignalsBatch("u1", null, null)).rejects.toThrow(/HTTP error! status: 500/);
   });
 });

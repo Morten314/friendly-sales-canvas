@@ -30,21 +30,29 @@ export async function fetchSignals(
 
 /**
  * POST /api/generate-signals-batch_claude — page-only. The firmographics `data`
- * block is now sourced from the org's real company profile (Settings → Company
+ * block is sourced from the org's real company profile (Settings → Company
  * Profile) rather than the old hardcoded SaaS/example.com placeholders. A null
  * profile (none saved yet, or query not resolved) sends empty fields — never the
  * dummy values — so signals are generated against the org's actual business.
  * `component_name: "test"` remains a fixed probe label (a separate concern from
  * the firmographics, unrelated to company-profile personalisation).
+ *
+ * `org_id` is forwarded when available so the backend can scope tenant retrieval.
+ * Without it the backend receives `org_id=None` and silently skips both the
+ * Pinecone supporting-context lookup and the leads fetch (both gated on org_id),
+ * so generated signals lose the org's uploaded-document context. Omitted when no
+ * org is resolved — the backend treats absent and null identically.
  */
 export async function generateSignalsBatch(
   userId: string,
+  orgId: string | null,
   profile: CompanyProfileResponse | null,
 ): Promise<GenerateSignalsBatchResponse> {
   return apiPost(
     "generate-signals-batch_claude",
     {
       user_id: userId,
+      ...(orgId ? { org_id: orgId } : {}),
       component_name: "test",
       data: {
         industry: profile?.industry ?? "",

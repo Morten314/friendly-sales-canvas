@@ -285,7 +285,7 @@ const SignalsPage = () => {
     window.dispatchEvent(new CustomEvent("signalsRefreshStart"));
 
     try {
-      await generateSignalsBatch(currentUser.uid, companyProfileRef.current);
+      await generateSignalsBatch(currentUser.uid, orgId, companyProfileRef.current);
       await loadSignals();
       toast({
         title: "Success",

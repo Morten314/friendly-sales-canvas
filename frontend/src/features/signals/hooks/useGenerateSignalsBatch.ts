@@ -12,7 +12,14 @@ import type { CompanyProfileResponse } from "@/shared/api/contracts";
  */
 export function useGenerateSignalsBatch() {
   return useMutation({
-    mutationFn: ({ userId, profile }: { userId: string; profile: CompanyProfileResponse | null }) =>
-      generateSignalsBatch(userId, profile),
+    mutationFn: ({
+      userId,
+      orgId,
+      profile,
+    }: {
+      userId: string;
+      orgId: string | null;
+      profile: CompanyProfileResponse | null;
+    }) => generateSignalsBatch(userId, orgId, profile),
   });
 }
