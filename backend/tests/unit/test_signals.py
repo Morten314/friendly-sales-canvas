@@ -804,6 +804,80 @@ def test_signal_ask_qwen_includes_data_source_context(
     assert "DATA_SOURCE_SENTINEL_QWEN" in prompt
 
 
+def test_signal_ask_qwen_uses_aligned_supporting_docs_label(
+    mocker, mock_session, mock_mongo_client,
+):
+    """signal_ask labels uploaded docs with the shared 'SUPPORTING DOCUMENTS'
+    wording (aligned to the Jinja partial), not the old bespoke
+    'DATA SOURCES (uploaded documents):' label."""
+    mocker.patch(
+        "app.services.signals.ask._fetch_pinecone_supporting_context",
+        return_value=[{"content": "DATA_SOURCE_SENTINEL_ALIGN", "score": 0.8}],
+    )
+    mock_session.run.return_value.single.return_value = None
+    mock_mongo_client.__getitem__.return_value.__getitem__.return_value.find_one.return_value = None
+
+    chain_mock = MagicMock()
+    chain_mock.invoke.return_value = {"output": "answer"}
+
+    request = SignalAskRequest(user_id=TEST_USER_ID, org_id=TEST_ORG_ID, question="What changed?")
+    result = asyncio.run(signal_ask(mock_session._driver, mock_mongo_client, MagicMock(), chain_mock, request))
+
+    assert result["status"] == "success"
+    prompt = chain_mock.invoke.call_args[0][0]["input"]
+    assert "SUPPORTING DOCUMENTS" in prompt
+    assert "DATA SOURCES (uploaded documents)" not in prompt
+    assert "DATA_SOURCE_SENTINEL_ALIGN" in prompt
+
+
+def test_signal_ask_claude_uses_aligned_supporting_docs_label(
+    mocker, mock_session, mock_mongo_client,
+):
+    """signal_ask_claude (the path the FE actually calls) also labels uploaded
+    docs with the aligned 'SUPPORTING DOCUMENTS' wording via the shared helper."""
+    mocker.patch("app.services.signals.ask.CLAUDE_API_KEY", "valid-key")
+    mocker.patch("app.services.signals.ask._reserve_claude_signal_budget", return_value={"run_id": "rid"})
+    mocker.patch("app.services.signals.ask._estimate_token_count", return_value=10)
+    mocker.patch(
+        "app.services.signals.ask._finalize_claude_signal_budget",
+        return_value={"window_tokens_5m": 10, "run_count_5m": 1, "run_count_total": 1},
+    )
+    mocker.patch(
+        "app.services.signals.ask._fetch_pinecone_supporting_context",
+        return_value=[{"content": "DATA_SOURCE_SENTINEL_CLAUDE", "score": 0.8}],
+    )
+    mock_session.run.return_value.single.return_value = None
+    mock_mongo_client.__getitem__.return_value.__getitem__.return_value.find_one.return_value = None
+
+    captured_payload: dict = {}
+    mocker.patch("app.services.signals.ask.requests.post", side_effect=_fake_claude_post(captured_payload))
+
+    request = SignalAskRequest(user_id=TEST_USER_ID, org_id=TEST_ORG_ID, question="What changed?")
+    result = asyncio.run(signal_ask_claude(mock_session._driver, mock_mongo_client, MagicMock(), request))
+
+    assert result["status"] == "success"
+    prompt = captured_payload["json"]["messages"][0]["content"]
+    assert "SUPPORTING DOCUMENTS" in prompt
+    assert "DATA SOURCES (uploaded documents)" not in prompt
+    assert "DATA_SOURCE_SENTINEL_CLAUDE" in prompt
+
+
+def test_supporting_docs_label_matches_partial():
+    """Goal-4 drift guard: ask.py's _SUPPORTING_DOCS_LABEL must stay
+    byte-identical to the Jinja partial's label line (the two are the only
+    copies of the wording — a future edit to either would silently diverge)."""
+    from pathlib import Path
+    from app.services.signals.ask import _SUPPORTING_DOCS_LABEL
+
+    partial = (
+        Path(__file__).resolve().parents[2]
+        / "prompts" / "_shared" / "supporting_documents_section.md.j2"
+    )
+    lines = partial.read_text().splitlines()
+    label_line = lines[lines.index("{% if supporting_documents %}") + 1]
+    assert label_line == _SUPPORTING_DOCS_LABEL
+
+
 def test_signal_ask_claude_falls_back_to_user_icp_config(
     mocker, mock_session,
 ):
