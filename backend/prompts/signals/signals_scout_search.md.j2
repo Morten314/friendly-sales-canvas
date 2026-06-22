@@ -1,6 +1,6 @@
 ---
 name: signals_scout_search
-version: 1.0.0
+version: 1.1.0
 description: Scout-persona market signal research (Qwen agent_chain or Claude+Tavily). Sub-templates included conditionally based on leads / existing_headlines presence.
 model: Qwen/Qwen3-235B-A22B-Instruct-2507-tput
 response_format: json
@@ -12,6 +12,7 @@ inputs:
   - signal_label
   - existing_headlines
   - headlines_list
+  - supporting_documents
 ---
 Task: Research and identify a high-quality, actionable market signal for a sales scout agent. This signal should help the sales team understand market opportunities, competitor movements, or industry trends that could impact their sales strategy.
 
@@ -28,6 +29,8 @@ Company Profile Data:
 {% if existing_headlines %}
 {% include 'signals/signals_existing_headlines_section.md.j2' %}
 {% endif %}
+
+{% include '_shared/supporting_documents_section.md.j2' %}
 
 STEP 2 - RESEARCH REQUIREMENTS (CRITICAL):
 You MUST use the WebSearch tool to find a REAL, RECENT, and ACTIONABLE market signal. Based on the company profile above, perform comprehensive research to identify:

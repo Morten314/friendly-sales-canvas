@@ -1,6 +1,6 @@
 ---
 name: signals_profiler_search
-version: 1.0.0
+version: 1.1.0
 description: Profiler-persona ICP/customer signal research (Qwen agent_chain or Claude+Tavily). Sub-templates included conditionally based on leads / existing_headlines presence.
 model: Qwen/Qwen3-235B-A22B-Instruct-2507-tput
 response_format: json
@@ -12,6 +12,7 @@ inputs:
   - signal_label
   - existing_headlines
   - headlines_list
+  - supporting_documents
 ---
 Task: Research and identify a high-quality, actionable ICP/customer signal for a profiler agent. This signal should help the sales team understand customer buying behavior, ICP trends, or customer acquisition opportunities.
 
@@ -28,6 +29,8 @@ Company Profile and ICP Data:
 {% if existing_headlines %}
 {% include 'signals/signals_existing_headlines_section.md.j2' %}
 {% endif %}
+
+{% include '_shared/supporting_documents_section.md.j2' %}
 
 STEP 2 - RESEARCH REQUIREMENTS (CRITICAL):
 You MUST use the WebSearch tool to find a REAL, RECENT, and ACTIONABLE ICP/customer signal. Based on the company profile and ICP data above, perform comprehensive research to identify:

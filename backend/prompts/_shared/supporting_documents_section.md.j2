@@ -1,0 +1,9 @@
+---
+name: supporting_documents_section
+version: 1.0.0
+description: Labeled section for Pinecone-retrieved org documents; included by Scout/Profiler generation prompts. Omitted when no documents retrieved.
+---
+{% if supporting_documents %}
+SUPPORTING DOCUMENTS (retrieved from your organization's uploaded knowledge base — treat as corroborating evidence and cite where relevant; these are NOT the company's declared profile fields):
+{{ supporting_documents }}
+{% endif %}
