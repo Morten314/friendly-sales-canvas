@@ -1,7 +1,7 @@
 # Spec 39 — Label retrieved supporting documents as their own prompt section
 
 Status: design (intent) · Stack: backend · Author: Claude (RCA-driven)
-Revised after spec-review round 1 (see `docs/reviews/39-…-spec-review-1.md` + synthesis-1); `signal_ask` confirmed in scope by user (2026-06-22).
+Revised after spec-review rounds 1–2 (see `docs/reviews/39-…-spec-review-{1,2}*.md` + syntheses); `signal_ask` confirmed in scope by user (2026-06-22). One open decision remains: §1 "M2" content↔`metadata.text` de-duplication (recommended; pending user confirm).
 
 ## Context
 
@@ -50,6 +50,13 @@ unrelated. The accurate statement: no template labels the *retrieved Pinecone*
 content, and the four generation surfaces bury it in the profile blob or drop
 it.)
 
+Signals retrieval is populated at **two entry points** before `search_signals`
+runs — `run_signals_research` (in `signals/search.py`) and `signals/batch.py`
+(`:124-133` scout, `:184-193` profiler) — both setting
+`pre_data["pinecone_supporting_context"]` and delegating to the shared
+`search_signals`. The §4 `search_signals` seam therefore covers both; neither
+needs a separate edit, but both are exercised in tests.
+
 ## Goals
 
 1. Retrieved docs appear in every Scout/Profiler **generation** prompt (signals
@@ -66,8 +73,9 @@ it.)
 - WS1 (the `org_id` wire fix) — already done on `fix-signals-batch-org-id`.
 - Retrieval, embedding, the document write path (`/upload-document` →
   `process_file_to_embeddings` → Pinecone) — verified healthy; untouched.
-- Prose/summarised rendering of the docs — decision is **raw JSON rows, full
-  fidelity** (no field trimming).
+- Prose/summarised rendering of the docs — decision is **raw JSON rows** (no
+  trimming of the distinct `query/id/score/content`+metadata fields; see §1 "M2"
+  for the content↔`metadata.text` de-duplication decision).
 - `icp_generator` — does not fetch retrieval context.
 - The `pinecone_context_queries` (retrieval *query strings*) — never useful model
   context; **dropped from the prompt** on every generation surface. Confirmed no
@@ -84,9 +92,19 @@ format_supporting_documents(rows) -> str | None
 ```
 
 - Input: the list returned by `_fetch_pinecone_supporting_context`, or `None`/`[]`.
-- Output: `json.dumps(rows, indent=2, default=str)` when the list is non-empty;
-  `None` when empty/`None`. Rows pass through **untrimmed** (full
-  `{query, id, score, content, metadata}`).
+- Output: `json.dumps(<rows>, indent=2, default=str)` when the list is
+  non-empty; `None` when empty/`None`. Rows keep their distinct fields
+  (`query/id/score/content` + metadata) — no trimming of those.
+- **Redundancy decision (M2 — pending user confirm):** `_retrieval.py` sets
+  `content = metadata.get("text") or metadata.get("page_content")` *and* carries
+  the full `metadata`, so dumping rows verbatim repeats each chunk's text twice
+  (`content` + `metadata.text`/`page_content`) — up to ~6 chunks × 2 per call, an
+  avoidable per-call token/cost increase on every Scout/Profiler generation
+  surface (and net-new payload on the profiler path, which currently drops docs).
+  **Recommended (and the behaviour specified here pending the user's call):**
+  strip only the redundant `text`/`page_content` keys from each row's `metadata`
+  before serialising — keeps `query/id/score/content` + all other metadata,
+  removing the literal duplication. Alternative: accept the doubling.
 - Pure, total, never raises. `default=str` is load-bearing: the Pinecone `score`
   can be a non-JSON-native type (e.g. a numpy float) depending on the client, and
   `metadata` is arbitrary — the helper must serialise these without raising.
@@ -131,19 +149,31 @@ undeclared kwarg and `MissingInputs` on a declared-but-absent input — see §6)
 - **`signals/search.py`** — there is a **single** shared `prompts.render` call
   (`:130`) with `prompt_name` chosen by persona. Compute
   `supporting_documents = format_supporting_documents(pre_data.get("pinecone_supporting_context"))`
-  once and pass it to that one call. Scout branch: add
+  **inside the existing `isinstance(pre_data, dict)` handling** (the function also
+  has defensive `str`-`pre_data` branches where a bare `.get` would
+  `AttributeError`; both real callers dict-ify first, so the str path is
+  defensive) and pass it to that one call. Scout branch: add
   `pinecone_supporting_context` and `pinecone_context_queries` to the
   `context_json` exclude list (`:70`). Profiler branch: already excludes them.
   Because the same kwargs go to both `signals_scout_search` and
   `signals_profiler_search`, **both** templates must declare
-  `supporting_documents` in `inputs:` (kept in lockstep).
+  `supporting_documents` in `inputs:` (kept in lockstep). Both signals entry
+  points populate `pre_data["pinecone_supporting_context"]` *before* calling
+  `search_signals` — `run_signals_research` (in `search.py`) and
+  `signals/batch.py:124-133/184-193` (scout/profiler) — so this single seam covers
+  both transitively; no separate edit in `batch.py`.
 - **`market_research/orchestrator.py`** — stop setting
   `company_profile["pinecone_*"]` (`:154-155`). Thread `supporting_documents`
   through the dispatch indirection: the `COMPONENT_FUNCTIONS` /
   `COMPONENT_FUNCTIONS_CLAUDE` lambdas (`:92-106`), the
   `research_function(agent_chain, company_profile)` call site (`:162`), and
   `_run_research_component`'s signature (`:49`, **not** `_run_market_research_component`).
-  Render with `company_profile_json=..., supporting_documents=...`.
+  Thread `supporting_documents` as a **keyword** argument — *not* a positional
+  before `llm_backend`: `COMPONENT_FUNCTIONS_CLAUDE` calls
+  `_run_research_component(N, agent_chain, d, "claude")` (`:101-105`), so a
+  positional 4th param would bind `"claude"`→docs and silently revert the Claude
+  path to the Qwen default (identical hazard to the ICP fix below). Render with
+  `company_profile_json=..., supporting_documents=...`.
 - **`icp/orchestrator.py`** — stop putting pinecone into `context_data`
   (`:296-297`) so `context_json` (= `pre_data`) is profile + `icp_card` only.
   Thread `supporting_documents` as a **keyword** argument (not a new positional
@@ -166,8 +196,11 @@ undeclared kwarg and `MissingInputs` on a declared-but-absent input — see §6)
 `signals_scout_search`, `signals_profiler_search`; `research_market_1`–`5`;
 `icp_research_1`–`4`. In each, `{% include '_shared/supporting_documents_section.md.j2' %}`
 after the existing profile/context block (before the "research requirements"
-step), and `supporting_documents` added to `inputs:`. The `ask` templates are
-handled in code (§4) and are **not** in this list.
+step), and `supporting_documents` added to `inputs:`. **Bump each of the 11
+templates' `version:` frontmatter** (patch/minor) so persisted
+`prompt_meta.version` / `content_hash` reflect the changed body; the new partial
+stays `1.0.0`. The `ask` templates are handled in code (§4) and are **not** in
+this list.
 
 ## Data flow
 
@@ -200,22 +233,37 @@ Deterministic prompt-assembly assertions — no prod seeding (verification
 decision: unit-level only). Coverage **samples one template per surface family**
 (scout, profiler, market_research, icp) to exercise the shared partial; we do not
 assert all five `research_market_*` or all four `icp_research_*` individually.
+Crucially, the market/ICP cases run **through the async orchestrator** with
+collaborators patched (extending the existing `test_market_research.py` /
+`test_icp.py`, which already patch `_fetch_pinecone_supporting_context` /
+`_fetch_company_profile`) so the **call-site threading** (dispatch lambdas +
+`research_function(...)`) is exercised — not just the leaf render; assert
+`prompts.render` is called with `supporting_documents=…`. Signals run via the
+`batch._generate_signals_batch_impl` and `run_signals_research` entry points
+(existing `test_signals.py` already patches `batch._fetch_pinecone_supporting_context`),
+not by calling `search_signals` with a hand-built dict.
 
 - **Helper:** non-empty rows → JSON string containing the row content; `[]`/`None`
-  → `None`; full fields retained; a row whose `score` is a non-JSON-native type
-  (numpy float / `Decimal`) serialises without raising.
-- **Per generation surface (retrieval patched to fixed rows):**
+  → `None`; distinct fields retained; per the M2 decision, the redundant
+  `metadata.text`/`page_content` is absent when de-dupe is confirmed; a row whose
+  `score` is a non-JSON-native type (numpy float / `Decimal`) serialises without
+  raising.
+- **Per generation surface (retrieval patched to fixed rows, via the orchestrator
+  / entry point):**
   - assembled prompt **contains** the labeled SUPPORTING DOCUMENTS section with
     the row content;
   - the profile/context JSON in the prompt **does not contain**
     `pinecone_supporting_context` / `pinecone_context_queries` (D1 regression);
   - retrieval patched to `[]` → section **absent** (no empty header).
 - **Profiler regression (D3):** profiler prompt includes the retrieved docs.
-- **`ask` alignment:** the `ask` context still contains the (now shared-helper)
+- **`ask` alignment:** the `ask` context still contains the (shared-helper)
   documents under the aligned label.
-- **Fixtures:** update `tests/fixtures/prompts/_inputs/<name>.json` skeletons for
-  the edited templates (add a `supporting_documents` key) and regenerate the
-  golden `rendered/` + `captured/` fixtures (`tests/regen_prompt_fixtures.py`).
+- **Fixtures:** add a `supporting_documents` key to the edited templates'
+  `tests/fixtures/prompts/_inputs/<name>.json` skeletons and regenerate the golden
+  `rendered/` fixtures (`tests/regen_prompt_fixtures.py`); also regenerate the
+  runtime `captured/*.json` (incl. `captured/signal_ask_{qwen,claude}.json`, whose
+  embedded context string carries the now-changed `ask` label — no test asserts
+  the old string, so this is staleness, not breakage).
 
 ## Acceptance criteria
 
@@ -249,6 +297,8 @@ assert all five `research_market_*` or all four `icp_research_*` individually.
   either report (it already labels its docs); it is included for Goal-4
   consistency — a light change (shared helper + aligned label wording in
   `ask.py`, no partial), per §4.
-- **Doc shape:** raw JSON rows, full fidelity (untrimmed).
+- **Doc shape:** raw JSON rows; distinct fields untrimmed. Open: content↔
+  `metadata.text` de-duplication (M2) — recommended de-dupe, pending user confirm
+  (see §1).
 - **Verification:** unit-level pytest (deterministic prompt assembly); no prod
   seeding.
