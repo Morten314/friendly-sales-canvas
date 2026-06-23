@@ -6,14 +6,16 @@ import {
   ApolloDiscoverStatusSchema,
   ApolloStatusSchema,
   ApolloWarmupSchema,
+  DisconnectResponseSchema,
   type ApolloDiscoverResponse,
   type ApolloDiscoverStatus,
   type ApolloStatus,
   type ApolloWarmup,
+  type DisconnectResponse,
 } from "../contracts";
 import type { ApolloConnectErrorShape, DiscoverMode } from "../types";
 
-import { apiGet } from "@/shared/api/client";
+import { apiGet, apiRequest } from "@/shared/api/client";
 import { buildApiUrl } from "@/shared/api/transport";
 
 /** GET /api/connectors/apollo/status — connection + credit summary for the org. */
@@ -177,5 +179,14 @@ export async function connectApollo(
 export function apolloLeadsExportUrl(orgId: string, format: "json" | "csv"): string {
   return buildApiUrl(
     `connectors/apollo/leads/export?org_id=${encodeURIComponent(orgId)}&format=${format}`,
+  );
+}
+
+/** DELETE /api/connectors/apollo/connect — remove stored Apollo credentials for the org. */
+export async function disconnectApollo(orgId: string): Promise<DisconnectResponse> {
+  return apiRequest(
+    `connectors/apollo/connect?org_id=${encodeURIComponent(orgId)}`,
+    DisconnectResponseSchema,
+    { method: "DELETE" },
   );
 }

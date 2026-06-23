@@ -1,6 +1,6 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   status: vi.fn(),
@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   discoverStatus: vi.fn(),
   discover: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
   exportLeads: vi.fn(() => vi.fn()),
+  disconnect: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
   toast: vi.fn(),
 }));
 
@@ -19,13 +20,39 @@ vi.mock("../../hooks/useDiscoverStatus", () => ({
 }));
 vi.mock("../../hooks/useDiscover", () => ({ useDiscover: mocks.discover }));
 vi.mock("../../hooks/useExportApolloLeads", () => ({ useExportApolloLeads: mocks.exportLeads }));
+vi.mock("../../hooks/useDisconnectApollo", () => ({ useDisconnectApollo: mocks.disconnect }));
 vi.mock("@/components/ui/use-toast", () => ({ useToast: () => ({ toast: mocks.toast }) }));
 vi.mock("@/shared/auth", () => ({
   useAuth: () => ({ orgId: "o1", currentUser: { uid: "u1" } }),
 }));
 
+// The modal has its own MSW-backed tests; here we stub it to expose its mode + a success trigger,
+// so the tile's wiring (mode routing + mode-aware toast) is tested without the network.
+vi.mock("../ApolloConnectModal", () => ({
+  ApolloConnectModal: ({
+    open,
+    mode,
+    onConnected,
+  }: {
+    open: boolean;
+    mode?: string;
+    onConnected: () => void;
+  }) =>
+    open ? (
+      <div>
+        <span>modal-mode:{mode ?? "connect"}</span>
+        <button onClick={onConnected}>mock-connected</button>
+      </div>
+    ) : null,
+}));
+
 import { ApolloDiscoverError } from "../../services/apollo";
 import { ApolloTile } from "../ApolloTile";
+
+function openGear() {
+  const gear = screen.getByRole("button", { name: /apollo settings/i });
+  fireEvent.keyDown(gear, { key: " ", code: "Space" });
+}
 
 // Drive launch() onError by having the discover mock invoke the supplied onError synchronously.
 // mutate must be a vi.fn() (Mock) to match the useDiscover mock's inferred return type.
@@ -62,6 +89,7 @@ beforeEach(() => {
   mocks.discoverStatus.mockReturnValue({ data: undefined });
   mocks.discover.mockReturnValue({ mutate: vi.fn(), isPending: false });
   mocks.exportLeads.mockReturnValue(vi.fn());
+  mocks.disconnect.mockReturnValue({ mutate: vi.fn(), isPending: false });
   mocks.toast.mockClear();
 });
 
@@ -143,7 +171,7 @@ describe("ApolloTile", () => {
     expect(screen.getByRole("button", { name: /connect apollo/i })).toBeInTheDocument();
   });
 
-  it("shows the key-error message + Retry when credentials errored", () => {
+  it("credential-error shows 'Update API key' (not Retry) and opens the update modal", () => {
     mocks.status.mockReturnValue({
       data: {
         connected: true,
@@ -151,10 +179,13 @@ describe("ApolloTile", () => {
         low_credit: false,
         icp_changed_since_last_discovery: false,
       },
+      refetch: vi.fn(),
     });
     renderTile();
     expect(screen.getByText(/reconnect to resume discovery/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^retry$/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /update api key/i }));
+    expect(screen.getByText("modal-mode:update")).toBeInTheDocument();
   });
 
   it("shows the failed-run message when a discovery run failed", () => {
@@ -220,5 +251,92 @@ describe("ApolloTile", () => {
       expect.objectContaining({ mode: "keep" }),
       expect.anything(),
     );
+  });
+
+  it("shows the gear menu when connected and hides it when disconnected", () => {
+    renderTile();
+    expect(screen.getByRole("button", { name: /apollo settings/i })).toBeInTheDocument();
+    mocks.status.mockReturnValue({
+      data: { connected: false, status: "disconnected", low_credit: false },
+    });
+    cleanup();
+    renderTile();
+    expect(screen.queryByRole("button", { name: /apollo settings/i })).not.toBeInTheDocument();
+  });
+
+  it("gear → Update API key opens the modal in update mode", async () => {
+    renderTile();
+    openGear();
+    fireEvent.click(await screen.findByRole("menuitem", { name: /update api key/i }));
+    expect(screen.getByText("modal-mode:update")).toBeInTheDocument();
+  });
+
+  it("toasts 'Apollo key updated.' after a successful update, but not after a plain connect", async () => {
+    renderTile();
+    openGear();
+    fireEvent.click(await screen.findByRole("menuitem", { name: /update api key/i }));
+    fireEvent.click(screen.getByRole("button", { name: /mock-connected/i }));
+    expect(mocks.toast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: expect.stringMatching(/key updated/i) }),
+    );
+
+    // connect mode must NOT toast "key updated"
+    mocks.toast.mockClear();
+    mocks.status.mockReturnValue({
+      data: { connected: false, status: "disconnected", low_credit: false },
+      refetch: vi.fn(),
+    });
+    cleanup();
+    renderTile();
+    fireEvent.click(screen.getByRole("button", { name: /connect apollo/i }));
+    fireEvent.click(screen.getByRole("button", { name: /mock-connected/i }));
+    expect(mocks.toast).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: expect.stringMatching(/key updated/i) }),
+    );
+  });
+
+  it("gear → Disconnect opens the confirm dialog with the leads-preserved warning", async () => {
+    renderTile();
+    openGear();
+    fireEvent.click(await screen.findByRole("menuitem", { name: /disconnect apollo/i }));
+    expect(screen.getByText(/leads will remain in your pool/i)).toBeInTheDocument();
+  });
+
+  it("confirming disconnect calls the mutation and toasts 'Apollo disconnected.'", async () => {
+    const mutate = vi.fn((_vars: unknown, opts?: { onSuccess?: () => void }) =>
+      opts?.onSuccess?.(),
+    );
+    mocks.disconnect.mockReturnValue({ mutate, isPending: false });
+    renderTile();
+    openGear();
+    fireEvent.click(await screen.findByRole("menuitem", { name: /disconnect apollo/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^disconnect$/i }));
+    expect(mutate).toHaveBeenCalled();
+    expect(mocks.toast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: expect.stringMatching(/apollo disconnected/i) }),
+    );
+  });
+
+  it("toasts the failure message and stays connected when disconnect fails", async () => {
+    const mutate = vi.fn((_vars: unknown, opts?: { onError?: (e: unknown) => void }) =>
+      opts?.onError?.(new Error("network")),
+    );
+    mocks.disconnect.mockReturnValue({ mutate, isPending: false });
+    renderTile();
+    openGear();
+    fireEvent.click(await screen.findByRole("menuitem", { name: /disconnect apollo/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^disconnect$/i }));
+    expect(mutate).toHaveBeenCalled();
+    expect(mocks.toast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: expect.stringMatching(/couldn't disconnect apollo/i),
+        variant: "destructive",
+      }),
+    );
+    // failure must NOT also fire the success toast, and the tile stays connected (gear present)
+    expect(mocks.toast).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: expect.stringMatching(/apollo disconnected/i) }),
+    );
+    expect(screen.getByRole("button", { name: /apollo settings/i })).toBeInTheDocument();
   });
 });

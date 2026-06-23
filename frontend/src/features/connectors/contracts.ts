@@ -70,3 +70,8 @@ export const ApolloDiscoverStatusSchema = z
   })
   .passthrough();
 export type ApolloDiscoverStatus = z.infer<typeof ApolloDiscoverStatusSchema>;
+
+export const DisconnectResponseSchema = z
+  .object({ status: z.string(), message: z.string() })
+  .passthrough();
+export type DisconnectResponse = z.infer<typeof DisconnectResponseSchema>;
