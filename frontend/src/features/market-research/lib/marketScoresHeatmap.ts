@@ -113,6 +113,42 @@ export function mapMarketScoresRowToHeatmapLead(row: MarketScoresApiRow): Heatma
     ratings,
     totalScore,
     priority: getPriority(Math.round(combined)),
+    scored: true,
+  };
+}
+
+/**
+ * Map one raw /api/v2/leads node to an UNscored HeatmapLead. Used so the Scout
+ * Lead Stream surfaces an org's real leads (e.g. Apollo-discovered) even before
+ * any market-scoring run — the score columns render "—" until scored. Reuses the
+ * same loose field-picking as the market-scores mapper. Never throws; returns
+ * null when there is no usable lead id.
+ */
+export function heatmapLeadFromV2Lead(raw: Record<string, unknown>): HeatmapLead | null {
+  const leadId =
+    raw.lead_id ?? raw.leadId ?? (raw.lead as Record<string, unknown> | undefined)?.lead_id;
+  if (leadId === undefined || leadId === null || String(leadId).trim() === "") return null;
+
+  const company = pickCompanyName(raw) || "—";
+  const name = pickLeadDisplayName(raw, company);
+  const emailStatus =
+    typeof raw.email_status === "string"
+      ? raw.email_status
+      : typeof (raw as { emailStatus?: unknown }).emailStatus === "string"
+        ? ((raw as { emailStatus?: string }).emailStatus ?? null)
+        : null;
+
+  return {
+    id: String(leadId),
+    name,
+    company,
+    source: typeof raw.source === "string" ? raw.source : null,
+    ratings: {},
+    totalScore: 0,
+    // Placeholder tier; the table renders "—" (not this value) for unscored rows.
+    priority: "Tier 3",
+    email_status: emailStatus,
+    scored: false,
   };
 }
 

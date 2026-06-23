@@ -156,6 +156,24 @@ describe("SignalCard — leads section states", () => {
     expect(props.onRecomputeLeadMap).toHaveBeenCalledTimes(1);
   });
 
+  it("error state offers a Try again action that calls onRetryLeadMap (S5)", () => {
+    const onRetryLeadMap = vi.fn();
+    renderCard({ isAccepted: true, isLeadsExpanded: true, leadsError: true, onRetryLeadMap });
+    fireEvent.click(screen.getByRole("button", { name: /try again/i }));
+    expect(onRetryLeadMap).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the in-flight spinner while recomputing (leadsFetching), not the stale error (S6)", () => {
+    renderCard({
+      isAccepted: true,
+      isLeadsExpanded: true,
+      leadsError: true,
+      leadsFetching: true,
+    });
+    expect(screen.getByText(/finding matched leads/i)).toBeInTheDocument();
+    expect(screen.queryByText(/could not load matched leads/i)).not.toBeInTheDocument();
+  });
+
   it("renders the zero-leads message and hides Save", () => {
     renderCard({ isAccepted: true, isLeadsExpanded: true, matchedLeads: [] });
     expect(screen.getByText(/No matched leads found for this signal yet/i)).toBeInTheDocument();

@@ -14,7 +14,7 @@ import {
   ChevronUp,
   Loader2,
 } from "lucide-react";
-import React, { useState, useEffect, useLayoutEffect, useCallback } from "react";
+import React, { useState, useEffect, useLayoutEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -29,6 +29,7 @@ import {
   extractMarketScoreRowsFromResponse,
   heatmapLeadFromUnknownRow,
 } from "../../lib/marketScoresHeatmap";
+import { fetchAllOrgLeads } from "../../services/orgLeads";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -357,6 +358,10 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
   const { signalsForLead } = useSignalLeadMap(leadMapOrgId);
   const { toast } = useToast();
   const [apiHeatmapLeads, setApiHeatmapLeads] = useState<HeatmapLead[] | null>(null);
+  // Real org leads from /api/v2/leads (the same source the Customers Lead Stream
+  // uses). Surfaced so discovered/uploaded leads appear here regardless of whether
+  // a market-scoring run has happened; scores overlay on top when available.
+  const [realLeads, setRealLeads] = useState<HeatmapLead[] | null>(null);
   const [marketScoresLoading, setMarketScoresLoading] = useState(false);
   const [sortBy, setSortBy] = useState<"score" | "priority" | null>(null);
   const [sortAsc, setSortAsc] = useState(false);
@@ -527,11 +532,49 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
       window.removeEventListener("scoutLeadStreamHeatmapRefresh", onLeadStreamHeaderRefresh);
   }, [fetchMarketScores]);
 
+  // Load the org's real leads (GET /api/v2/leads, via the shared data layer) on
+  // mount / org change. Best-effort overlay: a failure leaves realLeads null and
+  // the table falls back to scores/demo, but logs so it isn't a silent dead-end.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const ctx = await resolveUserIdOrgId();
+      if (cancelled || !ctx) return;
+      try {
+        const leads = await fetchAllOrgLeads(ctx.orgId);
+        if (!cancelled) setRealLeads(leads);
+      } catch (e) {
+        console.warn("[Lead Stream] failed to load org leads from /v2/leads", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [resolveUserIdOrgId]);
+
   useLayoutEffect(() => {
     onHeatmapRowsForDashboardChange?.(apiHeatmapLeads);
   }, [apiHeatmapLeads, onHeatmapRowsForDashboardChange]);
 
-  const baseLeads = apiHeatmapLeads ?? heatmapLeads;
+  // Merge real leads with market-scores by lead id (scored rows win), so every
+  // real lead shows and scored ones are enriched. Demo data is used ONLY when there
+  // is no org context (dev/storybook) and nothing real to show — never for a real org.
+  const hasOrgContext = Boolean(selectedTenant?.id ?? authOrgId);
+  const baseLeads = useMemo<HeatmapLead[]>(() => {
+    const scored = apiHeatmapLeads ?? [];
+    const real = realLeads ?? [];
+    if (!hasOrgContext && scored.length === 0 && real.length === 0) return heatmapLeads;
+    const byId = new Map<string, HeatmapLead>();
+    for (const lead of real) byId.set(lead.id, lead);
+    for (const lead of scored) byId.set(lead.id, lead);
+    return Array.from(byId.values());
+  }, [apiHeatmapLeads, realLeads, hasOrgContext]);
+  const usingDemoData = baseLeads === heatmapLeads;
+  // Unscored leads are excluded from named-tier filters (their "Tier 3" is a
+  // placeholder, not a real score); surface a hint so they're not a silent
+  // dead-end when a user filters to find them (impl-review-1 F2).
+  const hiddenUnscoredCount =
+    tierFilter !== "all" ? baseLeads.filter((l) => l.scored === false).length : 0;
 
   const toggleExpand = (id: string) => {
     const willOpen = !expandedLeads.has(id);
@@ -548,7 +591,9 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
 
   // Filter by tier then source
   const tierFiltered =
-    tierFilter === "all" ? baseLeads : baseLeads.filter((l) => l.priority === tierFilter);
+    tierFilter === "all"
+      ? baseLeads
+      : baseLeads.filter((l) => l.scored !== false && l.priority === tierFilter);
   const filteredLeads = filterLeadsBySource(tierFiltered, sourceFilter);
 
   // Sort
@@ -578,7 +623,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
             <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" aria-hidden />
           )}
           <h3 className="text-sm font-semibold text-foreground">Lead Intelligence Heatmap</h3>
-          {apiHeatmapLeads !== null ? (
+          {!usingDemoData ? (
             <Badge variant="secondary" className="text-[10px] font-medium shrink-0">
               Live API
             </Badge>
@@ -741,7 +786,15 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                     colSpan={REPORT_COLUMNS.length + 5}
                     className="text-center py-10 text-sm text-muted-foreground"
                   >
-                    No leads match this filter.
+                    {baseLeads.length === 0
+                      ? "No leads yet — run Apollo discovery or upload a CSV to populate your Lead Stream."
+                      : hiddenUnscoredCount > 0
+                        ? `No leads match this filter — ${hiddenUnscoredCount} unscored lead${
+                            hiddenUnscoredCount === 1 ? "" : "s"
+                          } ${
+                            hiddenUnscoredCount === 1 ? "is" : "are"
+                          } hidden. Choose “All Tiers” to see them.`
+                        : "No leads match this filter."}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -771,14 +824,28 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                       </TableCell>
                       {REPORT_COLUMNS.map((col) => (
                         <TableCell key={col.key} className="text-center">
-                          <RatingCell rating={lead.ratings[col.key]} />
+                          {lead.scored === false ? (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          ) : (
+                            <RatingCell rating={lead.ratings[col.key]} />
+                          )}
                         </TableCell>
                       ))}
                       <TableCell className="text-center">
-                        <ScoreBreakdown lead={lead} />
+                        {lead.scored === false ? (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        ) : (
+                          <ScoreBreakdown lead={lead} />
+                        )}
                       </TableCell>
                       <TableCell className="text-center">
-                        <PriorityBadge tier={lead.priority} />
+                        {lead.scored === false ? (
+                          <Badge variant="outline" className="text-[11px] text-muted-foreground">
+                            Unscored
+                          </Badge>
+                        ) : (
+                          <PriorityBadge tier={lead.priority} />
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex flex-col items-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">

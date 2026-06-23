@@ -1,4 +1,4 @@
-import { Bookmark, MessageCircle, Share2, Bot } from "lucide-react";
+import { Bookmark, MessageCircle, Share2, Bot, Loader2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -47,8 +47,10 @@ const SignalsPage = () => {
   const {
     leadsForSignal,
     isLoading: leadsLoading,
+    isFetching: leadsFetching,
     isError: leadsError,
     refresh: refreshLeadMap,
+    retry: retryLeadMap,
   } = useSignalLeadMap(orgId);
   // The org's real company profile (Settings → Company Profile). Generated
   // signals are personalised against these firmographics instead of the old
@@ -112,6 +114,22 @@ const SignalsPage = () => {
     >
   >(new Map());
   const { toast } = useToast();
+
+  // Recompute the signal↔lead mapping (server-side) and surface the outcome — the
+  // in-flight spinner is driven by leadsFetching; this adds the success/failure
+  // toast so the action no longer feels inert (S6).
+  const handleRecomputeLeadMap = async () => {
+    const ok = await refreshLeadMap();
+    toast(
+      ok
+        ? { title: "Lead mapping updated" }
+        : {
+            title: "Couldn't recompute lead mapping",
+            description: "Please try again in a moment.",
+            variant: "destructive",
+          },
+    );
+  };
 
   const loadSignals = async () => {
     if (!currentUser?.uid) {
@@ -743,7 +761,13 @@ const SignalsPage = () => {
         {currentTab === "signals" && (
           <div className="w-full max-w-5xl mx-auto space-y-4">
             <div className="flex justify-end">
-              <Button variant="outline" size="sm" onClick={() => void refreshLeadMap()}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={leadsFetching}
+                onClick={() => void handleRecomputeLeadMap()}
+              >
+                {leadsFetching && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
                 Recompute lead mapping
               </Button>
             </div>
@@ -810,11 +834,13 @@ const SignalsPage = () => {
                     affectedLeadCount={leads.length}
                     matchedLeads={leads}
                     leadsLoading={leadsLoading}
+                    leadsFetching={leadsFetching}
                     leadsError={leadsError}
                     isLeadsExpanded={expandedLeadsSignalId === signal.id}
                     onFindMatchedLeads={() => handleFindMatchedLeads(signal.id)}
                     onSaveAsArtefact={() => handleSaveAsArtefact(signal)}
-                    onRecomputeLeadMap={() => void refreshLeadMap()}
+                    onRecomputeLeadMap={() => void handleRecomputeLeadMap()}
+                    onRetryLeadMap={retryLeadMap}
                   />
                 );
               })

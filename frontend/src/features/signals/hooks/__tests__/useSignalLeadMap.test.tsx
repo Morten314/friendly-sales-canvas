@@ -72,12 +72,32 @@ describe("useSignalLeadMap", () => {
     expect(lastBody).toMatchObject({ refresh: true });
   });
 
+  it("auto-retries a transient failure and recovers without surfacing an error (S5)", async () => {
+    let calls = 0;
+    server.use(
+      http.post("/api/signal-lead-map_claude", () => {
+        calls += 1;
+        // First attempt 502s (cold start), the retry succeeds.
+        if (calls === 1) return new HttpResponse(null, { status: 502 });
+        return HttpResponse.json(RESPONSE);
+      }),
+    );
+    const { result } = renderHook(() => useSignalLeadMap("org1"), { wrapper });
+    await waitFor(() => expect(result.current.leadsForSignal("s1")).toHaveLength(1), {
+      timeout: 5000,
+    });
+    expect(result.current.isError).toBe(false);
+    expect(calls).toBeGreaterThanOrEqual(2);
+  });
+
   it("recompute exits the error state on a successful refetch", async () => {
     let calls = 0;
     server.use(
       http.post("/api/signal-lead-map_claude", () => {
         calls += 1;
-        if (calls === 1) return new HttpResponse(null, { status: 500 });
+        // Initial load fails across all retry attempts (retry: 2 → 3 attempts);
+        // the explicit recompute (calls > 3) then succeeds.
+        if (calls <= 3) return new HttpResponse(null, { status: 500 });
         return HttpResponse.json(RESPONSE);
       }),
     );

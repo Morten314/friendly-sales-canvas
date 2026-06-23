@@ -144,6 +144,20 @@ describe("ApolloTile", () => {
     expect(screen.queryByRole("button", { name: /widen your icp/i })).not.toBeInTheDocument();
   });
 
+  it("on complete, shows the created count and a link to the Customers Lead Stream (S2)", () => {
+    mocks.discoverStatus.mockReturnValue({
+      data: {
+        status: "completed",
+        finished_at: "2026-06-23T11:47:07Z",
+        counts: { searched: 100, created: 9, matched: 0 },
+      },
+    });
+    renderTile();
+    expect(screen.getByText(/discovery complete/i)).toBeInTheDocument();
+    expect(screen.getByText(/9 new leads/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /view leads in customers/i })).toBeInTheDocument();
+  });
+
   it("shows a low-credit warning when status.low_credit", () => {
     mocks.status.mockReturnValue({
       data: {

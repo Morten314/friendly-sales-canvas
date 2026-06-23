@@ -14,6 +14,12 @@ export interface HeatmapLead {
   totalScore: number;
   priority: "Tier 1" | "Tier 2" | "Tier 3";
   email_status?: string | null;
+  /**
+   * False for real leads sourced from /v2/leads that have not been market-scored
+   * yet (shown so discovered leads surface regardless of scoring — the score
+   * columns render "—" for these). Undefined/true for demo + market-scored rows.
+   */
+  scored?: boolean;
 }
 
 export const REPORT_COLUMNS = [
