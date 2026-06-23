@@ -114,7 +114,7 @@ describe("SignalsPage — Find Matched Leads → Save", () => {
     // CTA lives in the expanded description section — expand first.
     expandCard(card);
     fireEvent.click(within(card).getByRole("button", { name: /Find Matched Leads/i }));
-    fireEvent.click(within(card).getByRole("button", { name: /Save as Artefact/i }));
+    fireEvent.click(within(card).getByRole("button", { name: /Save as Artifact/i }));
 
     expect(generateAndDownloadPDF).toHaveBeenCalledTimes(1);
     expect(enqueueArtefact).toHaveBeenCalledTimes(1);

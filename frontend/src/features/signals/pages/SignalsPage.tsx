@@ -12,8 +12,15 @@ import {
 import { SignalChatPanel } from "../components/SignalChatPanel";
 import { SignalsEmptyState, SignalsLoadingState } from "../components/SignalsEmptyState";
 import { useSignalLeadMap } from "../hooks/useSignalLeadMap";
-import { buildSignalBriefingArtefact } from "../lib/signalBriefing";
-import { fetchSignals, generateSignalsBatch } from "../services/signals";
+import {
+  buildRecommendationPlaybookArtefact,
+  buildSignalBriefingArtefact,
+} from "../lib/signalBriefing";
+import {
+  fetchSignals,
+  generateRecommendationArtefact,
+  generateSignalsBatch,
+} from "../services/signals";
 import type { Agent, NBAItem, SignalCard as SignalCardType } from "../types";
 
 import { Badge } from "@/components/ui/badge";
@@ -81,6 +88,14 @@ const SignalsPage = () => {
   const [recommendationAnswerLoading, setRecommendationAnswerLoading] = useState<string | null>(
     null,
   );
+  /** Key `${signalId}-${index}` of the recommendation currently generating a playbook. */
+  const [recommendationArtefactGenerating, setRecommendationArtefactGenerating] = useState<
+    string | null
+  >(null);
+  /** Key `${signalId}-${index}` whose last playbook generation failed (drives the card's inline error). */
+  const [recommendationArtefactError, setRecommendationArtefactError] = useState<string | null>(
+    null,
+  );
   /** Keys of answers that are expanded (full view): `${signalId}-${index}` */
   const [answerExpandedKeys, setAnswerExpandedKeys] = useState<Set<string>>(new Set());
 
@@ -88,6 +103,7 @@ const SignalsPage = () => {
   useEffect(() => {
     if (!expandedRecommendation) {
       setAnswerExpandedKeys(new Set());
+      setRecommendationArtefactError(null);
     }
   }, [expandedRecommendation]);
   /** True when current signals (and recommendations) came from GET /api/v2/fetch-signals; false when using sample fallback */
@@ -534,14 +550,77 @@ const SignalsPage = () => {
     generateAndDownloadPDF(item);
     enqueueArtefact(item);
     toast({
-      title: "Saved to Artefacts",
-      description: "Your signal briefing was downloaded and added to the Artefacts library.",
+      title: "Saved to Artifacts",
+      description: "Your signal briefing was downloaded and added to the Artifacts library.",
       action: (
         <Button variant="outline" size="sm" onClick={() => navigate("/artifacts")}>
           View →
         </Button>
       ),
     });
+  };
+
+  const handleSaveRecommendationAsArtefact = async (signal: SignalCardType, index: number) => {
+    // Resolve the item exactly as the card/effect do, so `index` maps to the same
+    // list the card indexed (NBAs, falling back to nextBestMoves).
+    const list: NBAItem[] =
+      signal.NBAs && signal.NBAs.length > 0
+        ? signal.NBAs
+        : (signal.nextBestMoves ?? []).map((m) => ({ nba: m, prompt: "" }));
+    const item = list[index];
+    const key = `${signal.id}-${index}`;
+    const answer = recommendationAnswers[key];
+    const isAccepted = acceptedSignals.has(getSignalContentHash(signal));
+    // Re-check the gate (the button already blocks the click): accepted + non-null
+    // org + a non-empty cached answer. orgId is string | null here.
+    if (!item || !isAccepted || !orgId || !currentUser?.uid || !(answer ?? "").trim()) return;
+
+    setRecommendationArtefactError(null); // clear any prior failure on retry
+    setRecommendationArtefactGenerating(key);
+    try {
+      const leads = leadsForSignal(signal.id);
+      const generated = await generateRecommendationArtefact(currentUser.uid, orgId, {
+        signal_headline: signal.headline,
+        signal_description: signal.description,
+        signal_sources: (signal.source ?? []).map((s) => s.citation || s.url).filter(Boolean),
+        matched_leads: leads.map((l) => ({
+          company: l.company,
+          relevance: l.relevance,
+          why: l.why,
+        })),
+        recommendation: item.nba,
+        recommendation_answer: answer,
+      });
+      const artefact = buildRecommendationPlaybookArtefact(
+        signal,
+        item,
+        index,
+        answer,
+        leads,
+        generated,
+      );
+      generateAndDownloadPDF(artefact);
+      enqueueArtefact(artefact);
+      toast({
+        title: "Saved to Artifacts",
+        description: "Your GTM playbook was downloaded and added to the Artifacts library.",
+        action: (
+          <Button variant="outline" size="sm" onClick={() => navigate("/artifacts")}>
+            View →
+          </Button>
+        ),
+      });
+    } catch (error) {
+      console.error("Error generating recommendation artefact:", error);
+      setRecommendationArtefactError(key); // inline-below-row error (spec §6.3/§10/AC#6), in addition to the toast
+      toast({
+        title: "Error",
+        description: "Could not generate artifact — please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setRecommendationArtefactGenerating(null);
+    }
   };
 
   const handleRejectSignal = (signalId: string) => {
@@ -815,9 +894,11 @@ const SignalsPage = () => {
                     onFindMatchedLeads={() => handleFindMatchedLeads(signal.id)}
                     onSaveAsArtefact={() => handleSaveAsArtefact(signal)}
                     onRecomputeLeadMap={() => void refreshLeadMap()}
-                    onSaveRecommendationAsArtefact={() => undefined}
-                    recommendationArtefactGeneratingKey={null}
-                    recommendationArtefactErrorKey={null}
+                    onSaveRecommendationAsArtefact={(index) =>
+                      void handleSaveRecommendationAsArtefact(signal, index)
+                    }
+                    recommendationArtefactGeneratingKey={recommendationArtefactGenerating}
+                    recommendationArtefactErrorKey={recommendationArtefactError}
                   />
                 );
               })
