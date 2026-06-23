@@ -165,9 +165,22 @@ export function ApolloTile() {
         <div className="space-y-2">
           {status?.low_credit && <LowCreditWarning />}
           {tileState === "complete" && run?.finished_at && (
-            <p className="text-sm">
-              Discovery complete · {new Date(run.finished_at).toLocaleString()}
-            </p>
+            <div className="space-y-1">
+              <p className="text-sm">
+                Discovery complete · {new Date(run.finished_at).toLocaleString()}
+                {run.counts.created > 0
+                  ? ` · ${run.counts.created} new lead${run.counts.created === 1 ? "" : "s"}`
+                  : ""}
+              </p>
+              {/* The tile never lists leads; point the user to where they actually surface. */}
+              <Button
+                variant="link"
+                className="h-auto p-0 text-sm"
+                onClick={() => navigate("/customers", { state: { tab: "lead-stream" } })}
+              >
+                View leads in Customers → Lead Stream
+              </Button>
+            </div>
           )}
           {tileState === "complete_empty" &&
             ((run?.counts.searched ?? 0) === 0 ? (
