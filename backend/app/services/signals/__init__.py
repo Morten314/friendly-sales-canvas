@@ -42,6 +42,7 @@ from app.services.signals.persistence import (
     fetch_signals,
 )
 from app.services.signals.lead_map import build_signal_lead_map_claude
+from app.services.signals.artefact import generate_recommendation_artefact_claude
 
 __all__ = [
     "search_signals",
@@ -53,4 +54,5 @@ __all__ = [
     "record_signal_action",
     "fetch_signals",
     "build_signal_lead_map_claude",
+    "generate_recommendation_artefact_claude",
 ]
