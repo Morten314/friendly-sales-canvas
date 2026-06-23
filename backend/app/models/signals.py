@@ -26,6 +26,26 @@ class SignalLeadMapRequest(BaseModel):
     refresh: bool = False
 
 
+class MatchedLead(BaseModel):
+    company: str = ""
+    relevance: str = ""  # high|medium|low — kept str (degrade-tolerant; only feeds the prompt)
+    why: str = ""
+
+
+class RecommendationArtefactRequest(BaseModel):
+    """POST /generate-recommendation-artefact_claude — all inputs the LLM needs
+    are supplied by the FE (no server-side profile/leads fetch). user_id/org_id
+    are for logging/scoping only; no auth is enforced (§3)."""
+    signal_headline: str
+    signal_description: str = ""
+    signal_sources: List[str] = []
+    matched_leads: List[MatchedLead] = []
+    recommendation: str
+    recommendation_answer: str
+    user_id: str
+    org_id: Optional[str] = None
+
+
 # ---------------------------------------------------------------------------
 # Response models
 # ---------------------------------------------------------------------------
@@ -73,3 +93,14 @@ class SignalAskResponse(BaseModel):
     user_id: str
     question: str
     prompt_meta: Optional[Dict[str, Any]] = None
+
+
+class RecommendationArtefactResponse(BaseModel):
+    """Response for POST /generate-recommendation-artefact_claude — the five
+    LLM-generated playbook sections. All default "" so a malformed/partial LLM
+    response still yields a valid body (degrade-never-throw, §7.3)."""
+    what_to_do: str = ""
+    strategy: str = ""
+    how_to_communicate: str = ""
+    communication_channel: str = ""
+    communication_template: str = ""
