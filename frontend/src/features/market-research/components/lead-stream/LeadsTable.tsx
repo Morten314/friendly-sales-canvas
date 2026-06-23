@@ -28,8 +28,8 @@ import {
 import {
   extractMarketScoreRowsFromResponse,
   heatmapLeadFromUnknownRow,
-  heatmapLeadFromV2Lead,
 } from "../../lib/marketScoresHeatmap";
+import { fetchAllOrgLeads } from "../../services/orgLeads";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -532,36 +532,19 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
       window.removeEventListener("scoutLeadStreamHeatmapRefresh", onLeadStreamHeaderRefresh);
   }, [fetchMarketScores]);
 
-  // Load the org's real leads (GET /api/v2/leads) on mount / org change. Best-effort
-  // overlay: a failure leaves realLeads null and the table falls back to scores/demo.
+  // Load the org's real leads (GET /api/v2/leads, via the shared data layer) on
+  // mount / org change. Best-effort overlay: a failure leaves realLeads null and
+  // the table falls back to scores/demo, but logs so it isn't a silent dead-end.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       const ctx = await resolveUserIdOrgId();
       if (cancelled || !ctx) return;
       try {
-        const authHeader = await jwtManager.getAuthHeader();
-        const qs = new URLSearchParams({ org_id: ctx.orgId, limit: "500", offset: "0" });
-        const res = await fetch(buildApiUrl(`v2/leads?${qs.toString()}`), {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            ...(authHeader && { Authorization: authHeader }),
-          },
-        });
-        if (!res.ok) return;
-        const data: unknown = await res.json();
-        const items = Array.isArray((data as { items?: unknown })?.items)
-          ? ((data as { items: unknown[] }).items as Record<string, unknown>[])
-          : Array.isArray(data)
-            ? (data as Record<string, unknown>[])
-            : [];
-        const mapped = items
-          .map((r) => heatmapLeadFromV2Lead(r))
-          .filter((x): x is HeatmapLead => x != null);
-        if (!cancelled) setRealLeads(mapped);
-      } catch {
-        // best-effort: leave realLeads null
+        const leads = await fetchAllOrgLeads(ctx.orgId);
+        if (!cancelled) setRealLeads(leads);
+      } catch (e) {
+        console.warn("[Lead Stream] failed to load org leads from /v2/leads", e);
       }
     })();
     return () => {
@@ -587,6 +570,11 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
     return Array.from(byId.values());
   }, [apiHeatmapLeads, realLeads, hasOrgContext]);
   const usingDemoData = baseLeads === heatmapLeads;
+  // Unscored leads are excluded from named-tier filters (their "Tier 3" is a
+  // placeholder, not a real score); surface a hint so they're not a silent
+  // dead-end when a user filters to find them (impl-review-1 F2).
+  const hiddenUnscoredCount =
+    tierFilter !== "all" ? baseLeads.filter((l) => l.scored === false).length : 0;
 
   const toggleExpand = (id: string) => {
     const willOpen = !expandedLeads.has(id);
@@ -800,7 +788,13 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                   >
                     {baseLeads.length === 0
                       ? "No leads yet — run Apollo discovery or upload a CSV to populate your Lead Stream."
-                      : "No leads match this filter."}
+                      : hiddenUnscoredCount > 0
+                        ? `No leads match this filter — ${hiddenUnscoredCount} unscored lead${
+                            hiddenUnscoredCount === 1 ? "" : "s"
+                          } ${
+                            hiddenUnscoredCount === 1 ? "is" : "are"
+                          } hidden. Choose “All Tiers” to see them.`
+                        : "No leads match this filter."}
                   </TableCell>
                 </TableRow>
               ) : (

@@ -1,14 +1,19 @@
-// Fix #1 — Scout "Your Lead Stream" sources the org's real leads from
-// GET /api/v2/leads (the same source the Customers Lead Stream uses), so
-// discovered/uploaded leads show regardless of whether a market-scoring run
-// has happened, and demo placeholders are NOT shown for a real org.
+// Fix #1 — Scout "Your Lead Stream" sources the org's real leads (via the shared
+// data layer, fetchAllOrgLeads → GET /api/v2/leads), so discovered/uploaded leads
+// show regardless of whether a market-scoring run has happened, and demo
+// placeholders are NOT shown for a real org. The fetch/pagination itself is unit-
+// tested in services/__tests__/orgLeads.test.ts; here we mock the service and
+// assert the table renders its output.
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { fetchAllOrgLeads } from "../../../services/orgLeads";
 import LeadsTable from "../LeadsTable";
+
+import type { HeatmapLead } from "@/shared/lib/leadData";
 
 beforeAll(() => {
   if (!window.HTMLElement.prototype.scrollIntoView) {
@@ -30,36 +35,35 @@ vi.mock("@/shared/api/transport", () => ({
 }));
 // Keep the signal-lead-map overlay inert in this test (it only adds "relevant signals").
 vi.mock("@/features/signals", () => ({ useSignalLeadMap: () => ({ signalsForLead: () => [] }) }));
+// The real-leads loader is unit-tested separately; mock it here.
+vi.mock("../../../services/orgLeads", () => ({ fetchAllOrgLeads: vi.fn() }));
 
-const V2_LEADS = {
-  items: [
-    {
-      lead_id: "L1",
-      company_name: "astuto.ai",
-      name: "Jane Founder",
-      source: "apollo",
-      email_status: "verified",
-    },
-    { lead_id: "L2", company_name: "Flowace.ai", source: "apollo" },
-  ],
-  total: 2,
-};
+const REAL_LEADS: HeatmapLead[] = [
+  {
+    id: "L1",
+    name: "Jane Founder",
+    company: "astuto.ai",
+    source: "apollo",
+    ratings: {},
+    totalScore: 0,
+    priority: "Tier 3",
+    email_status: "verified",
+    scored: false,
+  },
+  {
+    id: "L2",
+    name: "Flowace.ai",
+    company: "Flowace.ai",
+    source: "apollo",
+    ratings: {},
+    totalScore: 0,
+    priority: "Tier 3",
+    scored: false,
+  },
+];
 
 beforeEach(() => {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url.includes("v2/leads")) {
-        return { ok: true, status: 200, json: async () => V2_LEADS } as Response;
-      }
-      return { ok: true, status: 200, json: async () => ({}) } as Response;
-    }),
-  );
-});
-
-afterEach(() => {
-  vi.unstubAllGlobals();
+  vi.mocked(fetchAllOrgLeads).mockResolvedValue(REAL_LEADS);
 });
 
 function renderTable() {
@@ -76,10 +80,9 @@ function renderTable() {
 describe("LeadsTable real leads (Fix #1)", () => {
   it("shows the org's real /v2/leads leads, not demo placeholders", async () => {
     renderTable();
-    // Real leads from /v2/leads appear (L2 has no person name, so "Flowace.ai"
-    // renders in both the Lead and Company columns → use findAllByText).
     expect(await screen.findByText("Jane Founder")).toBeInTheDocument();
     expect(await screen.findByText("astuto.ai")).toBeInTheDocument();
+    // L2 has no person name, so "Flowace.ai" renders in both the Lead and Company columns.
     expect((await screen.findAllByText("Flowace.ai")).length).toBeGreaterThan(0);
     // ...and the demo placeholder leads do not.
     expect(screen.queryByText("Sarah Chen")).not.toBeInTheDocument();
@@ -96,7 +99,6 @@ describe("LeadsTable real leads (Fix #1)", () => {
   it("renders unscored real leads with an Unscored tier badge (no fake score)", async () => {
     renderTable();
     expect(await screen.findByText("astuto.ai")).toBeInTheDocument();
-    // Both real leads are unscored (no market-scoring run) → Unscored badges.
     expect(screen.getAllByText("Unscored").length).toBeGreaterThanOrEqual(2);
   });
 });
