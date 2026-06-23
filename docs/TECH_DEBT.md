@@ -87,7 +87,7 @@ Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases
 | TD-FE-75 | open | [below](#td-fe-75--settingspage-page-level-loading-gate-dropped-with-the-orphan-company-fetch) |
 | TD-FE-76 | open | [below](#td-fe-76--settings-profile-reads-bypass-the-apifetch-transport-and-rate-limiter) |
 | TD-FE-77 | open | [below](#td-fe-77--signal-briefings-delivered-to-the-artefacts-library-do-not-survive-navigation) |
-| TD-FE-78 | open | [below](#td-fe-78--shared-pdf-generator-emits-structurally-non-compliant-output-and-mojibakes-non-winansi-glyphs) |
+| TD-FE-78 | partial | [below](#td-fe-78--shared-pdf-generator-emits-structurally-non-compliant-output-and-mojibakes-non-winansi-glyphs) |
 
 ---
 
@@ -1227,19 +1227,25 @@ currently fire `addArtefact` into the void).
 **Origin:** Plan 38 (Signals CTA). Hardened the briefing path's free-text (structural
 escaping + common-punctuation ASCII fold) but left the generator's deeper issues.
 
-**Current state:** `artefactPdf.ts::createSimplePDF` has a hardcoded `/Length 2000`,
-placeholder xref offsets, and a single-page `MediaBox` with no pagination — lead-heavy
-briefings clip past one page. Residual non-ASCII (accented company names, non-Latin
-scripts beyond the common fold) still mojibakes under Helvetica/WinAnsi. Shared with the
-Strategist artefact download path.
+**Partial resolution (Spec/Plan 41, 2026-06-23):** `createSimplePDF` migrated to jsPDF.
+The hardcoded `/Length 2000` and placeholder xref offsets are gone — jsPDF emits a
+structurally valid xref and a real compressed PDF stream. Multi-page flow and text-wrap
+within margins are now handled by `splitTextToSize` + page-break logic, so lead-heavy
+or strategy-heavy content no longer clips. Both shared consumers are covered: the Spec 38
+briefing save (`SignalsPage.tsx`) and the Artefacts-library re-download (`ArtifactsPage.tsx:130`).
 
-**What it should be:** a real PDF library (e.g. jsPDF/pdf-lib) with correct xref, multi-page
-flow, and Unicode-capable font embedding.
+**Current state (remaining open half):** non-ASCII glyphs (accented company names, non-Latin
+scripts beyond the common ASCII fold) still mojibake — no Unicode-capable font is embedded;
+jsPDF defaults to Helvetica/WinAnsi and the ASCII-fold pre-pass is unchanged.
 
-**Why deferred:** the in-scope escaping/fold makes typical LLM briefings render correctly;
-a correct generator is a larger, shared effort beyond this branch.
+**What it should be:** Unicode-capable font embedding (e.g. a subset-embedded TTF via
+jsPDF's `addFileToVFS`/`addFont`) so accented and non-Latin glyphs render correctly.
 
-**Pull-forward trigger:** the PDF path is prioritized, or garbled/clipped briefings are
-reported in practice.
+**Why deferred:** the in-scope ASCII fold covers typical LLM output at MVP scale; embedding
+a font bundle adds meaningful JS weight and is a shared effort better timed with a real
+internationalisation pass.
+
+**Pull-forward trigger:** garbled glyphs are reported in practice, or an i18n pass is
+prioritized.
 
 **Owner:** TBD.
