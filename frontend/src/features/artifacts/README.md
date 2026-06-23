@@ -11,7 +11,7 @@ The Artefacts library surface (route `/artifacts`). Presentational / local-state
 - `pages/ArtifactsPage.tsx` — orchestrator (state, the two `window` CustomEvent listeners, handlers, derived `filteredArtefacts`/`folders`, layout).
 - `types.ts` — `ArtefactItem`.
 - `data/mockArtefacts.ts` — mock seed data (`folders` is derived in the page, not seeded).
-- `lib/artefactPdf.ts` — `createSimplePDF` / `generateAndDownloadPDF`.
+- `lib/artefactPdf.ts` — `buildArtefactPdfDoc` / `buildArtefactPdfBlob` / `generateAndDownloadPDF` (jsPDF).
 - `lib/artefactPresentation.tsx` — `getTypeIcon` / `getStatusIcon`.
 - `components/LibraryCard.tsx`, `ArtefactStats.tsx`, `FolderGrid.tsx` — view pieces. `FolderGrid` also takes the `artefacts` array (beyond Spec 29 §4's prop list) to compute each folder's count, preserving the original behavior.
 
