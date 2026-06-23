@@ -125,4 +125,47 @@ describe("ApolloConnectModal", () => {
     fireEvent.click(screen.getByRole("button", { name: /connect/i }));
     expect(await screen.findByText(/invalid key/i)).toBeInTheDocument();
   });
+
+  it("renders update-mode copy with an empty field", () => {
+    wrap(
+      <ApolloConnectModal
+        open
+        mode="update"
+        orgId="o1"
+        userId="u1"
+        onClose={vi.fn()}
+        onConnected={vi.fn()}
+        onDeepLink={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: /update apollo api key/i })).toBeInTheDocument();
+    expect(screen.getByText(/a key is already connected/i)).toBeInTheDocument();
+    const input = screen.getByLabelText(/^api key$/i) as HTMLInputElement;
+    expect(input.value).toBe("");
+    expect(input).toHaveAttribute("placeholder", "Enter new Apollo master key");
+    expect(screen.getByRole("button", { name: /^update$/i })).toBeInTheDocument();
+  });
+
+  it("update mode still posts to /connect and calls onConnected", async () => {
+    server.use(
+      http.post("/api/connectors/apollo/connect", () =>
+        HttpResponse.json({ connected: true, status: "connected" }),
+      ),
+    );
+    const onConnected = vi.fn();
+    wrap(
+      <ApolloConnectModal
+        open
+        mode="update"
+        orgId="o1"
+        userId="u1"
+        onClose={vi.fn()}
+        onConnected={onConnected}
+        onDeepLink={vi.fn()}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText(/^api key$/i), { target: { value: "rotated-key" } });
+    fireEvent.click(screen.getByRole("button", { name: /^update$/i }));
+    await waitFor(() => expect(onConnected).toHaveBeenCalled());
+  });
 });

@@ -26,6 +26,9 @@ const CustomersPage = () => {
     const state = location.state as { tab?: string } | null;
     if (state?.tab === "chat-profiler") {
       setActiveTab("chat-profiler");
+    } else if (state?.tab === "lead-stream") {
+      // Deep-link from the Mission Control Apollo tile after discovery completes.
+      setActiveTab("lead-stream");
     }
   }, [location.state]);
 

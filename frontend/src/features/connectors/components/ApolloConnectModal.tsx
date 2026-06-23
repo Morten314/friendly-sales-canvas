@@ -15,6 +15,8 @@ import { Label } from "@/components/ui/label";
 
 interface Props {
   open: boolean;
+  /** "connect" (default) for first connect; "update" to replace an existing key. */
+  mode?: "connect" | "update";
   orgId: string;
   userId: string;
   onClose: () => void;
@@ -27,6 +29,7 @@ const APOLLO_KEY_HELP = "https://docs.apollo.io/docs/create-api-key";
 
 export function ApolloConnectModal({
   open,
+  mode = "connect",
   orgId,
   userId,
   onClose,
@@ -45,6 +48,8 @@ export function ApolloConnectModal({
       setSubmitting(false);
     }
   }, [open]);
+
+  const isUpdate = mode === "update";
 
   async function handleConnect() {
     setSubmitting(true);
@@ -67,10 +72,19 @@ export function ApolloConnectModal({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Connect Apollo</DialogTitle>
+          <DialogTitle>{isUpdate ? "Update Apollo API key" : "Connect Apollo"}</DialogTitle>
           <DialogDescription>
-            Discover net-new leads from Apollo based on your ICP. Requires a{" "}
-            <strong>master API key</strong> with search access.{" "}
+            {isUpdate ? (
+              <>
+                Enter a new Apollo <strong>master API key</strong>. It replaces the current key and
+                is validated before saving.{" "}
+              </>
+            ) : (
+              <>
+                Discover net-new leads from Apollo based on your ICP. Requires a{" "}
+                <strong>master API key</strong> with search access.{" "}
+              </>
+            )}
             <a href={APOLLO_KEY_HELP} target="_blank" rel="noreferrer" className="underline">
               Where do I find it?
             </a>
@@ -84,8 +98,9 @@ export function ApolloConnectModal({
             type="password"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
-            placeholder="Apollo master API key"
+            placeholder={isUpdate ? "Enter new Apollo master key" : "Apollo master API key"}
           />
+          {isUpdate && <p className="text-xs text-muted-foreground">A key is already connected.</p>}
         </div>
 
         {error?.code === "profile_incomplete" && (
@@ -122,7 +137,13 @@ export function ApolloConnectModal({
             Cancel
           </Button>
           <Button onClick={handleConnect} disabled={submitting || !apiKey}>
-            {submitting ? "Connecting…" : "Connect"}
+            {submitting
+              ? isUpdate
+                ? "Updating…"
+                : "Connecting…"
+              : isUpdate
+                ? "Update"
+                : "Connect"}
           </Button>
         </div>
       </DialogContent>

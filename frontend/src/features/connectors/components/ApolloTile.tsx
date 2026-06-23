@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useApolloStatus } from "../hooks/useApolloStatus";
 import { useApolloWarmup } from "../hooks/useApolloWarmup";
+import { useDisconnectApollo } from "../hooks/useDisconnectApollo";
 import { useDiscover } from "../hooks/useDiscover";
 import { useDiscoverStatus } from "../hooks/useDiscoverStatus";
 import { useExportApolloLeads } from "../hooks/useExportApolloLeads";
@@ -12,6 +13,8 @@ import { ApolloDiscoverError } from "../services/apollo";
 import type { DiscoverMode } from "../types";
 
 import { ApolloConnectModal } from "./ApolloConnectModal";
+import { ApolloManageMenu } from "./ApolloManageMenu";
+import { DisconnectApolloDialog } from "./DisconnectApolloDialog";
 import { ReDiscoveryGuard, KeepReplaceDownloadPrompt } from "./DiscoveryDialogs";
 import { LowCreditWarning } from "./LowCreditWarning";
 import { WarmupProgress } from "./WarmupProgress";
@@ -43,8 +46,31 @@ export function ApolloTile() {
   const discover = useDiscover(orgId);
   const exportLeads = useExportApolloLeads(orgId);
 
-  const [connectOpen, setConnectOpen] = useState(false);
+  const [modal, setModal] = useState<"none" | "connect" | "update">("none");
+  const [disconnectOpen, setDisconnectOpen] = useState(false);
   const [prompt, setPrompt] = useState<"none" | "guard" | "keep_replace">("none");
+
+  const disconnect = useDisconnectApollo(orgId);
+
+  function onConfirmDisconnect() {
+    disconnect.mutate(undefined, {
+      onSuccess: () => {
+        setDisconnectOpen(false);
+        // Clear discovery-local state so useDiscoverStatus stops polling the now-disconnected org
+        // (spec §5.3; mirrors the launch() clear). Status invalidation in the hook flips the tile.
+        setRunId(null);
+        setPrompt("none");
+        toast({ title: "Apollo disconnected." });
+      },
+      onError: () => {
+        setDisconnectOpen(false);
+        toast({
+          title: "Couldn't disconnect Apollo — please try again.",
+          variant: "destructive",
+        });
+      },
+    });
+  }
 
   const tileState = deriveApolloTileState(
     { connected, credentialError: status?.status === "error" },
@@ -106,13 +132,21 @@ export function ApolloTile() {
     <div className="rounded-lg border p-4 space-y-3" data-testid="apollo-tile">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold">Apollo</h3>
-        {status?.icp_changed_since_last_discovery && tileState !== "locked" && (
-          <span className="text-xs text-muted-foreground">ICP updated since last discovery</span>
-        )}
+        <div className="flex items-center gap-2">
+          {status?.icp_changed_since_last_discovery && tileState !== "locked" && (
+            <span className="text-xs text-muted-foreground">ICP updated since last discovery</span>
+          )}
+          {connected && (
+            <ApolloManageMenu
+              onUpdateKey={() => setModal("update")}
+              onDisconnect={() => setDisconnectOpen(true)}
+            />
+          )}
+        </div>
       </div>
 
       {tileState === "disconnected" && (
-        <Button onClick={() => setConnectOpen(true)}>Connect Apollo</Button>
+        <Button onClick={() => setModal("connect")}>Connect Apollo</Button>
       )}
 
       {tileState === "locked" && warmup && (
@@ -131,9 +165,22 @@ export function ApolloTile() {
         <div className="space-y-2">
           {status?.low_credit && <LowCreditWarning />}
           {tileState === "complete" && run?.finished_at && (
-            <p className="text-sm">
-              Discovery complete · {new Date(run.finished_at).toLocaleString()}
-            </p>
+            <div className="space-y-1">
+              <p className="text-sm">
+                Discovery complete · {new Date(run.finished_at).toLocaleString()}
+                {run.counts.created > 0
+                  ? ` · ${run.counts.created} new lead${run.counts.created === 1 ? "" : "s"}`
+                  : ""}
+              </p>
+              {/* The tile never lists leads; point the user to where they actually surface. */}
+              <Button
+                variant="link"
+                className="h-auto p-0 text-sm"
+                onClick={() => navigate("/customers", { state: { tab: "lead-stream" } })}
+              >
+                View leads in Customers → Lead Stream
+              </Button>
+            </div>
           )}
           {tileState === "complete_empty" &&
             ((run?.counts.searched ?? 0) === 0 ? (
@@ -175,24 +222,38 @@ export function ApolloTile() {
               ? "Apollo key error — reconnect to resume discovery."
               : "Discovery failed — check your Apollo credits."}
           </p>
-          {/* Retry should re-run, not re-open the keep/replace prompt — launch directly (keep). */}
-          <Button onClick={() => launch("keep")}>Retry</Button>
+          {status?.status === "error" ? (
+            // Credential error: the fix is a new key, not a discovery retry.
+            <Button onClick={() => setModal("update")}>Update API key</Button>
+          ) : (
+            // Discovery failure: retry re-runs directly (keep), bypassing the keep/replace prompt.
+            <Button onClick={() => launch("keep")}>Retry</Button>
+          )}
         </div>
       )}
 
       <ApolloConnectModal
-        open={connectOpen}
+        open={modal !== "none"}
+        mode={modal === "update" ? "update" : "connect"}
         orgId={orgId}
         userId={userId}
-        onClose={() => setConnectOpen(false)}
+        onClose={() => setModal("none")}
         onConnected={() => {
-          setConnectOpen(false);
+          const wasUpdate = modal === "update";
+          setModal("none");
           void statusQ.refetch();
+          if (wasUpdate) toast({ title: "Apollo key updated." });
         }}
         onDeepLink={(section) => {
-          setConnectOpen(false);
+          setModal("none");
           goDeepLink(section);
         }}
+      />
+      <DisconnectApolloDialog
+        open={disconnectOpen}
+        isPending={disconnect.isPending}
+        onConfirm={onConfirmDisconnect}
+        onCancel={() => setDisconnectOpen(false)}
       />
       <ReDiscoveryGuard
         open={prompt === "guard"}

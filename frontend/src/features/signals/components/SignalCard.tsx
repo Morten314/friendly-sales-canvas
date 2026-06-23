@@ -56,6 +56,8 @@ interface SignalCardProps {
   matchedLeads: SignalLeadMapLead[];
   /** Org-level map fetch state (drives the four-state leads section). */
   leadsLoading: boolean;
+  /** Org-level map refetch in flight (recompute/retry) — shows the in-flight spinner. */
+  leadsFetching?: boolean;
   leadsError: boolean;
   /** Page-held: whether this card's leads section is open. */
   isLeadsExpanded: boolean;
@@ -63,8 +65,10 @@ interface SignalCardProps {
   onFindMatchedLeads: () => void;
   /** Build + download + deliver the briefing. */
   onSaveAsArtefact: () => void;
-  /** Offered in the error state; wraps the page's refreshLeadMap. */
+  /** Offered in the error state; wraps the page's refreshLeadMap (forces a server recompute). */
   onRecomputeLeadMap?: () => void;
+  /** Offered in the error state; plain re-fetch of the mapping (the "Try again" escape). */
+  onRetryLeadMap?: () => void;
   /** Build + generate + deliver the recommendation playbook for `index`. */
   onSaveRecommendationAsArtefact: (index: number) => void;
   /** Page-held `${signalId}-${index}` currently generating a playbook, or null. */
@@ -94,11 +98,13 @@ export const SignalCard = ({
   affectedLeadCount,
   matchedLeads,
   leadsLoading,
+  leadsFetching,
   leadsError,
   isLeadsExpanded,
   onFindMatchedLeads,
   onSaveAsArtefact,
   onRecomputeLeadMap,
+  onRetryLeadMap,
   onSaveRecommendationAsArtefact,
   recommendationArtefactGeneratingKey,
   recommendationArtefactErrorKey,
@@ -191,7 +197,7 @@ export const SignalCard = ({
 
   const leadsSection: ReactNode = isLeadsExpanded ? (
     <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
-      {leadsLoading ? (
+      {leadsLoading || leadsFetching ? (
         <div className="flex items-center gap-2 py-1 text-sm text-gray-600">
           <Loader2 className="h-4 w-4 animate-spin" />
           <span>Finding matched leads…</span>
@@ -199,9 +205,14 @@ export const SignalCard = ({
       ) : leadsError ? (
         <div className="flex items-center justify-between gap-3 py-1">
           <span className="text-sm text-red-600">Could not load matched leads.</span>
-          <Button variant="outline" size="sm" onClick={() => onRecomputeLeadMap?.()}>
-            Recompute lead mapping
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => onRetryLeadMap?.()}>
+              Try again
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => onRecomputeLeadMap?.()}>
+              Recompute lead mapping
+            </Button>
+          </div>
         </div>
       ) : matchedLeads.length === 0 ? (
         <p className="py-1 text-sm text-gray-500">No matched leads found for this signal yet.</p>

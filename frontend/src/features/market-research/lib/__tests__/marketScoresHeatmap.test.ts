@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   extractMarketScoreRowsFromResponse,
   heatmapLeadFromUnknownRow,
+  heatmapLeadFromV2Lead,
   mapMarketScoresRowToHeatmapLead,
   scorePercentToRating,
   type MarketScoresApiRow,
@@ -86,6 +87,48 @@ describe("mapMarketScoresRowToHeatmapLead", () => {
     // @ts-expect-error — exercising the String() coercion intentionally
     const lead = mapMarketScoresRowToHeatmapLead({ ...baseRow, lead_id: 12345 });
     expect(lead.id).toBe("12345");
+  });
+
+  it("marks market-scored rows as scored:true", () => {
+    expect(mapMarketScoresRowToHeatmapLead(baseRow).scored).toBe(true);
+  });
+});
+
+describe("heatmapLeadFromV2Lead (unscored real leads)", () => {
+  it("maps a /v2/leads row to an unscored HeatmapLead (scored:false, empty ratings, 0 score)", () => {
+    const lead = heatmapLeadFromV2Lead({
+      lead_id: "lead_42",
+      company_name: "astuto.ai",
+      name: "Jane Founder",
+      source: "apollo",
+      email_status: "verified",
+    });
+    expect(lead).not.toBeNull();
+    expect(lead).toMatchObject({
+      id: "lead_42",
+      name: "Jane Founder",
+      company: "astuto.ai",
+      source: "apollo",
+      email_status: "verified",
+      totalScore: 0,
+      scored: false,
+    });
+    expect(lead?.ratings).toEqual({});
+  });
+
+  it("falls back to company for the display name when no person name is present", () => {
+    const lead = heatmapLeadFromV2Lead({ lead_id: "l1", company_name: "OnlyCo", source: "csv" });
+    expect(lead?.name).toBe("OnlyCo");
+    expect(lead?.company).toBe("OnlyCo");
+  });
+
+  it("returns null when there is no usable lead id", () => {
+    expect(heatmapLeadFromV2Lead({ company_name: "NoId" })).toBeNull();
+    expect(heatmapLeadFromV2Lead({ lead_id: "  " })).toBeNull();
+  });
+
+  it("preserves an Apollo source verbatim so the Apollo source filter matches", () => {
+    expect(heatmapLeadFromV2Lead({ lead_id: "l2", source: "apollo" })?.source).toBe("apollo");
   });
 });
 
