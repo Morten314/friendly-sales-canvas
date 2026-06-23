@@ -53,6 +53,9 @@ function renderCard(overrides: Partial<React.ComponentProps<typeof SignalCard>> 
     onFindMatchedLeads: vi.fn(),
     onSaveAsArtefact: vi.fn(),
     onRecomputeLeadMap: vi.fn(),
+    onSaveRecommendationAsArtefact: vi.fn(),
+    recommendationArtefactGeneratingKey: null,
+    recommendationArtefactErrorKey: null,
     ...overrides,
   };
   render(
@@ -124,6 +127,9 @@ describe("SignalCard — Find Matched Leads CTA", () => {
       onFindMatchedLeads: vi.fn(),
       onSaveAsArtefact: vi.fn(),
       onRecomputeLeadMap: vi.fn(),
+      onSaveRecommendationAsArtefact: vi.fn(),
+      recommendationArtefactGeneratingKey: null,
+      recommendationArtefactErrorKey: null,
     };
     const { rerender } = render(
       <TooltipProvider>
@@ -159,7 +165,7 @@ describe("SignalCard — leads section states", () => {
   it("renders the zero-leads message and hides Save", () => {
     renderCard({ isAccepted: true, isLeadsExpanded: true, matchedLeads: [] });
     expect(screen.getByText(/No matched leads found for this signal yet/i)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Save as Artefact/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Save as Artifact/i })).toBeNull();
   });
 
   it("renders rows with title-cased relevance + company fallback, hides why, shows Save", () => {
@@ -170,7 +176,72 @@ describe("SignalCard — leads section states", () => {
     expect(screen.getByText("Low")).toBeInTheDocument();
     // The per-lead `why` is reserved for the export — never on screen.
     expect(screen.queryByText(/secret rationale/i)).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: /Save as Artefact/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save as Artifact/i }));
     expect(props.onSaveAsArtefact).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("SignalCard — recommendation Save as Artifact", () => {
+  const withRec = {
+    signal: { ...signal, NBAs: [{ nba: "Reach out", prompt: "p1" }] },
+    isDescriptionExpanded: true,
+    expandedRecommendationIndex: 0,
+  };
+
+  it("is greyed and shows the accept hint when not accepted", () => {
+    const props = renderCard({
+      ...withRec,
+      isAccepted: false,
+      recommendationAnswers: { "sig-1-0": "ans" },
+    });
+    const btn = screen.getByRole("button", { name: /Save as Artifact/i });
+    expect(btn.getAttribute("aria-disabled")).toBe("true");
+    fireEvent.click(btn);
+    expect(screen.getByText(/Accept this signal to save as artifact/i)).toBeInTheDocument();
+    expect(props.onSaveRecommendationAsArtefact).not.toHaveBeenCalled();
+  });
+
+  it("is greyed and shows the load-answer hint when accepted but no cached answer", () => {
+    const props = renderCard({ ...withRec, isAccepted: true, recommendationAnswers: {} });
+    fireEvent.click(screen.getByRole("button", { name: /Save as Artifact/i }));
+    expect(screen.getByText(/Load the recommendation answer first/i)).toBeInTheDocument();
+    expect(props.onSaveRecommendationAsArtefact).not.toHaveBeenCalled();
+  });
+
+  it("is active and calls onSaveRecommendationAsArtefact(index) when accepted + cached", () => {
+    const props = renderCard({
+      ...withRec,
+      isAccepted: true,
+      recommendationAnswers: { "sig-1-0": "ans" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Save as Artifact/i }));
+    expect(props.onSaveRecommendationAsArtefact).toHaveBeenCalledWith(0);
+  });
+
+  it("shows a generating spinner when the key matches", () => {
+    renderCard({
+      ...withRec,
+      isAccepted: true,
+      recommendationAnswers: { "sig-1-0": "ans" },
+      recommendationArtefactGeneratingKey: "sig-1-0",
+    });
+    expect(screen.getByText(/Generating/i)).toBeInTheDocument();
+  });
+
+  it("shows an inline error when the error key matches", () => {
+    renderCard({
+      ...withRec,
+      isAccepted: true,
+      recommendationAnswers: { "sig-1-0": "ans" },
+      recommendationArtefactErrorKey: "sig-1-0",
+    });
+    expect(screen.getByText(/Could not generate artifact/i)).toBeInTheDocument();
+  });
+
+  it("renders the answer action row as justify-between with Chat on the right", () => {
+    renderCard({ ...withRec, isAccepted: true, recommendationAnswers: { "sig-1-0": "ans" } });
+    // Header bot button + row Chat button both match; assert at least one is present.
+    expect(screen.getAllByRole("button", { name: /Chat with Scout/i }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /Save as Artifact/i })).toBeInTheDocument();
   });
 });

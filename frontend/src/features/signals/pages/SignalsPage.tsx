@@ -815,6 +815,9 @@ const SignalsPage = () => {
                     onFindMatchedLeads={() => handleFindMatchedLeads(signal.id)}
                     onSaveAsArtefact={() => handleSaveAsArtefact(signal)}
                     onRecomputeLeadMap={() => void refreshLeadMap()}
+                    onSaveRecommendationAsArtefact={() => undefined}
+                    recommendationArtefactGeneratingKey={null}
+                    recommendationArtefactErrorKey={null}
                   />
                 );
               })

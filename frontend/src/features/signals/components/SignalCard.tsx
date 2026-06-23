@@ -65,6 +65,12 @@ interface SignalCardProps {
   onSaveAsArtefact: () => void;
   /** Offered in the error state; wraps the page's refreshLeadMap. */
   onRecomputeLeadMap?: () => void;
+  /** Build + generate + deliver the recommendation playbook for `index`. */
+  onSaveRecommendationAsArtefact: (index: number) => void;
+  /** Page-held `${signalId}-${index}` currently generating a playbook, or null. */
+  recommendationArtefactGeneratingKey: string | null;
+  /** Page-held `${signalId}-${index}` whose last generation failed (drives the inline error). */
+  recommendationArtefactErrorKey: string | null;
 }
 
 export const SignalCard = ({
@@ -93,6 +99,9 @@ export const SignalCard = ({
   onFindMatchedLeads,
   onSaveAsArtefact,
   onRecomputeLeadMap,
+  onSaveRecommendationAsArtefact,
+  recommendationArtefactGeneratingKey,
+  recommendationArtefactErrorKey,
 }: SignalCardProps) => {
   const [showLockMessage, setShowLockMessage] = useState(false);
   const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -104,11 +113,23 @@ export const SignalCard = ({
     }
   };
 
+  const [artefactHint, setArtefactHint] = useState<string | null>(null);
+  const artefactHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearArtefactHintTimer = () => {
+    if (artefactHintTimerRef.current) {
+      clearTimeout(artefactHintTimerRef.current);
+      artefactHintTimerRef.current = null;
+    }
+  };
+
   // Clear the lock timer on card collapse and on unmount (Spec §2).
   useEffect(() => {
     if (!isDescriptionExpanded) {
       clearLockTimer();
       setShowLockMessage(false);
+      clearArtefactHintTimer();
+      setArtefactHint(null);
     }
   }, [isDescriptionExpanded]);
   // Clear the lock message immediately when the signal is accepted (Spec §3).
@@ -118,7 +139,13 @@ export const SignalCard = ({
       setShowLockMessage(false);
     }
   }, [isAccepted]);
-  useEffect(() => () => clearLockTimer(), []);
+  useEffect(
+    () => () => {
+      clearLockTimer();
+      clearArtefactHintTimer();
+    },
+    [],
+  );
 
   const handleFindClick = () => {
     if (!isAccepted) {
@@ -131,6 +158,28 @@ export const SignalCard = ({
     setShowLockMessage(false);
     clearLockTimer();
     onFindMatchedLeads();
+  };
+
+  const showArtefactHint = (msg: string) => {
+    clearArtefactHintTimer();
+    setArtefactHint(msg);
+    artefactHintTimerRef.current = setTimeout(() => setArtefactHint(null), 3000);
+  };
+
+  // Gated click: explain when locked, otherwise delegate to the page (D-2/D-6).
+  const handleSaveArtefactClick = (index: number) => {
+    const key = `${signal.id}-${index}`;
+    if (!isAccepted) {
+      showArtefactHint("Accept this signal to save as artifact");
+      return;
+    }
+    if ((recommendationAnswers[key] ?? "").trim() === "") {
+      showArtefactHint("Load the recommendation answer first.");
+      return;
+    }
+    clearArtefactHintTimer();
+    setArtefactHint(null);
+    onSaveRecommendationAsArtefact(index);
   };
 
   const relevanceBadgeClass = (relevance: SignalLeadMapLead["relevance"]): string => {
@@ -181,7 +230,7 @@ export const SignalCard = ({
               className="text-blue-700 border-blue-300 hover:bg-blue-50"
               onClick={onSaveAsArtefact}
             >
-              Save as Artefact
+              Save as Artifact
             </Button>
           </div>
         </>
@@ -354,6 +403,14 @@ export const SignalCard = ({
                               {recommendationsList.map((item, index) => {
                                 const isExpanded = expandedRecommendationIndex === index;
                                 const hasPrompt = (item.prompt ?? "").trim() !== "";
+                                const artefactKey = `${signal.id}-${index}`;
+                                const answerCached =
+                                  (recommendationAnswers[artefactKey] ?? "").trim() !== "";
+                                const isGeneratingArtefact =
+                                  recommendationArtefactGeneratingKey === artefactKey;
+                                const showArtefactError =
+                                  recommendationArtefactErrorKey === artefactKey;
+                                const canSaveArtefact = isAccepted && answerCached;
                                 return (
                                   <div
                                     key={index}
@@ -445,37 +502,65 @@ export const SignalCard = ({
                                                       <ChevronUp className="h-3.5 w-3.5 ml-0.5" />
                                                     </Button>
                                                   )}
-                                                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-200">
-                                                    <Button
-                                                      variant="ghost"
-                                                      size="sm"
-                                                      className={`h-8 w-8 p-0 ${
-                                                        isAccepted
-                                                          ? "text-green-600 bg-green-50"
-                                                          : "text-slate-500 hover:text-green-600 hover:bg-green-50"
-                                                      }`}
-                                                      onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        void onAccept(signal.id);
-                                                      }}
-                                                      title={
-                                                        isAccepted ? "Accepted" : "Accept signal"
-                                                      }
-                                                    >
-                                                      <ThumbsUp className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                      variant="ghost"
-                                                      size="sm"
-                                                      className="h-8 w-8 p-0 text-slate-500 hover:text-red-600 hover:bg-red-50"
-                                                      onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        onReject(signal.id);
-                                                      }}
-                                                      title="Reject signal"
-                                                    >
-                                                      <ThumbsDown className="h-4 w-4" />
-                                                    </Button>
+                                                  <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-slate-200">
+                                                    <div className="flex items-center gap-2">
+                                                      <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className={`h-8 w-8 p-0 ${
+                                                          isAccepted
+                                                            ? "text-green-600 bg-green-50"
+                                                            : "text-slate-500 hover:text-green-600 hover:bg-green-50"
+                                                        }`}
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          void onAccept(signal.id);
+                                                        }}
+                                                        title={
+                                                          isAccepted ? "Accepted" : "Accept signal"
+                                                        }
+                                                      >
+                                                        <ThumbsUp className="h-4 w-4" />
+                                                      </Button>
+                                                      <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-8 w-8 p-0 text-slate-500 hover:text-red-600 hover:bg-red-50"
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          onReject(signal.id);
+                                                        }}
+                                                        title="Reject signal"
+                                                      >
+                                                        <ThumbsDown className="h-4 w-4" />
+                                                      </Button>
+                                                      <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        role="button"
+                                                        aria-disabled={
+                                                          !canSaveArtefact || isGeneratingArtefact
+                                                        }
+                                                        className={
+                                                          canSaveArtefact
+                                                            ? "text-xs font-medium h-8 border-gray-300 text-gray-700 hover:bg-gray-50"
+                                                            : "text-xs font-medium h-8 border-gray-300 text-gray-400 cursor-not-allowed"
+                                                        }
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          handleSaveArtefactClick(index);
+                                                        }}
+                                                      >
+                                                        {isGeneratingArtefact ? (
+                                                          <>
+                                                            <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                                                            Generating…
+                                                          </>
+                                                        ) : (
+                                                          "Save as Artifact"
+                                                        )}
+                                                      </Button>
+                                                    </div>
                                                     <Button
                                                       size="sm"
                                                       variant="outline"
@@ -498,6 +583,23 @@ export const SignalCard = ({
                                                         : "Chat with Profiler"}
                                                     </Button>
                                                   </div>
+                                                  {artefactHint && (
+                                                    <p
+                                                      role="status"
+                                                      className="mt-2 text-xs text-amber-700"
+                                                    >
+                                                      {artefactHint}
+                                                    </p>
+                                                  )}
+                                                  {showArtefactError && (
+                                                    <p
+                                                      role="alert"
+                                                      className="mt-2 text-xs text-red-600"
+                                                    >
+                                                      Could not generate artifact — please try
+                                                      again.
+                                                    </p>
+                                                  )}
                                                 </>
                                               )}
                                             </div>
