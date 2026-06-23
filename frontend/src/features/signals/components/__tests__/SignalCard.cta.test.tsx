@@ -243,5 +243,11 @@ describe("SignalCard — recommendation Save as Artifact", () => {
     // Header bot button + row Chat button both match; assert at least one is present.
     expect(screen.getAllByRole("button", { name: /Chat with Scout/i }).length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: /Save as Artifact/i })).toBeInTheDocument();
+    // Assert the row is actually justify-between (not merely that the buttons exist), so a
+    // regression to the old single left-aligned flex (D-1) would fail this test.
+    const row = screen
+      .getByRole("button", { name: /Save as Artifact/i })
+      .closest("div.justify-between");
+    expect(row).not.toBeNull();
   });
 });
