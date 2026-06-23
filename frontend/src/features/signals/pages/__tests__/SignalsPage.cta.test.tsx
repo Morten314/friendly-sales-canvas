@@ -37,8 +37,10 @@ vi.mock("../../hooks/useSignalLeadMap", () => ({
   useSignalLeadMap: () => ({
     leadsForSignal: (id: string) => (id === "sig-1" ? LEADS : []),
     isLoading: false,
+    isFetching: false,
     isError: false,
-    refresh: vi.fn(),
+    refresh: vi.fn().mockResolvedValue(true),
+    retry: vi.fn(),
   }),
 }));
 vi.mock("../../services/signals", () => ({
