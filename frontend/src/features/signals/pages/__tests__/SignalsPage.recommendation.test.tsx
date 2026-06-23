@@ -141,4 +141,50 @@ describe("SignalsPage — Save recommendation as Artifact", () => {
     );
     expect(generateAndDownloadPDF).not.toHaveBeenCalled();
   });
+
+  it("does not double-submit while a playbook is already generating", async () => {
+    const { generateRecommendationArtefact } = await import("../../services/signals");
+    // Hold the first call open so the generating state stays active across a 2nd click.
+    let resolveFirst: () => void = () => {};
+    vi.mocked(generateRecommendationArtefact).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveFirst = () =>
+            resolve({
+              what_to_do: "do",
+              strategy: "play",
+              how_to_communicate: "warm",
+              communication_channel: "email",
+              communication_template: "Hi [First Name]",
+            });
+        }),
+    );
+    localStorage.setItem("signals_u1_accepted", JSON.stringify(["hash-sig-1"]));
+    renderPage();
+    await waitFor(() => expect(screen.getByText("Hiring surge")).toBeInTheDocument());
+    const card = screen.getByText("Hiring surge").closest(".bg-white") as HTMLElement;
+
+    fireEvent.click(within(card).getByText("Read more"));
+    fireEvent.click(within(card).getByText("Reach out"));
+    await waitFor(() =>
+      expect(
+        within(card)
+          .getByRole("button", { name: /Save as Artifact/i })
+          .getAttribute("aria-disabled"),
+      ).toBe("false"),
+    );
+
+    const saveBtn = within(card).getByRole("button", { name: /Save as Artifact/i });
+    fireEvent.click(saveBtn); // 1st click → generating starts, service call left pending
+    await waitFor(() => expect(within(card).getByText(/Generating/i)).toBeInTheDocument());
+    fireEvent.click(saveBtn); // 2nd click while generating → must be ignored
+
+    // Despite two clicks, the service is called exactly once.
+    expect(vi.mocked(generateRecommendationArtefact)).toHaveBeenCalledTimes(1);
+
+    // Resolve the in-flight call; exactly one delivery + enqueue occurs.
+    resolveFirst();
+    await waitFor(() => expect(generateAndDownloadPDF).toHaveBeenCalledTimes(1));
+    expect(enqueueArtefact).toHaveBeenCalledTimes(1);
+  });
 });

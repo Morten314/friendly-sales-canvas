@@ -548,6 +548,7 @@ export const SignalCard = ({
                                                         }
                                                         onClick={(e) => {
                                                           e.stopPropagation();
+                                                          if (isGeneratingArtefact) return;
                                                           handleSaveArtefactClick(index);
                                                         }}
                                                       >

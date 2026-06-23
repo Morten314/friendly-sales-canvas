@@ -561,6 +561,10 @@ const SignalsPage = () => {
   };
 
   const handleSaveRecommendationAsArtefact = async (signal: SignalCardType, index: number) => {
+    // Re-entry guard: a second click while a playbook is already generating must not
+    // start a parallel run. aria-disabled on the button is non-blocking, so without
+    // this the ~5-10s window allows a duplicate paid Claude call + download/enqueue.
+    if (recommendationArtefactGenerating) return;
     // Resolve the item exactly as the card/effect do, so `index` maps to the same
     // list the card indexed (NBAs, falling back to nextBestMoves).
     const list: NBAItem[] =
