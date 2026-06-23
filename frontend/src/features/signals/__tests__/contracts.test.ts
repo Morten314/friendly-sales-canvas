@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { SignalLeadMapResponseSchema } from "../contracts";
+import { RecommendationArtefactResponseSchema, SignalLeadMapResponseSchema } from "../contracts";
 
 // Anonymized golden fixture — the SHAPE captured from the live
 // /signal-lead-map_claude envelope (2026-06-19), values scrubbed. The live
@@ -23,6 +23,38 @@ const GOLDEN = {
     cached: false,
   },
 };
+
+describe("RecommendationArtefactResponseSchema", () => {
+  it("parses the full five-field shape", () => {
+    const out = RecommendationArtefactResponseSchema.parse({
+      what_to_do: "do",
+      strategy: "play",
+      how_to_communicate: "warm",
+      communication_channel: "email",
+      communication_template: "Hi {{name}}",
+    });
+    expect(out.what_to_do).toBe("do");
+    expect(out.strategy).toBe("play");
+    expect(out.how_to_communicate).toBe("warm");
+    expect(out.communication_channel).toBe("email");
+    expect(out.communication_template).toBe("Hi {{name}}");
+  });
+
+  it("degrades missing fields to empty string (degrade-never-throw)", () => {
+    const out = RecommendationArtefactResponseSchema.parse({});
+    expect(out.what_to_do).toBe("");
+    expect(out.strategy).toBe("");
+    expect(out.how_to_communicate).toBe("");
+    expect(out.communication_channel).toBe("");
+    expect(out.communication_template).toBe("");
+  });
+
+  it("tolerates extra keys (plain object strips them, no throw)", () => {
+    const out = RecommendationArtefactResponseSchema.parse({ status: "success", what_to_do: "x" });
+    expect(out.what_to_do).toBe("x");
+    expect("status" in out).toBe(false);
+  });
+});
 
 describe("SignalLeadMapResponseSchema (tightened, TD-FE-73)", () => {
   it("parses the golden live-shape fixture and exposes status/generated_at/cached", () => {

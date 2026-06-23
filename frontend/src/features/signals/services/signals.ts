@@ -3,9 +3,11 @@ import type { ZodType } from "zod";
 
 import {
   GenerateSignalsBatchResponseSchema,
+  RecommendationArtefactResponseSchema,
   SignalLeadMapResponseSchema,
   type FetchSignalsResponse,
   type GenerateSignalsBatchResponse,
+  type RecommendationArtefactResponse,
   type SignalLeadMapResponse,
 } from "../contracts";
 
@@ -67,6 +69,31 @@ export async function generateSignalsBatch(
       refresh: true,
     },
     GenerateSignalsBatchResponseSchema,
+  );
+}
+
+/**
+ * POST /api/generate-recommendation-artefact_claude — generate a GTM playbook
+ * for one accepted-signal recommendation. `org_id` is forwarded only when
+ * present (mirrors generateSignalsBatch); the backend treats absent and null
+ * identically. The five-field response degrades to "" per field.
+ */
+export async function generateRecommendationArtefact(
+  userId: string,
+  orgId: string | null,
+  body: {
+    signal_headline: string;
+    signal_description: string;
+    signal_sources: string[];
+    matched_leads: { company: string; relevance: "high" | "medium" | "low"; why: string }[];
+    recommendation: string;
+    recommendation_answer: string;
+  },
+): Promise<RecommendationArtefactResponse> {
+  return apiPost(
+    "generate-recommendation-artefact_claude",
+    { user_id: userId, ...(orgId ? { org_id: orgId } : {}), ...body },
+    RecommendationArtefactResponseSchema as ZodType<RecommendationArtefactResponse>,
   );
 }
 
