@@ -28,12 +28,22 @@ import { writeSessionChatContext, type ChatContext } from "@/shared/chat";
 import { useSignalAction } from "@/shared/chat/useSignalAction";
 import { useSignalAsk } from "@/shared/chat/useSignalAsk";
 import { useCompanyProfile } from "@/shared/company-profile";
+import { useTenant } from "@/shared/tenant";
 import type { UntypedBackendSignal } from "@/shared/types/escape-hatches";
 
 type ActionType = "accept" | "dismiss" | "save" | "ask";
 
 const SignalsPage = () => {
-  const { currentUser, orgId } = useAuth();
+  const { currentUser, orgId: authOrgId } = useAuth();
+  const { selectedTenant } = useTenant();
+  // Every org-scoped read on this page (matched leads, company profile, signals)
+  // must use the same id the lead-upload path writes under. AuthContext.orgId is
+  // null when /org can't be resolved; the upload defaults a missing org to the
+  // active tenant ("brewra" at login), so fall back to it here too. Without this
+  // the raw null disables useSignalLeadMap and Find Matched Leads silently shows
+  // nothing — while the Customers Lead Stream surface (LeadStream.tsx) works,
+  // because it already applies this same fallback chain.
+  const orgId = authOrgId ?? selectedTenant?.id ?? null;
   const {
     leadsForSignal,
     isLoading: leadsLoading,
