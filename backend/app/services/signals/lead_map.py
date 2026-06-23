@@ -77,16 +77,58 @@ def _signals_for_prompt(signals: List[Dict[str, Any]]) -> str:
     return json.dumps(rows, default=str)
 
 
+# CSV/Excel uploads keep their column headings verbatim as Lead-node keys
+# (the upload orchestrator stores them as-is — no canonicalization), so the
+# three fields the matching prompt reasons over (company / industry / region)
+# must be resolved by alias, not by a single hard-coded key. Keys are
+# normalized — lowercased, non-alphanumerics stripped — before lookup, so
+# "Company Name", "company_name" and "COMPANY  NAME" all collapse to the same
+# alias. Apollo/manual leads (already canonical keys) keep working unchanged.
+_COMPANY_ALIASES = (
+    "companyname", "company", "organizationname", "organisationname",
+    "organization", "organisation", "accountname", "account", "org",
+)
+_INDUSTRY_ALIASES = ("industry", "sector", "vertical")
+_REGION_ALIASES = (
+    "region", "country", "location", "geo", "geography",
+    "state", "province", "city", "countryregion",
+)
+
+
+def _normalize_lead_keys(lead: Dict[str, Any]) -> Dict[str, Any]:
+    """Index a lead by normalized key (lowercased, non-alphanumerics stripped).
+    First non-empty value wins, so a populated column isn't clobbered by a
+    later blank one that normalizes to the same key."""
+    norm: Dict[str, Any] = {}
+    for key, value in lead.items():
+        nk = re.sub(r"[^a-z0-9]", "", str(key).lower())
+        if not nk:
+            continue
+        if nk not in norm or (norm[nk] in (None, "") and value not in (None, "")):
+            norm[nk] = value
+    return norm
+
+
+def _first_alias(norm: Dict[str, Any], aliases: tuple) -> str:
+    """Return the first non-empty value among the alias keys, else ''."""
+    for alias in aliases:
+        value = norm.get(alias)
+        if value not in (None, ""):
+            return str(value)
+    return ""
+
+
 def _leads_for_prompt(leads: List[Dict[str, Any]]) -> str:
     rows = []
     for lead in leads:
         if not lead.get("lead_id"):
             continue
+        norm = _normalize_lead_keys(lead)
         rows.append({
             "lead_id": str(lead.get("lead_id")),
-            "company": lead.get("company_name") or lead.get("company") or "",
-            "industry": lead.get("industry", ""),
-            "region": lead.get("region", ""),
+            "company": _first_alias(norm, _COMPANY_ALIASES),
+            "industry": _first_alias(norm, _INDUSTRY_ALIASES),
+            "region": _first_alias(norm, _REGION_ALIASES),
         })
     return json.dumps(rows, default=str)
 
