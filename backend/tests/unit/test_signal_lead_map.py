@@ -43,6 +43,56 @@ def test_signal_and_lead_id_extraction():
     assert _lead_ids([{"lead_id": "l1"}, {"company": "x"}]) == ["l1"]
 
 
+def test_leads_for_prompt_resolves_csv_column_headings():
+    """CSV-uploaded leads keep verbatim column headings as Lead-node keys
+    (e.g. "Company Name", "Industry", "Country"). The matching prompt reasons
+    over company/industry/region, so these must resolve regardless of the
+    user's exact header casing/spacing. Regression: previously they stayed
+    blank, so Claude received empty context and matched nothing → the
+    "Find Matched Leads" feature returned no leads for CSV uploads.
+    """
+    import json
+    from app.services.signals.lead_map import _leads_for_prompt
+    leads = [{
+        "lead_id": "l1",
+        "Company Name": "Acme Corp",
+        "Industry": "Manufacturing",
+        "Country": "Germany",
+    }]
+    rows = json.loads(_leads_for_prompt(leads))
+    assert rows[0]["company"] == "Acme Corp"
+    assert rows[0]["industry"] == "Manufacturing"
+    assert rows[0]["region"] == "Germany"
+
+
+def test_leads_for_prompt_resolves_common_header_aliases():
+    """Common alternate CSV headers (Organization / Sector / Location) resolve."""
+    import json
+    from app.services.signals.lead_map import _leads_for_prompt
+    rows = json.loads(_leads_for_prompt([{
+        "lead_id": "l1",
+        "Organization": "Globex",
+        "Sector": "Fintech",
+        "Location": "Singapore",
+    }]))
+    assert rows[0]["company"] == "Globex"
+    assert rows[0]["industry"] == "Fintech"
+    assert rows[0]["region"] == "Singapore"
+
+
+def test_leads_for_prompt_preserves_canonical_keys():
+    """Apollo/manual leads already use canonical keys — behavior unchanged."""
+    import json
+    from app.services.signals.lead_map import _leads_for_prompt
+    rows = json.loads(_leads_for_prompt([{
+        "lead_id": "l1",
+        "company_name": "Acme",
+        "industry": "SaaS",
+        "region": "NA",
+    }]))
+    assert rows[0] == {"lead_id": "l1", "company": "Acme", "industry": "SaaS", "region": "NA"}
+
+
 def test_save_and_get_cached_lead_map_roundtrip():
     from unittest.mock import MagicMock
     from app.services.signals import lead_map
