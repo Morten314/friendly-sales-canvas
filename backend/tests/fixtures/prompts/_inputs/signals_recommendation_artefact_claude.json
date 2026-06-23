@@ -1,0 +1,8 @@
+{
+  "signal_headline": "ACME Corp announces DACH expansion",
+  "signal_description": "ACME Corp announced 30% revenue growth and a DACH expansion in Q3, signalling new buying centres in Germany and Austria.",
+  "signal_sources": "ACME Q3 press release\nhttps://example.com/acme-q3",
+  "matched_leads": "[\n  {\n    \"company\": \"Beispiel GmbH\",\n    \"relevance\": \"high\",\n    \"why\": \"DACH mid-market, matches ICP\"\n  }\n]",
+  "recommendation": "Reach out to DACH mid-market accounts referencing the expansion.",
+  "recommendation_answer": "The expansion creates a timely wedge for outreach to German-speaking mid-market buyers."
+}

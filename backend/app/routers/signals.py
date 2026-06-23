@@ -10,6 +10,8 @@ from app.core.dependencies import (
 from app.models.market_research import MarketRequest
 from app.models.signals import (
     GenerateSignalsBatchResponse,
+    RecommendationArtefactRequest,
+    RecommendationArtefactResponse,
     SignalActionRequest,
     SignalActionResponse,
     SignalAskRequest,
@@ -111,3 +113,14 @@ async def signal_ask_claude(
     Claude-powered signal ask endpoint with local token/run limiter.
     """
     return await signals_service.signal_ask_claude(driver, mongo, pc, request)
+
+
+@router.post("/generate-recommendation-artefact_claude", response_model=RecommendationArtefactResponse)
+async def generate_recommendation_artefact_claude(request: RecommendationArtefactRequest):
+    """Generate a GTM playbook (what-to-do / strategy / channel / template) for one
+    accepted-signal recommendation, via Claude. Self-contained from the body; reuses
+    the shared _claude_budget token/run limiter (parity with signal_ask_claude)."""
+    from app.services._claude_budget import CLAUDE_API_KEY
+    if not CLAUDE_API_KEY:
+        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY is not configured")
+    return await signals_service.generate_recommendation_artefact_claude(request)

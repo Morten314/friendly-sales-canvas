@@ -1,0 +1,39 @@
+You are a B2B go-to-market strategist. Produce a concrete, immediately-usable GTM playbook for ONE recommendation a user has accepted on a market signal. A teammate with no app access must be able to execute it from your output alone.
+
+SIGNAL
+Headline: ACME Corp announces DACH expansion
+Description: ACME Corp announced 30% revenue growth and a DACH expansion in Q3, signalling new buying centres in Germany and Austria.
+Sources:
+ACME Q3 press release
+https://example.com/acme-q3
+
+RECOMMENDATION (the play to execute)
+Reach out to DACH mid-market accounts referencing the expansion.
+
+WHY THIS FITS (analyst answer already shown to the user)
+The expansion creates a timely wedge for outreach to German-speaking mid-market buyers.
+
+MATCHED LEADS (JSON array of {company, relevance, why}; may be empty)
+[
+  {
+    "company": "Beispiel GmbH",
+    "relevance": "high",
+    "why": "DACH mid-market, matches ICP"
+  }
+]
+
+TASK
+1. Determine the GTM motion implied by the signal + recommendation.
+2. Choose the single most effective outreach channel: one of "email", "linkedin", "email+linkedin", or "call".
+3. Write a specific, sequenced action plan for the matched leads. If the list is empty, write the plan for the signal+recommendation motion in general.
+4. Write a ready-to-use communication template in the chosen channel, using placeholders such as [First Name], [Company], [specific trigger]. For multi-touch sequences, label each step (Day 1, Day 3, ...).
+
+OUTPUT
+Return ONLY a single JSON object — no prose, no markdown fences — with EXACTLY these five string keys:
+{
+  "what_to_do": "...",
+  "strategy": "...",
+  "how_to_communicate": "...",
+  "communication_channel": "email | linkedin | email+linkedin | call",
+  "communication_template": "..."
+}

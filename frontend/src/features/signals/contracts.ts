@@ -38,3 +38,16 @@ export const SignalLeadMapResponseSchema = z.object({
 export type SignalLeadMapEntry = z.infer<typeof SignalLeadMapEntrySchema>;
 export type SignalLeadMapLead = z.infer<typeof SignalLeadMapLeadSchema>;
 export type SignalLeadMapResponse = z.infer<typeof SignalLeadMapResponseSchema>;
+
+// POST /api/generate-recommendation-artefact_claude — five LLM playbook sections.
+// All optional + .default("") so a malformed/partial backend response still parses
+// (degrade-never-throw, consistent with the lead-map schemas). No .strict(): the
+// backend may add status/usage extras a plain object harmlessly strips.
+export const RecommendationArtefactResponseSchema = z.object({
+  what_to_do: z.string().optional().default(""),
+  strategy: z.string().optional().default(""),
+  how_to_communicate: z.string().optional().default(""),
+  communication_channel: z.string().optional().default(""),
+  communication_template: z.string().optional().default(""),
+});
+export type RecommendationArtefactResponse = z.infer<typeof RecommendationArtefactResponseSchema>;

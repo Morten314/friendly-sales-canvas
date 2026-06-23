@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 
-import { fetchSignals, generateSignalsBatch } from "../signals";
+import { fetchSignals, generateRecommendationArtefact, generateSignalsBatch } from "../signals";
 
 import { server } from "@/test/msw/server";
 
@@ -142,5 +142,32 @@ describe("generateSignalsBatch", () => {
       ),
     );
     await expect(generateSignalsBatch("u1", null, null)).rejects.toThrow(/HTTP error! status: 500/);
+  });
+});
+
+describe("generateRecommendationArtefact", () => {
+  it("generateRecommendationArtefact posts the body and forwards org_id only when present", async () => {
+    const seen: Array<Record<string, unknown>> = [];
+    server.use(
+      http.post("/api/generate-recommendation-artefact_claude", async ({ request }) => {
+        seen.push((await request.json()) as Record<string, unknown>);
+        return HttpResponse.json({ what_to_do: "do", communication_channel: "email" });
+      }),
+    );
+    const body = {
+      signal_headline: "h",
+      signal_description: "d",
+      signal_sources: ["s"],
+      matched_leads: [{ company: "Acme", relevance: "high" as const, why: "fit" }],
+      recommendation: "r",
+      recommendation_answer: "a",
+    };
+    const withOrg = await generateRecommendationArtefact("u1", "org1", body);
+    expect(withOrg.what_to_do).toBe("do");
+    expect(withOrg.strategy).toBe(""); // degraded
+    expect(seen[0].org_id).toBe("org1");
+
+    await generateRecommendationArtefact("u1", null, body);
+    expect("org_id" in seen[1]).toBe(false); // omitted when null
   });
 });
