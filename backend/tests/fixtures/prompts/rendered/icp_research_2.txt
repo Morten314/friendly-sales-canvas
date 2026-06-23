@@ -5,6 +5,19 @@ IMPORTANT: Use ALL the information provided in the context data below. Extract r
 Company Profile and ICP Data Context:
 {"company_profile": {"name": "Acme Corp", "industry": "SaaS", "region": "DACH", "employees": 120}, "icp_card": {"segment": "Mid-market", "company_size": "50-500", "buyer_role": "CTO"}}
 
+SUPPORTING DOCUMENTS (retrieved from your organization's uploaded knowledge base — treat as corroborating evidence and cite where relevant; these are NOT the company's declared profile fields):
+[
+  {
+    "query": "sample query",
+    "id": "doc-1",
+    "score": 0.91,
+    "content": "Sample retrieved document chunk.",
+    "metadata": {
+      "source": "sample.pdf"
+    }
+  }
+]
+
 Based on the information provided in the context data above, research and identify:
 1. Core buyer personas (decision makers) specific to the industries and roles mentioned
 2. Key pain points these buyer personas face in the specified industries

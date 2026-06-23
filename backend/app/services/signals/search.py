@@ -20,6 +20,7 @@ from app.models.market_research import MarketRequest
 from app.services._retrieval import (
     _build_signal_context_queries,
     _fetch_pinecone_supporting_context,
+    format_supporting_documents,
 )
 from app.services.leads import get_leads_for_org
 from app.services.signals import persistence
@@ -67,14 +68,14 @@ def search_signals(
         if isinstance(pre_data, dict):
             existing_headlines = pre_data.get("existing_headlines", [])
             leads_data = pre_data.get("leads_data", [])
-            company_profile_data = {k: v for k, v in pre_data.items() if k not in ["existing_headlines", "leads_data", "icp_data"]}
+            company_profile_data = {k: v for k, v in pre_data.items() if k not in ["existing_headlines", "leads_data", "icp_data", "pinecone_context_queries", "pinecone_supporting_context"]}
             context_json = json.dumps(company_profile_data, indent=2)
         elif isinstance(pre_data, str):
             try:
                 parsed = json.loads(pre_data)
                 existing_headlines = parsed.get("existing_headlines", [])
                 leads_data = parsed.get("leads_data", [])
-                company_profile_data = {k: v for k, v in parsed.items() if k not in ["existing_headlines", "leads_data", "icp_data"]}
+                company_profile_data = {k: v for k, v in parsed.items() if k not in ["existing_headlines", "leads_data", "icp_data", "pinecone_context_queries", "pinecone_supporting_context"]}
                 context_json = json.dumps(company_profile_data, indent=2)
             except Exception:
                 context_json = pre_data
@@ -91,7 +92,7 @@ def search_signals(
                 company_profile = pre_data["company_profile"]
                 icp_data = pre_data.get("icp_data", {})
             else:
-                company_profile = {k: v for k, v in pre_data.items() if k not in ["existing_headlines", "leads_data", "icp_data"]}
+                company_profile = {k: v for k, v in pre_data.items() if k not in ["existing_headlines", "leads_data", "icp_data", "pinecone_context_queries", "pinecone_supporting_context"]}
         else:
             try:
                 parsed = json.loads(pre_data) if isinstance(pre_data, str) else {}
@@ -101,7 +102,7 @@ def search_signals(
                     company_profile = parsed["company_profile"]
                     icp_data = parsed.get("icp_data", {})
                 else:
-                    company_profile = {k: v for k, v in parsed.items() if k not in ["existing_headlines", "leads_data", "icp_data"]}
+                    company_profile = {k: v for k, v in parsed.items() if k not in ["existing_headlines", "leads_data", "icp_data", "pinecone_context_queries", "pinecone_supporting_context"]}
                     icp_data = parsed.get("icp_data", {})
             except Exception:
                 company_profile = {}
@@ -126,6 +127,10 @@ def search_signals(
     # ------------------------------------------------------------------
     # 3. Render the prompt + capture prompt_meta
     # ------------------------------------------------------------------
+    supporting_documents = None
+    if isinstance(pre_data, dict):
+        supporting_documents = format_supporting_documents(pre_data.get("pinecone_supporting_context"))
+
     prompt_name = "signals_scout_search" if persona == "scout" else "signals_profiler_search"
     rendered = prompts.render(
         prompt_name,
@@ -136,6 +141,7 @@ def search_signals(
         signal_label=signal_label,
         existing_headlines=existing_headlines,
         headlines_list=headlines_list_str,
+        supporting_documents=supporting_documents,
     )
     prompt_meta = prompts.prompt_meta_from(rendered)
 

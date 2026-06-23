@@ -251,6 +251,67 @@ def test_run_market_research_propagates_budget_exhausted_error(
         asyncio.run(run_market_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend="claude"))
 
 
+SUPPORTING_DOC_ROWS = [
+    {
+        "query": "market size",
+        "id": "doc-chunk-1",
+        "score": 0.91,
+        "content": "ACME Corp announced 30% revenue growth and DACH expansion in Q3.",
+        "metadata": {
+            "source": "acme_q3.pdf",
+            "text": "ACME Corp announced 30% revenue growth and DACH expansion in Q3.",
+            "page": 2,
+        },
+    },
+]
+
+
+@pytest.mark.parametrize("llm_backend", ["qwen", "claude"])
+def test_run_market_research_labels_supporting_documents(
+    mocker, mock_session, mock_mongo_client, llm_backend,
+):
+    """The market-research prompt carries a labeled SUPPORTING DOCUMENTS
+    section (threaded through the real dispatch lambda + _run_research_component
+    + prompts.render), the pinecone keys no longer ride inside the
+    company_profile JSON blob (D1), and — on the `claude` param, which runs the
+    real COMPONENT_FUNCTIONS_CLAUDE lambda — the positional `"claude"` survives
+    the threading (the exact keyword/positional hazard the plan warns about)."""
+    captured = {}
+
+    def _capture(agent_chain, body, profile_json, backend):
+        captured["body"] = body
+        captured["backend"] = backend
+        return 'Final Answer: {"executiveSummary": "ok", "tamValue": "$1B"}'
+
+    mocker.patch(
+        "app.services.market_research.orchestrator._market_research_agent_output",
+        side_effect=_capture,
+    )
+    mocker.patch(
+        "app.services.market_research.orchestrator._fetch_pinecone_supporting_context",
+        return_value=SUPPORTING_DOC_ROWS,
+    )
+    mock_session.run.return_value.single.return_value = _make_neo4j_company_record()
+    _mock_market_collection(mock_mongo_client, find_one_return=None)
+
+    request = MarketRequest(
+        user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
+        component_name="market size & opportunity", data={}, refresh=True,
+    )
+    result = asyncio.run(
+        run_market_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend=llm_backend)
+    )
+
+    assert result["status"] == "success"
+    # claude path: the positional "claude" reached the leaf un-clobbered by docs
+    assert captured["backend"] == llm_backend
+    body = captured["body"]
+    assert "SUPPORTING DOCUMENTS" in body
+    assert "ACME Corp announced 30% revenue growth" in body
+    assert "pinecone_supporting_context" not in body
+    assert "pinecone_context_queries" not in body
+
+
 # ---------------------------------------------------------------------------
 # Regression — Claude path must parse the prompt-mandated "Final Answer:" framing
 # ---------------------------------------------------------------------------

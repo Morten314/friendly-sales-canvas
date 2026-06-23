@@ -1,3 +1,4 @@
 {
-  "pre_data": "{\"company_profile\": {\"name\": \"Acme Corp\", \"industry\": \"SaaS\", \"region\": \"DACH\", \"employees\": 120}, \"icp_card\": {\"segment\": \"Mid-market\", \"company_size\": \"50-500\", \"buyer_role\": \"CTO\"}}"
+  "pre_data": "{\"company_profile\": {\"name\": \"Acme Corp\", \"industry\": \"SaaS\", \"region\": \"DACH\", \"employees\": 120}, \"icp_card\": {\"segment\": \"Mid-market\", \"company_size\": \"50-500\", \"buyer_role\": \"CTO\"}}",
+  "supporting_documents": "[\n  {\n    \"query\": \"sample query\",\n    \"id\": \"doc-1\",\n    \"score\": 0.91,\n    \"content\": \"Sample retrieved document chunk.\",\n    \"metadata\": {\n      \"source\": \"sample.pdf\"\n    }\n  }\n]"
 }

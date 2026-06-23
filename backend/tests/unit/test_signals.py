@@ -35,6 +35,20 @@ from tests.identities import (
     TEST_USER_ID,
 )
 
+SUPPORTING_DOC_ROWS = [
+    {
+        "query": "scout signal opportunities",
+        "id": "doc-chunk-1",
+        "score": 0.91,
+        "content": "ACME Corp announced 30% revenue growth and DACH expansion in Q3.",
+        "metadata": {
+            "source": "acme_q3.pdf",
+            "text": "ACME Corp announced 30% revenue growth and DACH expansion in Q3.",
+            "page": 2,
+        },
+    },
+]
+
 
 # ---------------------------------------------------------------------------
 # search_signals (sync) — uses captured fixtures
@@ -55,7 +69,7 @@ def test_search_signals_scout_qwen_uses_captured(mocker):
     # Post-Task-9: search_signals attaches prompt_meta to the result for the
     # caller to persist into Mongo. Assert the migrated prompt drives the call.
     assert result["prompt_meta"]["name"] == "signals_scout_search"
-    assert result["prompt_meta"]["version"] == "1.0.0"
+    assert result["prompt_meta"]["version"] == "1.1.0"
 
 
 def test_search_signals_profiler_claude_uses_captured(mocker):
@@ -79,7 +93,110 @@ def test_search_signals_profiler_claude_uses_captured(mocker):
     assert result is not None
     # Post-Task-9: profiler persona uses signals_profiler_search; same prompt_meta contract.
     assert result["prompt_meta"]["name"] == "signals_profiler_search"
-    assert result["prompt_meta"]["version"] == "1.0.0"
+    assert result["prompt_meta"]["version"] == "1.1.0"
+
+
+# ---------------------------------------------------------------------------
+# run_signals_research — supporting_documents threading (Task 2)
+# ---------------------------------------------------------------------------
+
+def test_run_signals_research_scout_labels_supporting_documents(
+    mocker, mock_session, mock_mongo_client,
+):
+    """Scout signals prompt carries a distinct, labeled SUPPORTING DOCUMENTS
+    section with the retrieved content, and the pinecone scaffolding keys no
+    longer leak into the company-profile JSON blob (D1)."""
+    captured = load_captured("search_signals_scout_qwen")
+    chain_mock = MagicMock()
+    chain_mock.invoke.return_value = {"output": json.dumps(captured)}
+    mocker.patch(
+        "app.services.signals.search._fetch_pinecone_supporting_context",
+        return_value=SUPPORTING_DOC_ROWS,
+    )
+    mocker.patch("app.services.signals.search.get_leads_for_org", return_value=([], 0))
+    mocker.patch("app.services.signals.persistence._get_existing_headlines", return_value=[])
+    mocker.patch("app.services.signals.persistence._get_user_icp_config", return_value=None)
+    mocker.patch("app.services.signals.persistence._save_signal_and_track_headline", return_value=None)
+
+    request = MarketRequest(
+        user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
+        component_name="scout", data={"industry": "SaaS", "region": "DACH"}, refresh=True,
+    )
+    result = asyncio.run(
+        run_signals_research(mock_session._driver, mock_mongo_client, MagicMock(), chain_mock, request)
+    )
+
+    assert result["status"] == "success"
+    prompt = chain_mock.invoke.call_args[0][0]["input"]
+    assert "SUPPORTING DOCUMENTS" in prompt
+    assert "ACME Corp announced 30% revenue growth" in prompt
+    assert "pinecone_supporting_context" not in prompt
+    assert "pinecone_context_queries" not in prompt
+
+
+def test_run_signals_research_profiler_includes_supporting_documents(
+    mocker, mock_session, mock_mongo_client,
+):
+    """D3 regression: the profiler signals branch (which previously rebuilt
+    context_json from only {company_profile, icp_data} and dropped the docs)
+    now includes the retrieved documents."""
+    captured = load_captured("search_signals_profiler_qwen")
+    chain_mock = MagicMock()
+    chain_mock.invoke.return_value = {"output": json.dumps(captured)}
+    mocker.patch(
+        "app.services.signals.search._fetch_pinecone_supporting_context",
+        return_value=SUPPORTING_DOC_ROWS,
+    )
+    mocker.patch("app.services.signals.search.get_leads_for_org", return_value=([], 0))
+    mocker.patch("app.services.signals.persistence._get_existing_headlines", return_value=[])
+    mocker.patch("app.services.signals.persistence._get_user_icp_config", return_value=None)
+    mocker.patch("app.services.signals.persistence._save_signal_and_track_headline", return_value=None)
+
+    request = MarketRequest(
+        user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
+        component_name="profiler", data={"industry": "SaaS"}, refresh=True,
+    )
+    result = asyncio.run(
+        run_signals_research(mock_session._driver, mock_mongo_client, MagicMock(), chain_mock, request)
+    )
+
+    assert result["status"] == "success"
+    prompt = chain_mock.invoke.call_args[0][0]["input"]
+    assert "SUPPORTING DOCUMENTS" in prompt
+    assert "ACME Corp announced 30% revenue growth" in prompt
+    assert "pinecone_supporting_context" not in prompt
+    assert "pinecone_context_queries" not in prompt
+
+
+def test_run_signals_research_scout_omits_section_when_no_docs(
+    mocker, mock_session, mock_mongo_client,
+):
+    """AC1 / spec empty-retrieval case: with no retrieved docs the
+    {% if supporting_documents %} guard omits the section entirely — no empty
+    'SUPPORTING DOCUMENTS' header in the rendered prompt."""
+    captured = load_captured("search_signals_scout_qwen")
+    chain_mock = MagicMock()
+    chain_mock.invoke.return_value = {"output": json.dumps(captured)}
+    mocker.patch(
+        "app.services.signals.search._fetch_pinecone_supporting_context",
+        return_value=[],
+    )
+    mocker.patch("app.services.signals.search.get_leads_for_org", return_value=([], 0))
+    mocker.patch("app.services.signals.persistence._get_existing_headlines", return_value=[])
+    mocker.patch("app.services.signals.persistence._get_user_icp_config", return_value=None)
+    mocker.patch("app.services.signals.persistence._save_signal_and_track_headline", return_value=None)
+
+    request = MarketRequest(
+        user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
+        component_name="scout", data={"industry": "SaaS"}, refresh=True,
+    )
+    result = asyncio.run(
+        run_signals_research(mock_session._driver, mock_mongo_client, MagicMock(), chain_mock, request)
+    )
+
+    assert result["status"] == "success"
+    prompt = chain_mock.invoke.call_args[0][0]["input"]
+    assert "SUPPORTING DOCUMENTS" not in prompt
 
 
 # ---------------------------------------------------------------------------
@@ -685,6 +802,80 @@ def test_signal_ask_qwen_includes_data_source_context(
     chain_mock.invoke.assert_called_once()
     prompt = chain_mock.invoke.call_args[0][0]["input"]
     assert "DATA_SOURCE_SENTINEL_QWEN" in prompt
+
+
+def test_signal_ask_qwen_uses_aligned_supporting_docs_label(
+    mocker, mock_session, mock_mongo_client,
+):
+    """signal_ask labels uploaded docs with the shared 'SUPPORTING DOCUMENTS'
+    wording (aligned to the Jinja partial), not the old bespoke
+    'DATA SOURCES (uploaded documents):' label."""
+    mocker.patch(
+        "app.services.signals.ask._fetch_pinecone_supporting_context",
+        return_value=[{"content": "DATA_SOURCE_SENTINEL_ALIGN", "score": 0.8}],
+    )
+    mock_session.run.return_value.single.return_value = None
+    mock_mongo_client.__getitem__.return_value.__getitem__.return_value.find_one.return_value = None
+
+    chain_mock = MagicMock()
+    chain_mock.invoke.return_value = {"output": "answer"}
+
+    request = SignalAskRequest(user_id=TEST_USER_ID, org_id=TEST_ORG_ID, question="What changed?")
+    result = asyncio.run(signal_ask(mock_session._driver, mock_mongo_client, MagicMock(), chain_mock, request))
+
+    assert result["status"] == "success"
+    prompt = chain_mock.invoke.call_args[0][0]["input"]
+    assert "SUPPORTING DOCUMENTS" in prompt
+    assert "DATA SOURCES (uploaded documents)" not in prompt
+    assert "DATA_SOURCE_SENTINEL_ALIGN" in prompt
+
+
+def test_signal_ask_claude_uses_aligned_supporting_docs_label(
+    mocker, mock_session, mock_mongo_client,
+):
+    """signal_ask_claude (the path the FE actually calls) also labels uploaded
+    docs with the aligned 'SUPPORTING DOCUMENTS' wording via the shared helper."""
+    mocker.patch("app.services.signals.ask.CLAUDE_API_KEY", "valid-key")
+    mocker.patch("app.services.signals.ask._reserve_claude_signal_budget", return_value={"run_id": "rid"})
+    mocker.patch("app.services.signals.ask._estimate_token_count", return_value=10)
+    mocker.patch(
+        "app.services.signals.ask._finalize_claude_signal_budget",
+        return_value={"window_tokens_5m": 10, "run_count_5m": 1, "run_count_total": 1},
+    )
+    mocker.patch(
+        "app.services.signals.ask._fetch_pinecone_supporting_context",
+        return_value=[{"content": "DATA_SOURCE_SENTINEL_CLAUDE", "score": 0.8}],
+    )
+    mock_session.run.return_value.single.return_value = None
+    mock_mongo_client.__getitem__.return_value.__getitem__.return_value.find_one.return_value = None
+
+    captured_payload: dict = {}
+    mocker.patch("app.services.signals.ask.requests.post", side_effect=_fake_claude_post(captured_payload))
+
+    request = SignalAskRequest(user_id=TEST_USER_ID, org_id=TEST_ORG_ID, question="What changed?")
+    result = asyncio.run(signal_ask_claude(mock_session._driver, mock_mongo_client, MagicMock(), request))
+
+    assert result["status"] == "success"
+    prompt = captured_payload["json"]["messages"][0]["content"]
+    assert "SUPPORTING DOCUMENTS" in prompt
+    assert "DATA SOURCES (uploaded documents)" not in prompt
+    assert "DATA_SOURCE_SENTINEL_CLAUDE" in prompt
+
+
+def test_supporting_docs_label_matches_partial():
+    """Goal-4 drift guard: ask.py's _SUPPORTING_DOCS_LABEL must stay
+    byte-identical to the Jinja partial's label line (the two are the only
+    copies of the wording — a future edit to either would silently diverge)."""
+    from pathlib import Path
+    from app.services.signals.ask import _SUPPORTING_DOCS_LABEL
+
+    partial = (
+        Path(__file__).resolve().parents[2]
+        / "prompts" / "_shared" / "supporting_documents_section.md.j2"
+    )
+    lines = partial.read_text().splitlines()
+    label_line = lines[lines.index("{% if supporting_documents %}") + 1]
+    assert label_line == _SUPPORTING_DOCS_LABEL
 
 
 def test_signal_ask_claude_falls_back_to_user_icp_config(

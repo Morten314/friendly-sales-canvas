@@ -341,3 +341,71 @@ def test_icp_research_1_claude_parses_wrapped_output(mocker):
 
     assert parsed_json["title"] == "ICP Summary"
     assert prompt_meta["name"] == "icp_research_1"
+
+
+# ---------------------------------------------------------------------------
+# Task 4 — supporting_documents threading through ICP research surface
+# ---------------------------------------------------------------------------
+
+SUPPORTING_DOC_ROWS = [
+    {
+        "query": "icp opportunity",
+        "id": "doc-chunk-1",
+        "score": 0.91,
+        "content": "ACME Corp announced 30% revenue growth and DACH expansion in Q3.",
+        "metadata": {
+            "source": "acme_q3.pdf",
+            "text": "ACME Corp announced 30% revenue growth and DACH expansion in Q3.",
+            "page": 2,
+        },
+    },
+]
+
+
+@pytest.mark.parametrize("llm_backend", ["qwen", "claude"])
+def test_run_icp_research_labels_supporting_documents(
+    mocker, mock_session, mock_mongo_client, llm_backend,
+):
+    """The ICP prompt carries a labeled SUPPORTING DOCUMENTS section (threaded
+    through the real dispatch + icp_research_1 + prompts.render), the pinecone
+    keys no longer ride inside the context_json blob (D1), and — on the `claude`
+    param, which runs the real ICP_FUNCTIONS_CLAUDE lambda — the positional
+    `"claude"` survives the threading."""
+    captured = {}
+
+    def _capture(agent_chain, body, pre_data, backend):
+        captured["body"] = body
+        captured["backend"] = backend
+        return 'Final Answer: {"title": "ICP Summary", "currentData": {"segments": ["mid-market"]}}'
+
+    mocker.patch(
+        "app.services.icp.orchestrator._icp_research_agent_output",
+        side_effect=_capture,
+    )
+    mocker.patch(
+        "app.services.icp.orchestrator._fetch_pinecone_supporting_context",
+        return_value=SUPPORTING_DOC_ROWS,
+    )
+    mocker.patch(
+        "app.services.icp.orchestrator._build_market_context_queries", return_value=[],
+    )
+    mock_session.run.return_value.single.return_value = _make_company_record()
+    coll = MagicMock()
+    coll.find_one.return_value = None
+    mock_mongo_client["Profiler"].__getitem__.return_value = coll
+
+    request = MarketRequest(
+        user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
+        component_name="icp summary & market opportunity", data={}, refresh=True,
+    )
+    result = asyncio.run(
+        run_icp_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend=llm_backend)
+    )
+
+    assert result["status"] == "success"
+    assert captured["backend"] == llm_backend
+    body = captured["body"]
+    assert "SUPPORTING DOCUMENTS" in body
+    assert "ACME Corp announced 30% revenue growth" in body
+    assert "pinecone_supporting_context" not in body
+    assert "pinecone_context_queries" not in body

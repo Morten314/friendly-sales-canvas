@@ -34,6 +34,7 @@ from app.services._neo4j_helpers import fetch_company_profile as _fetch_company_
 from app.services._retrieval import (
     _build_market_context_queries,
     _fetch_pinecone_supporting_context,
+    format_supporting_documents,
 )
 
 
@@ -72,8 +73,8 @@ def ICP_generator(agent_chain, pre_data: str) -> tuple[dict, dict]:
     return parsed_json, prompt_meta
 
 
-def icp_research_1(agent_chain, pre_data: str, llm_backend: str = "qwen") -> tuple[dict, dict]:
-    rendered = prompts.render("icp_research_1", pre_data=pre_data)
+def icp_research_1(agent_chain, pre_data: str, llm_backend: str = "qwen", supporting_documents: "str | None" = None) -> tuple[dict, dict]:
+    rendered = prompts.render("icp_research_1", pre_data=pre_data, supporting_documents=supporting_documents)
     prompt_meta = prompts.prompt_meta_from(rendered)
 
     response = _icp_research_agent_output(agent_chain, rendered.body, pre_data, llm_backend)
@@ -90,8 +91,8 @@ def icp_research_1(agent_chain, pre_data: str, llm_backend: str = "qwen") -> tup
     return parsed_json, prompt_meta
 
 
-def icp_research_2(agent_chain, pre_data: str, llm_backend: str = "qwen") -> tuple[dict, dict]:
-    rendered = prompts.render("icp_research_2", pre_data=pre_data)
+def icp_research_2(agent_chain, pre_data: str, llm_backend: str = "qwen", supporting_documents: "str | None" = None) -> tuple[dict, dict]:
+    rendered = prompts.render("icp_research_2", pre_data=pre_data, supporting_documents=supporting_documents)
     prompt_meta = prompts.prompt_meta_from(rendered)
 
     # Get LLM response with retries
@@ -126,8 +127,8 @@ def icp_research_2(agent_chain, pre_data: str, llm_backend: str = "qwen") -> tup
             continue
 
 
-def icp_research_3(agent_chain, pre_data: str, llm_backend: str = "qwen") -> tuple[dict, dict]:
-    rendered = prompts.render("icp_research_3", pre_data=pre_data)
+def icp_research_3(agent_chain, pre_data: str, llm_backend: str = "qwen", supporting_documents: "str | None" = None) -> tuple[dict, dict]:
+    rendered = prompts.render("icp_research_3", pre_data=pre_data, supporting_documents=supporting_documents)
     prompt_meta = prompts.prompt_meta_from(rendered)
 
     # Get LLM response with retries
@@ -164,8 +165,8 @@ def icp_research_3(agent_chain, pre_data: str, llm_backend: str = "qwen") -> tup
             continue
 
 
-def icp_research_4(agent_chain, pre_data: str, llm_backend: str = "qwen") -> tuple[dict, dict]:
-    rendered = prompts.render("icp_research_4", pre_data=pre_data)
+def icp_research_4(agent_chain, pre_data: str, llm_backend: str = "qwen", supporting_documents: "str | None" = None) -> tuple[dict, dict]:
+    rendered = prompts.render("icp_research_4", pre_data=pre_data, supporting_documents=supporting_documents)
     prompt_meta = prompts.prompt_meta_from(rendered)
 
     # Get LLM response with retries
@@ -210,10 +211,10 @@ ICP_FUNCTIONS = {
 }
 
 ICP_FUNCTIONS_CLAUDE = {
-    "icp summary & market opportunity": lambda agent_chain, d: icp_research_1(agent_chain, d, "claude"),
-    "buyer map & roles, pain points, triggers": lambda agent_chain, d: icp_research_2(agent_chain, d, "claude"),
-    "competitive overlap & buying signals": lambda agent_chain, d: icp_research_3(agent_chain, d, "claude"),
-    "regulatory, compliance & recommended icp": lambda agent_chain, d: icp_research_4(agent_chain, d, "claude"),
+    "icp summary & market opportunity": lambda agent_chain, d, supporting_documents=None: icp_research_1(agent_chain, d, "claude", supporting_documents=supporting_documents),
+    "buyer map & roles, pain points, triggers": lambda agent_chain, d, supporting_documents=None: icp_research_2(agent_chain, d, "claude", supporting_documents=supporting_documents),
+    "competitive overlap & buying signals": lambda agent_chain, d, supporting_documents=None: icp_research_3(agent_chain, d, "claude", supporting_documents=supporting_documents),
+    "regulatory, compliance & recommended icp": lambda agent_chain, d, supporting_documents=None: icp_research_4(agent_chain, d, "claude", supporting_documents=supporting_documents),
 }
 
 
@@ -293,8 +294,7 @@ async def _run_icp_research_impl(driver, mongo, pc, agent_chain, request: Any, l
         request.org_id,
         3
     )
-    context_data["pinecone_context_queries"] = market_context_queries
-    context_data["pinecone_supporting_context"] = pinecone_context
+    supporting_documents = format_supporting_documents(pinecone_context)
 
     # Convert to JSON string for the research function
     context_json = json.dumps(context_data)
@@ -305,7 +305,7 @@ async def _run_icp_research_impl(driver, mongo, pc, agent_chain, request: Any, l
     prompt_meta: dict = {}
     for attempt in range(1, max_retries + 1):
         try:
-            research_result, prompt_meta = await asyncio.to_thread(research_function, agent_chain, context_json)
+            research_result, prompt_meta = await asyncio.to_thread(research_function, agent_chain, context_json, supporting_documents=supporting_documents)
             break
         except Exception:
             if attempt == max_retries:

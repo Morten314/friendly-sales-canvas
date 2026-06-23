@@ -30,6 +30,19 @@ Existing Signal Headlines:
 
 IMPORTANT: Your new signal headline must be about a DIFFERENT news story, market development, or industry trend. Do NOT generate a signal about the same event, company news, or market development as any of the above headlines, even if worded differently. Search for NEW and UNIQUE signals that haven't been covered yet.
 
+SUPPORTING DOCUMENTS (retrieved from your organization's uploaded knowledge base — treat as corroborating evidence and cite where relevant; these are NOT the company's declared profile fields):
+[
+  {
+    "query": "sample query",
+    "id": "doc-1",
+    "score": 0.91,
+    "content": "Sample retrieved document chunk.",
+    "metadata": {
+      "source": "sample.pdf"
+    }
+  }
+]
+
 STEP 2 - RESEARCH REQUIREMENTS (CRITICAL):
 You MUST use the WebSearch tool to find a REAL, RECENT, and ACTIONABLE market signal. Based on the company profile above, perform comprehensive research to identify:
 

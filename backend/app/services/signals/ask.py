@@ -29,8 +29,14 @@ from app.services._claude_budget import (
     _reserve_claude_signal_budget,
 )
 from app.services._neo4j_helpers import fetch_company_profile
-from app.services._retrieval import _fetch_pinecone_supporting_context
+from app.services._retrieval import _fetch_pinecone_supporting_context, format_supporting_documents
 from app.services.signals import persistence
+
+_SUPPORTING_DOCS_LABEL = (
+    "SUPPORTING DOCUMENTS (retrieved from your organization's uploaded "
+    "knowledge base — treat as corroborating evidence and cite where relevant; "
+    "these are NOT the company's declared profile fields):"
+)
 
 
 def _resolve_customer_profile(mongo, org_id, user_id) -> Optional[Dict[str, Any]]:
@@ -138,8 +144,8 @@ async def signal_ask(driver, mongo, pc, agent_chain, request: SignalAskRequest) 
             context_parts.append(f"CUSTOMER PROFILE (ICPs):\n{customer_profile_json}")
 
         if data_source_context:
-            data_source_json = json.dumps(data_source_context, indent=2, default=str)
-            context_parts.append(f"DATA SOURCES (uploaded documents):\n{data_source_json}")
+            supporting_documents = format_supporting_documents(data_source_context)
+            context_parts.append(f"{_SUPPORTING_DOCS_LABEL}\n{supporting_documents}")
 
         context = "\n\n".join(context_parts)
 
@@ -227,8 +233,8 @@ async def signal_ask_claude(driver, mongo, pc, request: SignalAskRequest) -> dic
             context_parts.append(f"CUSTOMER PROFILE (ICPs):\n{customer_profile_json}")
 
         if data_source_context:
-            data_source_json = json.dumps(data_source_context, indent=2, default=str)
-            context_parts.append(f"DATA SOURCES (uploaded documents):\n{data_source_json}")
+            supporting_documents = format_supporting_documents(data_source_context)
+            context_parts.append(f"{_SUPPORTING_DOCS_LABEL}\n{supporting_documents}")
 
         context = "\n\n".join(context_parts)
 

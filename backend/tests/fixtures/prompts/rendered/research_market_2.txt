@@ -15,6 +15,19 @@ Company Profile Data:
   ]
 }
 
+SUPPORTING DOCUMENTS (retrieved from your organization's uploaded knowledge base — treat as corroborating evidence and cite where relevant; these are NOT the company's declared profile fields):
+[
+  {
+    "query": "sample query",
+    "id": "doc-1",
+    "score": 0.91,
+    "content": "Sample retrieved document chunk.",
+    "metadata": {
+      "source": "sample.pdf"
+    }
+  }
+]
+
 STEP 2 - RESEARCH REQUIREMENTS (CRITICAL):
 You MUST use the WebSearch tool to find real, up-to-date industry trend data. Based on the company profile above, identify the industry and target markets/regions, then perform comprehensive research:
 

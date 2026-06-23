@@ -76,6 +76,19 @@ Keep bullet point recommendations short and actionable.
 
 give only json , nothing else , nothing at all
 
+SUPPORTING DOCUMENTS (retrieved from your organization's uploaded knowledge base — treat as corroborating evidence and cite where relevant; these are NOT the company's declared profile fields):
+[
+  {
+    "query": "sample query",
+    "id": "doc-1",
+    "score": 0.91,
+    "content": "Sample retrieved document chunk.",
+    "metadata": {
+      "source": "sample.pdf"
+    }
+  }
+]
+
 When you have reached the final answer, respond only with:
 Final Answer: <your answer here>
 Do not include any additional reasoning, thoughts, or steps after that.
