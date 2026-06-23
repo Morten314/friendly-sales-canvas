@@ -1,8 +1,8 @@
 import { Satellite, Target } from "lucide-react";
 import type { ComponentType } from "react";
 
-import type { SignalLeadMapLead } from "../contracts";
-import type { SignalCard } from "../types";
+import type { RecommendationArtefactResponse, SignalLeadMapLead } from "../contracts";
+import type { NBAItem, SignalCard } from "../types";
 
 import type { ArtefactItem } from "@/features/artifacts";
 
@@ -65,6 +65,56 @@ export function buildSignalBriefingArtefact(
       keyFindings,
       analysis: `These ${leads.length} leads were matched to the signal based on ICP fit and the signal's context.`,
       recommendations,
+    },
+  };
+}
+
+/** One playbook ArtefactItem from a recommendation + its LLM-generated sections (Spec 41 §9). */
+export function buildRecommendationPlaybookArtefact(
+  signal: SignalCard,
+  recommendation: NBAItem,
+  recommendationIndex: number,
+  answer: string,
+  leads: SignalLeadMapLead[],
+  generated: RecommendationArtefactResponse,
+): ArtefactItem {
+  const { agentName, agentIcon, agentColor } = resolveSignalAgentPresentation(signal.agent);
+
+  // D-5: flatten SourceCitation[] (citation, falling back to url) into a Sources line.
+  const sources = (signal.source ?? []).map((s) => s.citation || s.url).filter(Boolean);
+  const sourcesLine = sources.length ? `\n\nSources: ${sources.join("; ")}` : "";
+
+  const keyFindings = leads.map((lead) => {
+    const company = lead.company || "Unknown company";
+    const head = `${company} (Relevance: ${titleCase(lead.relevance)})`;
+    return lead.why ? `${head}: ${lead.why}` : head;
+  });
+
+  return {
+    id: `recommendation-playbook-${signal.id}-${recommendationIndex}-${Date.now()}`,
+    agentName,
+    agentIcon,
+    agentColor,
+    taskNumber: "GTM Playbook",
+    timestamp: signal.timestamp,
+    status: "new",
+    type: "playbook",
+    folder: "GTM Playbooks",
+    actionDelegated: recommendation.nba,
+    contextRationale: signal.description.slice(0, 200),
+    systemImpact: `${leads.length} matched lead(s) targeted`,
+    actionPerformed: "Generated GTM playbook for recommendation",
+    outputSummary: generated.strategy.slice(0, 150),
+    fullReport: {
+      title: signal.headline,
+      executiveSummary: `${signal.description}\n\nRecommendation: ${recommendation.nba}${sourcesLine}`,
+      keyFindings,
+      analysis: `${generated.strategy}\n\n${generated.what_to_do}`,
+      recommendations: [
+        `Explanation: ${answer}`,
+        `How to Communicate (${generated.communication_channel}): ${generated.how_to_communicate}`,
+        `Communication Template:\n${generated.communication_template}`,
+      ],
     },
   };
 }
