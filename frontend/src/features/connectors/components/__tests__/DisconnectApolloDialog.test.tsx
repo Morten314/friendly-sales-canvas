@@ -22,4 +22,9 @@ describe("DisconnectApolloDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
     expect(onCancel).toHaveBeenCalled();
   });
+
+  it("shows 'Disconnecting…' and disables the confirm button while isPending", () => {
+    render(<DisconnectApolloDialog open isPending onConfirm={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.getByRole("button", { name: /disconnecting/i })).toBeDisabled();
+  });
 });

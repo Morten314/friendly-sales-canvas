@@ -1,16 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { ApolloManageMenu } from "../ApolloManageMenu";
-
-// Radix DropdownMenu uses pointer-capture / scrollIntoView, which jsdom lacks.
-// Stub them so the menu opens under fireEvent (the repo has no user-event dep).
-beforeAll(() => {
-  Element.prototype.hasPointerCapture = vi.fn();
-  Element.prototype.setPointerCapture = vi.fn();
-  Element.prototype.releasePointerCapture = vi.fn();
-  Element.prototype.scrollIntoView = vi.fn();
-});
 
 function openMenu() {
   const trigger = screen.getByRole("button", { name: /apollo settings/i });

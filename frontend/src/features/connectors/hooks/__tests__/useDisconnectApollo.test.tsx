@@ -20,7 +20,9 @@ describe("useDisconnectApollo", () => {
         return HttpResponse.json({ status: "disconnected", message: "removed" });
       }),
     );
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
     const invalidateSpy = vi.spyOn(client, "invalidateQueries");
     const wrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
