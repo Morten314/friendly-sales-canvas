@@ -342,6 +342,27 @@ interface LeadsTableProps {
   onHeatmapRowsForDashboardChange?: (rows: HeatmapLead[] | null) => void;
 }
 
+/**
+ * Merge a market-scored row over the matching real /v2/leads row losslessly.
+ * The scored row (POST /leads/market-scores) wins for scoring fields, but its
+ * response model (LeadMarketScoreRow) carries no title/seniority and may carry a
+ * placeholder "—" for name/company, so the enriched real row's display fields are
+ * preserved wherever the scored row's are empty. Without this, the wholesale
+ * overwrite drops Title/Seniority for every scored lead (impl-review rounds 1-3).
+ */
+function mergeScoredOverReal(real: HeatmapLead, scored: HeatmapLead): HeatmapLead {
+  const present = (v: string | null | undefined): v is string =>
+    v != null && v !== "" && v !== "—";
+  return {
+    ...scored,
+    name: present(scored.name) ? scored.name : real.name,
+    company: present(scored.company) ? scored.company : real.company,
+    title: present(scored.title) ? scored.title : (real.title ?? null),
+    seniority: present(scored.seniority) ? scored.seniority : (real.seniority ?? null),
+    email_status: scored.email_status ?? real.email_status,
+  };
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 const LeadsTable: React.FC<LeadsTableProps> = ({
@@ -566,7 +587,10 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
     if (!hasOrgContext && scored.length === 0 && real.length === 0) return heatmapLeads;
     const byId = new Map<string, HeatmapLead>();
     for (const lead of real) byId.set(lead.id, lead);
-    for (const lead of scored) byId.set(lead.id, lead);
+    for (const lead of scored) {
+      const existing = byId.get(lead.id);
+      byId.set(lead.id, existing ? mergeScoredOverReal(existing, lead) : lead);
+    }
     return Array.from(byId.values());
   }, [apiHeatmapLeads, realLeads, hasOrgContext]);
   const usingDemoData = baseLeads === heatmapLeads;
