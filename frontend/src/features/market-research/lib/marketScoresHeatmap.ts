@@ -29,69 +29,6 @@ function num(v: unknown): number {
   return Number.isFinite(x) ? x : 0;
 }
 
-/** First non-empty string from known keys (snake/camel); also checks one nested `lead` object. */
-function pickFirstString(raw: Record<string, unknown>, keys: string[]): string {
-  const tryObj = (o: Record<string, unknown>) => {
-    for (const k of keys) {
-      if (!(k in o)) continue;
-      const v = o[k];
-      if (typeof v === "string" && v.trim()) return v.trim();
-      if (typeof v === "number" && Number.isFinite(v)) return String(v);
-    }
-    return "";
-  };
-  let s = tryObj(raw);
-  if (s) return s;
-  const nested = raw.lead;
-  if (nested && typeof nested === "object" && nested !== null && !Array.isArray(nested)) {
-    s = tryObj(nested as Record<string, unknown>);
-  }
-  return s || "";
-}
-
-/**
- * Company / account label for the "Company" column — backend may use different keys or nest under `company`.
- */
-function pickCompanyName(raw: Record<string, unknown>): string {
-  const keys = [
-    "company_name",
-    "companyName",
-    "organization_name",
-    "organizationName",
-    "account_name",
-    "accountName",
-    "company",
-  ];
-  let s = pickFirstString(raw, keys);
-  if (s) return s;
-  const co = raw.company;
-  if (co && typeof co === "object" && co !== null && !Array.isArray(co)) {
-    const o = co as Record<string, unknown>;
-    s = pickFirstString(o, ["name", "company_name", "companyName", "title"]);
-  }
-  return s || "";
-}
-
-/**
- * Contact / lead display name for the "Lead" column — optional; falls back to company when absent.
- */
-function pickLeadDisplayName(raw: Record<string, unknown>, companyFallback: string): string {
-  const keys = [
-    "contact_name",
-    "contactName",
-    "lead_name",
-    "leadName",
-    "full_name",
-    "fullName",
-    "contact_full_name",
-    "person_name",
-    "name",
-  ];
-  const s = pickFirstString(raw, keys);
-  if (s) return s;
-  return companyFallback || "—";
-}
-
 /** Accept snake_case or camelCase; tolerate string numbers from JSON gateways */
 export function mapMarketScoresRowToHeatmapLead(row: MarketScoresApiRow): HeatmapLead {
   const ratings: Record<string, Rating> = {
@@ -185,8 +122,9 @@ export function heatmapLeadFromUnknownRow(raw: Record<string, unknown>): Heatmap
     raw.lead_id ?? raw.leadId ?? (raw.lead as Record<string, unknown> | undefined)?.lead_id;
   if (leadId === undefined || leadId === null || String(leadId).trim() === "") return null;
 
-  const company = pickCompanyName(raw) || "—";
-  const name = pickLeadDisplayName(raw, company);
+  const fields = resolveLeadFields(raw);
+  const company = fields.company || "—";
+  const name = fields.name || company;
 
   if (import.meta.env.DEV && company === "—") {
     console.warn("[Lead Stream] No company label resolved for row; check API field names.", {
@@ -226,5 +164,11 @@ export function heatmapLeadFromUnknownRow(raw: Record<string, unknown>): Heatmap
   };
 
   const mapped = mapMarketScoresRowToHeatmapLead(row);
-  return { ...mapped, name, company };
+  return {
+    ...mapped,
+    name,
+    company,
+    title: fields.title || null,
+    seniority: fields.seniority || null,
+  };
 }
