@@ -6,8 +6,11 @@
 // assert the table renders its output.
 //
 // Fix R2 (scored-row merge-path regression) — scored rows from POST
-// /leads/market-scores overwrite real-lead rows by lead_id. heatmapLeadFromUnknownRow
-// must carry title/seniority (not "—") for those overwriting rows.
+// /leads/market-scores overwrite real-lead rows by lead_id, so they must carry
+// title/seniority (not "—"). The mapper itself (heatmapLeadFromUnknownRow producing
+// title/seniority from a raw row) is unit-tested in marketScoresHeatmap.prospect.test.ts;
+// the scored-row test below covers only the merge + render path, injecting a pre-mapped
+// scored HeatmapLead via the session cache.
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
@@ -120,9 +123,10 @@ describe("LeadsTable real leads (Fix #1)", () => {
 });
 
 // ─── Fix R2: scored rows must carry title/seniority (not "—") ───────────────
-// This is the merge-path regression: a scored row from POST /leads/market-scores
-// overwrites the real-lead row (same lead_id), so if heatmapLeadFromUnknownRow
-// does not carry title/seniority the columns silently render "—".
+// Covers the merge + RENDER path: a pre-mapped scored row (injected via the session
+// cache) overwrites the real-lead row (same lead_id), and its Title/Seniority cells
+// must render values, not "—". The mapper that produces title/seniority from a raw
+// row (heatmapLeadFromUnknownRow) is unit-tested in marketScoresHeatmap.prospect.test.ts.
 
 describe("LeadsTable scored-row merge-path (Fix R2)", () => {
   // L1 will have a corresponding scored row with prospect data
