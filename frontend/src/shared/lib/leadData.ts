@@ -739,6 +739,31 @@ function firstAlias(norm: Record<string, string>, aliases: string[]): string {
   return "";
 }
 
+/** Inner alias list for extracting a name from a nested company object. */
+const NESTED_COMPANY_NAME_ALIASES = ["name", "companyname", "company", "label", "displayname"];
+
+/**
+ * When a company-alias key holds a plain object (not a string), extract the
+ * company name from that object's name-ish field. Returns "" if nothing found,
+ * so callers never get "[object Object]".
+ */
+function resolveNestedCompany(merged: Record<string, unknown>): string {
+  const companyAliasSet = new Set(COMPANY_ALIASES);
+  for (const [k, v] of Object.entries(merged)) {
+    if (
+      v !== null &&
+      typeof v === "object" &&
+      !Array.isArray(v) &&
+      companyAliasSet.has(normKey(k))
+    ) {
+      const inner = normalizeLeadKeys(v as Record<string, unknown>);
+      const found = firstAlias(inner, NESTED_COMPANY_NAME_ALIASES);
+      if (found) return found;
+    }
+  }
+  return "";
+}
+
 export interface ResolvedLeadFields {
   name: string;
   company: string;
@@ -750,7 +775,10 @@ export interface ResolvedLeadFields {
  * Resolve display fields from a raw /v2/leads node, alias- + case-insensitive.
  * Composes First_Name + Last_Name when there is no single name field. A nested
  * `lead` object is folded in with the top level winning (preserves the prior
- * mapper's nested-object fallback). Never throws; missing fields -> "".
+ * mapper's nested-object fallback). When a company-alias key holds a nested
+ * object (e.g. `{ company: { name: "Acme" } }`), the name is extracted from
+ * that object rather than stringified to "[object Object]". Never throws;
+ * missing fields -> "".
  */
 export function resolveLeadFields(raw: Record<string, unknown>): ResolvedLeadFields {
   const nested = raw.lead;
@@ -763,9 +791,14 @@ export function resolveLeadFields(raw: Record<string, unknown>): ResolvedLeadFie
   const name =
     single ||
     `${firstAlias(norm, FIRST_NAME_ALIASES)} ${firstAlias(norm, LAST_NAME_ALIASES)}`.trim();
+  const rawCompany = firstAlias(norm, COMPANY_ALIASES);
+  const company =
+    rawCompany === "[object Object]" || rawCompany === ""
+      ? resolveNestedCompany(merged)
+      : rawCompany;
   return {
     name,
-    company: firstAlias(norm, COMPANY_ALIASES),
+    company,
     title: firstAlias(norm, TITLE_ALIASES),
     seniority: firstAlias(norm, SENIORITY_ALIASES),
   };
