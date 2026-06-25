@@ -26,6 +26,22 @@ export function resolveSignalAgentPresentation(agent: "scout" | "profiler"): Age
 
 const titleCase = (s: string): string => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
+/**
+ * One PDF keyFindings line for a matched lead. The identity prefix
+ * ("Name — Title, Seniority (Company)") is added only when prospect fields are
+ * present; the existing "(Relevance: X)[: why]" wrapping is preserved, so a
+ * prospect-less lead renders exactly as before. Used by BOTH artefact builders.
+ */
+function formatLeadFinding(lead: SignalLeadMapLead): string {
+  const company = lead.company || "Unknown company";
+  const role = [lead.title, lead.seniority].filter(Boolean).join(", ");
+  const identity = [lead.name, role].filter(Boolean).join(" — ");
+  const subject = identity ? `${identity} (${company})` : company;
+  const head = `${subject} (Relevance: ${titleCase(lead.relevance)})`;
+  // The per-lead `why` rides into the PDF here — it is intentionally never on screen.
+  return lead.why ? `${head}: ${lead.why}` : head;
+}
+
 /** One ArtefactItem from a signal + its matched leads (Spec 38 §5 mapping). */
 export function buildSignalBriefingArtefact(
   signal: SignalCard,
@@ -37,12 +53,7 @@ export function buildSignalBriefingArtefact(
       ? signal.NBAs.map((n) => n.nba)
       : (signal.nextBestMoves ?? []);
 
-  const keyFindings = leads.map((lead) => {
-    const company = lead.company || "Unknown company";
-    const head = `${company} (Relevance: ${titleCase(lead.relevance)})`;
-    // The per-lead `why` rides into the PDF here — it is intentionally never on screen.
-    return lead.why ? `${head}: ${lead.why}` : head;
-  });
+  const keyFindings = leads.map(formatLeadFinding);
 
   return {
     id: `signal-briefing-${signal.id}-${Date.now()}`,
@@ -84,11 +95,7 @@ export function buildRecommendationPlaybookArtefact(
   const sources = (signal.source ?? []).map((s) => s.citation || s.url).filter(Boolean);
   const sourcesLine = sources.length ? `\n\nSources: ${sources.join("; ")}` : "";
 
-  const keyFindings = leads.map((lead) => {
-    const company = lead.company || "Unknown company";
-    const head = `${company} (Relevance: ${titleCase(lead.relevance)})`;
-    return lead.why ? `${head}: ${lead.why}` : head;
-  });
+  const keyFindings = leads.map(formatLeadFinding);
 
   return {
     id: `recommendation-playbook-${signal.id}-${recommendationIndex}-${Date.now()}`,

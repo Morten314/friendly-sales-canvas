@@ -4,16 +4,35 @@
 // placeholders are NOT shown for a real org. The fetch/pagination itself is unit-
 // tested in services/__tests__/orgLeads.test.ts; here we mock the service and
 // assert the table renders its output.
+//
+// Fix R3 (scored-row lossless-merge regression) — scored rows from POST
+// /leads/market-scores overwrite real-lead rows by lead_id, but the response (typed
+// LeadMarketScoreRow) carries no title/seniority, so the merge must backfill those
+// from the enriched real row rather than overwrite wholesale. The mapper itself
+// (heatmapLeadFromUnknownRow) is unit-tested in marketScoresHeatmap.prospect.test.ts;
+// the R3 block below drives the real fetch → map → merge path (no pre-mapped injection).
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchAllOrgLeads } from "../../../services/orgLeads";
 import LeadsTable from "../LeadsTable";
 
 import type { HeatmapLead } from "@/shared/lib/leadData";
+
+// ─── helpers for the scored-row merge-path test ─────────────────────────────
+
+/** Build a minimal Response-like object for global.fetch mocks. */
+function jsonResponse(body: unknown, status = 200): Response {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => body,
+    text: async () => JSON.stringify(body),
+  } as unknown as Response;
+}
 
 beforeAll(() => {
   if (!window.HTMLElement.prototype.scrollIntoView) {
@@ -100,5 +119,92 @@ describe("LeadsTable real leads (Fix #1)", () => {
     renderTable();
     expect(await screen.findByText("astuto.ai")).toBeInTheDocument();
     expect(screen.getAllByText("Unscored").length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+// ─── Fix R3: scored rows must inherit Title/Seniority from the real row ───────
+// The /leads/market-scores response (typed response_model=LeadMarketScoreRow) carries
+// NO title/seniority — FastAPI strips undeclared keys — so a scored row built from it
+// has title/seniority=null. The byId merge lets the scored row win, so without a
+// lossless merge it overwrites the enriched /v2/leads real row and Title/Seniority
+// render "—". This test drives the REAL path: fetchAllOrgLeads returns a real lead WITH
+// title/seniority, the market-scores fetch returns a LeadMarketScoreRow-shaped row
+// WITHOUT them, and the merged row must still show the real row's prospect values while
+// taking the scored row's score.
+
+describe("LeadsTable scored-row merge-path (Fix R3 — lossless)", () => {
+  // One real lead, carrying prospect fields (as /v2/leads → heatmapLeadFromV2Lead would).
+  const REAL_WITH_PROSPECT: HeatmapLead[] = [
+    {
+      id: "L1",
+      name: "Jane Founder",
+      company: "astuto.ai",
+      source: "apollo",
+      ratings: {},
+      totalScore: 0,
+      priority: "Tier 3",
+      title: "VP Engineering",
+      seniority: "CXO",
+      scored: false,
+    },
+  ];
+
+  // Market-scores response shaped like the real LeadMarketScoreRow: lead_name +
+  // company_name + scores, and deliberately NO title / seniority keys.
+  const SCORED_RESPONSE = {
+    org_id: "org1",
+    total_leads: 1,
+    processing_status: "completed",
+    rows: [
+      {
+        lead_id: "L1",
+        org_id: "org1",
+        company_name: "astuto.ai",
+        lead_name: "Jane Founder",
+        score_market_size_opportunity: 80,
+        score_industry_trends_report: 80,
+        score_competitor_landscape: 80,
+        score_regulatory_compliance_highlights: 80,
+        score_market_entry_growth_strategy: 80,
+        combined_score: 80,
+        scoring_status: "completed",
+        source: "apollo",
+      },
+    ],
+  };
+
+  beforeEach(() => {
+    vi.mocked(fetchAllOrgLeads).mockResolvedValue(REAL_WITH_PROSPECT);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string) => {
+        if (String(url).includes("market-scores")) {
+          return Promise.resolve(jsonResponse(SCORED_RESPONSE));
+        }
+        return Promise.resolve(jsonResponse({}, 404));
+      }),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("scored row wins the score but Title/Seniority survive from the real row", async () => {
+    renderTable();
+
+    // Real lead renders first (unscored).
+    expect(await screen.findByText("Jane Founder")).toBeInTheDocument();
+
+    // Trigger the market-scores fetch the way the Scout header Refresh does.
+    window.dispatchEvent(new Event("scoutLeadStreamHeatmapRefresh"));
+
+    // After merge: the scored row wins the score (Tier 1) AND the real row's
+    // Title/Seniority survive (not "—").
+    expect(await screen.findByText("VP Engineering")).toBeInTheDocument();
+    expect(screen.getByText("CXO")).toBeInTheDocument();
+    // Score won from the scored row (combined 80 → Tier 1). Guards against a merge
+    // that kept the real row wholesale and dropped the score.
+    expect(await screen.findByText("Tier 1")).toBeInTheDocument();
   });
 });

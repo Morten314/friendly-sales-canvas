@@ -115,6 +115,8 @@ export function LeadStreamPanel({ orgId: orgIdProp }: LeadStreamPanelProps) {
           <TableHeader>
             <TableRow>
               <TableHead className="text-xs">Name</TableHead>
+              <TableHead className="text-xs">Title</TableHead>
+              <TableHead className="text-xs">Seniority</TableHead>
               <TableHead className="text-xs">Company</TableHead>
               <TableHead className="text-xs">Source</TableHead>
               <TableHead className="text-xs">Signals</TableHead>
@@ -128,6 +130,12 @@ export function LeadStreamPanel({ orgId: orgIdProp }: LeadStreamPanelProps) {
                 <Fragment key={lead.id}>
                   <TableRow>
                     <TableCell className="text-sm font-medium">{lead.name}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {lead.title || "—"}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {lead.seniority || "—"}
+                    </TableCell>
                     <TableCell className="text-sm">{lead.company}</TableCell>
                     <TableCell>
                       <LeadSourceBadge source={lead.source} />
@@ -148,7 +156,7 @@ export function LeadStreamPanel({ orgId: orgIdProp }: LeadStreamPanelProps) {
                   </TableRow>
                   {isExpanded && signals.length > 0 && (
                     <TableRow>
-                      <TableCell colSpan={4} className="bg-muted/30">
+                      <TableCell colSpan={6} className="bg-muted/30">
                         <ul className="space-y-1 py-1">
                           {signals.map((s) => (
                             <li key={s.signal_id} className="text-[11px] text-muted-foreground">

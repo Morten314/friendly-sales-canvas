@@ -219,20 +219,31 @@ export const SignalCard = ({
       ) : (
         <>
           <div className="space-y-2">
-            {matchedLeads.map((lead) => (
-              <div
-                key={lead.lead_id}
-                className="flex items-center justify-between gap-3 rounded-md bg-white px-3 py-2 border border-gray-100"
-              >
-                <span className="text-sm text-gray-800">{lead.company || "Unknown company"}</span>
-                <Badge
-                  variant="secondary"
-                  className={`text-xs ${relevanceBadgeClass(lead.relevance)}`}
+            {matchedLeads.map((lead) => {
+              const primary = lead.name || lead.company || "Unknown company";
+              // Include company in secondary only when a name is the primary;
+              // otherwise company is already the primary and would duplicate.
+              const secondary = [lead.title, lead.seniority, lead.name ? lead.company : null]
+                .filter(Boolean)
+                .join(" · ");
+              return (
+                <div
+                  key={lead.lead_id}
+                  className="flex items-start justify-between gap-3 rounded-md bg-white px-3 py-2 border border-gray-100"
                 >
-                  {titleCase(lead.relevance)}
-                </Badge>
-              </div>
-            ))}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-gray-800">{primary}</p>
+                    {secondary && <p className="truncate text-xs text-gray-500">{secondary}</p>}
+                  </div>
+                  <Badge
+                    variant="secondary"
+                    className={`shrink-0 text-xs ${relevanceBadgeClass(lead.relevance)}`}
+                  >
+                    {titleCase(lead.relevance)}
+                  </Badge>
+                </div>
+              );
+            })}
           </div>
           <div className="mt-3 flex justify-end">
             <Button

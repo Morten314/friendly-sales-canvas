@@ -64,6 +64,32 @@ describe("buildSignalBriefingArtefact", () => {
     const item = buildSignalBriefingArtefact(signal, leads);
     expect(item.fullReport.keyFindings[1]).toBe("Unknown company (Relevance: Low)");
   });
+
+  it("includes name/title/seniority in keyFindings, preserving the (Relevance: X) wrapping", () => {
+    const enriched: SignalLeadMapLead[] = [
+      {
+        lead_id: "l1",
+        company: "Acme",
+        relevance: "high",
+        why: "fit",
+        name: "Jane Doe",
+        title: "VP Engineering",
+        seniority: "CXO",
+      },
+    ];
+    const item = buildSignalBriefingArtefact(signal, enriched);
+    expect(item.fullReport.keyFindings[0]).toBe(
+      "Jane Doe — VP Engineering, CXO (Acme) (Relevance: High): fit",
+    );
+  });
+
+  it("leaves a prospect-less lead's line exactly as today (no format change)", () => {
+    const bare: SignalLeadMapLead[] = [
+      { lead_id: "l2", company: "Globex", relevance: "low", why: "" },
+    ];
+    const item = buildSignalBriefingArtefact(signal, bare);
+    expect(item.fullReport.keyFindings[0]).toBe("Globex (Relevance: Low)");
+  });
 });
 
 const generated: RecommendationArtefactResponse = {

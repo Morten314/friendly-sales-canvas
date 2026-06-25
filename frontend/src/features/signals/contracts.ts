@@ -17,6 +17,11 @@ export const SignalLeadMapLeadSchema = z.object({
   company: z.string().optional().default(""),
   relevance: z.enum(["high", "medium", "low"]).catch("low"),
   why: z.string().optional().default(""),
+  // Display-only prospect fields (Spec/Plan 42). Optional → output `string | undefined`;
+  // render code uses `||` / `.filter(Boolean)`, so existing fixtures stay valid.
+  name: z.string().optional(),
+  title: z.string().optional(),
+  seniority: z.string().optional(),
 });
 
 export const SignalLeadMapEntrySchema = z.object({

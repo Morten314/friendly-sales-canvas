@@ -342,6 +342,26 @@ interface LeadsTableProps {
   onHeatmapRowsForDashboardChange?: (rows: HeatmapLead[] | null) => void;
 }
 
+/**
+ * Merge a market-scored row over the matching real /v2/leads row losslessly.
+ * The scored row (POST /leads/market-scores) wins for scoring fields, but its
+ * response model (LeadMarketScoreRow) carries no title/seniority and may carry a
+ * placeholder "—" for name/company, so the enriched real row's display fields are
+ * preserved wherever the scored row's are empty. Without this, the wholesale
+ * overwrite drops Title/Seniority for every scored lead (impl-review rounds 1-3).
+ */
+function mergeScoredOverReal(real: HeatmapLead, scored: HeatmapLead): HeatmapLead {
+  const present = (v: string | null | undefined): v is string => v != null && v !== "" && v !== "—";
+  return {
+    ...scored,
+    name: present(scored.name) ? scored.name : real.name,
+    company: present(scored.company) ? scored.company : real.company,
+    title: present(scored.title) ? scored.title : (real.title ?? null),
+    seniority: present(scored.seniority) ? scored.seniority : (real.seniority ?? null),
+    email_status: scored.email_status ?? real.email_status,
+  };
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 const LeadsTable: React.FC<LeadsTableProps> = ({
@@ -566,7 +586,10 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
     if (!hasOrgContext && scored.length === 0 && real.length === 0) return heatmapLeads;
     const byId = new Map<string, HeatmapLead>();
     for (const lead of real) byId.set(lead.id, lead);
-    for (const lead of scored) byId.set(lead.id, lead);
+    for (const lead of scored) {
+      const existing = byId.get(lead.id);
+      byId.set(lead.id, existing ? mergeScoredOverReal(existing, lead) : lead);
+    }
     return Array.from(byId.values());
   }, [apiHeatmapLeads, realLeads, hasOrgContext]);
   const usingDemoData = baseLeads === heatmapLeads;
@@ -738,6 +761,8 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                 <TableHead className="w-[170px] text-xs font-semibold sticky left-0 bg-background z-10">
                   Lead
                 </TableHead>
+                <TableHead className="w-[150px] text-xs font-semibold">Title</TableHead>
+                <TableHead className="w-[120px] text-xs font-semibold">Seniority</TableHead>
                 <TableHead className="w-[130px] text-xs font-semibold">Company</TableHead>
                 {REPORT_COLUMNS.map((col) => (
                   <TableHead
@@ -783,7 +808,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
               {sortedLeads.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={REPORT_COLUMNS.length + 5}
+                    colSpan={REPORT_COLUMNS.length + 7}
                     className="text-center py-10 text-sm text-muted-foreground"
                   >
                     {baseLeads.length === 0
@@ -799,7 +824,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                 </TableRow>
               ) : (
                 sortedLeads.flatMap((lead) => {
-                  const colSpan = REPORT_COLUMNS.length + 5;
+                  const colSpan = REPORT_COLUMNS.length + 7;
                   const main = (
                     <TableRow key={`${lead.id}-main`} className="group">
                       <TableCell className="text-sm font-medium text-foreground sticky left-0 bg-background z-10">
@@ -818,6 +843,12 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                           <LeadSourceBadge source={lead.source} />
                           <UnverifiedBadge emailStatus={lead.email_status} />
                         </div>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {lead.title || "—"}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {lead.seniority || "—"}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {lead.company}
