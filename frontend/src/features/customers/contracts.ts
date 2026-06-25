@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { resolveLeadFields } from "@/shared/lib/leadData";
+
 /**
  * A single recommended-ICP item from GET /icp — kept opaque (shape varies).
  * Module-local (not exported): only the response schema below references it, so
@@ -70,15 +72,19 @@ export interface CustomerLead {
   company: string;
   source: string | null;
   emailStatus: string | null;
+  title: string | null;
+  seniority: string | null;
 }
 
 export function mapRawLead(raw: RawLead): CustomerLead {
-  const company = (raw.company_name ?? raw.company ?? "").trim() || "—";
-  const name = (raw.lead_name ?? raw.name ?? "").trim() || company;
+  const fields = resolveLeadFields(raw as unknown as Record<string, unknown>);
+  const company = fields.company || "—";
   return {
     id: raw.lead_id,
-    name,
+    name: fields.name || company,
     company,
+    title: fields.title || null,
+    seniority: fields.seniority || null,
     source: raw.source ?? null,
     emailStatus: raw.email_status ?? null,
   };
