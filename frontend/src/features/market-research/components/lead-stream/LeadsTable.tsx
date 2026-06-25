@@ -351,8 +351,7 @@ interface LeadsTableProps {
  * overwrite drops Title/Seniority for every scored lead (impl-review rounds 1-3).
  */
 function mergeScoredOverReal(real: HeatmapLead, scored: HeatmapLead): HeatmapLead {
-  const present = (v: string | null | undefined): v is string =>
-    v != null && v !== "" && v !== "—";
+  const present = (v: string | null | undefined): v is string => v != null && v !== "" && v !== "—";
   return {
     ...scored,
     name: present(scored.name) ? scored.name : real.name,
