@@ -93,6 +93,11 @@ _REGION_ALIASES = (
     "region", "country", "location", "geo", "geography",
     "state", "province", "city", "countryregion",
 )
+_TITLE_ALIASES = ("jobtitle", "title", "designation", "position", "jobrole")
+_SENIORITY_ALIASES = ("senioritylevel", "seniority", "joblevel")
+_NAME_ALIASES = ("name", "fullname", "contactname", "leadname", "personname", "contactfullname")
+_FIRST_NAME_ALIASES = ("firstname", "givenname", "fname")
+_LAST_NAME_ALIASES = ("lastname", "surname", "familyname", "lname")
 
 
 def _normalize_lead_keys(lead: Dict[str, Any]) -> Dict[str, Any]:
@@ -116,6 +121,40 @@ def _first_alias(norm: Dict[str, Any], aliases: tuple) -> str:
         if value not in (None, ""):
             return str(value)
     return ""
+
+
+def _resolve_contact_name(norm: Dict[str, Any]) -> str:
+    """Single name field if present, else 'First Last' composed from aliases, else ''."""
+    single = _first_alias(norm, _NAME_ALIASES)
+    if single:
+        return single
+    first = _first_alias(norm, _FIRST_NAME_ALIASES)
+    last = _first_alias(norm, _LAST_NAME_ALIASES)
+    return f"{first} {last}".strip()
+
+
+def _enrich_matched_leads(
+    mapping: List[Dict[str, Any]], leads_by_id: Dict[str, Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """Attach display-only prospect fields (name/title/seniority) to each matched
+    lead by re-joining lead_id -> the full lead dict (alias-resolved). PURE: returns
+    a new mapping so the cached narrow shape is never mutated. Never raises; an
+    unknown lead_id yields empty fields. Matching is unchanged — this only widens
+    the response shape."""
+    enriched: List[Dict[str, Any]] = []
+    for entry in mapping:
+        leads_out = []
+        for lead in entry.get("leads", []) or []:
+            full = leads_by_id.get(str(lead.get("lead_id", "")))
+            norm = _normalize_lead_keys(full) if full else {}
+            leads_out.append({
+                **lead,
+                "name": _resolve_contact_name(norm),
+                "title": _first_alias(norm, _TITLE_ALIASES),
+                "seniority": _first_alias(norm, _SENIORITY_ALIASES),
+            })
+        enriched.append({**entry, "leads": leads_out})
+    return enriched
 
 
 def _leads_for_prompt(leads: List[Dict[str, Any]]) -> str:
@@ -225,10 +264,14 @@ async def build_signal_lead_map_claude(driver, mongo, request) -> Dict[str, Any]
     sig_ids = _signal_ids(signals)
     ld_ids = _lead_ids(leads)
     fingerprint = _compute_fingerprint(sig_ids, ld_ids)
+    leads_by_id = {str(l["lead_id"]): l for l in leads if l.get("lead_id")}
     if not request.refresh:
         cached = await asyncio.to_thread(_get_cached_lead_map, mongo, request.org_id, request.user_id)
         if cached and cached.get("fingerprint") == fingerprint:
-            return _build_result(cached.get("mapping", []), cached.get("generated_at", now), True)
+            return _build_result(
+                _enrich_matched_leads(cached.get("mapping", []), leads_by_id),
+                cached.get("generated_at", now), True,
+            )
 
     # 4. context (ICP/company profile grounding)
     context = await asyncio.to_thread(
@@ -268,4 +311,4 @@ async def build_signal_lead_map_claude(driver, mongo, request) -> Dict[str, Any]
     except Exception as e:
         logger.warning("signal_lead_map: cache write failed: %s", e)
 
-    return _build_result(mapping, now, False)
+    return _build_result(_enrich_matched_leads(mapping, leads_by_id), now, False)

@@ -244,3 +244,87 @@ def test_build_map_degrades_to_empty_on_claude_failure():
     result, _ = _run([{"signal_id": "s1"}], [{"lead_id": "l1"}], RuntimeError("boom"))
     assert result["status"] == "success"
     assert result["data"]["mapping"] == []
+
+
+# ---------------------------------------------------------------------------
+# Task 1: enrich matched leads with name / title / seniority
+# ---------------------------------------------------------------------------
+
+def test_resolve_contact_name_single_and_composed():
+    from app.services.signals.lead_map import _resolve_contact_name, _normalize_lead_keys
+    assert _resolve_contact_name(_normalize_lead_keys({"name": "Sam Lee"})) == "Sam Lee"
+    assert _resolve_contact_name(
+        _normalize_lead_keys({"First_Name": "Jane", "Last_Name": "Doe"})
+    ) == "Jane Doe"
+    assert _resolve_contact_name(_normalize_lead_keys({"company_name": "Acme"})) == ""
+
+
+def test_enrich_matched_leads_csv_and_apollo_and_missing():
+    from app.services.signals.lead_map import _enrich_matched_leads
+    leads_by_id = {
+        "l1": {"lead_id": "l1", "First_Name": "Jane", "Last_Name": "Doe",
+               "Job_Title": "VP Engineering", "Seniority_Level": "CXO"},
+        "l2": {"lead_id": "l2", "name": "Sam Lee", "title": "Owner", "seniority": "Owner"},
+        "l3": {"lead_id": "l3"},  # no prospect fields
+    }
+    mapping = [{"signal_id": "s1", "headline": "h", "leads": [
+        {"lead_id": "l1", "company": "Acme", "relevance": "high", "why": "x"},
+        {"lead_id": "l2", "company": "Globex", "relevance": "low", "why": "y"},
+        {"lead_id": "l3", "company": "Z", "relevance": "low", "why": "z"},
+    ]}]
+    leads = _enrich_matched_leads(mapping, leads_by_id)[0]["leads"]
+    assert (leads[0]["name"], leads[0]["title"], leads[0]["seniority"]) == ("Jane Doe", "VP Engineering", "CXO")
+    assert (leads[1]["name"], leads[1]["title"], leads[1]["seniority"]) == ("Sam Lee", "Owner", "Owner")
+    assert (leads[2]["name"], leads[2]["title"], leads[2]["seniority"]) == ("", "", "")
+    # existing fields preserved
+    assert leads[0]["company"] == "Acme" and leads[0]["relevance"] == "high" and leads[0]["why"] == "x"
+
+
+def test_enrich_matched_leads_is_pure_does_not_mutate_input():
+    from app.services.signals.lead_map import _enrich_matched_leads
+    mapping = [{"signal_id": "s1", "headline": "h",
+                "leads": [{"lead_id": "l1", "company": "Acme", "relevance": "high", "why": "x"}]}]
+    leads_by_id = {"l1": {"lead_id": "l1", "name": "Sam Lee", "title": "CEO", "seniority": "CXO"}}
+    original_lead_keys = set(mapping[0]["leads"][0].keys())
+    _enrich_matched_leads(mapping, leads_by_id)
+    assert set(mapping[0]["leads"][0].keys()) == original_lead_keys  # input not mutated
+
+
+def test_build_map_enriches_on_cache_hit():
+    from app.services.signals import lead_map
+    signals = [{"signal_id": "s1", "headline": "h"}]
+    leads = [{"lead_id": "l1", "First_Name": "Jane", "Last_Name": "Doe",
+              "Job_Title": "VP Engineering", "Seniority_Level": "CXO"}]
+    fp = lead_map._compute_fingerprint(["s1"], ["l1"])
+    mongo, _ = _fake_cache_mongo({
+        "o1:u1": {"_id": "o1:u1", "fingerprint": fp, "generated_at": "t0",
+                  "mapping": [{"signal_id": "s1", "headline": "cached", "leads": [
+                      {"lead_id": "l1", "company": "Acme", "relevance": "high", "why": "x"}]}]}
+    })
+    result, claude = _run(signals, leads, "SHOULD-NOT-RUN", mongo=mongo)
+    assert result["data"]["cached"] is True
+    lead = result["data"]["mapping"][0]["leads"][0]
+    assert (lead["name"], lead["title"], lead["seniority"]) == ("Jane Doe", "VP Engineering", "CXO")
+    claude.assert_not_called()
+
+
+def test_build_map_enriches_on_cache_miss():
+    from app.services.signals import lead_map
+    signals = [{"signal_id": "s1", "headline": "Hiring surge"}]
+    leads = [{"lead_id": "l1", "company_name": "Acme", "name": "Sam Lee",
+              "title": "Founder", "seniority": "CXO"}]
+    claude_json = (
+        '{"mapping":[{"signal_id":"s1","leads":'
+        '[{"lead_id":"l1","company":"Acme","relevance":"high","why":"match"}]}]}'
+    )
+    mongo, store = _fake_cache_mongo()
+    result, claude = _run(signals, leads, claude_json, mongo=mongo)
+    assert result["data"]["cached"] is False
+    lead = result["data"]["mapping"][0]["leads"][0]
+    assert (lead["name"], lead["title"], lead["seniority"]) == ("Sam Lee", "Founder", "CXO")
+    # cache must store the NARROW shape (no name/title/seniority)
+    cached_lead = store["o1:u1"]["mapping"][0]["leads"][0]
+    assert "name" not in cached_lead
+    assert "title" not in cached_lead
+    assert "seniority" not in cached_lead
+    claude.assert_called_once()
