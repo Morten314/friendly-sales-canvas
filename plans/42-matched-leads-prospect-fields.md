@@ -21,6 +21,7 @@
 - **Frontend commands run from `frontend/`.** Per-task verify: `npm run typecheck` (the npm script — never bare `npx tsc`, the root tsconfig is a no-op stub), `npx vitest run <file>` for the task's tests, `npx prettier --write <touched files>` (the per-task `npm run verify` omits `format:check`).
 - **Backend commands run from the repo root (worktree root).** Per-task verify: `backend/.venv/bin/python -m pytest backend/tests/unit/test_signal_lead_map.py -q` (no `PYTHONPATH`).
 - **Merge gate** is the serial `npm run preflight` (typecheck, lint, format:check, vitest, build, bundle, Playwright + visual regression, knip) plus the backend pytest run. Adding table columns changes the lead-stream VR snapshots — regenerate baselines in the gate and **confirm the diff is only the intended +Title/+Seniority columns** before accepting (do not blanket `--update-snapshots`).
+- **Abort triggers (stop and report, don't improvise):** (a) Task 1 — `leads` is in scope on the cache-hit path today (`lead_map.py` L218–231); if a refactor has changed that so enrichment can't be wired there, the enrich-before-cache + cache-version-bump fallback is a design change → stop and report. (b) Task 6 — if deleting `pickCompanyName`/`pickLeadDisplayName` (and `pickFirstString` if unused) surfaces a live caller or an unresolvable `knip --strict`/type conflict → stop. (c) Merge gate — if VR diffs show drift beyond the new Title/Seniority columns → stop and investigate.
 
 ## Prerequisites — worktree setup (one-time)
 
@@ -33,6 +34,14 @@ ln -s /projects/Brewra/brewra-gtm-intelligence/frontend/node_modules frontend/no
 ```
 
 (If a symlink misbehaves, fall back to `python -m venv` + `pip install -r backend/requirements.txt` and `npm ci` in `frontend/`.)
+
+## Parallelization (for subagent-driven execution)
+
+The serial 1→9 order is safe. The dependency graph also admits parallelism: **Task 1 (backend) is independent of every FE task**. Within the FE, once **Task 2** lands (shared `resolveLeadFields` + widened `HeatmapLead`), three chains are mutually independent and may run concurrently:
+
+- **signals:** Task 3 → Tasks 4 and 5 (4 and 5 are independent of each other)
+- **market-research:** Task 6 → Task 7
+- **customers:** Task 8 → Task 9
 
 ---
 
@@ -599,33 +608,34 @@ git commit -m "feat(fe): render name/title/seniority on matched-lead rows in Sig
 
 ---
 
-### Task 5: FE — include prospect fields in the briefing PDF
+### Task 5: FE — include prospect fields in the briefing PDFs
 
-Each `keyFindings` line gains the contact identity, omitting empty segments.
+Each `keyFindings` line gains the contact identity, omitting empty segments. `signalBriefing.ts` has **two** builders that render `SignalLeadMapLead[]` with an identical `keyFindings` line — `buildSignalBriefingArtefact` (Spec 38) and `buildRecommendationPlaybookArtefact` (Spec 41 GTM playbook). Extract one shared `formatLeadFinding` helper and apply it to **both**, so the two artefacts stay consistent (review F2). The existing parenthesized `(Relevance: X)` wrapping is **preserved** for prospect-less leads — only the identity prefix is new, so today's output is unchanged for those leads (review F1).
 
 **Files:**
-- Modify: `frontend/src/features/signals/lib/signalBriefing.ts`
+- Modify: `frontend/src/features/signals/lib/signalBriefing.ts` (both `buildSignalBriefingArtefact` and `buildRecommendationPlaybookArtefact`)
 - Test: `frontend/src/features/signals/lib/__tests__/signalBriefing.test.ts` (extend)
 
 **Interfaces:**
-- Consumes: `SignalLeadMapLead` (with optional `name/title/seniority`). `buildSignalBriefingArtefact` signature unchanged.
+- Consumes: `SignalLeadMapLead` (with optional `name/title/seniority`). Both builder signatures unchanged.
+- Produces: module-local `formatLeadFinding(lead: SignalLeadMapLead): string`, used by both builders.
 
 - [ ] **Step 1: Write the failing test (append to the existing describe block)**
 
 Add to `frontend/src/features/signals/lib/__tests__/signalBriefing.test.ts`:
 
 ```ts
-  it("includes name/title/seniority in keyFindings when present, omitting empties", () => {
+  it("includes name/title/seniority in keyFindings, preserving the (Relevance: X) wrapping", () => {
     const enriched: SignalLeadMapLead[] = [
       { lead_id: "l1", company: "Acme", relevance: "high", why: "fit", name: "Jane Doe", title: "VP Engineering", seniority: "CXO" },
     ];
     const item = buildSignalBriefingArtefact(signal, enriched);
     expect(item.fullReport.keyFindings[0]).toBe(
-      "Jane Doe — VP Engineering, CXO (Acme) — Relevance: High: fit",
+      "Jane Doe — VP Engineering, CXO (Acme) (Relevance: High): fit",
     );
   });
 
-  it("omits the identity prefix when no prospect fields are present", () => {
+  it("leaves a prospect-less lead's line exactly as today (no format change)", () => {
     const bare: SignalLeadMapLead[] = [{ lead_id: "l2", company: "Globex", relevance: "low", why: "" }];
     const item = buildSignalBriefingArtefact(signal, bare);
     expect(item.fullReport.keyFindings[0]).toBe("Globex (Relevance: Low)");
@@ -637,21 +647,38 @@ Add to `frontend/src/features/signals/lib/__tests__/signalBriefing.test.ts`:
 Run: `npx vitest run src/features/signals/lib/__tests__/signalBriefing.test.ts`
 Expected: FAIL — the current line is `"Acme (Relevance: High): fit"`; no identity prefix.
 
-- [ ] **Step 3: Update the `keyFindings` builder**
+- [ ] **Step 3: Extract `formatLeadFinding` and apply it to both builders**
 
-In `frontend/src/features/signals/lib/signalBriefing.ts`, replace the `keyFindings` map with:
+In `frontend/src/features/signals/lib/signalBriefing.ts`, add a module-local helper just below `titleCase`:
 
 ```ts
-  const keyFindings = leads.map((lead) => {
-    const company = lead.company || "Unknown company";
-    // Identity prefix: "Name — Title, Seniority" — omit empty parts.
-    const role = [lead.title, lead.seniority].filter(Boolean).join(", ");
-    const identity = [lead.name, role].filter(Boolean).join(" — ");
-    const subject = identity ? `${identity} (${company})` : company;
-    const head = `${subject} — Relevance: ${titleCase(lead.relevance)}`;
-    // The per-lead `why` rides into the PDF here — it is intentionally never on screen.
-    return lead.why ? `${head}: ${lead.why}` : head;
-  });
+/**
+ * One PDF keyFindings line for a matched lead. The identity prefix
+ * ("Name — Title, Seniority (Company)") is added only when prospect fields are
+ * present; the existing "(Relevance: X)[: why]" wrapping is preserved, so a
+ * prospect-less lead renders exactly as before. Used by BOTH artefact builders.
+ */
+function formatLeadFinding(lead: SignalLeadMapLead): string {
+  const company = lead.company || "Unknown company";
+  const role = [lead.title, lead.seniority].filter(Boolean).join(", ");
+  const identity = [lead.name, role].filter(Boolean).join(" — ");
+  const subject = identity ? `${identity} (${company})` : company;
+  const head = `${subject} (Relevance: ${titleCase(lead.relevance)})`;
+  // The per-lead `why` rides into the PDF here — it is intentionally never on screen.
+  return lead.why ? `${head}: ${lead.why}` : head;
+}
+```
+
+Then replace the `keyFindings` map in **`buildSignalBriefingArtefact`** (the current `leads.map((lead) => { … })` block) with:
+
+```ts
+  const keyFindings = leads.map(formatLeadFinding);
+```
+
+And replace the **identical** `keyFindings` map in **`buildRecommendationPlaybookArtefact`** with the same line:
+
+```ts
+  const keyFindings = leads.map(formatLeadFinding);
 ```
 
 > The escaping/ASCII-fold from Spec/Plan 38's `createSimplePDF` still applies to these strings automatically; accented names beyond that fold remain the deferred shared-generator TD (spec Out-of-scope).
@@ -659,7 +686,7 @@ In `frontend/src/features/signals/lib/signalBriefing.ts`, replace the `keyFindin
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `npx vitest run src/features/signals/lib/__tests__/signalBriefing.test.ts`
-Expected: PASS — the new cases plus the existing ones (the bare-lead case now reads `"Globex (Relevance: Low)"`; **update any pre-existing assertion** that expected the old `"Company (Relevance: …)"` format to match this — the format for prospect-less leads is unchanged except it still has no identity prefix).
+Expected: PASS. Prospect-less leads render **byte-identical to today** (`"Company (Relevance: X)[: why]"`), so any pre-existing assertion over that format still holds; enriched leads gain the `"Name — Title, Seniority (Company) "` prefix before the unchanged `(Relevance: X)` wrapping. Both builders now route through `formatLeadFinding`.
 
 - [ ] **Step 5: Typecheck, format, commit**
 
