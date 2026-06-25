@@ -1,5 +1,5 @@
 import type { HeatmapLead, Rating } from "@/shared/lib/leadData";
-import { getPriority } from "@/shared/lib/leadData";
+import { getPriority, resolveLeadFields } from "@/shared/lib/leadData";
 
 export function scorePercentToRating(score: number): Rating {
   if (score >= 75) return "High";
@@ -129,8 +129,9 @@ export function heatmapLeadFromV2Lead(raw: Record<string, unknown>): HeatmapLead
     raw.lead_id ?? raw.leadId ?? (raw.lead as Record<string, unknown> | undefined)?.lead_id;
   if (leadId === undefined || leadId === null || String(leadId).trim() === "") return null;
 
-  const company = pickCompanyName(raw) || "—";
-  const name = pickLeadDisplayName(raw, company);
+  const fields = resolveLeadFields(raw);
+  const company = fields.company || "—";
+  const name = fields.name || company;
   const emailStatus =
     typeof raw.email_status === "string"
       ? raw.email_status
@@ -148,6 +149,8 @@ export function heatmapLeadFromV2Lead(raw: Record<string, unknown>): HeatmapLead
     // Placeholder tier; the table renders "—" (not this value) for unscored rows.
     priority: "Tier 3",
     email_status: emailStatus,
+    title: fields.title || null,
+    seniority: fields.seniority || null,
     scored: false,
   };
 }
