@@ -14,6 +14,8 @@ export interface HeatmapLead {
   totalScore: number;
   priority: "Tier 1" | "Tier 2" | "Tier 3";
   email_status?: string | null;
+  title?: string | null;
+  seniority?: string | null;
   /**
    * False for real leads sourced from /v2/leads that have not been market-scored
    * yet (shown so discovered leads surface regardless of scoring — the score
@@ -683,4 +685,88 @@ export function computeReportComponentScoresForLeads(leads: HeatmapLead[]): Repo
       totalScore,
     };
   }).sort((a, b) => b.totalScore - a.totalScore);
+}
+
+// ── Lead-field resolution (shared by both Lead Stream mappers) ────────────────
+// /api/v2/leads returns raw stored keys: CSV uploads keep TitleCase_underscore
+// headers (First_Name, Job_Title, Seniority_Level); Apollo uses lowercase
+// canonical keys (name, title, seniority). FE mirror of the backend's
+// _normalize_lead_keys/_first_alias (re-implemented in TS per the FE<->BE rule).
+const NAME_ALIASES = [
+  "name",
+  "fullname",
+  "contactname",
+  "leadname",
+  "personname",
+  "contactfullname",
+];
+const FIRST_NAME_ALIASES = ["firstname", "givenname", "fname"];
+const LAST_NAME_ALIASES = ["lastname", "surname", "familyname", "lname"];
+const COMPANY_ALIASES = [
+  "companyname",
+  "company",
+  "organizationname",
+  "organisationname",
+  "organization",
+  "organisation",
+  "accountname",
+  "account",
+  "org",
+];
+const TITLE_ALIASES = ["jobtitle", "title", "designation", "position", "jobrole"];
+const SENIORITY_ALIASES = ["senioritylevel", "seniority", "joblevel"];
+
+const normKey = (k: string): string => k.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+/** Index raw lead by normalized key (lowercased, non-alphanumerics stripped);
+ *  first non-empty value wins. */
+function normalizeLeadKeys(raw: Record<string, unknown>): Record<string, string> {
+  const norm: Record<string, string> = {};
+  for (const [k, v] of Object.entries(raw)) {
+    const nk = normKey(k);
+    if (!nk) continue;
+    const s = v == null ? "" : String(v).trim();
+    if (!(nk in norm) || (norm[nk] === "" && s !== "")) norm[nk] = s;
+  }
+  return norm;
+}
+
+/** First non-empty value among the (already-normalized) alias keys, else "". */
+function firstAlias(norm: Record<string, string>, aliases: string[]): string {
+  for (const a of aliases) {
+    if (norm[a]) return norm[a];
+  }
+  return "";
+}
+
+export interface ResolvedLeadFields {
+  name: string;
+  company: string;
+  title: string;
+  seniority: string;
+}
+
+/**
+ * Resolve display fields from a raw /v2/leads node, alias- + case-insensitive.
+ * Composes First_Name + Last_Name when there is no single name field. A nested
+ * `lead` object is folded in with the top level winning (preserves the prior
+ * mapper's nested-object fallback). Never throws; missing fields -> "".
+ */
+export function resolveLeadFields(raw: Record<string, unknown>): ResolvedLeadFields {
+  const nested = raw.lead;
+  const merged =
+    nested && typeof nested === "object" && !Array.isArray(nested)
+      ? { ...(nested as Record<string, unknown>), ...raw }
+      : raw;
+  const norm = normalizeLeadKeys(merged);
+  const single = firstAlias(norm, NAME_ALIASES);
+  const name =
+    single ||
+    `${firstAlias(norm, FIRST_NAME_ALIASES)} ${firstAlias(norm, LAST_NAME_ALIASES)}`.trim();
+  return {
+    name,
+    company: firstAlias(norm, COMPANY_ALIASES),
+    title: firstAlias(norm, TITLE_ALIASES),
+    seniority: firstAlias(norm, SENIORITY_ALIASES),
+  };
 }
