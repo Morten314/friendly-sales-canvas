@@ -738,6 +738,8 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                 <TableHead className="w-[170px] text-xs font-semibold sticky left-0 bg-background z-10">
                   Lead
                 </TableHead>
+                <TableHead className="w-[150px] text-xs font-semibold">Title</TableHead>
+                <TableHead className="w-[120px] text-xs font-semibold">Seniority</TableHead>
                 <TableHead className="w-[130px] text-xs font-semibold">Company</TableHead>
                 {REPORT_COLUMNS.map((col) => (
                   <TableHead
@@ -783,7 +785,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
               {sortedLeads.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={REPORT_COLUMNS.length + 5}
+                    colSpan={REPORT_COLUMNS.length + 7}
                     className="text-center py-10 text-sm text-muted-foreground"
                   >
                     {baseLeads.length === 0
@@ -799,7 +801,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                 </TableRow>
               ) : (
                 sortedLeads.flatMap((lead) => {
-                  const colSpan = REPORT_COLUMNS.length + 5;
+                  const colSpan = REPORT_COLUMNS.length + 7;
                   const main = (
                     <TableRow key={`${lead.id}-main`} className="group">
                       <TableCell className="text-sm font-medium text-foreground sticky left-0 bg-background z-10">
@@ -818,6 +820,12 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                           <LeadSourceBadge source={lead.source} />
                           <UnverifiedBadge emailStatus={lead.email_status} />
                         </div>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {lead.title || "—"}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {lead.seniority || "—"}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {lead.company}
