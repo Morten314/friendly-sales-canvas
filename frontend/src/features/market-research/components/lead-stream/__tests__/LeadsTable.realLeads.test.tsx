@@ -5,12 +5,12 @@
 // tested in services/__tests__/orgLeads.test.ts; here we mock the service and
 // assert the table renders its output.
 //
-// Fix R2 (scored-row merge-path regression) — scored rows from POST
-// /leads/market-scores overwrite real-lead rows by lead_id, so they must carry
-// title/seniority (not "—"). The mapper itself (heatmapLeadFromUnknownRow producing
-// title/seniority from a raw row) is unit-tested in marketScoresHeatmap.prospect.test.ts;
-// the scored-row test below covers only the merge + render path, injecting a pre-mapped
-// scored HeatmapLead via the session cache.
+// Fix R3 (scored-row lossless-merge regression) — scored rows from POST
+// /leads/market-scores overwrite real-lead rows by lead_id, but the response (typed
+// LeadMarketScoreRow) carries no title/seniority, so the merge must backfill those
+// from the enriched real row rather than overwrite wholesale. The mapper itself
+// (heatmapLeadFromUnknownRow) is unit-tested in marketScoresHeatmap.prospect.test.ts;
+// the R3 block below drives the real fetch → map → merge path (no pre-mapped injection).
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
