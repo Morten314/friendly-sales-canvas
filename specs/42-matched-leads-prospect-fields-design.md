@@ -3,7 +3,7 @@
 **Date:** 2026-06-25
 **Spec:** 42 (pairs with `plans/42-matched-leads-prospect-fields.md`)
 **Branch:** `worktree-matched-leads-prospect-fields`
-**Status:** Draft — pre-review (brainstorming output, 2026-06-25)
+**Status:** Reviewed round 1 (`docs/reviews/42-matched-leads-prospect-fields-design-spec-review-1-glm-5.2.md`) — revised; synthesis at `…-synthesis-1.md`. One open scope question: the separate Customers Lead Stream surface (see Frontend — Lead Stream).
 **Scope:** Backend (`backend/app/services/signals/lead_map.py`) + Frontend (`frontend/src/features/signals`, `frontend/src/features/market-research`, `frontend/src/shared/lib`)
 
 > Builds directly on the RCA at `docs/reviews/matched-leads-prospect-fields-rca-2026-06-24.md` (root cause confirmed in code + live probe). This spec is the resolution of that RCA's "Option A" path, after the product decision in its §7.
@@ -12,7 +12,7 @@
 
 ## Problem
 
-Clicking **"Find Matched Leads"** on a Signal card returns results, but each matched lead shows the **company name only** — no contact-level detail (name, designation/title, seniority). The same gap appears in the **"Save as Artifact"** PDF the card produces and in the Scout / Profiler / Customers **"Lead Stream"** table. A salesperson scanning matched leads cannot tell *who* to contact.
+Clicking **"Find Matched Leads"** on a Signal card returns results, but each matched lead shows the **company name only** — no contact-level detail (name, designation/title, seniority). The same gap appears in the **"Save as Artifact"** PDF the card produces and in the Scout / Profiler **"Lead Stream"** (the market-research leads table). A salesperson scanning matched leads cannot tell *who* to contact.
 
 The prospect fields are present and fully populated in storage (live-verified: 198/198 on a CSV org, 172/172 on an Apollo org — RCA §4). They are discarded **in code**, not missing from the data.
 
@@ -51,7 +51,7 @@ Surface each matched lead's **name, title, and seniority** in three places — t
 |---|---|---|---|
 | `name` | `First_Name` + `Last_Name` (compose) | `name`, or `first_name`+`last_name` | singles: `name`, `fullname`, `contactname`, `leadname`, `personname`, `contactfullname`. Else compose first+last — first: `firstname`, `givenname`, `fname`; last: `lastname`, `surname`, `familyname`, `lname` |
 | `title` | `Job_Title` | `title` | `jobtitle`, `title`, `designation`, `position`, `jobrole` |
-| `seniority` | `Seniority_Level` | `seniority` | `senioritylevel`, `seniority`, `joblevel`, `level` |
+| `seniority` | `Seniority_Level` | `seniority` | `senioritylevel`, `seniority`, `joblevel` |
 
 `_normalize_lead_keys` lowercases and strips `_`/spaces, so `Job_Title` → `jobtitle` matches the alias. **Missing → `""`** everywhere (degrade-never-throw).
 
@@ -76,13 +76,18 @@ File: `backend/app/services/signals/lead_map.py`. **The prompt (`prompts/signals
   - line 1: `name || company || "Unknown company"` + the existing relevance badge (badge logic unchanged).
   - line 2: `[title, seniority, company].filter(Boolean).join(" · ")`.
 - **`frontend/src/features/signals/lib/signalBriefing.ts`** (`buildSignalBriefingArtefact`, `keyFindings` map) — each entry becomes a line built from non-empty parts, e.g. `"{name} — {title}, {seniority} ({company}) — Relevance: {High}: {why}"`, omitting empty segments and preserving the existing "omit `: {why}` when empty" behavior. The same `leads` array still feeds card + PDF, so `handleSaveAsArtefact` is structurally unchanged.
+  - *PII note (review F3):* the contact **name** now rides into the downloaded PDF and the artefact-library item — i.e. it enters the **saved** briefing, not just the on-screen render. This follows Spec 38's precedent that briefings carry lead data; the no-email/phone field-set and the anonymized golden-fixture guardrail still apply, and the library itself stays non-durable per Spec 38.
 - The per-lead `why` remains **PDF-only** (unchanged from Spec 38).
 
 ## Frontend — Lead Stream (separate FE-only path)
 
 - **`frontend/src/shared/lib/leadData.ts`** — `HeatmapLead` gains `title?: string | null; seniority?: string | null;` (`name` / `company` already present).
-- **`frontend/src/features/market-research/lib/marketScoresHeatmap.ts`** — add `pickTitle(raw)` / `pickSeniority(raw)` built on a **new separator/case-normalized matcher** (e.g. `pickNormalized(raw, keys)` that lowercases + strips `_`/space on both the candidate keys and the object's keys) so CSV (`Job_Title` / `Seniority_Level`) and Apollo (`title` / `seniority`) both resolve. `heatmapLeadFromV2Lead` sets the two new fields. **The existing name / company pickers are left untouched** (no behavior risk to current columns).
-- **`frontend/src/features/market-research/components/lead-stream/LeadsTable.tsx`** — add **Title** and **Seniority** columns (header + cell) in order `Lead | Title | Seniority | Company | <score columns>`, rendering `—` when empty (matches the existing unscored `—` pattern). Confirm this table is feature-local to lead-stream and not reused with a fixed column set elsewhere.
+- **`frontend/src/features/market-research/lib/marketScoresHeatmap.ts`** — add `pickTitle(raw)` / `pickSeniority(raw)` built on a **new separator/case-normalized matcher** (`pickNormalized(raw, keys)` — lowercase + strip `_`/space on both the candidate keys and the object's keys, matching by normalized **equality** (not substring) to avoid spurious matches, and preserving the existing ordered-preference + nested-`lead`-object fallback). `heatmapLeadFromV2Lead` sets the two new fields.
+  - **Also apply `pickNormalized` to the existing `pickCompanyName` / `pickLeadDisplayName` (review F1).** Today they use exact `k in o` membership with lower/camelCase keys, so the RCA's primary CSV org (`Company_Name` / `First_Name` / `Last_Name`) currently renders **blank Name + Company** in the Lead Stream — a latent gap (RCA §4/§6). Left unfixed, the post-feature row would show populated Title + Seniority next to blank Name + Company — the feature would look broken on the exact org that motivated it, and inconsistent with the Signals card (whose backend path normalizes company). Normalization is a **superset** (Apollo lowercase keys still resolve), so there is **no regression**; a test asserts both CSV TitleCase **and** Apollo lowercase resolve for name/company.
+- **`frontend/src/features/market-research/components/lead-stream/LeadsTable.tsx`** — add **Title** and **Seniority** columns (header + cell) in order `Lead | Title | Seniority | Company | <score columns>`, rendering `—` when empty (matches the existing unscored `—` pattern).
+  - **Column-count edit sites (review F2):** the empty/loading rows hardcode `REPORT_COLUMNS.length + 5` at **L786 and L802** (and L868 consumes the L802-derived `colSpan`). Adding two columns means `+ 5` → **`+ 7`** at both literal sites, or those state rows render with a mismatched `colSpan`.
+  - **Consumers (review F2):** `LeadsTable` is **not** purely feature-local — it is rendered by `ScoutLeadStream.tsx` (L6/L54), so both the **market-research** and **Scout** Lead Stream surfaces gain the columns (intended; keeps them consistent).
+- **Separate surface — NOT in this spec's concrete edits (open scope question):** `frontend/src/features/customers/components/lead-stream/LeadStream.tsx` is a **distinct** component (its own `useLeads` hook + a `Name | Company | Source | Signals` table, `colSpan=4`); it does **not** use `heatmapLeadFromV2Lead` / `LeadsTable`, and it **already shows Name + Company** (so it does not exhibit the "company-only" symptom). Surfacing Title/Seniority there would require editing that component + its `useLeads` data path separately. **Provisional decision:** treat the Customers surface as an **optional consistency follow-up**, not part of this spec — the reported symptom is the HeatmapLead/Scout Lead Stream. The user may opt to fold it in (see synthesis Open Questions).
 
 ## Data flow
 
@@ -107,7 +112,7 @@ File: `backend/app/services/signals/lead_map.py`. **The prompt (`prompts/signals
 - Existing `_leads_for_prompt_resolves_*` tests unchanged + green (prompt projection untouched).
 
 **Frontend** (Vitest):
-- `marketScoresHeatmap`: the new normalized picker resolves title + seniority from CSV (`Job_Title` / `Seniority_Level`) **and** Apollo (`title` / `seniority`); missing → empty (renders `—`).
+- `marketScoresHeatmap`: the new normalized picker resolves title + seniority from CSV (`Job_Title` / `Seniority_Level`) **and** Apollo (`title` / `seniority`); missing → empty (renders `—`). **And** (review F1) `pickCompanyName` / `pickLeadDisplayName` now resolve **both** CSV TitleCase (`Company_Name` / `First_Name`+`Last_Name`) **and** Apollo lowercase (`company_name` / `name`) — guarding the fix and its no-regression-for-Apollo guarantee.
 - `contracts`: the widened schema defaults the three new fields to `""` when absent and carries them when present.
 - `SignalCard`: a lead with name/title/seniority renders two lines (name primary; `title · seniority · company` secondary); a lead with only company falls back to company as the primary line; relevance badge unchanged.
 - `signalBriefing`: a `keyFindings` line includes name/title/seniority when present, omits empty segments, and keeps the existing omit-empty-`why` behavior.
@@ -133,5 +138,5 @@ File: `backend/app/services/signals/lead_map.py`. **The prompt (`prompts/signals
 - **Deploy:** `/signal-lead-map_claude` is already live, but this change must be **deployed** (Render redeploys from `master`) before the Signals surface shows prospects in production. The Lead Stream change is FE-only (ships with the Vercel FE deploy). The plan's "after merge" section must call both out.
 - **TD-FE-73** (FE contract reconciliation): this widens the same `SignalLeadMapResponseSchema`. Update the golden fixture in `contracts.test.ts` to include the three new fields (anonymized values, PII guardrail per Spec 38).
 - **Provenance:** the RCA `docs/reviews/matched-leads-prospect-fields-rca-2026-06-24.md` is currently **untracked in the main checkout**. Commit it alongside this feature (or remove it before the merge) per the cross-sandbox-merge note — untracked review files block a merge into the main checkout.
-- **No new deferred TD expected** — this spec *is* the resolution of the RCA's two suggested TD placeholders. If implementation reveals the Lead Stream table is reused elsewhere, or that the CSV-key case-sensitivity also affects the existing name/company columns, capture that as TD.
+- **No new deferred TD expected** — this spec *is* the resolution of the RCA's two suggested TD placeholders. (Round-1 review resolved the two "if" conditionals: the CSV-key case-sensitivity **does** affect the existing name/company columns → fixed in-scope, not deferred; and `LeadsTable` **is** reused by `ScoutLeadStream` → both surfaces updated.) The only optional follow-up is the separate Customers `LeadStream.tsx` surface (above).
 - **Related:** Spec 38 (Find Matched Leads CTA — the card/PDF this extends), Plan 36 (signal↔lead map), the live field names in the RCA §4.
