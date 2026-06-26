@@ -66,7 +66,7 @@ Resolved from the full stored lead dict already in scope, case-insensitively, fi
 | `phone` | `phone` · `Contact_Number`, `Phone`, `Phone_Number`, `mobile` |
 | `linkedin_url` | `linkedin_url` · `LinkedIn_URL`, `linkedin`, `LinkedIn` |
 
-`email_status` is populated only for Apollo-discovered leads; it will be blank for CSV-uploaded and manually-added leads. Phone is blank for most Apollo leads (phone reveal is a separate, costlier pool that discovery leaves off) and present only when the source file/record included it. These blanks are expected (decision §3).
+`email_status` is populated for Apollo-sourced leads — both the discovery and list-import paths run through the same Apollo normalizer (`normalize_apollo_record`) — and is blank only for CSV-uploaded and manually-added leads. Phone is blank for most Apollo leads (phone reveal is a separate, costlier pool that discovery leaves off) and present only when the source file/record included it. These blanks are expected (decision §3).
 
 ## Backend design
 
@@ -82,13 +82,13 @@ Resolved from the full stored lead dict already in scope, case-insensitively, fi
 **File:** `frontend/src/features/signals/contracts.ts` — widen `SignalLeadMapLeadSchema`:
 
 ```ts
-email: z.string().optional().default(""),
-email_status: z.string().optional().default(""),
-phone: z.string().optional().default(""),
-linkedin_url: z.string().optional().default(""),
+email: z.string().optional(),
+email_status: z.string().optional(),
+phone: z.string().optional(),
+linkedin_url: z.string().optional(),
 ```
 
-The schema is non-`strict()`, so this is additive and safe. These fields flow into `SignalLeadMapLead` and are consumed by the artifact builders (below). The on-screen card (`SignalCard`) is unchanged — contact fields appear only in the CSV.
+These mirror the existing Spec-42 prospect fields (`name`/`title`/`seniority`, `contracts.ts:22-24`), which are deliberately bare `.optional()` (output `string | undefined`) per the rationale documented there — so the new fields stay consistent rather than introducing a `.default("")` mix. The schema is non-`strict()`, so this is additive and safe. These fields flow into `SignalLeadMapLead` and are consumed by the artifact builders (below); the `leadToRow` mapper (F3) coerces every field to `""`, so optional/`undefined` values never reach the CSV. The on-screen card (`SignalCard`) is unchanged — contact fields appear only in the CSV.
 
 ## Frontend design
 
@@ -99,6 +99,7 @@ Mirrors `artefactPdf.ts` (blob + anchor download), so the two exports are symmet
 - `buildLeadsCsv(rows: ArtefactLeadRow[]): string`
   - Header row in the fixed column order (§column schema).
   - **RFC 4180** quoting: a field is wrapped in `"…"` when it contains `,`, `"`, `\n`, or `\r`; embedded `"` is doubled. (The `Why` rationale is free text and commonly contains commas — quoting is load-bearing.)
+  - **Formula-injection guard:** if a cell's first character is `=`, `+`, `-`, or `@`, prefix a single quote `'` (applied before RFC-4180 quoting) so spreadsheet apps don't evaluate it as a formula. `Why` is LLM-generated and `Name`/`Email`/`Company` come from external sources (Apollo, CSV upload), so RFC-4180 quoting alone does not prevent this.
   - `\r\n` line endings.
 - `generateAndDownloadCsv(artefact: ArtefactItem): void`
   - No-op if `!artefact.leadRows?.length` (see edge cases).
@@ -124,7 +125,7 @@ leadRows?: ArtefactLeadRow[];
 
 ### F3. Builders attach `leadRows` — `frontend/src/features/signals/lib/signalBriefing.ts`
 
-Both `buildSignalBriefingArtefact` and `buildRecommendationPlaybookArtefact` already receive `leads: SignalLeadMapLead[]`. Each maps that array into `leadRows: ArtefactLeadRow[]` (a small `leadToRow` helper) and sets it on the returned `ArtefactItem`. `formatLeadFinding` (the PDF line) is unchanged.
+Both `buildSignalBriefingArtefact` and `buildRecommendationPlaybookArtefact` already receive `leads: SignalLeadMapLead[]`. Each maps that array into `leadRows: ArtefactLeadRow[]` (a small `leadToRow` helper) and sets it on the returned `ArtefactItem`. **`leadToRow` coerces every column with `?? ""`** so optional/`undefined` values — including the existing `name`/`title`/`seniority` (`string | undefined`, `contracts.ts:22-24`) and the new contact fields — never become an `undefined` cell. `formatLeadFinding` (the PDF line) is unchanged.
 
 ### F4. Save handlers download the CSV too — `frontend/src/features/signals/pages/SignalsPage.tsx`
 
@@ -153,10 +154,11 @@ No backend call occurs at download time on either path; the only backend involve
 
 ## Error handling / degradation / edge cases
 
-- **Missing fields** → empty cells (degrade-never-throw end to end: backend `""`, zod `.default("")`, builder maps `""`).
+- **Missing fields** → empty cells (degrade-never-throw end to end: backend emits `""`; `leadToRow` coerces any optional/`undefined` field to `""`).
 - **0 leads** (possible for a GTM Playbook): `leadRows` is `[]`; `generateAndDownloadCsv` is a no-op and the library CSV control is hidden. The PDF + artifact still save as today.
 - **`email_status` / phone blank** for non-Apollo or non-revealed leads — expected, not an error.
 - **Commas / quotes / newlines** in `Why` (or any field) — handled by RFC-4180 quoting.
+- **Spreadsheet formula injection** — cells beginning with `=`, `+`, `-`, or `@` (e.g. an LLM `Why` or an external `Name`) are neutralized with a leading `'` so they can't execute when the file is opened.
 - **Excel encoding** — UTF-8 BOM ensures correct rendering of non-ASCII names.
 
 ## Cost & safety
@@ -171,7 +173,7 @@ This feature reads only data already stored and already enriched by the existing
 - No new external/LLM call (the join is a pure in-memory dict lookup).
 
 **Frontend**:
-- `artefactCsv`: header + exact column order; RFC-4180 quoting (field with comma, embedded quote, newline); `\r\n` endings; leading BOM; blanks for missing fields; `generateAndDownloadCsv` no-op when `leadRows` empty.
+- `artefactCsv`: header + exact column order; RFC-4180 quoting (field with comma, embedded quote, newline); `\r\n` endings; leading BOM; the formula-injection guard (a cell starting with `=`/`+`/`-`/`@` gets a leading `'`); blanks for missing fields and `undefined` prospect fields coerced to empty cells (not the literal `undefined`); `generateAndDownloadCsv` no-op when `leadRows` empty.
 - `signalBriefing`: both builders attach `leadRows` correctly mapped (incl. `relevance`, `why`, contact fields) from `leads`.
 - `SignalsPage`: saving (briefing + playbook) calls `generateAndDownloadCsv` in addition to PDF + enqueue.
 - Artifacts library: CSV control renders iff `leadRows?.length`; clicking calls `generateAndDownloadCsv`.
@@ -197,7 +199,7 @@ This feature reads only data already stored and already enriched by the existing
 - **AC1** — Saving a Signal Briefing or GTM Playbook downloads a `.csv` (in addition to the PDF) with header `Name,Title,Seniority,Company,Email,Email status,LinkedIn,Phone,Relevance,Why` and one row per matched lead.
 - **AC2** — Email / Email status / LinkedIn / Phone are populated from stored data where present and blank where not; rows without contact info are still included.
 - **AC3** — The saved artifact in the library exposes a CSV download (next to the PDF) that regenerates the same CSV; hidden when the artifact has no leads.
-- **AC4** — Fields containing commas/quotes/newlines (notably `Why`) are correctly RFC-4180 quoted; the file opens cleanly in Excel (UTF-8 BOM) including non-ASCII names.
+- **AC4** — Fields containing commas/quotes/newlines (notably `Why`) are correctly RFC-4180 quoted, and cells beginning with `=`/`+`/`-`/`@` are neutralized with a leading `'` (formula-injection guard); the file opens cleanly in Excel (UTF-8 BOM) including non-ASCII names.
 - **AC5** — No Apollo credits are spent and no LLM runs when saving an artifact or downloading a CSV; `/connectors/apollo/enrich` is never called.
 - **AC6** — Backend matched-leads enrichment carries the four new fields via pure projection (no new external call); verified by unit tests and a live response-shape check.
 
