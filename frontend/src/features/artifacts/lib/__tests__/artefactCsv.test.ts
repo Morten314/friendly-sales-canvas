@@ -58,7 +58,9 @@ describe("buildLeadsCsv", () => {
     // International phones start with '+', so the formula guard prefixes a '.
     // On plain-CSV import some apps show that apostrophe literally — an accepted
     // MVP artifact (see plan Global Constraints). Pinned here so it's intentional.
-    const cells = buildLeadsCsv([row({ phone: "+1-555-0100" })]).split("\r\n")[1].split(",");
+    const cells = buildLeadsCsv([row({ phone: "+1-555-0100" })])
+      .split("\r\n")[1]
+      .split(",");
     expect(cells[7]).toBe("'+1-555-0100"); // Phone column
   });
 
@@ -117,7 +119,7 @@ describe("generateAndDownloadCsv", () => {
         recommendations: [],
       },
       leadRows,
-    }) as ArtefactItem;
+    }) as unknown as ArtefactItem;
 
   it("is a no-op when there are no lead rows", () => {
     generateAndDownloadCsv(artefact(undefined));

@@ -183,7 +183,9 @@ describe("leadRows attachment (Spec 43 CSV export)", () => {
   });
 
   it("coerces undefined prospect/contact fields to empty strings (no undefined cells)", () => {
-    const bare: SignalLeadMapLead[] = [{ lead_id: "l2", company: "Globex", relevance: "low", why: "" }];
+    const bare: SignalLeadMapLead[] = [
+      { lead_id: "l2", company: "Globex", relevance: "low", why: "" },
+    ];
     const item = buildSignalBriefingArtefact(signal, bare);
     expect(item.leadRows).toEqual([
       {

@@ -27,7 +27,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/components/ui/use-toast";
-import { enqueueArtefact, generateAndDownloadCsv, generateAndDownloadPDF } from "@/features/artifacts";
+import {
+  enqueueArtefact,
+  generateAndDownloadCsv,
+  generateAndDownloadPDF,
+} from "@/features/artifacts";
 import { Layout } from "@/features/shell";
 import type { CompanyProfileResponse } from "@/shared/api/contracts";
 import { useAuth } from "@/shared/auth";

@@ -7,7 +7,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SignalsPage from "../SignalsPage";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { enqueueArtefact, generateAndDownloadCsv, generateAndDownloadPDF } from "@/features/artifacts";
+import {
+  enqueueArtefact,
+  generateAndDownloadCsv,
+  generateAndDownloadPDF,
+} from "@/features/artifacts";
 
 const SIGNAL = {
   id: "sig-1",
