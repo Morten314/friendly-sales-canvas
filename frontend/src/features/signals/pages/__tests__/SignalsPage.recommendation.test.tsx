@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SignalsPage from "../SignalsPage";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { enqueueArtefact, generateAndDownloadPDF } from "@/features/artifacts";
+import { enqueueArtefact, generateAndDownloadCsv, generateAndDownloadPDF } from "@/features/artifacts";
 
 const SIGNAL = {
   id: "sig-1",
@@ -75,6 +75,7 @@ vi.mock("@/shared/chat/useSignalAsk", () => ({
 vi.mock("@/features/artifacts", () => ({
   enqueueArtefact: vi.fn(),
   generateAndDownloadPDF: vi.fn(),
+  generateAndDownloadCsv: vi.fn(),
 }));
 
 function renderPage() {
@@ -116,6 +117,7 @@ describe("SignalsPage — Save recommendation as Artifact", () => {
     const item = vi.mocked(enqueueArtefact).mock.calls[0][0];
     expect(item.type).toBe("playbook");
     expect(item.id).toMatch(/^recommendation-playbook-sig-1-0-\d+$/);
+    expect(generateAndDownloadCsv).toHaveBeenCalledTimes(1);
   });
 
   it("shows the inline error and skips delivery when the backend rejects", async () => {

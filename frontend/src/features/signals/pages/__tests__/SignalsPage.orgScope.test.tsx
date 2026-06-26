@@ -79,6 +79,7 @@ vi.mock("@/shared/chat/useSignalAsk", () => ({
 vi.mock("@/features/artifacts", () => ({
   enqueueArtefact: vi.fn(),
   generateAndDownloadPDF: vi.fn(),
+  generateAndDownloadCsv: vi.fn(),
 }));
 
 function renderPage() {

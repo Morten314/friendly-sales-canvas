@@ -27,7 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/components/ui/use-toast";
-import { enqueueArtefact, generateAndDownloadPDF } from "@/features/artifacts";
+import { enqueueArtefact, generateAndDownloadCsv, generateAndDownloadPDF } from "@/features/artifacts";
 import { Layout } from "@/features/shell";
 import type { CompanyProfileResponse } from "@/shared/api/contracts";
 import { useAuth } from "@/shared/auth";
@@ -566,6 +566,7 @@ const SignalsPage = () => {
     const leads = leadsForSignal(signal.id);
     const item = buildSignalBriefingArtefact(signal, leads);
     generateAndDownloadPDF(item);
+    generateAndDownloadCsv(item);
     enqueueArtefact(item);
     toast({
       title: "Saved to Artifacts",
@@ -622,6 +623,7 @@ const SignalsPage = () => {
         generated,
       );
       generateAndDownloadPDF(artefact);
+      generateAndDownloadCsv(artefact);
       enqueueArtefact(artefact);
       toast({
         title: "Saved to Artifacts",

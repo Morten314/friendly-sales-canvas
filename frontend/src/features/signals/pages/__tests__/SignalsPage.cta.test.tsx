@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SignalsPage from "../SignalsPage";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { enqueueArtefact, generateAndDownloadPDF } from "@/features/artifacts";
+import { enqueueArtefact, generateAndDownloadCsv, generateAndDownloadPDF } from "@/features/artifacts";
 
 const SIGNAL = {
   id: "sig-1",
@@ -72,6 +72,7 @@ vi.mock("@/shared/chat/useSignalAsk", () => ({
 vi.mock("@/features/artifacts", () => ({
   enqueueArtefact: vi.fn(),
   generateAndDownloadPDF: vi.fn(),
+  generateAndDownloadCsv: vi.fn(),
 }));
 
 function renderPage() {
@@ -125,6 +126,9 @@ describe("SignalsPage — Find Matched Leads → Save", () => {
     expect(item.fullReport.keyFindings[0]).toContain("ICP match");
     // Still on the signals feed.
     expect(screen.getByText("Hiring surge")).toBeInTheDocument();
+    expect(generateAndDownloadCsv).toHaveBeenCalledTimes(1);
+    // The CSV is built from the same item as the PDF.
+    expect(vi.mocked(generateAndDownloadCsv).mock.calls[0][0].id).toBe(item.id);
   });
 
   it("opens only one leads section at a time", async () => {
