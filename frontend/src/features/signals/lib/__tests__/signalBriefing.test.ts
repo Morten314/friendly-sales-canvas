@@ -147,3 +147,81 @@ describe("buildRecommendationPlaybookArtefact", () => {
     expect(item.type).toBe("playbook"); // still a valid item
   });
 });
+
+describe("leadRows attachment (Spec 43 CSV export)", () => {
+  it("buildSignalBriefingArtefact attaches one leadRow per lead with contact fields mapped", () => {
+    const enriched: SignalLeadMapLead[] = [
+      {
+        lead_id: "l1",
+        company: "Acme",
+        relevance: "high",
+        why: "fit",
+        name: "Jane Doe",
+        title: "VP Eng",
+        seniority: "CXO",
+        email: "jane@acme.com",
+        email_status: "verified",
+        phone: "555-0100",
+        linkedin_url: "https://li/jane",
+      },
+    ];
+    const item = buildSignalBriefingArtefact(signal, enriched);
+    expect(item.leadRows).toEqual([
+      {
+        name: "Jane Doe",
+        title: "VP Eng",
+        seniority: "CXO",
+        company: "Acme",
+        email: "jane@acme.com",
+        emailStatus: "verified",
+        linkedin: "https://li/jane",
+        phone: "555-0100",
+        relevance: "high",
+        why: "fit",
+      },
+    ]);
+  });
+
+  it("coerces undefined prospect/contact fields to empty strings (no undefined cells)", () => {
+    const bare: SignalLeadMapLead[] = [{ lead_id: "l2", company: "Globex", relevance: "low", why: "" }];
+    const item = buildSignalBriefingArtefact(signal, bare);
+    expect(item.leadRows).toEqual([
+      {
+        name: "",
+        title: "",
+        seniority: "",
+        company: "Globex",
+        email: "",
+        emailStatus: "",
+        linkedin: "",
+        phone: "",
+        relevance: "low",
+        why: "",
+      },
+    ]);
+  });
+
+  it("buildRecommendationPlaybookArtefact also attaches leadRows (one per lead)", () => {
+    const item = buildRecommendationPlaybookArtefact(
+      signal,
+      { nba: "X", prompt: "" },
+      0,
+      "ans",
+      leads,
+      generated,
+    );
+    expect(item.leadRows).toHaveLength(leads.length);
+    expect(item.leadRows?.[0]).toEqual({
+      name: "",
+      title: "",
+      seniority: "",
+      company: "Acme",
+      email: "",
+      emailStatus: "",
+      linkedin: "",
+      phone: "",
+      relevance: "high",
+      why: "ICP match",
+    });
+  });
+});

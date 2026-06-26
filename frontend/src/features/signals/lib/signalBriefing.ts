@@ -4,7 +4,7 @@ import type { ComponentType } from "react";
 import type { RecommendationArtefactResponse, SignalLeadMapLead } from "../contracts";
 import type { NBAItem, SignalCard } from "../types";
 
-import type { ArtefactItem } from "@/features/artifacts";
+import type { ArtefactItem, ArtefactLeadRow } from "@/features/artifacts";
 
 interface AgentPresentation {
   agentName: string;
@@ -42,6 +42,26 @@ function formatLeadFinding(lead: SignalLeadMapLead): string {
   return lead.why ? `${head}: ${lead.why}` : head;
 }
 
+/**
+ * Map a matched lead into the all-string CSV row. Every column is coerced with
+ * `?? ""` so the optional prospect/contact fields (`string | undefined`) never
+ * become an `undefined` cell. Used by both artefact builders (Spec 43).
+ */
+function leadToRow(lead: SignalLeadMapLead): ArtefactLeadRow {
+  return {
+    name: lead.name ?? "",
+    title: lead.title ?? "",
+    seniority: lead.seniority ?? "",
+    company: lead.company ?? "",
+    email: lead.email ?? "",
+    emailStatus: lead.email_status ?? "",
+    linkedin: lead.linkedin_url ?? "",
+    phone: lead.phone ?? "",
+    relevance: lead.relevance ?? "",
+    why: lead.why ?? "",
+  };
+}
+
 /** One ArtefactItem from a signal + its matched leads (Spec 38 §5 mapping). */
 export function buildSignalBriefingArtefact(
   signal: SignalCard,
@@ -77,6 +97,7 @@ export function buildSignalBriefingArtefact(
       analysis: `These ${leads.length} leads were matched to the signal based on ICP fit and the signal's context.`,
       recommendations,
     },
+    leadRows: leads.map(leadToRow),
   };
 }
 
@@ -123,5 +144,6 @@ export function buildRecommendationPlaybookArtefact(
         `Communication Template:\n${generated.communication_template}`,
       ],
     },
+    leadRows: leads.map(leadToRow),
   };
 }
