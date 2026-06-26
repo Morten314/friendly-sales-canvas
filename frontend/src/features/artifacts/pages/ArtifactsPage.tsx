@@ -5,6 +5,7 @@ import { ArtefactStats } from "../components/ArtefactStats";
 import { FolderGrid } from "../components/FolderGrid";
 import { LibraryCard } from "../components/LibraryCard";
 import { mockArtefacts } from "../data/mockArtefacts";
+import { generateAndDownloadCsv } from "../lib/artefactCsv";
 import { generateAndDownloadPDF } from "../lib/artefactPdf";
 import { drainArtefactQueue } from "../lib/artefactQueue";
 import type { ArtefactItem } from "../types";
@@ -130,6 +131,16 @@ const ArtifactsPage = () => {
     generateAndDownloadPDF(artefact);
   };
 
+  const handleDownloadCsv = (artefact: ArtefactItem) => {
+    // Mark as viewed if it was new (mirrors the PDF download).
+    if (artefact.status === "new") {
+      setArtefacts((prev) =>
+        prev.map((a) => (a.id === artefact.id ? { ...a, status: "viewed" as const } : a)),
+      );
+    }
+    generateAndDownloadCsv(artefact);
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -178,6 +189,7 @@ const ArtifactsPage = () => {
                 onSaveEdit={handleSaveEdit}
                 onCancelEdit={handleCancelEdit}
                 onDownloadClick={handleDownloadClick}
+                onDownloadCsv={handleDownloadCsv}
                 onEditNameChange={setEditName}
               />
             ))

@@ -1,4 +1,4 @@
-import { CheckCircle, Clock, Edit, FileText, Lightbulb, Trash2 } from "lucide-react";
+import { CheckCircle, Clock, Download, Edit, FileText, Lightbulb, Trash2 } from "lucide-react";
 import type { MouseEvent } from "react";
 
 import { getStatusIcon, getTypeIcon } from "../lib/artefactPresentation";
@@ -20,6 +20,7 @@ interface LibraryCardProps {
   onSaveEdit: (id: string) => void;
   onCancelEdit: () => void;
   onDownloadClick: (artefact: ArtefactItem) => void;
+  onDownloadCsv: (artefact: ArtefactItem) => void;
   onEditNameChange: (value: string) => void;
 }
 
@@ -35,6 +36,7 @@ export const LibraryCard = ({
   onSaveEdit,
   onCancelEdit,
   onDownloadClick,
+  onDownloadCsv,
   onEditNameChange,
 }: LibraryCardProps) => {
   const TypeIcon = getTypeIcon(artefact.type);
@@ -171,6 +173,19 @@ export const LibraryCard = ({
                       <span>•</span>
                       <span>{artefact.timestamp}</span>
                     </div>
+                    {artefact.leadRows && artefact.leadRows.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDownloadCsv(artefact);
+                        }}
+                        className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                      >
+                        <Download className="h-3 w-3" />
+                        Download leads CSV ({artefact.leadRows.length})
+                      </button>
+                    ) : null}
                   </div>
                 </div>
               </div>

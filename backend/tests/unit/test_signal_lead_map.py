@@ -327,4 +327,40 @@ def test_build_map_enriches_on_cache_miss():
     assert "name" not in cached_lead
     assert "title" not in cached_lead
     assert "seniority" not in cached_lead
+    assert "email" not in cached_lead
+    assert "email_status" not in cached_lead
+    assert "phone" not in cached_lead
+    assert "linkedin_url" not in cached_lead
     claude.assert_called_once()
+
+
+def test_enrich_matched_leads_projects_contact_fields():
+    """email / email_status / phone / linkedin_url project from the joined full
+    lead dict (Apollo canonical keys + CSV TitleCase_underscore aliases); missing
+    -> ''; and email_status is blank for CSV-upload leads (no canonical key)."""
+    from app.services.signals.lead_map import _enrich_matched_leads
+    leads_by_id = {
+        # Apollo canonical keys
+        "l1": {"lead_id": "l1", "email": "a@x.com", "email_status": "verified",
+               "phone": "+1-555", "linkedin_url": "https://li/a"},
+        # CSV-upload TitleCase_underscore headers (no email_status equivalent)
+        "l2": {"lead_id": "l2", "Email_Id": "b@y.com", "Contact_Number": "555-2",
+               "LinkedIn_URL": "https://li/b"},
+        # nothing on file
+        "l3": {"lead_id": "l3"},
+    }
+    mapping = [{"signal_id": "s1", "headline": "h", "leads": [
+        {"lead_id": "l1", "company": "Acme", "relevance": "high", "why": "x"},
+        {"lead_id": "l2", "company": "Globex", "relevance": "low", "why": "y"},
+        {"lead_id": "l3", "company": "Z", "relevance": "low", "why": "z"},
+    ]}]
+    out = _enrich_matched_leads(mapping, leads_by_id)[0]["leads"]
+    assert (out[0]["email"], out[0]["email_status"], out[0]["phone"], out[0]["linkedin_url"]) == \
+        ("a@x.com", "verified", "+1-555", "https://li/a")
+    assert (out[1]["email"], out[1]["phone"], out[1]["linkedin_url"]) == \
+        ("b@y.com", "555-2", "https://li/b")
+    assert out[1]["email_status"] == ""        # CSV upload -> no canonical email_status
+    assert (out[2]["email"], out[2]["email_status"], out[2]["phone"], out[2]["linkedin_url"]) == \
+        ("", "", "", "")
+    # existing prospect/identity fields still project unchanged
+    assert out[0]["company"] == "Acme" and out[0]["relevance"] == "high"

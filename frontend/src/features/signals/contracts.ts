@@ -22,6 +22,12 @@ export const SignalLeadMapLeadSchema = z.object({
   name: z.string().optional(),
   title: z.string().optional(),
   seniority: z.string().optional(),
+  // Contact fields (Spec 43 CSV export). Bare .optional() to match the Spec-42
+  // siblings above (output `string | undefined`); leadToRow coerces to "".
+  email: z.string().optional(),
+  email_status: z.string().optional(),
+  phone: z.string().optional(),
+  linkedin_url: z.string().optional(),
 });
 
 export const SignalLeadMapEntrySchema = z.object({

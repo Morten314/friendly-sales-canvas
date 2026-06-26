@@ -537,6 +537,7 @@ with a `.../status` poll endpoint.
 ### A6. **POST `/connectors/apollo/enrich`** - Enrich Leads (background)
 - **Description**: Reveal/enrich contact details via Apollo `people/match`
 - **Returns**: `ApolloEnrichResponse`
+- **Frontend**: Not called by any frontend surface — this endpoint (and its `enrich/status` poll, A7) is backend-only and currently unreachable from the UI (verified 2026-06-26). The only UI-wired path that spends Apollo reveal credits (`people/match` / `bulk_match`) is discovery (A8); no frontend action triggers an enrich credit spend.
 
 ### A7. **GET `/connectors/apollo/enrich/status`** - Enrich Job Status
 - **Returns**: `ApolloEnrichStatusResponse`
