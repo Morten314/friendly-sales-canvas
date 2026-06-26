@@ -20,6 +20,7 @@ Every task's requirements implicitly include this section.
 - **Backend first, then frontend** (CLAUDE.md polyglot rule). Land Task 1, then build the FE. There is no auto-generated client; confirm the live `/signal-lead-map_claude` response shape with a real call after the backend redeploys (the new contact columns show blank until then — same deploy caveat as Spec 42).
 - **Column order is fixed (single source of truth):** `Name,Title,Seniority,Company,Email,Email status,LinkedIn,Phone,Relevance,Why`. (spec §2.)
 - **CSV correctness:** RFC-4180 quoting (wrap on `,` `"` CR LF; double embedded `"`), a formula-injection guard (cell starting `=`/`+`/`-`/`@` gets a leading `'`, applied **before** RFC-4180 quoting), `\r\n` row endings, and a leading UTF-8 BOM in the downloaded file. (spec §F1, AC4.)
+- **Accepted formula-guard tradeoff (plan review round 1).** On plain-CSV import, some apps render the guard's leading `'` as a literal character (it is *not* Excel's manual-entry text qualifier). The column that triggers this in real data is **Phone**: E.164 numbers (`+1-555-…`) export as `'+1-555-…`. We keep the guard **uniform** (OWASP-standard, matches the spec's settled §F1 decision; per-column exemption would need fuzzy phone-vs-formula detection) and accept the visible `'` as an MVP cosmetic artifact — the number is still readable, the data is self-/vendor-sourced, and there are 0 users. It is pinned by a Phone test in Task 3 so it is intentional, not incidental. Revisit (column-scoped policy or a TAB-prefix) only if a user reports it.
 - **Contract style:** the four new lead fields are bare `.optional()` (output `string | undefined`) to match the Spec-42 sibling prospect fields; the `leadToRow` mapper coerces every column with `?? ""` so no `undefined` cell is emitted. (synthesis §Agreed.)
 - **Cache stays narrow.** Enrichment is a post-cache projection; the cached mapping must never carry the wide shape. A backend test asserts the new keys are absent from the persisted doc.
 - **D-7 spelling:** user-facing copy uses "Artifact"; code/file identifiers keep the existing `Artefact` spelling (`ArtefactItem`, `artefactPdf.ts`, etc.). The new code uses `ArtefactLeadRow` / `artefactCsv.ts` for consistency; the user-facing CSV control label avoids both spellings ("Download leads CSV").
@@ -309,6 +310,14 @@ describe("buildLeadsCsv", () => {
     expect(cells[9]).toBe("safe"); // Why — untouched
   });
 
+  it("guards a +E.164 phone too — documented data-fidelity tradeoff (plan review r1)", () => {
+    // International phones start with '+', so the formula guard prefixes a '.
+    // On plain-CSV import some apps show that apostrophe literally — an accepted
+    // MVP artifact (see plan Global Constraints). Pinned here so it's intentional.
+    const cells = buildLeadsCsv([row({ phone: "+1-555-0100" })]).split("\r\n")[1].split(",");
+    expect(cells[7]).toBe("'+1-555-0100"); // Phone column
+  });
+
   it("renders blank cells for empty fields without writing the literal 'undefined'", () => {
     const dataRow = buildLeadsCsv([
       row({
@@ -444,6 +453,9 @@ const rowToCells = (r: ArtefactLeadRow): string[] => [
 // Sheets/LibreOffice. Prefix a single quote so it renders as literal text. The
 // `Why` text is LLM-generated and Name/Email/Company come from external sources,
 // so RFC-4180 quoting alone (below) does NOT prevent this.
+// Tradeoff: on plain-CSV import the leading ' is itself visible, so a +E.164
+// phone exports as '+1-555... — an accepted MVP artifact (see plan Global
+// Constraints), pinned by a Phone test. Kept uniform, not column-exempted.
 const guardFormula = (value: string): string => (/^[=+\-@]/.test(value) ? `'${value}` : value);
 
 // RFC-4180: wrap in double quotes when the (already formula-guarded) value
