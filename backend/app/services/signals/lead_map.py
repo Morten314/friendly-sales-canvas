@@ -99,6 +99,16 @@ _NAME_ALIASES = ("name", "fullname", "contactname", "leadname", "personname", "c
 _FIRST_NAME_ALIASES = ("firstname", "givenname", "fname")
 _LAST_NAME_ALIASES = ("lastname", "surname", "familyname", "lname")
 
+# Contact fields (Spec 43 CSV export). Same normalized-alias pattern as above:
+# keys are normalized (lowercased, non-alphanumerics stripped) before lookup, so
+# "Email_Id" -> "emailid", "Contact_Number" -> "contactnumber", "LinkedIn_URL" ->
+# "linkedinurl". Apollo leads use canonical keys (email/email_status/phone/
+# linkedin_url). email_status has no common CSV equivalent -> canonical key only.
+_EMAIL_ALIASES = ("email", "emailid", "emailaddress")
+_EMAIL_STATUS_ALIASES = ("emailstatus",)
+_PHONE_ALIASES = ("phone", "contactnumber", "phonenumber", "mobile")
+_LINKEDIN_ALIASES = ("linkedinurl", "linkedin")
+
 
 def _normalize_lead_keys(lead: Dict[str, Any]) -> Dict[str, Any]:
     """Index a lead by normalized key (lowercased, non-alphanumerics stripped).
@@ -136,7 +146,8 @@ def _resolve_contact_name(norm: Dict[str, Any]) -> str:
 def _enrich_matched_leads(
     mapping: List[Dict[str, Any]], leads_by_id: Dict[str, Dict[str, Any]]
 ) -> List[Dict[str, Any]]:
-    """Attach display-only prospect fields (name/title/seniority) to each matched
+    """Attach display-only prospect + contact fields (name/title/seniority/email/
+    email_status/phone/linkedin_url) to each matched
     lead by re-joining lead_id -> the full lead dict (alias-resolved). PURE: returns
     a new mapping so the cached narrow shape is never mutated. Never raises; an
     unknown lead_id yields empty fields. Matching is unchanged — this only widens
@@ -152,6 +163,10 @@ def _enrich_matched_leads(
                 "name": _resolve_contact_name(norm),
                 "title": _first_alias(norm, _TITLE_ALIASES),
                 "seniority": _first_alias(norm, _SENIORITY_ALIASES),
+                "email": _first_alias(norm, _EMAIL_ALIASES),
+                "email_status": _first_alias(norm, _EMAIL_STATUS_ALIASES),
+                "phone": _first_alias(norm, _PHONE_ALIASES),
+                "linkedin_url": _first_alias(norm, _LINKEDIN_ALIASES),
             })
         enriched.append({**entry, "leads": leads_out})
     return enriched
