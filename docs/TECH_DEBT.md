@@ -2,7 +2,7 @@
 
 Running list of debt items the team has consciously accepted. Each entry: what was done, what should be done, why we deferred, and the trigger that should pull it forward.
 
-Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases E and F) were removed on 2026-05-23; their IDs are not reused so commit/spec references stay traceable. TD-006 (market_scoring callers recomputing len(leads)) was resolved 2026-05-24 by Phase H Task 4. TD-007 (Phase G plan-verbatim cosmetic cruft) was resolved 2026-05-25 by Phase I commit 11/11. TD-008 (backend LOC reduction) and TD-009 (docstring/comment drift) were resolved 2026-05-25 by Phase L (audit + 7 K-tasks + I2 promotion, commit `7f169f9`). TD-010 (prompt management overhaul) was resolved 2026-05-26 by plan-13 (Phase 0 audit + render/registry infrastructure + 6 service migrations, commits `5238fb7..1c94e29`); the resolved entry is retained below with original context preserved. TD-011 (stale Claude Sonnet model pin) was resolved 2026-06-15 — `backend/app/core/config.py` now defaults to `claude-sonnet-4-6` (the Render `CLAUDE_SONNET_MODEL` env matches); the resolved entry is retained below with original context preserved.
+Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases E and F) were removed on 2026-05-23; their IDs are not reused so commit/spec references stay traceable. TD-006 (market_scoring callers recomputing len(leads)) was resolved 2026-05-24 by Phase H Task 4. TD-007 (Phase G plan-verbatim cosmetic cruft) was resolved 2026-05-25 by Phase I commit 11/11. TD-008 (backend LOC reduction) and TD-009 (docstring/comment drift) were resolved 2026-05-25 by Phase L (audit + 7 K-tasks + I2 promotion, commit `7f169f9`). TD-010 (prompt management overhaul) was resolved 2026-05-26 by plan-13 (Phase 0 audit + render/registry infrastructure + 6 service migrations, commits `5238fb7..1c94e29`); the resolved entry is retained below with original context preserved. TD-011 (stale Claude Sonnet model pin) was resolved 2026-06-15 — `backend/app/core/config.py` now defaults to `claude-sonnet-4-6` (the Render `CLAUDE_SONNET_MODEL` env matches); the resolved entry is retained below with original context preserved. TD-005 (v1 `count`-as-page-size envelope) and TD-012 (Apollo connector router doing blocking Mongo I/O on the event loop) were both resolved 2026-06-16 by Phase 37 (commits `77c7e9d`, `7fe2818`); their resolved entries are retained below with original context preserved.
 
 ---
 
@@ -18,7 +18,7 @@ Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases
 | TD-FE-6 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-6--deferred-unused-exports-srcutilsprofileracceptedicpdisplayts) |
 | TD-FE-7 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-7--deferred-unused-exports-srccomponentsui-shadcn-locked-primitives) |
 | TD-FE-8 | open | [below](#td-fe-8--knip-ignoredependencies-for-two-untraceable-packages) |
-| TD-FE-9 | open | [below](#td-fe-9--phase-2a-escape-hatches-threshold-reached-6-entries) |
+| TD-FE-9 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-9--phase-2a-escape-hatches-threshold-reached-6-entries) |
 | TD-FE-10 | open | [below](#td-fe-10--phase-2b-escape-hatches-threshold-reached-5-new-entries) |
 | TD-FE-11 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-11--orphaned-settings-company-profile-fetch-after-companyprofile-tanstack-migration) |
 | TD-FE-12 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-12--dead-tenantcontextavailabletenantssetavailabletenants-after-tenantselection-migration) |
@@ -42,11 +42,11 @@ Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases
 | TD-FE-30 | open | [below](#td-fe-30--market-size-page-level-fetchstatecache-slice-the-cascade-root-retained-in-usemarketresearchdatats) |
 | TD-FE-31 | open | [below](#td-fe-31--market-size-edit-save-retains-the-legacy-apiask-get-write-path) |
 | TD-FE-32 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-32--feature-phase-number-disagreement-master-spec-14-4-vs-featuresreadme-naming-map) |
-| TD-FE-33 | open | [below](#td-fe-33--icpmanager-read-migrated-to-useicps-legacy-localstorage-fallback--user_id-mismatch-guard-dropped) |
+| TD-FE-33 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-33--icpmanager-read-migrated-to-useicps-legacy-localstorage-fallback--user_id-mismatch-guard-dropped) |
 | TD-FE-34 | open | [below](#td-fe-34--mission-control-writemutation-paths-remain-raw-fetch) |
 | TD-FE-35 | open | [below](#td-fe-35--mission-control-client-storage-bridges-retained-as-is) |
 | TD-FE-36 | open | [below](#td-fe-36--usecompanyprofile-shared-promotion-candidate) |
-| TD-FE-37 | open | [below](#td-fe-37--datasourcesmanager-upload-helpers-shared-extraction-deferred) |
+| TD-FE-37 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-37--datasourcesmanager-upload-helpers-shared-extraction-deferred) |
 | TD-FE-38 | open | [below](#td-fe-38--mission-control-escape-hatch-typings-retained) |
 | TD-FE-39 | open | [below](#td-fe-39--relocated-connector-cluster-is-dead-code-two-datasource-shapes-not-unified) |
 | TD-FE-40 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-40--phase-6-relocated-legacy-cleanup-nits-in-mission-control) |
@@ -58,7 +58,7 @@ Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases
 | TD-FE-46 | open | [below](#td-fe-46--phase-7-stage-4-behavioral-test-covers-only-accept--reject-happy-paths-optimistic-edge-case-matrix-and-fake-timer-deadlock-unresolved) |
 | TD-FE-47 | open | [below](#td-fe-47--strategistworkspace-relocated-as-is-live-but-large-decomposition--get-chat-deferred) |
 | TD-FE-48 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-48--dealsdeals-naming-dealstsx-is-the-strategist-page-not-a-phase-12-small-page) |
-| TD-FE-49 | open | [below](#td-fe-49--signals-acceptedrejected-localstorage-is-primary-state-not-cache) |
+| TD-FE-49 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-49--signals-acceptedrejected-localstorage-is-primary-state-not-cache) |
 | TD-FE-50 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-50--signalschatcontext-sessionstorage-handoff-is-untyped) |
 | TD-FE-51 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-51--componentsmarket-research-retains-scoutchatpaneltsx--typests-legacy-residue) |
 | TD-FE-52 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-52--no-strategist-playwrightvr-journey-coverage-is-behavioral-only) |
@@ -69,7 +69,7 @@ Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases
 | TD-FE-57 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-57--phase-12-features-still-import-legacy-hooksusepagetitle) |
 | TD-FE-58 | open | [below](#td-fe-58--artefacts-cross-component-coupling-via-untyped-window-customevents) |
 | TD-FE-59 | open | [below](#td-fe-59--small-page-surfaces-are-mockplaceholder-no-backend) |
-| TD-FE-60 | open | [below](#td-fe-60--no-featuresprofiler-folder-profiler-distributed-across-three-areas) |
+| TD-FE-60 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-60--no-featuresprofiler-folder-profiler-distributed-across-three-areas) |
 | TD-FE-61 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-61--signalschatcontext-type-name-retained-after-component-renamed-to-contextchat) |
 | TD-FE-62 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-62--srcutilsleadstreamchatcontextts-remains-in-utils) |
 | TD-FE-63 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-63--componentsmarket-research-retains-6-files-after-phase-9s-partial-drain) |
@@ -339,38 +339,6 @@ listed above remained genuinely untraceable.
 
 ---
 
-## TD-FE-9 — Phase 2a escape-hatches threshold reached (6 entries)
-
-**Date logged:** 2026-05-28
-**Origin:** Spec 17 Phase 2a (plans/17-frontend-phase-2a-strict-ts.md), Step 3.
-
-**Current state:**
-`src/lib/types/escape-hatches.ts` accumulated 6 entries during Wave B's noImplicitAny annotation
-pass:
-- `UntypedReportState` — setState callback `prev`/`prevData` parameter across MarketResearch.tsx
-  and MarketEntrySection.tsx (all set*Data callbacks).
-- `UntypedUiComponent` — `uiComponents.find((comp) =>)` callback in MarketResearch.tsx.
-- `UntypedRegulatoryUpdate` — `keyDataPoints[]` (derived from `keyUpdates[]`) array items in
-  RegulatoryComplianceSection.tsx.
-- `UntypedVisualDataCard` — `visualDataCards[]` array items in RegulatoryComplianceSection.tsx.
-- `UntypedRegionData` — `regionalData[]` array items in RegulatoryComplianceSection.tsx.
-- `UntypedReportSection` — MarketEntry report-section arrays (executiveSummary paragraphs,
-  entryBarriers, competitiveDifferentiation, strategicRecommendations, riskAssessment) in
-  MarketEntrySection.tsx.
-
-**Pattern:** Backend response shapes consumed by FE before contract types are written. Wave B's
-annotation pass routed them through `Untyped*` aliases instead of inlining `any`, keeping the
-inline-`any` count from regressing past the 238 baseline (post-fix count: 223).
-
-**Why deferred:**
-Spec 17 §2.4 posture rule 3 — proper typing requires backend contracts which are not in Phase 2a
-scope.
-
-**Pull-forward trigger:** Phase 13's audit re-evaluates per master spec line 298. Backend contract
-typing (Phase ~10+) would unlock replacing these with proper types.
-
-**Owner:** TBD.
-
 ## TD-FE-10 — Phase 2b escape-hatches threshold reached (5+ new entries)
 
 **Date logged:** 2026-05-28
@@ -402,6 +370,8 @@ are still out of scope.
 
 **Pull-forward trigger:** Phase 13's audit re-evaluates per master spec line 298. Backend contract
 typing (Phase ~10+) would unlock replacing these with proper types.
+
+**Correction (2026-06-27 audit):** the file is now `src/shared/types/escape-hatches.ts` (moved from `src/lib/types/` in the Phase-10 `shared/` reorg) and holds exactly 14 `export type Untyped* = any` aliases today — no growth, no progress since logging. TD-FE-9 (the original 6 Wave-B aliases) is a strict subset of these 14 and was archived as superseded; **this entry is now the single umbrella for all 14 aliases** (removes the prior double-counting). The real fix is still gated on typed backend contracts; the aliases are consumed across ~20 modules.
 
 **Owner:** TBD.
 
@@ -459,6 +429,8 @@ Post-Phase-5, when the decomposed tab/section components are stable enough to sn
 
 **Current state:**
 5b built the market-research data layer (feature-local `contracts.ts`, `services/marketResearch.ts`, `hooks/useMarketResearch.ts`, `qk.marketResearchComponent`, MSW handlers) and corrected the E2E mock envelope to `{ status, data }`. But the page itself (`src/features/market-research/pages/MarketResearchPage.tsx`, ~7k LOC) was **not** rewired: it still holds 9 raw `fetch(` sites, the `CACHE_DURATION` 5-min localStorage cache, the `?_cb&_r` cache-busting, and the `save*ToLocalStorage` helpers. The plan's Task 6 Step 1(c) ("delete the server-data `useState`s; the hook now owns that data") was found false during execution: the six data `useState`s are **editable UI state**, not server caches — the per-component fetchers send `data: previousContext` for cascading, responses are reconciled by timestamp-merge (`isTimestampNewer`), and the states carry ~113 `setX` callsites plus full edit-history. The flat hooks model none of this; deleting the states would destroy edit/cascade/timestamp features.
+
+**Correction (2026-06-27 audit):** `MarketResearchPage.tsx` was subsequently decomposed in Phase 5; the raw-`fetch` + `CACHE_DURATION` localStorage cache + `save*ToLocalStorage` machinery this entry describes now lives in `hooks/useMarketResearchData.ts` (~6,072 LOC — see TD-FE-65), not in a ~7k-LOC page component. The substance (9 raw `fetch` sites + 5-min localStorage cache + cascade) is unchanged; only its location moved.
 
 **What it should be:**
 The page-level raw `fetch` + localStorage-cache removal moves to **5c (page decomposition)** and **5d–5h (section extraction)**. As each section is extracted to consume `useResearchComponent`/`useRegenerateResearch`, its slice of the editable-state/cascade/timestamp logic moves with it (or is intentionally dropped per its section plan), and the corresponding page `fetch` + cache machinery is deleted then. The data layer existing now already satisfies Spec 24 R3 (hooks precede section conversion).
@@ -599,36 +571,6 @@ Migrate the market-size edit-write path to a mutation hook (a POST with a JSON *
 
 ---
 
-## TD-FE-33 — ICPManager read migrated to `useICPs`; legacy localStorage-fallback + user_id-mismatch guard dropped
-
-**Date logged:** 2026-06-03
-**Origin:** Phase 6 Task 20. The task wired `ICPManager.tsx`'s ICP *read* onto the `useICPs` TanStack Query hook (and swapped its in-file `ICP`/`FitConfidence` types for the canonical `features/mission-control/types` ones). The row→`ICP` mapping + dedup-by-`id` were preserved byte-for-byte; only the source of the rows changed (two raw `fetch` GETs → the query). Writes (CRUD) stay raw `fetch` + optimistic this phase — deferred (mirror TD-FE-19/21/27/31).
-
-**Current state:**
-The old imperative loader (`loadCustomerProfileFromBackend`) carried two resilience behaviors that were **consciously dropped** in the migration; the TanStack Query cache is their replacement:
-- **Imperative localStorage-fallback-on-backend-error.** On any non-2xx / network failure (and on the "no ICPs in the API response" branch), the loader fell back to reading `customerProfile` from user-scoped localStorage and seeding `icps` from it. It also wrote loaded ICPs back to localStorage for offline access. `useICPs` (via `fetchIcpsRowsForOrg`) returns `[]` on failure with no localStorage fallback, so a backend error now yields the empty state rather than a stale-local-cache view.
-- **Cached-profile `user_id`-mismatch guard.** The loader cross-checked the API/localStorage `user_id` against `currentUser.uid` and refused to display another tenant's cached profile. That guard only gated the now-removed localStorage fallback, so it was removed with it.
-
-The cross-component `icpManagerCustomerProfileLoadFinished` dispatch (consumed by `MissionControlPage` to clear its "syncing customer profile" spinner) is **preserved** — re-fired from an effect when the query settles (success or error) or when it is disabled (no authenticated user/org). The load-side `customerProfileSaved` dispatch was **dropped**: no external listener depends on it (the page derives customer-profile completeness from its own backend read, and the `customers` `SuggestedICPCards` sibling does its own `fetchIcpsRowsForOrg` with the localStorage read only as a network-failure fallback). The write-path `customerProfileSaved` dispatches (in `handleSaveICP` / `handleDeleteICP`) are untouched.
-
-**What it should be:**
-ICP read sourced purely from the query cache (done). Offline resilience, if reintroduced, belongs in the query layer (e.g. a persisted query client / `placeholderData`) shared by all ICP consumers, not re-implemented imperatively per component. Multi-tenant cache isolation, if it matters pre-scale, belongs in the query-key scoping (already org-scoped via `qk.icps(orgId)`) rather than an ad-hoc `user_id` cross-check.
-
-**Why we deferred:**
-- MVP, 0 live users (CLAUDE.md business state) — backend-failure offline resilience and cross-tenant cache-poisoning are low-value pre-launch.
-- The parity gate for this task (journey `05-icp-create` + VR `01-mission-control-empty-icp`) exercises the happy read + empty state, not the failure/offline path, so the dropped behaviors are not under test.
-
-**What we lose by staying as-is:**
-- A backend outage now shows the empty ICP state instead of the last locally-cached ICPs.
-- No per-component `user_id` cross-check on cached ICP data (relies on the org-scoped query key for tenant isolation).
-
-**Pull-forward trigger:**
-- When offline resilience becomes a real requirement (a persisted/optimistic query layer for ICPs), or when multi-tenant cache-poisoning becomes a genuine concern (real users sharing a device/browser profile). Also revisit when the ICP *write* path is migrated to a mutation hook (the matching deferral).
-
-**Owner:** TBD.
-
----
-
 ## TD-FE-34 — mission-control write/mutation paths remain raw `fetch`
 
 **Date logged:** 2026-06-04
@@ -676,6 +618,8 @@ Continued ad-hoc client-storage coupling; inconsistent resilience model across c
 **Pull-forward trigger:**
 When the company-profile/connector writes migrate to mutations (TD-FE-34) or when offline resilience is reconsidered.
 
+**Correction (2026-06-27 audit):** the literal `company_profile_${uid}` localStorage key actually lives in `DataSourcesManager.tsx:40` (reading `companyName`/`companyUrl`), not in `CompanyProfileForm`. `CompanyProfileForm` carries a *separate* failover keyed `companyProfile` (via `getUserLocalStorage`, guarded by `localProfile.user_id === userId`). So there are **three** client-storage bridges here, not two: the DataSourcesManager `company_profile_` read, the CompanyProfileForm `companyProfile` failover, and the ConnectorApprovals `slackSourceToConnect` session bridge.
+
 **Owner:** TBD.
 
 ---
@@ -703,30 +647,6 @@ With Spec 38 (the data-layer split that resolves TD-FE-19/65) — the MR duplica
 **Owner:** TBD.
 
 **Resolved (Phase 37, partial):** the shared-promotion + consumer-repoint half is done (useCompanyProfile is in @/shared/company-profile). The remaining MR duplicate-fetch removal is blocked on the editable-state↔query decomposition (TD-FE-19/65) and is reclassified accordingly. Pull-forward: with Spec 38.
-
----
-
-## TD-FE-37 — `DataSourcesManager` upload helpers shared-extraction deferred
-
-**Date logged:** 2026-06-04
-**Origin:** Phase 6 Task 19 (R1 decision: kept the upload pipeline inline in the container rather than extracting it to a shared utility).
-
-**Current state:**
-The CSV/lead upload helpers (`uploadCsvBatch`, `validateCsvFormat`, `getLeadImportKind`, `sniffExcelBinarySignature`, drag handlers) live inline in `DataSourcesManager` — tightly coupled to auth/refresh/polling logic. No other consumer exists today.
-
-**What it should be:**
-Extracted to a shared upload utility/hook when a second consumer needs CSV ingest.
-
-**Why we deferred:**
-No second consumer yet; extraction now would be speculative (R1 from Phase 6 Task 19 design review).
-
-**What we lose by staying as-is:**
-If a second upload consumer is added, it will either duplicate the logic or reach into `DataSourcesManager` internals.
-
-**Pull-forward trigger:**
-Phase 11, or when a second upload consumer appears.
-
-**Owner:** TBD.
 
 ---
 
@@ -760,7 +680,7 @@ Phase 13 escape-hatch retyping pass, or when the backend response contracts are 
 **Origin:** Phase 6 Task 16 (extracted `components/company-profile/ConnectorApprovals.tsx` + `connectorTypes.ts`).
 
 **Current state:**
-`ConnectorApprovals.tsx` is 3,060 lines. The file's own JSDoc (line 66) documents: "KNOWN DEAD CODE (TD): the catalog/auth/config/delete dialogs have NO live [entry points] in an earlier refactor. They are preserved here AS-IS (closed -> render ... scope, deferred). The Slack OAuth callback effect DOES still run on mount." The only live path is the Slack-OAuth-return mount effect; all other catalog/add/delete/config/auth-modal handlers are unreachable from any UI trigger and have no test. The feature also defines two un-unified `DataSource` shapes: the read-list shape in `types.ts` (`DataSourceType`/`DataSourceStatus`) vs the connector-catalog shape in `connectorTypes.ts` — deliberately not consolidated because connector writes were deferred.
+`ConnectorApprovals.tsx` is ~801 lines (was 3,060 when this was logged; reduced ~73% by Phase 13's `ConnectorApprovals` decomposition — figure corrected 2026-06-27). The file's own JSDoc documents: "KNOWN DEAD CODE (TD): the catalog/auth/config/delete dialogs have NO live [entry points] in an earlier refactor. They are preserved here AS-IS (closed -> render ... scope, deferred). The Slack OAuth callback effect DOES still run on mount." The only live path is the Slack-OAuth-return mount effect; all other catalog/add/delete/config/auth-modal handlers are unreachable from any UI trigger and have no test. The feature also defines two un-unified `DataSource` shapes: the read-list shape in `types.ts` (`DataSourceType`/`DataSourceStatus`) vs the connector-catalog shape in `connectorTypes.ts` — deliberately not consolidated because connector writes were deferred.
 
 **What it should be:**
 Decide delete-vs-wire for the dead cluster; if kept, unify the `DataSource` shapes and add a Slack-OAuth mount-effect test. The connector WRITE paths, when wired, are part of the TD-FE-34 mutation pass.
@@ -769,7 +689,7 @@ Decide delete-vs-wire for the dead cluster; if kept, unify the `DataSource` shap
 Phase 6 was a parity relocation — deleting or wiring connector functionality is a product decision out of scope. The dead code is at least self-documenting (the JSDoc TD comment).
 
 **What we lose by staying as-is:**
-~3,000 lines of dead code in the tree; two `DataSource` shapes that will need reconciling when connectors are wired; no test coverage for the live Slack-OAuth effect.
+a dead connector cluster (now the bulk of the ~801-LOC file, post Phase-13 decomposition); two `DataSource` shapes that will need reconciling when connectors are wired; no test coverage for the live Slack-OAuth effect.
 
 **Pull-forward trigger:**
 When connectors become a real feature (wire + unify + test) or a dead-code sweep (delete).
@@ -917,27 +837,6 @@ Phase 13 (monster-file decomposition, Spec 14 §6.2).
 
 ---
 
-## TD-FE-49 — Signals accepted/rejected `localStorage` is primary state, not cache
-
-**Date logged:** 2026-06-05
-**Origin:** Phase 8 (signals relocation). The `signals_<uid>_accepted` / `signals_<uid>_rejected` `localStorage` keys hold the user's accept/reject decisions and are primary state, not a cache layer — so they stay on `localStorage` rather than migrating into the TanStack cache.
-
-**Current state:**
-Signal accept/reject decisions persist as `signals_<uid>_accepted` and `signals_<uid>_rejected` in `localStorage`. This is primary, user-owned state (NOT cache), so it is kept on `localStorage`. The read accessor was extracted as `useSignalAcceptance`, but the page's accept/reject write paths remain inline (see TD-FE-53).
-
-**What it should be:**
-As-is is correct for the current product scope — `localStorage` is the right home for device-local user decisions. Only a cross-device-sync requirement would change this.
-
-**Why we deferred:**
-There is no defect here; the entry exists to record that this `localStorage` usage is intentional primary state and must not be "fixed" into a cache during a data-layer pass.
-
-**Pull-forward trigger:**
-A "signal decisions sync across devices" product requirement.
-
-**Owner:** TBD.
-
----
-
 ## TD-FE-53 — Signals page data flow NOT migrated to TanStack (Phase 8 was structure-only)
 
 **Date logged:** 2026-06-05
@@ -960,27 +859,6 @@ Backend stabilization (TD-FE-13) + a dedicated signals-data-layer migration.
 ---
 
 <!-- TD-FE-60 through TD-FE-63 are Phase 9 entries. They were originally drafted as TD-FE-57–60 in plan 30, but Phase 10 (added 54–56) and Phase 12 (added 57–59) landed on master before Phase 9 merged, so they were renumbered to 60–63 at T13 reconciliation. -->
-
-## TD-FE-60 — No `features/profiler/` folder; Profiler distributed across three areas
-
-**Date logged:** 2026-06-05
-**Origin:** Phase 9 (scout + profiler extraction). Spec 30 §1.1 resolved the §3.1 open question: Profiler is **not** extracted into a standalone `features/profiler/` folder.
-
-**Current state:**
-Profiler UI is distributed across `features/customers/` (ICP Intelligence, Lead Stream, Profiler Chat), `features/mission-control/` (ICPManager, ICP wizard), and `src/shared/profiler/` (shared merge algorithm). There is intentionally no `src/features/profiler/`.
-
-**What it should be:**
-This is an accepted architectural decision, not a defect. A dedicated `features/profiler/` would only be warranted if Profiler grows a standalone, first-class surface that is not naturally co-located with customers or mission-control.
-
-**Why we deferred:**
-The asymmetry (Scout has a thin `features/scout/`; Profiler is distributed) is intentional per Spec 30 §1.1. Profiler's UI naturally co-locates with its two host surfaces. Creating a stub `features/profiler/` would add ceremony without co-location benefit.
-
-**Pull-forward trigger:**
-Profiler grows a standalone surface that is not naturally customers or mission-control territory.
-
-**Owner:** TBD.
-
----
 
 ## TD-FE-58 — Artefacts cross-component coupling via untyped `window` CustomEvents
 
@@ -1018,7 +896,7 @@ _Phase 12 note: these entries were authored as provisional TD-FE-47–49 and ren
 **Origin:** Phase 13 Stage SELECT picked this as decomposition sub-phase 13d; the 13d seam analysis found no behavior-safe structural seam (Spec 32 §5.3 / plan Task J Step 6).
 
 **Current state:**
-`frontend/src/features/market-research/hooks/useMarketResearchData.ts` is one ~6,034-LOC `export function useMarketResearchData(activeTabRef)` (~108 hook calls). A full read found that the editable-state↔`useQuery` coupling (TD-FE-19/21) pervades every cohesive slice: five parallel per-component editable-state clusters, five `fetch*` functions that write those clusters directly, and a loading-phase state machine (`validateAllComponentsHaveFreshData` / `startRenderingPhase`) that **reads the editable data states to decide phase transitions** — that read IS the coupling. Only ~93 LOC of truly pure helpers (`transformReportData`, `formatTimestamp`, `getDefaultRegulatoryData`) are independent of the coupling (~1.5% of the file); the `getInitial*` initializers (~330 LOC) and `saveX` callbacks (~120 LOC) sit on the editable-state initializer/persistence seam and are unsafe to extract.
+`frontend/src/features/market-research/hooks/useMarketResearchData.ts` is one ~6,034-LOC `export function useMarketResearchData(activeTabRef)` (~108 hook calls). A full read found that the editable-state↔fetch-cascade coupling (TD-FE-19/21) pervades every cohesive slice (note: the hook itself has **no** `useQuery` — the TanStack queries live in the section components; the coupling is editable-state ↔ imperative fetch-cascade ↔ loading-phase machine): five parallel per-component editable-state clusters, five `fetch*` functions that write those clusters directly, and a loading-phase state machine (`validateAllComponentsHaveFreshData` / `startRenderingPhase`) that **reads the editable data states to decide phase transitions** — that read IS the coupling. Only ~93 LOC of truly pure helpers (`transformReportData`, `formatTimestamp`, `getDefaultRegulatoryData`) are independent of the coupling (~1.5% of the file); the `getInitial*` initializers (~330 LOC) and `saveX` callbacks (~120 LOC) sit on the editable-state initializer/persistence seam and are unsafe to extract.
 
 **Why deferred:**
 Phase 13 decomposition is behavior-preserving structural splitting only (Spec 32 §5.2/§5.3). Extracting the entangled clusters requires a data-layer rewrite (separating the server-cache/query layer from the editable draft state) — a logic change, out of scope. Extracting only the ~93 LOC of pure helpers would not move the needle on the monster file and adds import churn for negligible benefit, so the whole file was deferred rather than force a split (this mirrors the Phase 5/8 editable-state-blocks-`useQuery` deferrals).
@@ -1064,6 +942,8 @@ and out of scope for the batch fix.
 
 **Pull-forward trigger:** a production 502 on a cold-start batch, a paid Render
 plan (no spin-down), or migrating the streaming `/chat/` path onto `/api`.
+
+**Correction (2026-06-27 audit):** only **two** residual direct-backend callsites remain, both streaming `/chat/` (`ChatWithScout` + `StrategistWorkspace`). The `/ask` (`AIPromptingInterface`) and `/profile/company` (`RegulatoryComplianceSection`) callsites listed above have since moved onto `buildApiUrl`/`/api` (a grep for ``BACKEND_BASE_URL}/(ask|profile)`` now returns nothing). The two streaming holdouts need an SSE-aware `/api` transport; the cold-start-margin half is unchanged.
 
 **Owner:** TBD.
 
@@ -1154,6 +1034,8 @@ confirm the per-entry/per-lead sub-shapes empirically.
 **Why deferred:** the removal touches `DataSourcesManager.tsx` (~1k LOC) and sits outside Task 8's scope (which targeted `useDocumentSync`'s `_isSaving`, not the manager's call sites); the plan explicitly sanctioned the no-op branch.
 
 **Pull-forward trigger:** the next change that touches `DataSourcesManager.tsx`, or the mission-control write/mutation-hook pass (see TD-FE-34).
+
+**Correction (2026-06-27 audit):** the count is **7** `setIsSaving(...)` call sites in `DataSourcesManager.tsx` plus 1 destructure of the setter — the title's "8" counted the destructure as a call site. `DataSourcesManager.tsx` is now ~1,623 LOC. Scope is otherwise unchanged (behaviour-preserving dead-code removal).
 
 **Owner:** TBD.
 

@@ -1166,3 +1166,143 @@ Spec 14 §12 rescope (doc-only).
 **Resolved (Phase 37, 2026-06-16):** closed as a Phase-8 delta — the code disposition was already done (`Deals.tsx` → `features/strategist/pages/StrategistPage.tsx`, with `/deals` redirecting to `/your-ai-team/strategist/workspace`). The frozen Spec 14 §12 is intentionally left as-is (specs are a frozen record of intent); this entry is the standing record that `Deals.tsx` is Phase-8 strategist territory, not a Phase-12 small page. No Phase-37 commit. Original entry preserved above.
 
 ---
+
+## TD-FE-9 — Phase 2a escape-hatches threshold reached (6 entries)
+
+**Date logged:** 2026-05-28
+**Origin:** Spec 17 Phase 2a (plans/17-frontend-phase-2a-strict-ts.md), Step 3.
+
+**Current state:**
+`src/lib/types/escape-hatches.ts` accumulated 6 entries during Wave B's noImplicitAny annotation
+pass:
+- `UntypedReportState` — setState callback `prev`/`prevData` parameter across MarketResearch.tsx
+  and MarketEntrySection.tsx (all set*Data callbacks).
+- `UntypedUiComponent` — `uiComponents.find((comp) =>)` callback in MarketResearch.tsx.
+- `UntypedRegulatoryUpdate` — `keyDataPoints[]` (derived from `keyUpdates[]`) array items in
+  RegulatoryComplianceSection.tsx.
+- `UntypedVisualDataCard` — `visualDataCards[]` array items in RegulatoryComplianceSection.tsx.
+- `UntypedRegionData` — `regionalData[]` array items in RegulatoryComplianceSection.tsx.
+- `UntypedReportSection` — MarketEntry report-section arrays (executiveSummary paragraphs,
+  entryBarriers, competitiveDifferentiation, strategicRecommendations, riskAssessment) in
+  MarketEntrySection.tsx.
+
+**Pattern:** Backend response shapes consumed by FE before contract types are written. Wave B's
+annotation pass routed them through `Untyped*` aliases instead of inlining `any`, keeping the
+inline-`any` count from regressing past the 238 baseline (post-fix count: 223).
+
+**Why deferred:**
+Spec 17 §2.4 posture rule 3 — proper typing requires backend contracts which are not in Phase 2a
+scope.
+
+**Pull-forward trigger:** Phase 13's audit re-evaluates per master spec line 298. Backend contract
+typing (Phase ~10+) would unlock replacing these with proper types.
+
+**Owner:** TBD.
+
+**Resolved (2026-06-27, audit):** superseded by / consolidated into **TD-FE-10**. The file moved to `src/shared/types/escape-hatches.ts` (Phase-10 `shared/` reorg) and TD-FE-10 now tracks all 14 `Untyped* = any` aliases — these 6 Wave-B entries are a strict subset. Closed here to remove the double-counting; the underlying typed-backend-contracts debt lives on under TD-FE-10 (still open).
+
+---
+
+## TD-FE-33 — ICPManager read migrated to `useICPs`; legacy localStorage-fallback + user_id-mismatch guard dropped
+
+**Date logged:** 2026-06-03
+**Origin:** Phase 6 Task 20. The task wired `ICPManager.tsx`'s ICP *read* onto the `useICPs` TanStack Query hook (and swapped its in-file `ICP`/`FitConfidence` types for the canonical `features/mission-control/types` ones). The row→`ICP` mapping + dedup-by-`id` were preserved byte-for-byte; only the source of the rows changed (two raw `fetch` GETs → the query). Writes (CRUD) stay raw `fetch` + optimistic this phase — deferred (mirror TD-FE-19/21/27/31).
+
+**Current state:**
+The old imperative loader (`loadCustomerProfileFromBackend`) carried two resilience behaviors that were **consciously dropped** in the migration; the TanStack Query cache is their replacement:
+- **Imperative localStorage-fallback-on-backend-error.** On any non-2xx / network failure (and on the "no ICPs in the API response" branch), the loader fell back to reading `customerProfile` from user-scoped localStorage and seeding `icps` from it. It also wrote loaded ICPs back to localStorage for offline access. `useICPs` (via `fetchIcpsRowsForOrg`) returns `[]` on failure with no localStorage fallback, so a backend error now yields the empty state rather than a stale-local-cache view.
+- **Cached-profile `user_id`-mismatch guard.** The loader cross-checked the API/localStorage `user_id` against `currentUser.uid` and refused to display another tenant's cached profile. That guard only gated the now-removed localStorage fallback, so it was removed with it.
+
+The cross-component `icpManagerCustomerProfileLoadFinished` dispatch (consumed by `MissionControlPage` to clear its "syncing customer profile" spinner) is **preserved** — re-fired from an effect when the query settles (success or error) or when it is disabled (no authenticated user/org). The load-side `customerProfileSaved` dispatch was **dropped**: no external listener depends on it (the page derives customer-profile completeness from its own backend read, and the `customers` `SuggestedICPCards` sibling does its own `fetchIcpsRowsForOrg` with the localStorage read only as a network-failure fallback). The write-path `customerProfileSaved` dispatches (in `handleSaveICP` / `handleDeleteICP`) are untouched.
+
+**What it should be:**
+ICP read sourced purely from the query cache (done). Offline resilience, if reintroduced, belongs in the query layer (e.g. a persisted query client / `placeholderData`) shared by all ICP consumers, not re-implemented imperatively per component. Multi-tenant cache isolation, if it matters pre-scale, belongs in the query-key scoping (already org-scoped via `qk.icps(orgId)`) rather than an ad-hoc `user_id` cross-check.
+
+**Why we deferred:**
+- MVP, 0 live users (CLAUDE.md business state) — backend-failure offline resilience and cross-tenant cache-poisoning are low-value pre-launch.
+- The parity gate for this task (journey `05-icp-create` + VR `01-mission-control-empty-icp`) exercises the happy read + empty state, not the failure/offline path, so the dropped behaviors are not under test.
+
+**What we lose by staying as-is:**
+- A backend outage now shows the empty ICP state instead of the last locally-cached ICPs.
+- No per-component `user_id` cross-check on cached ICP data (relies on the org-scoped query key for tenant isolation).
+
+**Pull-forward trigger:**
+- When offline resilience becomes a real requirement (a persisted/optimistic query layer for ICPs), or when multi-tenant cache-poisoning becomes a genuine concern (real users sharing a device/browser profile). Also revisit when the ICP *write* path is migrated to a mutation hook (the matching deferral).
+
+**Owner:** TBD.
+
+**Resolved (2026-06-27, audit):** the ICP *read* migration is complete and this entry is a record of consciously-dropped behaviors, not pending work — `ICPManager.tsx` reads via `useICPs` with no read-side `fetch`/localStorage (verified). The dropped offline-fallback / `user_id` guard are intentional and conditional (only a real offline-resilience or shared-device requirement would reintroduce them, in the query layer); the ICP *write*-path migration is tracked separately under **TD-FE-34**. No standing action remains in this entry.
+
+---
+
+## TD-FE-37 — `DataSourcesManager` upload helpers shared-extraction deferred
+
+**Date logged:** 2026-06-04
+**Origin:** Phase 6 Task 19 (R1 decision: kept the upload pipeline inline in the container rather than extracting it to a shared utility).
+
+**Current state:**
+The CSV/lead upload helpers (`uploadCsvBatch`, `validateCsvFormat`, `getLeadImportKind`, `sniffExcelBinarySignature`, drag handlers) live inline in `DataSourcesManager` — tightly coupled to auth/refresh/polling logic. No other consumer exists today.
+
+**What it should be:**
+Extracted to a shared upload utility/hook when a second consumer needs CSV ingest.
+
+**Why we deferred:**
+No second consumer yet; extraction now would be speculative (R1 from Phase 6 Task 19 design review).
+
+**What we lose by staying as-is:**
+If a second upload consumer is added, it will either duplicate the logic or reach into `DataSourcesManager` internals.
+
+**Pull-forward trigger:**
+Phase 11, or when a second upload consumer appears.
+
+**Owner:** TBD.
+
+**Resolved (2026-06-27, audit):** the inline-coupling concern is gone — the upload helpers were extracted out of the `DataSourcesManager` container into sibling modules `data-sources/csvHelpers.ts` + `data-sources/useLeadStream.ts` during Phase 13b (verified; the named helpers are no longer inline in `DataSourcesManager.tsx`). The original "promote to a *cross-feature* shared util" was always gated on a second CSV-ingest consumer, which still does not exist (YAGNI); if one appears, promoting these now-isolated modules is a trivial move, not standing debt. Closed.
+
+---
+
+## TD-FE-49 — Signals accepted/rejected `localStorage` is primary state, not cache
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 8 (signals relocation). The `signals_<uid>_accepted` / `signals_<uid>_rejected` `localStorage` keys hold the user's accept/reject decisions and are primary state, not a cache layer — so they stay on `localStorage` rather than migrating into the TanStack cache.
+
+**Current state:**
+Signal accept/reject decisions persist as `signals_<uid>_accepted` and `signals_<uid>_rejected` in `localStorage`. This is primary, user-owned state (NOT cache), so it is kept on `localStorage`. The read accessor was extracted as `useSignalAcceptance`, but the page's accept/reject write paths remain inline (see TD-FE-53).
+
+**What it should be:**
+As-is is correct for the current product scope — `localStorage` is the right home for device-local user decisions. Only a cross-device-sync requirement would change this.
+
+**Why we deferred:**
+There is no defect here; the entry exists to record that this `localStorage` usage is intentional primary state and must not be "fixed" into a cache during a data-layer pass.
+
+**Pull-forward trigger:**
+A "signal decisions sync across devices" product requirement.
+
+**Owner:** TBD.
+
+**Resolved (2026-06-27, audit):** confirmed working-as-intended — `signals_<uid>_accepted/_rejected` localStorage is the correct home for device-local user decisions (this entry was always a "do not 'fix' this into a cache" marker, not a defect). Only a cross-device-sync product requirement would change it. The page's still-inline accept/reject *write* paths are tracked under **TD-FE-53**, not here. Closed as a recorded accepted decision.
+
+---
+
+## TD-FE-60 — No `features/profiler/` folder; Profiler distributed across three areas
+
+**Date logged:** 2026-06-05
+**Origin:** Phase 9 (scout + profiler extraction). Spec 30 §1.1 resolved the §3.1 open question: Profiler is **not** extracted into a standalone `features/profiler/` folder.
+
+**Current state:**
+Profiler UI is distributed across `features/customers/` (ICP Intelligence, Lead Stream, Profiler Chat), `features/mission-control/` (ICPManager, ICP wizard), and `src/shared/profiler/` (shared merge algorithm). There is intentionally no `src/features/profiler/`.
+
+**What it should be:**
+This is an accepted architectural decision, not a defect. A dedicated `features/profiler/` would only be warranted if Profiler grows a standalone, first-class surface that is not naturally co-located with customers or mission-control.
+
+**Why we deferred:**
+The asymmetry (Scout has a thin `features/scout/`; Profiler is distributed) is intentional per Spec 30 §1.1. Profiler's UI naturally co-locates with its two host surfaces. Creating a stub `features/profiler/` would add ceremony without co-location benefit.
+
+**Pull-forward trigger:**
+Profiler grows a standalone surface that is not naturally customers or mission-control territory.
+
+**Owner:** TBD.
+
+**Resolved (2026-06-27, audit):** confirmed accepted architectural decision (Spec 30 §1.1 / ADR-0006), not a defect — there is intentionally no `features/profiler/`; Profiler lives across `features/customers/`, `features/mission-control/`, and `src/shared/profiler/` (verified — no `profiler/` feature dir exists). The pull-forward (Profiler grows a standalone surface) has not occurred. Closed as a recorded accepted decision.
+
+---
