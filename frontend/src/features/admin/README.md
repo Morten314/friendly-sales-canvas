@@ -22,8 +22,7 @@ caller's Firebase ID token on those calls, and the backend verifies it
 verified email is on the backend operator allowlist — so for those endpoints the
 guard is a real boundary, not cosmetic. The reused parity/inspection endpoints
 (`/org`, `/v2/leads`, …) remain open per the global backend posture. Roster
-changes touch **both** allowlists (FE `adminAllowlist.ts` + BE `auth.ADMIN_EMAILS`)
-and require a commit + redeploy.
+changes touch **both** allowlists (FE `adminAllowlist.ts` + BE `auth.ADMIN_EMAILS`); a push to `master` auto-deploys both (Vercel + Render).
 
 ## Key files
 

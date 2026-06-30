@@ -27,7 +27,7 @@ swagger UI and `/openapi.json` return 200).
 | `name`         | `brewera` — **stale, see discrepancy note below**  |
 | `runtime`      | `python`                                           |
 | `plan`         | `free`                                             |
-| `autoDeploy`   | `false` (manual redeploys via the Render dashboard)|
+| `autoDeploy`   | `false` in `render.yaml` — **stale**; live service auto-deploys on push to `master` |
 | `buildCommand` | `pip install -r requirements.txt`                  |
 | `startCommand` | `uvicorn main:app --host 0.0.0.0 --port $PORT`     |
 
@@ -35,9 +35,11 @@ swagger UI and `/openapi.json` return 200).
 > would map to `brewera.onrender.com`), but the live backend serves from
 > `brewra-gtm-intelligence.onrender.com`. The running service was renamed /
 > recreated on the Render dashboard during the host repoint; the committed
-> `render.yaml` is stale and is **not** the source of truth for the live deploy
-> (`autoDeploy: false`, manual). Verify the real service name on the dashboard
-> before relying on `render.yaml`.
+> `render.yaml` is stale and is **not** the source of truth for the live deploy:
+> its `name: brewera` and `autoDeploy: false` are both wrong for the running
+> service, which serves from `brewra-gtm-intelligence.onrender.com` and
+> **auto-deploys on push to `master`** (same as Vercel for the FE). Verify the
+> real service config on the dashboard before relying on `render.yaml`.
 
 **Path / routes.** No URL path prefix — endpoints live at the domain root
 (`/signal_ask_claude`, `/generate-signals-batch_claude`, `/icp-research_claude`,
