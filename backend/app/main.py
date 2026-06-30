@@ -213,3 +213,7 @@ app.include_router(market_scoring.router)
 from app.routers import connectors
 
 app.include_router(connectors.router)
+
+from app.routers import admin
+
+app.include_router(admin.router, prefix="/admin")
