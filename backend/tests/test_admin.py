@@ -3,6 +3,10 @@ import asyncio
 from contextlib import contextmanager
 from unittest.mock import MagicMock
 
+import pytest
+
+from app.core.exceptions import AuthenticationError, AuthorizationError
+
 
 @contextmanager
 def _override(provider, instance):
@@ -26,6 +30,19 @@ def _mongo_with_org_docs(orgs_doc, users_doc):
     mongo = MagicMock()
     mongo.__getitem__.return_value = db  # mongo["Org_Management"] -> db
     return mongo
+
+
+@pytest.fixture(autouse=True)
+def _allow_admin():
+    """Endpoint tests target an allowlisted operator — override the Firebase
+    verify dependency so they exercise the handler, not the auth gate. The
+    verification/allowlist logic itself is unit-tested in test_require_admin_*."""
+    from app.main import app
+    from app.core.auth import require_admin
+
+    app.dependency_overrides[require_admin] = lambda: {"email": "gaurav@brewra.com"}
+    yield
+    app.dependency_overrides.pop(require_admin, None)
 
 
 def test_admin_orgs_returns_orgs_with_user_counts(client):
@@ -150,3 +167,41 @@ def test_admin_health_gives_llm_a_longer_timeout_than_connectivity(client, monke
     assert resp.status_code == 200
     assert captured["mongo"] == captured["neo4j"] == captured["pinecone"]
     assert captured["llm"] > captured["mongo"]
+
+
+def test_require_admin_allows_allowlisted_email(monkeypatch):
+    import app.core.auth as auth_mod
+
+    monkeypatch.setattr(
+        auth_mod, "verify_firebase_id_token", lambda _t: {"email": "Gaurav@Brewra.com"}
+    )
+    claims = auth_mod.require_admin("Bearer faketoken")
+    assert claims["email"].lower() == "gaurav@brewra.com"
+
+
+def test_require_admin_rejects_non_allowlisted_email(monkeypatch):
+    import app.core.auth as auth_mod
+
+    monkeypatch.setattr(
+        auth_mod, "verify_firebase_id_token", lambda _t: {"email": "stranger@example.com"}
+    )
+    with pytest.raises(AuthorizationError):
+        auth_mod.require_admin("Bearer faketoken")
+
+
+def test_require_admin_rejects_missing_bearer():
+    from app.core.auth import require_admin
+
+    with pytest.raises(AuthenticationError):
+        require_admin("")
+
+
+def test_admin_allowlist_contains_all_operators():
+    from app.core.auth import ADMIN_EMAILS
+
+    assert {
+        "gaurav@brewra.com",
+        "shilpa@brewra.com",
+        "ishani@brewra.com",
+        "mortenevensen@brewra.com",
+    } <= ADMIN_EMAILS

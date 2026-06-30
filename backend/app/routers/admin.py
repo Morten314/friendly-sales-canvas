@@ -4,6 +4,7 @@ from typing import Callable, Dict, List
 
 from fastapi import APIRouter, Depends
 
+from app.core.auth import require_admin
 from app.core.dependencies import (
     get_llm2,
     get_mongo,
@@ -19,7 +20,9 @@ from app.services.admin import (
     probe_pinecone,
 )
 
-router = APIRouter(tags=["admin"])
+# Every /admin route requires a verified, allowlisted Firebase operator. This is
+# the one backend-enforced surface (spec 44 / TD-FE-79); reused endpoints stay open.
+router = APIRouter(tags=["admin"], dependencies=[Depends(require_admin)])
 
 # Connectivity pings (Mongo/Neo4j/Pinecone) are sub-second; the LLM probe issues a
 # real generation against the production model (get_llm2 -> Qwen3-235B), which is

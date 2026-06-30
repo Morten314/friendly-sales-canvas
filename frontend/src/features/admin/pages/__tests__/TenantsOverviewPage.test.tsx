@@ -3,11 +3,13 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import TenantsOverviewPage from "../TenantsOverviewPage";
 
 import { server } from "@/test/msw/server";
+
+vi.mock("@/shared/auth/firebase", () => ({ auth: { currentUser: null } }));
 
 function renderPage(node: ReactNode) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });

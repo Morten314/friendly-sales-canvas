@@ -12,18 +12,34 @@ import {
   type SystemHealth,
 } from "../types";
 
-import { apiGet, apiPost } from "@/shared/api/client";
+import { apiGet, apiPost, apiRequest } from "@/shared/api/client";
 import { paginatedSchema } from "@/shared/api/pagination";
+import { auth } from "@/shared/auth/firebase";
 
 const enc = encodeURIComponent;
 const Unknown = z.unknown();
 
-export function fetchAdminOrgs(): Promise<AdminOrgSummary[]> {
-  return apiGet("admin/orgs", AdminOrgListSchema as ZodType<AdminOrgSummary[]>);
+// The two /admin/* endpoints are the only backend-enforced surface (spec 44 /
+// TD-FE-79): they require a verified Firebase ID token from an allowlisted
+// operator. Attach it here; the reused parity/inspection endpoints stay open.
+async function adminAuthHeaders(): Promise<Record<string, string>> {
+  const user = auth.currentUser;
+  if (!user) return {};
+  return { Authorization: `Bearer ${await user.getIdToken()}` };
 }
 
-export function fetchSystemHealth(): Promise<SystemHealth> {
-  return apiGet("admin/health", SystemHealthSchema);
+export async function fetchAdminOrgs(): Promise<AdminOrgSummary[]> {
+  return apiRequest("admin/orgs", AdminOrgListSchema as ZodType<AdminOrgSummary[]>, {
+    method: "GET",
+    headers: await adminAuthHeaders(),
+  });
+}
+
+export async function fetchSystemHealth(): Promise<SystemHealth> {
+  return apiRequest("admin/health", SystemHealthSchema, {
+    method: "GET",
+    headers: await adminAuthHeaders(),
+  });
 }
 
 const RegistrationPageSchema = paginatedSchema(RegistrationSchema);
