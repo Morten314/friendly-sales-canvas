@@ -44,6 +44,7 @@ def test_admin_orgs_returns_orgs_with_user_counts(client):
     assert sorted(by_id["o1"]["user_ids"]) == ["u1", "u2"]
     assert by_id["o2"]["org_name"] is None
     assert by_id["o2"]["user_count"] == 1
+    assert sorted(by_id["o2"]["user_ids"]) == ["u3"]
 
 
 def test_admin_orgs_empty_when_no_orgs_doc(client):
