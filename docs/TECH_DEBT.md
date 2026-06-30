@@ -1131,3 +1131,29 @@ internationalisation pass.
 prioritized.
 
 **Owner:** TBD.
+
+## TD-FE-79 — internal `/admin/*` endpoints are unauthenticated; `AdminGuard` is a cosmetic client-side allowlist
+
+**Date logged:** 2026-06-30
+**Origin:** Spec/Plan 44 (internal ops console). Spec §3 mandated recording this accepted
+compromise; the plan did not carry it as a task, so it is logged here at impl review.
+
+**Current state:** `GET /admin/orgs` and `GET /admin/health` (`backend/app/routers/admin.py`)
+mount with no auth — like every other endpoint, the backend trusts client-supplied params and
+validates no token. The frontend `AdminGuard` (`features/admin/guards/AdminGuard.tsx`) gates
+`/admin/*` by checking `useAuth().currentUser.email` against a hardcoded `adminAllowlist.ts`
+set, but this is **cosmetic**: it only stops a logged-in customer from *accidentally* landing
+on the console. Anyone can call the `/admin/*` endpoints directly.
+
+**What it should be:** a backend-enforced allowlist (the admin endpoints reject non-staff
+callers server-side), so the guard is a real authorization boundary rather than a UI hint.
+
+**Why deferred:** consistent with the repo's MVP posture (0 live users; the whole backend
+trusts client IDs — see the §2.2 security backlog and the CORS `allow_origins=["*"]` debt).
+Hardening one feature's endpoints in isolation buys nothing while the rest stay open.
+
+**Pull-forward trigger:** the first real users, or any general backend-authz pass — whichever
+comes first. At that point the `/admin/*` surface must move behind server-side auth before the
+console is exposed publicly.
+
+**Owner:** TBD.
