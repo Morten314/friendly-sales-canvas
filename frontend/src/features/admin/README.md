@@ -35,6 +35,8 @@ commit + redeploy.
 
 - Org/user **write** actions (create org, connect user→org, lookup) live on
   the Tenants overview toolbar.
-- Inspection tabs: Company Profile, Customer Profiles, Leads, Documents. Data
-  Sources is omitted — no org-scoped _list_ endpoint exists (`data_sources.py`
-  is upload/status only).
+- Inspection tabs: Company Profile, Customer Profiles, Leads, Documents. A
+  separate Data Sources tab is omitted — the org's uploaded documents (its data
+  sources) are already listed in the Documents tab via
+  `GET /api/v2/user-documents?org_id=`; `data_sources.py` otherwise exposes only
+  upload/status/delete, no further org-scoped _list_.
