@@ -22,6 +22,7 @@
 - **FE import rule:** cross-feature imports go through a feature's `index.ts` only (enforced by `import-x`). Admin imports shared code from `@/shared/*` and `@/features/shell`.
 - **Auth reality:** the backend does not validate auth; the admin email allowlist is a cosmetic client-side guardrail, not a security boundary (spec §3). Do not add backend authz.
 - **MongoDB org store shape (verified):** DB `Org_Management`; collection `orgs` is a single doc `{_id:"orgs", org_list:[org_id,...], org_names:{org_id:name}, created_at, updated_at}`; collection `users` is a single doc `{_id:"users", user_mappings:{user_id:org_id}, ...}`.
+- **Abort condition:** if a new endpoint's live shape can't be confirmed (Task 1 step 8 / Task 2 step 6) or a reused endpoint returns an unexpected 4xx, **stop and report** — do not guess the contract. The mandated `executing-plans` / `subagent-driven-development` skills report-and-wait on failure by default; this names the explicit trigger.
 
 ---
 
@@ -578,6 +579,7 @@ In `frontend/src/shared/api/queryKeys.ts`, add these entries to the `qk` object 
   adminCompanyProfile: (orgId: string) => ["admin", "company-profile", orgId] as const,
   adminCustomerProfiles: (orgId: string) => ["admin", "customer-profiles", orgId] as const,
   adminOrgLeads: (orgId: string) => ["admin", "org-leads", orgId] as const,
+  adminUserDocuments: (orgId: string) => ["admin", "user-documents", orgId] as const,
 ```
 
 - [ ] **Step 3: Typecheck + format**
@@ -736,7 +738,7 @@ git commit -m "feat(fe): add admin email-allowlist route guard"
 
 **Interfaces:**
 - Consumes: `apiGet`/`apiPost` from `@/shared/api/client`; `paginatedSchema` from `@/shared/api/pagination`; schemas from `../types`.
-- Produces: `fetchAdminOrgs()`, `fetchSystemHealth()`, `fetchRegistrations(limit, offset)`, `createRegistration(body)`, `createOrg(orgName)`, `connectUserToOrg(userId, orgId)`, `lookupOrgByUser(userId)`, `fetchCompanyProfile(orgId)`, `fetchCustomerProfiles(orgId)`, `fetchOrgLeads(userIds)`.
+- Produces: `fetchAdminOrgs()`, `fetchSystemHealth()`, `fetchRegistrations(limit, offset)`, `createRegistration(body)`, `createOrg(orgName)`, `connectUserToOrg(userId, orgId)`, `lookupOrgByUser(userId)`, `fetchCompanyProfile(orgId)`, `fetchCustomerProfiles(orgId)`, `fetchOrgLeads(orgId)`, `fetchUserDocuments(orgId)`.
 
 - [ ] **Step 1: Write the services**
 
@@ -803,13 +805,21 @@ export function fetchCustomerProfiles(orgId: string): Promise<unknown> {
   return apiGet(`customer_profile?org_id=${enc(orgId)}`, Unknown);
 }
 
-export async function fetchOrgLeads(userIds: string[]): Promise<unknown[]> {
-  // /leads is keyed by user_id; fan out across the org's users and concatenate
-  // client-side (spec §5 A+B). Many-user orgs are an accepted MVP limitation.
-  const pages = await Promise.all(
-    userIds.map((uid) => apiGet(`leads?user_id=${enc(uid)}`, z.array(Unknown))),
+export function fetchOrgLeads(orgId: string): Promise<unknown[]> {
+  // Leads are ORG-scoped. Use the v2 paginated envelope — NOT the
+  // deprecated/500-capped v1 `GET /leads` (which also requires org_id, not
+  // user_id). First page only; the ops view is a spot-check, not an export.
+  return apiGet(`v2/leads?org_id=${enc(orgId)}&limit=500&offset=0`, paginatedSchema(Unknown)).then(
+    (env) => env.items as unknown[],
   );
-  return pages.flat();
+}
+
+export function fetchUserDocuments(orgId: string): Promise<unknown[]> {
+  // Org-scoped uploaded documents (v2 paginated envelope). First page only.
+  return apiGet(
+    `v2/user-documents?org_id=${enc(orgId)}&limit=500&offset=0`,
+    paginatedSchema(Unknown),
+  ).then((env) => env.items as unknown[]);
 }
 ```
 
@@ -839,7 +849,7 @@ git commit -m "feat(fe): add admin ops-console API services"
 
 **Interfaces:**
 - Consumes: services from `../services/admin`; `qk` from `@/shared/api/queryKeys`.
-- Produces: `useAdminOrgs()`, `useSystemHealth()`, `useRegistrations(limit, offset)`, `useCreateRegistration()`, `useCreateOrg()`, `useConnectUserToOrg()`, `useOrgByUser(userId, enabled)`, `useCompanyProfile(orgId)`, `useCustomerProfiles(orgId)`, `useOrgLeads(orgId, userIds)`.
+- Produces: `useAdminOrgs()`, `useSystemHealth()`, `useRegistrations(limit, offset)`, `useCreateRegistration()`, `useCreateOrg()`, `useConnectUserToOrg()`, `useOrgByUser(userId, enabled)`, `useCompanyProfile(orgId)`, `useCustomerProfiles(orgId)`, `useOrgLeads(orgId)`, `useUserDocuments(orgId)`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -976,7 +986,12 @@ Create `frontend/src/features/admin/hooks/useOrgInspection.ts`:
 ```ts
 import { useQuery } from "@tanstack/react-query";
 
-import { fetchCompanyProfile, fetchCustomerProfiles, fetchOrgLeads } from "../services/admin";
+import {
+  fetchCompanyProfile,
+  fetchCustomerProfiles,
+  fetchOrgLeads,
+  fetchUserDocuments,
+} from "../services/admin";
 
 import { qk } from "@/shared/api/queryKeys";
 
@@ -998,11 +1013,20 @@ export function useCustomerProfiles(orgId: string) {
   });
 }
 
-export function useOrgLeads(orgId: string, userIds: string[]) {
+export function useOrgLeads(orgId: string) {
   return useQuery({
     queryKey: qk.adminOrgLeads(orgId),
-    queryFn: () => fetchOrgLeads(userIds),
-    enabled: !!orgId && userIds.length > 0,
+    queryFn: () => fetchOrgLeads(orgId),
+    enabled: !!orgId,
+    retry: false,
+  });
+}
+
+export function useUserDocuments(orgId: string) {
+  return useQuery({
+    queryKey: qk.adminUserDocuments(orgId),
+    queryFn: () => fetchUserDocuments(orgId),
+    enabled: !!orgId,
     retry: false,
   });
 }
@@ -1023,6 +1047,8 @@ git commit -m "feat(fe): add admin ops-console data hooks"
 ```
 
 ---
+
+> **Parallelization:** Tasks 7–10 (the four pages) are independent once Tasks 3, 5, 6 land — no shared mutable state. They may be implemented in parallel (a natural fan-out point for parallel agents). Tasks 11 (wiring) and 12 (cleanup) must follow all four pages.
 
 ## Task 7: Frontend — TenantsOverviewPage
 
@@ -1230,8 +1256,8 @@ git commit -m "feat(fe): add admin tenants-overview page"
 - Create: `frontend/src/features/admin/pages/OrgDetailPage.tsx`
 
 **Interfaces:**
-- Consumes: `useParams` (`orgId`); `useAdminOrgs` (to resolve `user_ids` for the org); `useCompanyProfile`, `useCustomerProfiles`, `useOrgLeads`.
-- Produces: default-exported `OrgDetailPage` — tabbed read-only inspection: Company Profile / Customer Profiles / Leads. **Scope note:** Data Sources and Documents tabs are NOT included — no org-scoped read endpoint exists in the current routers (see plan "Spec divergences").
+- Consumes: `useParams` (`orgId`); `useAdminOrgs` (org name + `user_ids` for the header); `useCompanyProfile`, `useCustomerProfiles`, `useOrgLeads`, `useUserDocuments`.
+- Produces: default-exported `OrgDetailPage` — tabbed read-only inspection: Company Profile / Customer Profiles / Leads / Documents. **Scope note:** the Data Sources tab is NOT included — no org-scoped *list* endpoint exists (`data_sources.py` is upload/status only); see plan "Spec divergences".
 
 - [ ] **Step 1: Write the page**
 
@@ -1242,9 +1268,14 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { useAdminOrgs } from "../hooks/useAdminOrgs";
-import { useCompanyProfile, useCustomerProfiles, useOrgLeads } from "../hooks/useOrgInspection";
+import {
+  useCompanyProfile,
+  useCustomerProfiles,
+  useOrgLeads,
+  useUserDocuments,
+} from "../hooks/useOrgInspection";
 
-type Tab = "company" | "customers" | "leads";
+type Tab = "company" | "customers" | "leads" | "documents";
 
 function JsonPanel({ isLoading, isError, data }: { isLoading: boolean; isError: boolean; data: unknown }) {
   if (isLoading) return <p>Loading…</p>;
@@ -1262,23 +1293,28 @@ export default function OrgDetailPage() {
 
   const { data: orgs } = useAdminOrgs();
   const org = (orgs ?? []).find((o) => o.org_id === orgId);
-  const userIds = org?.user_ids ?? [];
 
   const company = useCompanyProfile(orgId);
   const customers = useCustomerProfiles(orgId);
-  const leads = useOrgLeads(orgId, userIds);
+  const leads = useOrgLeads(orgId);
+  const documents = useUserDocuments(orgId);
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "company", label: "Company Profile" },
     { key: "customers", label: "Customer Profiles" },
-    { key: "leads", label: `Leads (${userIds.length} user${userIds.length === 1 ? "" : "s"})` },
+    { key: "leads", label: "Leads" },
+    { key: "documents", label: "Documents" },
   ];
+  const active = { company, customers, leads, documents }[tab];
 
   return (
     <div className="space-y-4">
       <Link to="/admin/tenants" className="text-sm text-blue-600 hover:underline">← All tenants</Link>
       <h1 className="text-2xl font-semibold">{org?.org_name ?? "(unnamed org)"}</h1>
       <p className="font-mono text-xs text-gray-500">{orgId}</p>
+      {org && org.user_ids.length > 0 && (
+        <p className="text-xs text-gray-500">Users: {org.user_ids.join(", ")}</p>
+      )}
 
       <div className="flex gap-2 border-b">
         {tabs.map((t) => (
@@ -1292,15 +1328,7 @@ export default function OrgDetailPage() {
         ))}
       </div>
 
-      {tab === "company" && <JsonPanel isLoading={company.isLoading} isError={company.isError} data={company.data} />}
-      {tab === "customers" && <JsonPanel isLoading={customers.isLoading} isError={customers.isError} data={customers.data} />}
-      {tab === "leads" && (
-        userIds.length === 0 ? (
-          <p className="text-gray-500">No users mapped to this org — leads are keyed by user_id.</p>
-        ) : (
-          <JsonPanel isLoading={leads.isLoading} isError={leads.isError} data={leads.data} />
-        )
-      )}
+      <JsonPanel isLoading={active.isLoading} isError={active.isError} data={active.data} />
     </div>
   );
 }
@@ -1644,14 +1672,15 @@ commit + redeploy.
 
 - `GET /admin/orgs`, `GET /admin/health` (new, `app/routers/admin.py`).
 - Reuses `/org`, `/connect_org`, `GET /api/v2/registration`, `POST /registration`,
-  `/profile/company`, `/customer_profile`, `/leads`.
+  `/profile/company`, `/customer_profile`, `GET /api/v2/leads`, `GET /api/v2/user-documents`.
 
 ## Scope notes
 
 - Org/user **write** actions (create org, connect user→org, lookup) live on
   the Tenants overview toolbar.
-- Inspection tabs: Company Profile, Customer Profiles, Leads only. Data Sources
-  and Documents are omitted — no org-scoped read endpoint exists.
+- Inspection tabs: Company Profile, Customer Profiles, Leads, Documents. Data
+  Sources is omitted — no org-scoped *list* endpoint exists (`data_sources.py`
+  is upload/status only).
 ```
 
 - [ ] **Step 4: Register the routes**
@@ -1735,6 +1764,6 @@ git commit -m "chore(be): remove legacy admin HTML tools superseded by /admin co
 
 ## Spec divergences encoded in this plan
 
-1. **Inspection tabs reduced from 5 to 3.** Spec §5 listed Company Profile, Customer Profiles, Lead Stream, Data Sources, Documents. The current routers expose no org-scoped **Data Sources list** or **user-documents** endpoint (the legacy `admin_panel.html` paths are stale). Inspection is scoped to the three confirmed endpoints; the other two are dropped (re-add if/when org-scoped list endpoints exist — net-new backend, out of scope).
+1. **Inspection tabs reduced from 5 to 4 (only Data Sources dropped).** Spec §5 listed Company Profile, Customer Profiles, Lead Stream, Data Sources, Documents. Confirmed-live endpoints: Company Profile (`/profile/company`), Customer Profiles (`/customer_profile`), **Leads via `GET /api/v2/leads?org_id=`** (org-scoped, paginated), and **Documents via `GET /api/v2/user-documents?org_id=`** (paginated). Only **Data Sources** is dropped — `data_sources.py` exposes upload/status/delete but no org-scoped *list* endpoint. Re-add a Data Sources tab if/when such a list endpoint exists (net-new backend, out of scope).
 2. **Org/user write actions placed on the Tenants overview toolbar**, not inside Org Detail. They are org-set-level actions (create org, connect user→org, look up org by user), so they belong at the list level; Org Detail is read-only inspection. (Spec §5 grouped them under "Org Detail (A+B)".)
-3. **`/admin/orgs` returns `user_ids` per org** (not just `user_count`). Needed so Org Detail's Leads tab can fan out `/leads?user_id=` across the org's users (spec §5 A+B). `user_count` is derived from `user_ids`.
+3. **`/admin/orgs` returns `user_ids` per org** (in addition to `user_count`). This is display-only — shown in the Org Detail header for operator awareness. It is **not** used to fetch leads: leads are org-scoped (`GET /api/v2/leads?org_id=`), so there is no per-user fan-out. `user_count` is derived from `user_ids`.
