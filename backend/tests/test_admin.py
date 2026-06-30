@@ -204,4 +204,5 @@ def test_admin_allowlist_contains_all_operators():
         "shilpa@brewra.com",
         "ishani@brewra.com",
         "mortenevensen@brewra.com",
+        "sunnyghosh@brewra.com",
     } <= ADMIN_EMAILS
