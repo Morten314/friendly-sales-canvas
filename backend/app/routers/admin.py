@@ -21,14 +21,21 @@ from app.services.admin import (
 
 router = APIRouter(tags=["admin"])
 
-_PROBE_TIMEOUT_S = 5.0
+# Connectivity pings (Mongo/Neo4j/Pinecone) are sub-second; the LLM probe issues a
+# real generation against the production model (get_llm2 -> Qwen3-235B), which is
+# inherently slower and can cold-start -- so it gets a larger budget. Both still cap
+# the call so a hung dependency can't block the panel (spec §6 item 2). A single
+# tight 5s budget would false-"timeout" a healthy-but-slow LLM (the panel's most
+# important row); per-probe budgets keep "timeout" meaning "actually unreachable".
+_CONNECTIVITY_TIMEOUT_S = 3.0
+_LLM_TIMEOUT_S = 12.0
 
 
-async def _run_probe(name: str, fn: Callable, *args) -> Dict:
+async def _run_probe(name: str, timeout: float, fn: Callable, *args) -> Dict:
     try:
-        return await asyncio.wait_for(asyncio.to_thread(fn, *args), timeout=_PROBE_TIMEOUT_S)
+        return await asyncio.wait_for(asyncio.to_thread(fn, *args), timeout=timeout)
     except asyncio.TimeoutError:
-        return {"name": name, "status": "timeout", "detail": f"probe exceeded {_PROBE_TIMEOUT_S}s"}
+        return {"name": name, "status": "timeout", "detail": f"probe exceeded {timeout}s"}
     except Exception as exc:  # noqa: BLE001
         return {"name": name, "status": "error", "detail": str(exc)}
 
@@ -46,9 +53,9 @@ async def admin_health(
     llm2=Depends(get_llm2),
 ):
     probes = await asyncio.gather(
-        _run_probe("mongo", probe_mongo, mongo),
-        _run_probe("neo4j", probe_neo4j, driver),
-        _run_probe("pinecone", probe_pinecone, pc),
-        _run_probe("llm", probe_llm_health, llm2),
+        _run_probe("mongo", _CONNECTIVITY_TIMEOUT_S, probe_mongo, mongo),
+        _run_probe("neo4j", _CONNECTIVITY_TIMEOUT_S, probe_neo4j, driver),
+        _run_probe("pinecone", _CONNECTIVITY_TIMEOUT_S, probe_pinecone, pc),
+        _run_probe("llm", _LLM_TIMEOUT_S, probe_llm_health, llm2),
     )
     return AdminHealthResponse(probes=probes)

@@ -1,4 +1,5 @@
 """Tests for the internal ops-console endpoints (spec 44)."""
+import asyncio
 from contextlib import contextmanager
 from unittest.mock import MagicMock
 
@@ -115,3 +116,37 @@ def test_admin_health_one_dep_down_does_not_500(client):
     probes = {p["name"]: p for p in resp.json()["probes"]}
     assert probes["mongo"]["status"] == "error"
     assert "unreachable" in (probes["mongo"]["detail"] or "")
+
+
+def test_run_probe_times_out_at_its_own_budget():
+    """A probe that exceeds its passed timeout reports 'timeout' (naming the
+    budget) rather than blocking — the per-probe budget is honored."""
+    import time
+    from app.routers.admin import _run_probe
+
+    def slow(_arg):
+        time.sleep(0.3)
+        return {"name": "slow", "status": "ok"}
+
+    result = asyncio.run(_run_probe("slow", 0.02, slow, object()))
+    assert result["status"] == "timeout"
+    assert "0.02" in result["detail"]
+
+
+def test_admin_health_gives_llm_a_longer_timeout_than_connectivity(client, monkeypatch):
+    """The LLM probe (a real generation) gets a strictly larger budget than the
+    three connectivity pings, which share one budget."""
+    import app.routers.admin as admin_router
+
+    captured = {}
+
+    async def _spy(name, timeout, fn, *args):
+        captured[name] = timeout
+        return {"name": name, "status": "ok"}
+
+    monkeypatch.setattr(admin_router, "_run_probe", _spy)
+    resp = client.get("/admin/health")
+
+    assert resp.status_code == 200
+    assert captured["mongo"] == captured["neo4j"] == captured["pinecone"]
+    assert captured["llm"] > captured["mongo"]
