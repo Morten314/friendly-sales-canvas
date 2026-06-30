@@ -1132,28 +1132,29 @@ prioritized.
 
 **Owner:** TBD.
 
-## TD-FE-79 — internal `/admin/*` endpoints are unauthenticated; `AdminGuard` is a cosmetic client-side allowlist
+## TD-FE-79 — internal `/admin/*` endpoints: Firebase-verified (resolved); reused endpoints remain open
 
 **Date logged:** 2026-06-30
-**Origin:** Spec/Plan 44 (internal ops console). Spec §3 mandated recording this accepted
-compromise; the plan did not carry it as a task, so it is logged here at impl review.
+**Origin:** Spec/Plan 44 (internal ops console). Logged as accepted debt at impl review, then
+resolved in the same branch when the operator opted into real enforcement (reversing Spec 44 §7's
+"no backend authz" — a deliberate, owner-approved exception to the MVP "ignore security" posture).
 
-**Current state:** `GET /admin/orgs` and `GET /admin/health` (`backend/app/routers/admin.py`)
-mount with no auth — like every other endpoint, the backend trusts client-supplied params and
-validates no token. The frontend `AdminGuard` (`features/admin/guards/AdminGuard.tsx`) gates
-`/admin/*` by checking `useAuth().currentUser.email` against a hardcoded `adminAllowlist.ts`
-set, but this is **cosmetic**: it only stops a logged-in customer from *accidentally* landing
-on the console. Anyone can call the `/admin/*` endpoints directly.
+**Resolution (this branch):** `GET /admin/orgs` and `GET /admin/health` now require a verified
+Firebase ID token from an allowlisted operator. The `/admin` router depends on `require_admin`
+(`backend/app/core/auth.py`), which verifies the token against Google's public signing keys +
+project `multi-tenant-50161` — using only PUBLIC inputs, so **no service-account secret** — and
+returns 403 for non-operators (401 if the token is missing/invalid). The FE attaches the ID token
+on those two calls (`features/admin/services/admin.ts`); `AdminGuard` + `adminAllowlist.ts` still
+gate the UI. So the `/admin/*` surface is a real server-side boundary, not cosmetic. The two
+allowlists (FE `adminAllowlist.ts`, BE `auth.ADMIN_EMAILS`) are kept in sync by hand.
 
-**What it should be:** a backend-enforced allowlist (the admin endpoints reject non-staff
-callers server-side), so the guard is a real authorization boundary rather than a UI hint.
+**Residual (NOT admin-specific):** the panel's reused parity/inspection endpoints (`/org`,
+`/connect_org`, `/v2/registration`, `/profile/company`, `/v2/leads`, `/v2/user-documents`) remain
+unauthenticated, consistent with the global backend posture (CLAUDE.md "Auth reality"; the §2.2
+security backlog + CORS `allow_origins=["*"]`). Closing that is the broader backend-authz effort,
+out of this entry's scope.
 
-**Why deferred:** consistent with the repo's MVP posture (0 live users; the whole backend
-trusts client IDs — see the §2.2 security backlog and the CORS `allow_origins=["*"]` debt).
-Hardening one feature's endpoints in isolation buys nothing while the rest stay open.
-
-**Pull-forward trigger:** the first real users, or any general backend-authz pass — whichever
-comes first. At that point the `/admin/*` surface must move behind server-side auth before the
-console is exposed publicly.
+**Pull-forward trigger:** the broader backend-authz pass — at which point the reused endpoints get
+the same Firebase-verification treatment.
 
 **Owner:** TBD.

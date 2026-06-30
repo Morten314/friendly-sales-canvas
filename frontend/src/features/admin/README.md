@@ -15,9 +15,15 @@ Re-exported from `index.ts`:
 ## Access
 
 `AdminGuard` (`guards/AdminGuard.tsx`) checks `useAuth().currentUser.email`
-against `adminAllowlist.ts`. Cosmetic guardrail only — NOT a security
-boundary (the backend does not validate auth). Roster changes require a
-commit + redeploy.
+against `adminAllowlist.ts` and controls UI access (redirect). The two new
+`/admin/*` endpoints are **also enforced server-side**: the FE attaches the
+caller's Firebase ID token on those calls, and the backend verifies it
+(`backend/app/core/auth.py`, `require_admin`) and returns 403 unless the
+verified email is on the backend operator allowlist — so for those endpoints the
+guard is a real boundary, not cosmetic. The reused parity/inspection endpoints
+(`/org`, `/v2/leads`, …) remain open per the global backend posture. Roster
+changes touch **both** allowlists (FE `adminAllowlist.ts` + BE `auth.ADMIN_EMAILS`)
+and require a commit + redeploy.
 
 ## Key files
 
