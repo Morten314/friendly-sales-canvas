@@ -22,4 +22,13 @@ export const qk = {
     ["connectors", "apollo", "discover-status", orgId, runId] as const,
   signalLeadMap: (orgId: string, userId: string) => ["signals", "lead-map", orgId, userId] as const,
   leads: (orgId: string) => ["leads", orgId] as const,
+  adminOrgs: () => ["admin", "orgs"] as const,
+  adminHealth: () => ["admin", "health"] as const,
+  adminRegistrations: (limit: number, offset: number) =>
+    ["admin", "registrations", limit, offset] as const,
+  adminOrgByUser: (userId: string) => ["admin", "org-by-user", userId] as const,
+  adminCompanyProfile: (orgId: string) => ["admin", "company-profile", orgId] as const,
+  adminCustomerProfiles: (orgId: string) => ["admin", "customer-profiles", orgId] as const,
+  adminOrgLeads: (orgId: string) => ["admin", "org-leads", orgId] as const,
+  adminUserDocuments: (orgId: string) => ["admin", "user-documents", orgId] as const,
 };

@@ -1131,3 +1131,30 @@ internationalisation pass.
 prioritized.
 
 **Owner:** TBD.
+
+## TD-FE-79 — internal `/admin/*` endpoints: Firebase-verified (resolved); reused endpoints remain open
+
+**Date logged:** 2026-06-30
+**Origin:** Spec/Plan 44 (internal ops console). Logged as accepted debt at impl review, then
+resolved in the same branch when the operator opted into real enforcement (reversing Spec 44 §7's
+"no backend authz" — a deliberate, owner-approved exception to the MVP "ignore security" posture).
+
+**Resolution (this branch):** `GET /admin/orgs` and `GET /admin/health` now require a verified
+Firebase ID token from an allowlisted operator. The `/admin` router depends on `require_admin`
+(`backend/app/core/auth.py`), which verifies the token against Google's public signing keys +
+project `multi-tenant-50161` — using only PUBLIC inputs, so **no service-account secret** — and
+returns 403 for non-operators (401 if the token is missing/invalid). The FE attaches the ID token
+on those two calls (`features/admin/services/admin.ts`); `AdminGuard` + `adminAllowlist.ts` still
+gate the UI. So the `/admin/*` surface is a real server-side boundary, not cosmetic. The two
+allowlists (FE `adminAllowlist.ts`, BE `auth.ADMIN_EMAILS`) are kept in sync by hand.
+
+**Residual (NOT admin-specific):** the panel's reused parity/inspection endpoints (`/org`,
+`/connect_org`, `/v2/registration`, `/profile/company`, `/v2/leads`, `/v2/user-documents`) remain
+unauthenticated, consistent with the global backend posture (CLAUDE.md "Auth reality"; the §2.2
+security backlog + CORS `allow_origins=["*"]`). Closing that is the broader backend-authz effort,
+out of this entry's scope.
+
+**Pull-forward trigger:** the broader backend-authz pass — at which point the reused endpoints get
+the same Firebase-verification treatment.
+
+**Owner:** TBD.
