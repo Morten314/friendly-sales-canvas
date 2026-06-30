@@ -54,3 +54,64 @@ def test_admin_orgs_empty_when_no_orgs_doc(client):
         resp = client.get("/admin/orgs")
     assert resp.status_code == 200
     assert resp.json() == []
+
+
+def test_admin_health_aggregates_all_probes(client):
+    from app.core.dependencies import (
+        get_mongo, get_neo4j_driver, get_pinecone, get_llm2,
+    )
+    from app.main import app
+
+    mongo = MagicMock()
+    mongo.admin.command.return_value = {"ok": 1.0}
+    driver = MagicMock()
+    driver.verify_connectivity.return_value = None
+    pc = MagicMock()
+    pc.list_indexes.return_value = []
+    llm2 = MagicMock()
+    llm2.invoke.return_value = MagicMock(content='{"test": "hello"}')
+
+    app.dependency_overrides[get_mongo] = lambda: mongo
+    app.dependency_overrides[get_neo4j_driver] = lambda: driver
+    app.dependency_overrides[get_pinecone] = lambda: pc
+    app.dependency_overrides[get_llm2] = lambda: llm2
+    try:
+        resp = client.get("/admin/health")
+    finally:
+        for p in (get_mongo, get_neo4j_driver, get_pinecone, get_llm2):
+            app.dependency_overrides.pop(p, None)
+
+    assert resp.status_code == 200
+    probes = {p["name"]: p for p in resp.json()["probes"]}
+    assert set(probes) == {"mongo", "neo4j", "pinecone", "llm"}
+    assert probes["mongo"]["status"] == "ok"
+
+
+def test_admin_health_one_dep_down_does_not_500(client):
+    from app.core.dependencies import (
+        get_mongo, get_neo4j_driver, get_pinecone, get_llm2,
+    )
+    from app.main import app
+
+    mongo = MagicMock()
+    mongo.admin.command.side_effect = RuntimeError("mongo unreachable")
+    driver = MagicMock()
+    pc = MagicMock()
+    pc.list_indexes.return_value = []
+    llm2 = MagicMock()
+    llm2.invoke.return_value = MagicMock(content="{}")
+
+    app.dependency_overrides[get_mongo] = lambda: mongo
+    app.dependency_overrides[get_neo4j_driver] = lambda: driver
+    app.dependency_overrides[get_pinecone] = lambda: pc
+    app.dependency_overrides[get_llm2] = lambda: llm2
+    try:
+        resp = client.get("/admin/health")
+    finally:
+        for p in (get_mongo, get_neo4j_driver, get_pinecone, get_llm2):
+            app.dependency_overrides.pop(p, None)
+
+    assert resp.status_code == 200
+    probes = {p["name"]: p for p in resp.json()["probes"]}
+    assert probes["mongo"]["status"] == "error"
+    assert "unreachable" in (probes["mongo"]["detail"] or "")
