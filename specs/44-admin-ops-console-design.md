@@ -27,7 +27,7 @@ It is **not** the three-panel product the superseded doc imagined: there is no t
 |---|---|---|
 | A | Org & user management — look up org by user, create org, connect user↔org | **Exists** (`/org`, `/connect_org`) |
 | B | Tenant data inspection (read-only) — company profile, customer profiles, lead stream, data sources, documents | **Exists** (reuse) |
-| C | Registration / waitlist management — list, add, export | **Exists** (`GET`/`POST /registration`) |
+| C | Registration / waitlist management — list, add, export | **Exists** — list via `GET /api/v2/registration` (paginated envelope), create via `POST /registration` |
 | D1 | Tenants overview — table of all orgs with key fields | **New** (`GET /admin/orgs`) |
 | D2 | System health panel — Mongo / Neo4j / Pinecone / LLM status | **New** (`GET /admin/health`) |
 
@@ -99,7 +99,7 @@ All wrapped by `<AdminGuard>` via the layout.
 | Authenticated, email **not** in `ADMIN_EMAILS` | Redirect to `/` |
 | Authenticated, email in `ADMIN_EMAILS` | Render children |
 
-`ADMIN_EMAILS` is a hardcoded set in `adminAllowlist.ts` (Brewra staff). The check reads `useAuth().user?.email`.
+`ADMIN_EMAILS` is a hardcoded set in `adminAllowlist.ts` (Brewra staff). The check reads `useAuth().user?.email`. Changing the roster (add/remove an operator) is therefore a code change + frontend redeploy. A `VITE_*` env var would **not** avoid this — Vite inlines env vars at build time, so it still requires a rebuild/redeploy — so the only true no-redeploy option is the deferred backend-served allowlist noted below.
 
 **This is not a security boundary.** The backend does not validate auth and continues to trust client-supplied `org_id`/`user_id`; the admin data endpoints stay open. The guard only prevents a logged-in customer from *accidentally* landing on the console. This is an accepted MVP trade-off (record as a TECH_DEBT entry — promote to a real backend allowlist when there are live users).
 
@@ -120,27 +120,29 @@ One page, tabbed.
 - **Inspection tabs (read-only — reuse existing endpoints):**
   - Company Profile → `GET /profile/company?org_id=`
   - Customer Profiles → `GET /customer_profile?org_id=`
-  - Lead Stream → `GET /leads?user_id=` (resolves user(s) from the orgs/users mapping — see §8)
+  - Lead Stream → `GET /leads?user_id=`. The org→user(s) mapping (single users doc) resolves the org's user(s); if an org maps to multiple users, the tab issues one `/leads?user_id=` call per user and concatenates client-side. Many-user orgs are an accepted MVP limitation (no server-side org-keyed union); revisit if an org-scoped leads variant is preferred. See §8 quirk #2.
   - Data Sources → existing data-sources endpoint (`?org_id=`)
   - Documents → `GET /user-documents?org_id=`
 
 No new destructive actions (no delete/suspend) — parity writes only.
 
 ### C — Registrations
-- `GET /registration` (already paginated server-side: `count_documents` + `skip`/`limit`, sorted by `timestamp` desc) → table. `RegistrationResponse` = `{id, name, email, timestamp}`.
-- Add form → `POST /registration` (`RegistrationRequest` = `{name, email}`).
-- Export: client-side CSV download of the loaded rows.
+- **List:** `GET /api/v2/registration` — the paginated successor. Returns a `PaginatedResponse[RegistrationResponse]` envelope (`items` / `total` / `limit` / `offset`; `limit` 1–500, default 50), sorted by `timestamp` desc. Do **not** target v1 `GET /registration`: it is marked `Deprecation: true`, takes no `limit`/`offset`, and silently caps at 500 rows. `RegistrationResponse` = `{id, name, email, timestamp}`; the FE zod contract matches these four fields exactly (no `extra` passthrough — unlike `OrgResponse`).
+- **Add:** `POST /registration` (`RegistrationRequest` = `{name, email}`).
+- **Export:** client-side CSV of the **currently loaded page** (export-current-view). The table pages through the v2 envelope, so the operator can step through all rows; the CSV reflects the visible page. Whole-dataset server-side export is out of scope (§9).
 
 ### D2 — System health
 - `GET /admin/health` aggregates: Mongo ping, Neo4j ping, Pinecone reachability, and `probe_llm` (reused from `app/services/health.py`). Returns per-dependency `{name, status, detail/latency}`.
-- Panel of status badges. A failed probe renders red — it never throws the page.
+- `probe_llm(llm2)` requires an LLM model object — inject it via `Depends(get_llm2)` (the same dependency `pipeline.py`'s `test_llm` uses), so the probe reflects the LLM the product actually runs (currently `Qwen/Qwen3-235B-A22B-Instruct-2507-tput`), not an arbitrary one.
+- Each probe runs under a per-probe timeout (e.g. `asyncio.wait_for`) so an up-but-slow dependency surfaces as a red/degraded badge rather than hanging the aggregate request — try/except alone guards raised errors, not latency.
+- Panel of status badges. A failed or timed-out probe renders red — it never throws the page.
 
 ---
 
 ## Backend additions (the only new backend work)
 
-1. **`GET /admin/orgs`** — `admin` router + `admin` service. Reads the single orgs document, returns the list. Annotate with a `response_model`.
-2. **`GET /admin/health`** — aggregate probe. Reuses `probe_llm`; adds lightweight Mongo/Neo4j/Pinecone connectivity checks. Each check is independently guarded so one dependency being down doesn't fail the whole response.
+1. **`GET /admin/orgs`** — `admin` router + `admin` service. Reads the single `{_id:"orgs"}` document and returns its org entries as a list. The document is a map whose value shape is not formally typed in the codebase, so: (a) confirm the actual value fields live (`curl`/`/docs`) before fixing the contract — per the sequencing rule below; (b) the `response_model` is tolerant — model the known fields (`org_id`, `org_name`) and allow extras, mirroring `OrgResponse`'s `extra="allow"`; (c) the endpoint returns **all** orgs in one unpaginated single-doc read — acceptable at MVP scale, stated here as an explicit assumption to revisit if the org count grows large.
+2. **`GET /admin/health`** — aggregate probe. Reuses `probe_llm` (inject the model via `Depends(get_llm2)`); adds lightweight Mongo/Neo4j/Pinecone connectivity checks. Each check is independently guarded **and** wrapped in a per-probe timeout (`asyncio.wait_for`), so a dependency that is down *or* up-but-slow surfaces as a red/degraded badge without failing or hanging the whole response.
 
 Sequencing (per repo rule): build the endpoint, verify the JSON shape with a live `curl`/`/docs` call, then write the FE hook + zod contract against the confirmed shape.
 
@@ -194,6 +196,7 @@ After parity is verified live, **delete** `backend/admin_panel.html` and `backen
 | Feature flags (global + per-tenant) | Whole new subsystem; repo guidance says skip flags absent a real kill-switch/A-B need. |
 | Agent config view/edit | Net-new write surface; low MVP value. |
 | New destructive actions (delete/suspend org/user) | Beyond parity; not requested. |
+| Whole-dataset (server-side) registration export | Export is current-view only; a full-export endpoint is net-new and unneeded at current registration volume. Trigger: registrations exceed what paging comfortably covers. |
 
 ---
 
