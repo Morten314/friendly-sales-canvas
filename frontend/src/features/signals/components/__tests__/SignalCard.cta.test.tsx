@@ -53,7 +53,13 @@ function renderCard(overrides: Partial<React.ComponentProps<typeof SignalCard>> 
     onFindMatchedLeads: vi.fn(),
     onSaveAsArtefact: vi.fn(),
     onRecomputeLeadMap: vi.fn(),
-    onSaveRecommendationAsArtefact: vi.fn(),
+    onViewOutreachPlan: vi.fn(),
+    onRetryOutreachPlan: vi.fn(),
+    onSavePlanToLibrary: vi.fn(),
+    onDownloadPlanPdf: vi.fn(),
+    onDownloadPlanCsv: vi.fn(),
+    planExpandedKeys: new Set<string>(),
+    recommendationPlans: {},
     recommendationArtefactGeneratingKey: null,
     recommendationArtefactErrorKey: null,
     ...overrides,
@@ -127,7 +133,6 @@ describe("SignalCard — Find Matched Leads CTA", () => {
       onFindMatchedLeads: vi.fn(),
       onSaveAsArtefact: vi.fn(),
       onRecomputeLeadMap: vi.fn(),
-      onSaveRecommendationAsArtefact: vi.fn(),
       recommendationArtefactGeneratingKey: null,
       recommendationArtefactErrorKey: null,
     };
@@ -199,12 +204,24 @@ describe("SignalCard — leads section states", () => {
   });
 });
 
-describe("SignalCard — recommendation Save as Artifact", () => {
+describe("SignalCard — recommendation View Outreach Plan", () => {
   const withRec = {
     signal: { ...signal, NBAs: [{ nba: "Reach out", prompt: "p1" }] },
     isDescriptionExpanded: true,
     expandedRecommendationIndex: 0,
   };
+  const samplePlan = {
+    what_to_do: "Do the thing",
+    strategy: "The strategy",
+    how_to_communicate: "Warmly",
+    communication_channel: "Email",
+    communication_template: "Hi {name}",
+  };
+
+  it("reads 'View Outreach Plan' when accepted with a cached answer", () => {
+    renderCard({ ...withRec, isAccepted: true, recommendationAnswers: { "sig-1-0": "ans" } });
+    expect(screen.getByRole("button", { name: /View Outreach Plan/i })).toBeInTheDocument();
+  });
 
   it("is greyed and shows the accept hint when not accepted", () => {
     const props = renderCard({
@@ -212,31 +229,31 @@ describe("SignalCard — recommendation Save as Artifact", () => {
       isAccepted: false,
       recommendationAnswers: { "sig-1-0": "ans" },
     });
-    const btn = screen.getByRole("button", { name: /Save as Artifact/i });
+    const btn = screen.getByRole("button", { name: /View Outreach Plan/i });
     expect(btn.getAttribute("aria-disabled")).toBe("true");
     fireEvent.click(btn);
-    expect(screen.getByText(/Accept this signal to save as artifact/i)).toBeInTheDocument();
-    expect(props.onSaveRecommendationAsArtefact).not.toHaveBeenCalled();
+    expect(screen.getByText(/Accept this signal to view the outreach plan/i)).toBeInTheDocument();
+    expect(props.onViewOutreachPlan).not.toHaveBeenCalled();
   });
 
-  it("is greyed and shows the load-answer hint when accepted but no cached answer", () => {
+  it("shows the load-answer hint when accepted but no cached answer", () => {
     const props = renderCard({ ...withRec, isAccepted: true, recommendationAnswers: {} });
-    fireEvent.click(screen.getByRole("button", { name: /Save as Artifact/i }));
+    fireEvent.click(screen.getByRole("button", { name: /View Outreach Plan/i }));
     expect(screen.getByText(/Load the recommendation answer first/i)).toBeInTheDocument();
-    expect(props.onSaveRecommendationAsArtefact).not.toHaveBeenCalled();
+    expect(props.onViewOutreachPlan).not.toHaveBeenCalled();
   });
 
-  it("is active and calls onSaveRecommendationAsArtefact(index) when accepted + cached", () => {
+  it("calls onViewOutreachPlan(index) when accepted + cached", () => {
     const props = renderCard({
       ...withRec,
       isAccepted: true,
       recommendationAnswers: { "sig-1-0": "ans" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Save as Artifact/i }));
-    expect(props.onSaveRecommendationAsArtefact).toHaveBeenCalledWith(0);
+    fireEvent.click(screen.getByRole("button", { name: /View Outreach Plan/i }));
+    expect(props.onViewOutreachPlan).toHaveBeenCalledWith(0);
   });
 
-  it("shows a generating spinner when the key matches", () => {
+  it("shows a generating spinner + label when the key matches", () => {
     renderCard({
       ...withRec,
       isAccepted: true,
@@ -246,25 +263,40 @@ describe("SignalCard — recommendation Save as Artifact", () => {
     expect(screen.getByText(/Generating/i)).toBeInTheDocument();
   });
 
-  it("shows an inline error when the error key matches", () => {
+  it("renders the plan panel and a 'Hide' label when the plan is expanded", () => {
     renderCard({
       ...withRec,
       isAccepted: true,
       recommendationAnswers: { "sig-1-0": "ans" },
+      planExpandedKeys: new Set(["sig-1-0"]),
+      recommendationPlans: { "sig-1-0": samplePlan },
+    });
+    expect(screen.getByRole("button", { name: /Hide Outreach Plan/i })).toBeInTheDocument();
+    expect(screen.getByText("Outreach Plan")).toBeInTheDocument();
+    expect(screen.getByText("Do the thing")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Save to Library/i })).toBeInTheDocument();
+  });
+
+  it("shows the panel error state when generation failed and the panel is open", () => {
+    renderCard({
+      ...withRec,
+      isAccepted: true,
+      recommendationAnswers: { "sig-1-0": "ans" },
+      planExpandedKeys: new Set(["sig-1-0"]),
       recommendationArtefactErrorKey: "sig-1-0",
     });
-    expect(screen.getByText(/Could not generate artifact/i)).toBeInTheDocument();
+    expect(screen.getByText(/Could not generate outreach plan/i)).toBeInTheDocument();
   });
 
   it("renders the answer action row as justify-between with Chat on the right", () => {
     renderCard({ ...withRec, isAccepted: true, recommendationAnswers: { "sig-1-0": "ans" } });
     // Header bot button + row Chat button both match; assert at least one is present.
     expect(screen.getAllByRole("button", { name: /Chat with Scout/i }).length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: /Save as Artifact/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /View Outreach Plan/i })).toBeInTheDocument();
     // Assert the row is actually justify-between (not merely that the buttons exist), so a
     // regression to the old single left-aligned flex (D-1) would fail this test.
     const row = screen
-      .getByRole("button", { name: /Save as Artifact/i })
+      .getByRole("button", { name: /View Outreach Plan/i })
       .closest("div.justify-between");
     expect(row).not.toBeNull();
   });

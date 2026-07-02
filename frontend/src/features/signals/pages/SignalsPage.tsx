@@ -11,6 +11,7 @@ import {
 } from "../components/signalCards";
 import { SignalChatPanel } from "../components/SignalChatPanel";
 import { SignalsEmptyState, SignalsLoadingState } from "../components/SignalsEmptyState";
+import type { RecommendationArtefactResponse } from "../contracts";
 import { useSignalLeadMap } from "../hooks/useSignalLeadMap";
 import {
   buildRecommendationPlaybookArtefact,
@@ -98,18 +99,27 @@ const SignalsPage = () => {
   const [recommendationArtefactGenerating, setRecommendationArtefactGenerating] = useState<
     string | null
   >(null);
-  /** Key `${signalId}-${index}` whose last playbook generation failed (drives the card's inline error). */
+  /** Key `${signalId}-${index}` whose last playbook generation failed (drives the panel's inline error). */
   const [recommendationArtefactError, setRecommendationArtefactError] = useState<string | null>(
     null,
   );
+  /** Generated plans cached by `${signalId}-${index}` — reopening the panel never re-calls Claude. */
+  const [recommendationPlans, setRecommendationPlans] = useState<
+    Record<string, RecommendationArtefactResponse>
+  >({});
+  /** Keys `${signalId}-${index}` whose inline outreach-plan panel is currently open. */
+  const [planExpandedKeys, setPlanExpandedKeys] = useState<Set<string>>(new Set());
   /** Keys of answers that are expanded (full view): `${signalId}-${index}` */
   const [answerExpandedKeys, setAnswerExpandedKeys] = useState<Set<string>>(new Set());
 
-  // Reset answer expanded state when recommendation block is collapsed
+  // Reset answer/panel expanded state when the recommendation block is collapsed.
+  // The generated-plan cache (recommendationPlans) is intentionally kept so a
+  // reopened recommendation shows its plan again without another paid call.
   useEffect(() => {
     if (!expandedRecommendation) {
       setAnswerExpandedKeys(new Set());
       setRecommendationArtefactError(null);
+      setPlanExpandedKeys(new Set());
     }
   }, [expandedRecommendation]);
   /** True when current signals (and recommendations) came from GET /api/v2/fetch-signals; false when using sample fallback */
@@ -583,23 +593,23 @@ const SignalsPage = () => {
     });
   };
 
-  const handleSaveRecommendationAsArtefact = async (signal: SignalCardType, index: number) => {
-    // Re-entry guard: a second click while a playbook is already generating must not
-    // start a parallel run. aria-disabled on the button is non-blocking, so without
-    // this the ~5-10s window allows a duplicate paid Claude call + download/enqueue.
+  // Resolve `index` to the same list the card indexed (NBAs → nextBestMoves).
+  const recommendationList = (signal: SignalCardType): NBAItem[] =>
+    signal.NBAs && signal.NBAs.length > 0
+      ? signal.NBAs
+      : (signal.nextBestMoves ?? []).map((m) => ({ nba: m, prompt: "" }));
+
+  // Shared generation path used by both "View Outreach Plan" (first open) and the
+  // panel's "Try again". Guard + call + cache/error; sends the same Spec 41 request.
+  const generatePlan = async (signal: SignalCardType, index: number) => {
+    // Re-entry guard: a second trigger while a playbook is already generating must
+    // not start a parallel run (~5-10s window → duplicate paid Claude call).
     if (recommendationArtefactGenerating) return;
-    // Resolve the item exactly as the card/effect do, so `index` maps to the same
-    // list the card indexed (NBAs, falling back to nextBestMoves).
-    const list: NBAItem[] =
-      signal.NBAs && signal.NBAs.length > 0
-        ? signal.NBAs
-        : (signal.nextBestMoves ?? []).map((m) => ({ nba: m, prompt: "" }));
-    const item = list[index];
+    const item = recommendationList(signal)[index];
     const key = `${signal.id}-${index}`;
     const answer = recommendationAnswers[key];
     const isAccepted = acceptedSignals.has(getSignalContentHash(signal));
-    // Re-check the gate (the button already blocks the click): accepted + non-null
-    // org + a non-empty cached answer. orgId is string | null here.
+    // Re-check the gate: accepted + non-null org/user + a non-empty cached answer.
     if (!item || !isAccepted || !orgId || !currentUser?.uid || !(answer ?? "").trim()) return;
 
     setRecommendationArtefactError(null); // clear any prior failure on retry
@@ -618,37 +628,68 @@ const SignalsPage = () => {
         recommendation: item.nba,
         recommendation_answer: answer,
       });
-      const artefact = buildRecommendationPlaybookArtefact(
-        signal,
-        item,
-        index,
-        answer,
-        leads,
-        generated,
-      );
-      generateAndDownloadPDF(artefact);
-      generateAndDownloadCsv(artefact);
-      enqueueArtefact(artefact);
-      toast({
-        title: "Saved to Artifacts",
-        description: "Your GTM playbook was downloaded and added to the Artifacts library.",
-        action: (
-          <Button variant="outline" size="sm" onClick={() => navigate("/artifacts")}>
-            View →
-          </Button>
-        ),
-      });
+      setRecommendationPlans((prev) => ({ ...prev, [key]: generated }));
     } catch (error) {
       console.error("Error generating recommendation artefact:", error);
-      setRecommendationArtefactError(key); // inline-below-row error (spec §6.3/§10/AC#6), in addition to the toast
-      toast({
-        title: "Error",
-        description: "Could not generate artifact — please try again.",
-        variant: "destructive",
-      });
+      setRecommendationArtefactError(key); // drives the panel's inline error
     } finally {
       setRecommendationArtefactGenerating(null);
     }
+  };
+
+  // Toggle the inline outreach-plan panel; generate once on first open (cached after).
+  const handleViewOutreachPlan = (signal: SignalCardType, index: number) => {
+    const key = `${signal.id}-${index}`;
+    if (planExpandedKeys.has(key)) {
+      setPlanExpandedKeys((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+      return;
+    }
+    setPlanExpandedKeys((prev) => new Set(prev).add(key));
+    if (!recommendationPlans[key]) void generatePlan(signal, index);
+  };
+
+  const handleRetryOutreachPlan = (signal: SignalCardType, index: number) => {
+    void generatePlan(signal, index);
+  };
+
+  // Build the ArtefactItem on demand from the cached plan (Spec 41 builder reused).
+  const buildPlanArtefact = (signal: SignalCardType, index: number) => {
+    const item = recommendationList(signal)[index];
+    const key = `${signal.id}-${index}`;
+    const plan = recommendationPlans[key];
+    if (!item || !plan) return null;
+    const answer = recommendationAnswers[key] ?? "";
+    const leads = leadsForSignal(signal.id);
+    return buildRecommendationPlaybookArtefact(signal, item, index, answer, leads, plan);
+  };
+
+  const handleSavePlanToLibrary = (signal: SignalCardType, index: number) => {
+    const artefact = buildPlanArtefact(signal, index);
+    if (!artefact) return;
+    enqueueArtefact(artefact);
+    toast({
+      title: "Saved to Artifacts",
+      description: "Your GTM playbook was added to the Artifacts library.",
+      action: (
+        <Button variant="outline" size="sm" onClick={() => navigate("/artifacts")}>
+          View →
+        </Button>
+      ),
+    });
+  };
+
+  const handleDownloadPlanPdf = (signal: SignalCardType, index: number) => {
+    const artefact = buildPlanArtefact(signal, index);
+    if (artefact) generateAndDownloadPDF(artefact);
+  };
+
+  const handleDownloadPlanCsv = (signal: SignalCardType, index: number) => {
+    const artefact = buildPlanArtefact(signal, index);
+    if (artefact) generateAndDownloadCsv(artefact);
   };
 
   const handleRejectSignal = (signalId: string) => {
@@ -930,9 +971,13 @@ const SignalsPage = () => {
                     onSaveAsArtefact={() => handleSaveAsArtefact(signal)}
                     onRecomputeLeadMap={() => void handleRecomputeLeadMap()}
                     onRetryLeadMap={retryLeadMap}
-                    onSaveRecommendationAsArtefact={(index) =>
-                      void handleSaveRecommendationAsArtefact(signal, index)
-                    }
+                    onViewOutreachPlan={(index) => handleViewOutreachPlan(signal, index)}
+                    onRetryOutreachPlan={(index) => handleRetryOutreachPlan(signal, index)}
+                    onSavePlanToLibrary={(index) => handleSavePlanToLibrary(signal, index)}
+                    onDownloadPlanPdf={(index) => handleDownloadPlanPdf(signal, index)}
+                    onDownloadPlanCsv={(index) => handleDownloadPlanCsv(signal, index)}
+                    recommendationPlans={recommendationPlans}
+                    planExpandedKeys={planExpandedKeys}
                     recommendationArtefactGeneratingKey={recommendationArtefactGenerating}
                     recommendationArtefactErrorKey={recommendationArtefactError}
                   />
