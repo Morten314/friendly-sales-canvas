@@ -63,7 +63,6 @@ function renderCard() {
         onFindMatchedLeads={vi.fn()}
         onSaveAsArtefact={vi.fn()}
         onRecomputeLeadMap={vi.fn()}
-        onSaveRecommendationAsArtefact={vi.fn()}
         recommendationArtefactGeneratingKey={null}
         recommendationArtefactErrorKey={null}
       />

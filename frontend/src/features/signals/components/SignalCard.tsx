@@ -11,9 +11,10 @@ import {
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
-import type { SignalLeadMapLead } from "../contracts";
+import type { RecommendationArtefactResponse, SignalLeadMapLead } from "../contracts";
 import type { Agent, NBAItem, SignalCard as SignalCardType } from "../types";
 
+import { OutreachPlanPanel } from "./OutreachPlanPanel";
 import { sanitizeSourceUrl } from "./signalCards";
 
 import { Badge } from "@/components/ui/badge";
@@ -69,8 +70,18 @@ interface SignalCardProps {
   onRecomputeLeadMap?: () => void;
   /** Offered in the error state; plain re-fetch of the mapping (the "Try again" escape). */
   onRetryLeadMap?: () => void;
-  /** Build + generate + deliver the recommendation playbook for `index`. */
-  onSaveRecommendationAsArtefact: (index: number) => void;
+  /** Toggle the inline outreach-plan panel for `index` (generates on first open). */
+  onViewOutreachPlan?: (index: number) => void;
+  /** Re-run generation for `index` from the panel's "Try again" (keeps it open). */
+  onRetryOutreachPlan?: (index: number) => void;
+  /** Panel-footer delivery actions, built by the page from the cached plan. */
+  onSavePlanToLibrary?: (index: number) => void;
+  onDownloadPlanPdf?: (index: number) => void;
+  onDownloadPlanCsv?: (index: number) => void;
+  /** Page-held generated plans by `${signalId}-${index}` (cache; feeds the panel). */
+  recommendationPlans?: Record<string, RecommendationArtefactResponse>;
+  /** Page-held keys whose inline outreach-plan panel is currently open. */
+  planExpandedKeys?: Set<string>;
   /** Page-held `${signalId}-${index}` currently generating a playbook, or null. */
   recommendationArtefactGeneratingKey: string | null;
   /** Page-held `${signalId}-${index}` whose last generation failed (drives the inline error). */
@@ -105,7 +116,13 @@ export const SignalCard = ({
   onSaveAsArtefact,
   onRecomputeLeadMap,
   onRetryLeadMap,
-  onSaveRecommendationAsArtefact,
+  onViewOutreachPlan,
+  onRetryOutreachPlan,
+  onSavePlanToLibrary,
+  onDownloadPlanPdf,
+  onDownloadPlanCsv,
+  recommendationPlans,
+  planExpandedKeys,
   recommendationArtefactGeneratingKey,
   recommendationArtefactErrorKey,
 }: SignalCardProps) => {
@@ -172,11 +189,11 @@ export const SignalCard = ({
     artefactHintTimerRef.current = setTimeout(() => setArtefactHint(null), 3000);
   };
 
-  // Gated click: explain when locked, otherwise delegate to the page (D-2/D-6).
-  const handleSaveArtefactClick = (index: number) => {
+  // Gated click: explain when locked, otherwise toggle the plan via the page (D-2/D-6).
+  const handleViewPlanClick = (index: number) => {
     const key = `${signal.id}-${index}`;
     if (!isAccepted) {
-      showArtefactHint("Accept this signal to save as artifact");
+      showArtefactHint("Accept this signal to view the outreach plan");
       return;
     }
     if ((recommendationAnswers[key] ?? "").trim() === "") {
@@ -185,7 +202,7 @@ export const SignalCard = ({
     }
     clearArtefactHintTimer();
     setArtefactHint(null);
-    onSaveRecommendationAsArtefact(index);
+    onViewOutreachPlan?.(index);
   };
 
   const relevanceBadgeClass = (relevance: SignalLeadMapLead["relevance"]): string => {
@@ -432,7 +449,8 @@ export const SignalCard = ({
                                   recommendationArtefactGeneratingKey === artefactKey;
                                 const showArtefactError =
                                   recommendationArtefactErrorKey === artefactKey;
-                                const canSaveArtefact = isAccepted && answerCached;
+                                const canViewPlan = isAccepted && answerCached;
+                                const planExpanded = planExpandedKeys?.has(artefactKey) ?? false;
                                 return (
                                   <div
                                     key={index}
@@ -561,17 +579,17 @@ export const SignalCard = ({
                                                         variant="outline"
                                                         role="button"
                                                         aria-disabled={
-                                                          !canSaveArtefact || isGeneratingArtefact
+                                                          !canViewPlan || isGeneratingArtefact
                                                         }
                                                         className={
-                                                          canSaveArtefact
+                                                          canViewPlan
                                                             ? "text-xs font-medium h-8 border-gray-300 text-gray-700 hover:bg-gray-50"
                                                             : "text-xs font-medium h-8 border-gray-300 text-gray-400 cursor-not-allowed"
                                                         }
                                                         onClick={(e) => {
                                                           e.stopPropagation();
                                                           if (isGeneratingArtefact) return;
-                                                          handleSaveArtefactClick(index);
+                                                          handleViewPlanClick(index);
                                                         }}
                                                       >
                                                         {isGeneratingArtefact ? (
@@ -579,8 +597,10 @@ export const SignalCard = ({
                                                             <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                                                             Generating…
                                                           </>
+                                                        ) : planExpanded ? (
+                                                          "Hide Outreach Plan"
                                                         ) : (
-                                                          "Save as Artifact"
+                                                          "View Outreach Plan"
                                                         )}
                                                       </Button>
                                                     </div>
@@ -614,14 +634,25 @@ export const SignalCard = ({
                                                       {artefactHint}
                                                     </p>
                                                   )}
-                                                  {showArtefactError && (
-                                                    <p
-                                                      role="alert"
-                                                      className="mt-2 text-xs text-red-600"
-                                                    >
-                                                      Could not generate artifact — please try
-                                                      again.
-                                                    </p>
+                                                  {planExpanded && (
+                                                    <OutreachPlanPanel
+                                                      plan={
+                                                        recommendationPlans?.[artefactKey] ?? null
+                                                      }
+                                                      isGenerating={isGeneratingArtefact}
+                                                      isError={showArtefactError}
+                                                      hasLeads={matchedLeads.length > 0}
+                                                      onRetry={() => onRetryOutreachPlan?.(index)}
+                                                      onSaveToLibrary={() =>
+                                                        onSavePlanToLibrary?.(index)
+                                                      }
+                                                      onDownloadPdf={() =>
+                                                        onDownloadPlanPdf?.(index)
+                                                      }
+                                                      onDownloadCsv={() =>
+                                                        onDownloadPlanCsv?.(index)
+                                                      }
+                                                    />
                                                   )}
                                                 </>
                                               )}

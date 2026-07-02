@@ -50,7 +50,6 @@ function renderCard(overrides: Partial<React.ComponentProps<typeof SignalCard>> 
     onFindMatchedLeads: vi.fn(),
     onSaveAsArtefact: vi.fn(),
     onRecomputeLeadMap: vi.fn(),
-    onSaveRecommendationAsArtefact: vi.fn(),
     recommendationArtefactGeneratingKey: null,
     recommendationArtefactErrorKey: null,
     ...overrides,

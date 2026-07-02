@@ -98,59 +98,101 @@ beforeEach(() => {
 });
 afterEach(() => localStorage.clear());
 
-describe("SignalsPage — Save recommendation as Artifact", () => {
-  it("builds, downloads, and enqueues a playbook on Save", async () => {
+/**
+ * Expand the card's description + recommendation and wait for the "View Outreach
+ * Plan" button to become enabled (its answer has loaded). Returns the card element.
+ */
+async function openRecommendation() {
+  await waitFor(() => expect(screen.getByText("Hiring surge")).toBeInTheDocument());
+  const card = screen.getByText("Hiring surge").closest(".bg-white") as HTMLElement;
+  fireEvent.click(within(card).getByText("Read more")); // expand description
+  fireEvent.click(within(card).getByText("Reach out")); // expand recommendation → fetches answer
+  await waitFor(() =>
+    expect(
+      within(card)
+        .getByRole("button", { name: /View Outreach Plan/i })
+        .getAttribute("aria-disabled"),
+    ).toBe("false"),
+  );
+  return card;
+}
+
+describe("SignalsPage — View Outreach Plan", () => {
+  it("generates and shows the plan inline on View, with no auto-download or auto-save", async () => {
+    const { generateRecommendationArtefact } = await import("../../services/signals");
     localStorage.setItem("signals_u1_accepted", JSON.stringify(["hash-sig-1"]));
     renderPage();
-    await waitFor(() => expect(screen.getByText("Hiring surge")).toBeInTheDocument());
-    const card = screen.getByText("Hiring surge").closest(".bg-white") as HTMLElement;
+    const card = await openRecommendation();
 
-    fireEvent.click(within(card).getByText("Read more")); // expand description
-    fireEvent.click(within(card).getByText("Reach out")); // expand recommendation → fetches answer
+    fireEvent.click(within(card).getByRole("button", { name: /View Outreach Plan/i }));
+
+    await waitFor(() => expect(within(card).getByText("Outreach Plan")).toBeInTheDocument());
+    expect(within(card).getByText("Hi [First Name]")).toBeInTheDocument();
+    expect(vi.mocked(generateRecommendationArtefact)).toHaveBeenCalledTimes(1);
+    // Viewing must not download or enqueue anything (the whole point of the change).
+    expect(generateAndDownloadPDF).not.toHaveBeenCalled();
+    expect(generateAndDownloadCsv).not.toHaveBeenCalled();
+    expect(enqueueArtefact).not.toHaveBeenCalled();
+  });
+
+  it("Save to Library / Download PDF / Download CSV build + deliver from the viewed plan", async () => {
+    localStorage.setItem("signals_u1_accepted", JSON.stringify(["hash-sig-1"]));
+    renderPage();
+    const card = await openRecommendation();
+    fireEvent.click(within(card).getByRole("button", { name: /View Outreach Plan/i }));
     await waitFor(() =>
-      expect(
-        within(card)
-          .getByRole("button", { name: /Save as Artifact/i })
-          .getAttribute("aria-disabled"),
-      ).toBe("false"),
+      expect(within(card).getByRole("button", { name: /Save to Library/i })).toBeInTheDocument(),
     );
-    fireEvent.click(within(card).getByRole("button", { name: /Save as Artifact/i }));
 
-    await waitFor(() => expect(generateAndDownloadPDF).toHaveBeenCalledTimes(1));
+    fireEvent.click(within(card).getByRole("button", { name: /Save to Library/i }));
     expect(enqueueArtefact).toHaveBeenCalledTimes(1);
     const item = vi.mocked(enqueueArtefact).mock.calls[0][0];
     expect(item.type).toBe("playbook");
     expect(item.id).toMatch(/^recommendation-playbook-sig-1-0-\d+$/);
+
+    fireEvent.click(within(card).getByRole("button", { name: /Download PDF/i }));
+    expect(generateAndDownloadPDF).toHaveBeenCalledTimes(1);
+    fireEvent.click(within(card).getByRole("button", { name: /Download CSV/i }));
     expect(generateAndDownloadCsv).toHaveBeenCalledTimes(1);
   });
 
-  it("shows the inline error and skips delivery when the backend rejects", async () => {
+  it("caches the plan — collapsing then reopening does not re-call the backend", async () => {
+    const { generateRecommendationArtefact } = await import("../../services/signals");
+    localStorage.setItem("signals_u1_accepted", JSON.stringify(["hash-sig-1"]));
+    renderPage();
+    const card = await openRecommendation();
+
+    fireEvent.click(within(card).getByRole("button", { name: /View Outreach Plan/i }));
+    await waitFor(() =>
+      expect(within(card).getByRole("button", { name: /Hide Outreach Plan/i })).toBeInTheDocument(),
+    );
+    fireEvent.click(within(card).getByRole("button", { name: /Hide Outreach Plan/i })); // collapse
+    fireEvent.click(within(card).getByRole("button", { name: /View Outreach Plan/i })); // reopen
+
+    await waitFor(() => expect(within(card).getByText("Outreach Plan")).toBeInTheDocument());
+    expect(vi.mocked(generateRecommendationArtefact)).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the panel error with Try again when generation fails, then recovers on retry", async () => {
     const { generateRecommendationArtefact } = await import("../../services/signals");
     vi.mocked(generateRecommendationArtefact).mockRejectedValueOnce(new Error("boom"));
     localStorage.setItem("signals_u1_accepted", JSON.stringify(["hash-sig-1"]));
     renderPage();
-    await waitFor(() => expect(screen.getByText("Hiring surge")).toBeInTheDocument());
-    const card = screen.getByText("Hiring surge").closest(".bg-white") as HTMLElement;
-    fireEvent.click(within(card).getByText("Read more"));
-    fireEvent.click(within(card).getByText("Reach out"));
+    const card = await openRecommendation();
+
+    fireEvent.click(within(card).getByRole("button", { name: /View Outreach Plan/i }));
     await waitFor(() =>
-      expect(
-        within(card)
-          .getByRole("button", { name: /Save as Artifact/i })
-          .getAttribute("aria-disabled"),
-      ).toBe("false"),
-    );
-    fireEvent.click(within(card).getByRole("button", { name: /Save as Artifact/i }));
-    // The destructive toast also carries this copy; within(card) scopes to the inline-below-row <p>.
-    await waitFor(() =>
-      expect(within(card).getByText(/Could not generate artifact/i)).toBeInTheDocument(),
+      expect(within(card).getByText(/Could not generate outreach plan/i)).toBeInTheDocument(),
     );
     expect(generateAndDownloadPDF).not.toHaveBeenCalled();
+
+    fireEvent.click(within(card).getByRole("button", { name: /try again/i }));
+    await waitFor(() => expect(within(card).getByText("Outreach Plan")).toBeInTheDocument());
+    expect(vi.mocked(generateRecommendationArtefact)).toHaveBeenCalledTimes(2);
   });
 
-  it("does not double-submit while a playbook is already generating", async () => {
+  it("does not double-submit while a plan is already generating", async () => {
     const { generateRecommendationArtefact } = await import("../../services/signals");
-    // Hold the first call open so the generating state stays active across a 2nd click.
     let resolveFirst: () => void = () => {};
     vi.mocked(generateRecommendationArtefact).mockImplementationOnce(
       () =>
@@ -167,30 +209,16 @@ describe("SignalsPage — Save recommendation as Artifact", () => {
     );
     localStorage.setItem("signals_u1_accepted", JSON.stringify(["hash-sig-1"]));
     renderPage();
-    await waitFor(() => expect(screen.getByText("Hiring surge")).toBeInTheDocument());
-    const card = screen.getByText("Hiring surge").closest(".bg-white") as HTMLElement;
+    const card = await openRecommendation();
 
-    fireEvent.click(within(card).getByText("Read more"));
-    fireEvent.click(within(card).getByText("Reach out"));
+    fireEvent.click(within(card).getByRole("button", { name: /View Outreach Plan/i })); // starts, pending
     await waitFor(() =>
-      expect(
-        within(card)
-          .getByRole("button", { name: /Save as Artifact/i })
-          .getAttribute("aria-disabled"),
-      ).toBe("false"),
+      expect(within(card).getByRole("button", { name: /Generating/i })).toBeInTheDocument(),
     );
-
-    const saveBtn = within(card).getByRole("button", { name: /Save as Artifact/i });
-    fireEvent.click(saveBtn); // 1st click → generating starts, service call left pending
-    await waitFor(() => expect(within(card).getByText(/Generating/i)).toBeInTheDocument());
-    fireEvent.click(saveBtn); // 2nd click while generating → must be ignored
-
-    // Despite two clicks, the service is called exactly once.
+    fireEvent.click(within(card).getByRole("button", { name: /Generating/i })); // ignored while in flight
     expect(vi.mocked(generateRecommendationArtefact)).toHaveBeenCalledTimes(1);
 
-    // Resolve the in-flight call; exactly one delivery + enqueue occurs.
     resolveFirst();
-    await waitFor(() => expect(generateAndDownloadPDF).toHaveBeenCalledTimes(1));
-    expect(enqueueArtefact).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(within(card).getByText("Outreach Plan")).toBeInTheDocument());
   });
 });

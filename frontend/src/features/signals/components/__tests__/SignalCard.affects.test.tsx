@@ -46,7 +46,6 @@ const props: SignalCardProps = {
   onFindMatchedLeads: noop,
   onSaveAsArtefact: noop,
   onRecomputeLeadMap: noop,
-  onSaveRecommendationAsArtefact: noop,
   recommendationArtefactGeneratingKey: null,
   recommendationArtefactErrorKey: null,
 };
