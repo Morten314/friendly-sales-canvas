@@ -2,8 +2,9 @@
   python backend/scripts/reconcile_orgs.py            # --report (default, read-only)
   python backend/scripts/reconcile_orgs.py --apply    # destructive (Task 9)
 
-`apply_report` does not exist until Task 9 lands, so it is imported lazily
-inside the --apply branch — this keeps --report fully runnable today.
+`apply_report` is imported lazily inside the --apply branch so `--report`
+stays a light, dependency-minimal read path (no accidental import-time
+coupling to the write path) — not because the symbol doesn't exist.
 """
 import argparse
 
@@ -24,7 +25,7 @@ def main() -> None:
     print(report.render())
 
     if args.apply:
-        from app.services.org_auth.reconcile import apply_report  # Task 9
+        from app.services.org_auth.reconcile import apply_report
         apply_report(report, clients)
     else:
         print("\n(dry-run; re-run with --apply to migrate)")
