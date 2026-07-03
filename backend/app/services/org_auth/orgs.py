@@ -3,7 +3,20 @@ import uuid
 from datetime import datetime, timezone
 from typing import Dict
 
-from app.core.exceptions import OrgNotFoundError, UsersDocumentNotFoundError
+from app.core.exceptions import (
+    ConflictError,
+    OrgNotFoundError,
+    UsersDocumentNotFoundError,
+    ValidationError,
+)
+
+
+def _is_valid_uuid(value: str) -> bool:
+    try:
+        uuid.UUID(str(value))
+        return True
+    except (ValueError, AttributeError, TypeError):
+        return False
 
 
 def list_orgs(mongo, user_id: str) -> Dict:
@@ -110,43 +123,54 @@ def create_org(mongo, request: dict) -> Dict:
     return response
 
 
-def connect_user_to_org(mongo, user_id: str, org_id: str) -> Dict:
-    """
-    Connect a user_id to an org_id.
-    Saves the mapping in MongoDB users collection (single document).
+def connect_user_to_org(mongo, user_id: str, org_id: str, migrate: bool = False) -> Dict:
+    """Connect a user to an org, enforcing the bijective 1:1 invariant.
+
+    - org_id must be a UUID present in orgs.org_list.
+    - reverse-uniqueness: the org must not already belong to a different user.
+    - no silent re-key: if the user is already mapped to a different org,
+      require migrate=True (service-internal; not exposed on POST /connect_org).
     """
     db = mongo["Org_Management"]
-    collection = db["users"]
+    users_collection = db["users"]
+    orgs_collection = db["orgs"]
 
-    # Get or create the single users document
-    users_doc = collection.find_one({"_id": "users"})
+    # shape + membership validation
+    if not _is_valid_uuid(org_id):
+        raise ValidationError(f"org_id is not a valid UUID: {org_id!r}")
+    orgs_doc = orgs_collection.find_one({"_id": "orgs"}) or {}
+    if org_id not in orgs_doc.get("org_list", []):
+        raise ValidationError(f"org_id not found in org_list: {org_id!r}")
 
+    users_doc = users_collection.find_one({"_id": "users"})
+    user_mappings = (users_doc or {}).get("user_mappings", {})
+
+    # reverse-uniqueness: org owned by another user
+    for mapped_user, mapped_org in user_mappings.items():
+        if mapped_org == org_id and mapped_user != user_id:
+            raise ConflictError(
+                f"org {org_id} is already owned by another user"
+            )
+
+    # no silent re-key
+    existing = user_mappings.get(user_id)
+    if existing and existing != org_id and not migrate:
+        raise ConflictError(
+            f"user {user_id} is already mapped to {existing}; pass migrate=True to re-key"
+        )
+
+    user_mappings[user_id] = org_id
     if users_doc:
-        # Update existing user_mappings
-        user_mappings = users_doc.get("user_mappings", {})
-        user_mappings[user_id] = org_id
-
-        collection.update_one(
+        users_collection.update_one(
             {"_id": "users"},
-            {
-                "$set": {
-                    "user_mappings": user_mappings,
-                    "updated_at": datetime.now(timezone.utc)
-                }
-            }
+            {"$set": {"user_mappings": user_mappings, "updated_at": datetime.now(timezone.utc)}},
         )
     else:
-        # Create new document with the mapping
-        collection.insert_one({
-            "_id": "users",
-            "user_mappings": {user_id: org_id},
-            "created_at": datetime.now(timezone.utc),
-            "updated_at": datetime.now(timezone.utc)
-        })
+        users_collection.insert_one(
+            {"_id": "users", "user_mappings": {user_id: org_id},
+             "created_at": datetime.now(timezone.utc), "updated_at": datetime.now(timezone.utc)}
+        )
 
-    return {
-        "status": "success",
-        "message": f"User {user_id} connected to org {org_id}",
-        "user_id": user_id,
-        "org_id": org_id
-    }
+    return {"status": "success",
+            "message": f"User {user_id} connected to org {org_id}",
+            "user_id": user_id, "org_id": org_id}
