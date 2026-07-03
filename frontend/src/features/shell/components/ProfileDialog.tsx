@@ -1,6 +1,5 @@
 import { Popover, PopoverContent } from "@/components/ui/popover";
 import { useAuth } from "@/shared/auth";
-import { useTenant } from "@/shared/tenant";
 
 interface ProfileDialogProps {
   open: boolean;
@@ -10,14 +9,13 @@ interface ProfileDialogProps {
 }
 
 export function ProfileDialog({ open, onOpenChange, fullName, children }: ProfileDialogProps) {
-  const { currentUser } = useAuth();
-  const { selectedTenant } = useTenant();
+  const { currentUser, orgId } = useAuth();
 
   // Get user's email
   const userEmail = currentUser?.email || "";
 
-  // Get organization domain or default to Brewra.com
-  const organizationDomain = selectedTenant?.domain || "brewra.com";
+  // Get organization domain (derived from orgId, matching the old tenant convention) or default to Brewra.com
+  const organizationDomain = orgId ? `${orgId}.com` : "brewra.com";
 
   // Get initials for profile picture
   const getInitials = (name: string): string => {

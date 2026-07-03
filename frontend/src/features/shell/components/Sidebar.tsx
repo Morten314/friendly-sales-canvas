@@ -336,7 +336,6 @@ import { useIsMobile } from "@/components/ui/use-mobile";
 import { cn } from "@/components/ui/utils";
 import { useAuth } from "@/shared/auth";
 import { clearUserCache } from "@/shared/lib/cacheUtils";
-import { useTenant } from "@/shared/tenant";
 
 type NavItem = {
   icon: React.ElementType;
@@ -357,7 +356,6 @@ const navItems: NavItem[] = [
 
 export function Sidebar() {
   const { logout, currentUser } = useAuth();
-  const { clearTenant } = useTenant();
   const navigate = useNavigate();
   const { mobileOpen, setMobileOpen } = useAppSidebar();
   const isMobile = useIsMobile();
@@ -729,7 +727,6 @@ export function Sidebar() {
                 onClick={async () => {
                   // Clear all user-specific cache before logout
                   clearUserCache(currentUser?.uid);
-                  clearTenant();
                   await logout();
                   navigate("/login");
                 }}
@@ -755,7 +752,6 @@ export function Sidebar() {
                 onClick={async () => {
                   // Clear all user-specific cache before logout
                   clearUserCache(currentUser?.uid);
-                  clearTenant();
                   await logout();
                   navigate("/login");
                 }}
