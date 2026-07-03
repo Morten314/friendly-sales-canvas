@@ -53,6 +53,7 @@ Four workstreams. WS1+WS2 are the forward-fix (ship together, one FE change). WS
 
 **New hook** `src/shared/auth/useOrgId.ts`, exported from `@/shared/auth`:
 - Returns the org id resolved by `AuthContext` (authoritative per WS2). No tenant fallback, no `??` chain. Also exposes `orgName` where callers need it. Returns `null` until auth resolves.
+- **`orgName` is not guaranteed.** `GET /org` returns `org_name` only when the `orgs.org_names` map has an entry (`OrgResponse.org_name` is `Optional`, model is `extra="allow"`). Display consumers (Header, ProfileDialog) must render `orgName ?? orgId` (or a neutral label) — never assume a name is present, and never block on it. Tightening `OrgResponse` itself is out of scope (deferred to the response-model debt pass).
 
 There are **two classes** of `useTenant` consumer, and both must be handled for `shared/tenant` to be deletable. The complete consumer inventory (verified by grep on 2026-07-03):
 
@@ -88,7 +89,7 @@ There are **two classes** of `useTenant` consumer, and both must be handled for 
 
 **Stale-localStorage handling:**
 - The new resolver ignores `selectedTenant_*` entirely, so Ishani (and everyone) is fixed on next load with **no cleanup required**.
-- Add a **one-time idempotent sweep** on app init that removes any `selectedTenant_*` keys, so no dead state lingers. (The `org_id_*` / `org_name_*` auth-cache keys are retained — they belong to WS2.)
+- Add a **one-time idempotent sweep** on app init that enumerates `localStorage` keys and removes any matching the `selectedTenant_` prefix, so no dead state lingers. This module is the *only* place the `selectedTenant` literal survives (see success criterion #2). (The `org_id_*` / `org_name_*` auth-cache keys are retained — they belong to WS2.)
 
 **Admin console note:** `features/admin` labels orgs as "Tenants" in the UI (`TenantsOverviewPage`, `OrgDetailPage`). That is an internal-ops display label, not the `shared/tenant` abstraction — it is **out of scope** for renaming here (avoid scope creep); leave it.
 
@@ -100,6 +101,10 @@ There are **two classes** of `useTenant` consumer, and both must be handled for 
 - Overwrite `org_id_<uid>` / `org_name_<uid>` cache with the fresh values.
 - Use the cached value only as an *optimistic* value while the request is in flight, and as a *fallback* if the request fails (offline / backend cold-start).
 - On a genuine mismatch (cache ≠ fresh), the fresh value wins and the cache is corrected.
+
+**First paint must not block on `GET /org`.** Render off the optimistic cached org immediately; the authoritative fetch reconciles in the background. The mandatory `GET /org` sits on the auth path and shares the 30 req/min client limiter, so a Render cold-start must never gate initial render.
+
+**Invalidation cascade (already load-bearing, made explicit):** org-scoped TanStack Query keys already embed the resolved org (`qk.leads(orgId)`, `qk.marketResearchComponent(orgId, componentName)`, `qk.signalLeadMap(orgId, userId)`, `qk.icps(orgId)`, …). Because `useOrgId()` feeds those keys, when a stale→fresh org flip occurs the `queryKey` changes and React Query refetches under the new key automatically; the stale-key entry becomes unsubscribed (not rendered). No separate invalidation call is required — the org-in-key design *is* the cascade. The only visible artifact is a brief transient render off the optimistic cache before the fresh org resolves.
 
 This is the mechanism that guarantees WS1's single resolver is also *correct*, not just *singular*.
 
@@ -118,10 +123,20 @@ The sandbox cannot reach the production Neo4j/Mongo (HTTP-only egress; `mongodb+
 - For the reviewed/approved users, re-point `org_id` across every store that partitions on it:
   - **Neo4j** — `:Lead`, `:Company`, `:Contact`, `:Activity`, `:ICP`, `:Campaign`, `:GTM_Strategy` (any node carrying `org_id`).
   - **MongoDB** — Market Intelligence reports, Lead Market Scores, Signals, File Processing Status, Customer Profiles (across `Scout_Agent` / `Profiler`).
-  - **Pinecone** — vectors are namespaced by `org_id`; re-embed or re-namespace as required (surfaced in the report so the operator knows the Pinecone cost).
+  - **Pinecone** — vectors are namespaced by `org_id`, and Pinecone namespaces **cannot be renamed**. Reconcile by **copy-by-id**: fetch each vector from the source (non-canonical) namespace and `upsert` it into the canonical namespace under the *same id*, then delete the source namespace. Upsert-by-id is idempotent (a re-run overwrites in place, no duplication), which is how WS3's idempotency claim holds for this store. Re-embedding from the S3 source docs is the **fallback only** when source vectors aren't fetchable (it costs embedding-API calls). `--report` must **quantify vector counts per source namespace** so the Pinecone cost is concrete before `--apply`, not "surfaced."
 - **Idempotent** (re-running does nothing once a user is canonical), **per-user**, and **logged** (before/after counts).
 
-**Canonicalization rule:** prefer the user's mapped UUID org. Where the mapping itself is non-canonical, the report surfaces it and the operator decides per-case (re-map to a real UUID org, minting one via `create_org` if none exists) — never auto-guessed in code. Ishani is the trivial case: 197 `A5Bfx…` `:Lead` nodes → `b75ce29e-…`.
+**Canonicalization rule:** prefer the user's mapped UUID org. Where the mapping itself is non-canonical, the report surfaces it and the operator decides per-case (re-map to a real UUID org, minting one via `create_org` if none exists) — never auto-guessed in code.
+
+**What `--report` looks for (discovery, not a fixed list):** it flags *any* record whose `org_id` ≠ the user's canonical org — it does not hunt for specific known ids. That matters because the seed incident alone involves **three distinct non-canonical org-ids**, and the empty-stream symptom and the data-stranding have *different* remediations:
+
+| Non-canonical org-id | What it is | Remediation |
+|---|---|---|
+| `"brewra"` (slug) | The stale `tenant.id` Ishani's browser resolved; may or may not have data written under it during the window her auth org was the slug. | **WS1** fixes the user-facing empty-stream symptom (resolution no longer reads it). WS3 `--report` still scans for any data tagged `org_id="brewra"` and re-points it if present. |
+| `A5BfxZtDTNau2mtgXhUwEXJyBQD3` (uid) | Legacy uid-as-org; **197 `:Lead` nodes** stranded here. | **WS3** re-points → `b75ce29e-…`. |
+| `…string` (corrupt) | Malformed org value from an unvalidated write. | **WS3** manual per-case; **WS4** shape-validation blocks recurrence. |
+
+The **396 leads under `b75ce29e-…`** are her canonical org (already correct, no move) and the **197 under `A5Bfx…`** are the stranded set (a different org-id tag, not a subset) — WS3 leaves the 396 untouched and migrates the 197.
 
 The script lives under `backend/scripts/` (read-only-by-default, same convention as the removed diagnostics) and is **removed from the repo after the migration is applied and verified** (like the RCA diagnostics), or retained if we want it as a recurring maintenance tool — decided at merge.
 
@@ -130,9 +145,11 @@ The script lives under `backend/scripts/` (read-only-by-default, same convention
 `connect_user_to_org` (`app/services/org_auth/orgs.py:113`) has two holes: it never checks **reverse-uniqueness** (two users could map to one org) and it **silently overwrites** a user's existing org (the re-key that strands data). Harden it to enforce the invariant:
 
 - **Reverse-uniqueness:** reject connecting a user to an org already owned by a *different* user (→ "an org has exactly one user"). Since `user_mappings` is a single doc, this is an in-memory scan of its values — fine at this scale.
-- **No silent re-key:** if the user is already mapped to a *different* org, reject unless an explicit `migrate: true` flag is passed. `migrate` is the deliberate, audited path (it records the intent that WS3 acts on); the default path can never silently strand.
+- **No silent re-key:** if the user is already mapped to a *different* org, reject unless an explicit `migrate=True` flag is passed. **`migrate` is a service-function parameter, not an API field** — it is invoked only by the WS3 reconciliation script running in-process on Render (which calls the hardened Python fn directly). The public `POST /connect_org` (`app/routers/org_auth.py:24`) keeps its `user_id` + `org_id`-only body and always takes the strict default (reject re-key); no router/schema change, no client-reachable silent-rekey path. When WS3 must change a user→org mapping, it goes **through this hardened fn with `migrate=True`**, never a raw `user_mappings` write — so every mapping mutation honors the invariant.
 - **Org-id shape validation:** require the `org_id` to be a UUID present in `orgs.org_list`; reject uid-shaped / garbage (`…string`) values at the mapping-write layer. Defense-in-depth against the very inputs that created the fragmentation.
 - **Registration unaffected:** new-user signup (`create_org` → fresh UUID, then `connect_user_to_org` for a brand-new uid) satisfies all three checks by construction.
+
+All three checks are **deliberate**, not defense-in-depth gold-plating: reverse-uniqueness and no-silent-rekey directly implement the explicit bijective-1:1 requirement ("a user has exactly one org, an org has exactly one user"), and no-silent-rekey is the specific guard against the re-key stranding this spec exists to fix. Shape-validation alone would satisfy neither half of the invariant. They are cheap (in-memory checks on a single Mongo doc) and ship together.
 
 Enforcement is turned on **after** WS3 cleanup (see Sequencing) so existing violations don't wedge legitimate operations mid-migration.
 
@@ -169,8 +186,9 @@ WS4 depends on WS3 (can't enforce reverse-uniqueness while duplicates exist). WS
 
 **Frontend (`npm run preflight` must be green):**
 - `useOrgId()` unit tests: returns auth org when resolved; returns `null` before resolution; never falls back to a tenant value.
+- **WS2 re-key propagation (the headline guarantee, SC#3):** plant a stale `org_id_<uid>` cache, resolve auth, and assert `AuthContext` calls `GET /org` and the fresh org **overwrites** the stale cache. Pair it with an assertion that org-scoped query keys re-key on the stale→fresh flip (so downstream queries refetch under the new org) — this is the distinction between a *singular* and a *correct* resolver.
 - `LeadsTable` / `LeadStream` regression: assert the query uses the auth org and that a planted stale `selectedTenant_*` key has **no** effect on the resolved org.
-- Init sweep test: `selectedTenant_*` keys are removed; `org_id_*` retained.
+- Init sweep test: `selectedTenant_`-prefixed keys are removed; `org_id_*` / `org_name_*` retained.
 - Remove/replace tenant-selection + `useTenants` tests; ensure routing tests reflect the removed `/tenant-selection` step.
 
 **Backend (pytest under `backend/tests/`, patch-where-used per `backend/TESTING.md`):**
@@ -199,7 +217,7 @@ WS4 depends on WS3 (can't enforce reverse-uniqueness while duplicates exist). WS
 ## Success criteria
 
 1. A stale/mismatched `selectedTenant_*` value in a user's browser has **no effect** on any org-scoped query; every surface resolves the authoritative org. (Ishani's Scout Lead Stream shows her CSV leads without any manual localStorage edit.)
-2. `grep -r "selectedTenant" frontend/src` returns **zero** resolution/usage sites; `shared/tenant` and `features/tenant` are gone; `/tenant-selection` no longer exists.
+2. No `useTenant` / `selectedTenant?.id` **resolution or usage sites** remain in `frontend/src` outside the one-time init-sweep module (and its test); `shared/tenant` and `features/tenant` are deleted; `/tenant-selection` no longer exists. (The sweep iterates `localStorage` keys by the `selectedTenant_` prefix, so the literal token appears only there — not in any product resolution path. A bare `grep selectedTenant` is therefore expected to match only the sweep module + tests, not zero.)
 3. A backend org re-key is reflected in the client on next load (WS2 verified: cache no longer masks a changed `GET /org`).
 4. The reconciliation `--report` produces an accurate, reviewable plan; after `--apply`, every user's data is under their canonical org (Ishani: 0 leads left under `A5Bfx…`).
 5. `connect_user_to_org` rejects reverse-uniqueness violations, silent re-keys, and non-UUID orgs; new-user registration is unaffected.
