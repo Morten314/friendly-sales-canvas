@@ -183,6 +183,43 @@ def test_post_connect_org_links_user_to_org_existing_doc(client):
     assert users_col.update_one.called, "Refactor must preserve user-org link update"
 
 
+def test_post_connect_org_rejects_non_uuid_org_id(client):
+    """org_id must be a UUID -- lock the 400 contract (Task 7's bijective
+    invariant) at the HTTP layer, not just the service-level unit tests."""
+    mongo_instance, users_col = _connect_mongo_mock(None, [VALID_ORG])
+
+    with _override_mongo(mongo_instance):
+        response = client.post(
+            "/connect_org",
+            json={"user_id": TEST_USER_ID, "org_id": "not-a-uuid"},
+        )
+
+    assert response.status_code == 400
+    assert not users_col.insert_one.called
+    assert not users_col.update_one.called
+
+
+def test_post_connect_org_rejects_org_already_owned_by_another_user(client):
+    """Reverse-uniqueness: an org already claimed by a different user must
+    be rejected (409), not silently re-keyed onto the requesting user --
+    locks the 409 contract from Task 7 at the HTTP layer."""
+    existing_doc = {
+        "_id": "users",
+        "user_mappings": {"other_user": VALID_ORG},
+    }
+    mongo_instance, users_col = _connect_mongo_mock(existing_doc, [VALID_ORG])
+
+    with _override_mongo(mongo_instance):
+        response = client.post(
+            "/connect_org",
+            json={"user_id": TEST_USER_ID, "org_id": VALID_ORG},
+        )
+
+    assert response.status_code == 409
+    assert not users_col.insert_one.called
+    assert not users_col.update_one.called
+
+
 # ---------------------------------------------------------------------------
 # POST /registration — uses module-level clients.client (not MongoClient inline)
 # ---------------------------------------------------------------------------
