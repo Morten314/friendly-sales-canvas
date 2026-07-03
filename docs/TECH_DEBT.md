@@ -404,6 +404,22 @@ Either make the blocking handlers sync `def` (FastAPI dispatches them to the thr
 
 ---
 
+## TD-013 — `connect_user_to_org` reverse-uniqueness is a read-then-write (TOCTOU)
+
+**Date logged:** 2026-07-03 (Spec 46 WS4 impl-review round 1, glm-5.2 finding #3).
+
+**What was done:** `connect_user_to_org` (`backend/app/services/org_auth/orgs.py`) enforces the bijective 1:1 invariant by scanning the in-memory `user_mappings` for reverse-uniqueness, then writing the whole `users` doc back with `update_one`. Read-then-write, not atomic.
+
+**What should be done:** an atomic conditional update (`update_one` with a filter guard on the current mapping state) so two concurrent connects targeting the same pre-existing org can't both pass the scan and both write.
+
+**Why deferred:** unreachable at MVP. Registration mints a fresh UUID org per user (passes all three checks trivially); the only way to a colliding write is two operator-driven `connect_user_to_org` / `POST /connect_org` calls to the same pre-existing org, simultaneously, against a single FastAPI process with 0 live users — low likelihood, low blast radius.
+
+**Trigger:** a multi-worker/multi-process deploy lands, OR an automated (non-admin) path can call `connect_user_to_org`, OR the admin connect flow becomes concurrent with real users.
+
+**Owner:** TBD.
+
+---
+
 ## TD-FE-17 — market-research has no visual-regression baseline (Phase 5 guards with behavioral E2E + Vitest)
 
 **Date logged:** 2026-05-30
