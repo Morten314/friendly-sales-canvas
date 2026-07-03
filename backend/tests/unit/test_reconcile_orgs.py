@@ -83,6 +83,101 @@ def test_clean_user_yields_no_migration():
 
 
 # ---------------------------------------------------------------------------
+# Final-review fix: --report org-scoped visibility (Fix A)
+# ---------------------------------------------------------------------------
+
+
+def test_build_report_surfaces_org_scoped_counts_for_noncanonical_org_only():
+    """org_scoped input -> ReconcileReport.org_scoped, filtered to
+    non-canonical orgs only, and rendered under its own section."""
+    org_scoped = {
+        "stray-org": {"pinecone": 12, "Profiler.Company_Profile": 3},
+        VALID: {"pinecone": 999},  # VALID is u1's canonical org -- must be excluded
+        "zero-org": {"pinecone": 0},  # all-zero -- must be excluded
+    }
+    r = build_report(
+        user_mappings={"u1": VALID},
+        org_list=[VALID],
+        data_orgs_by_user={"u1": {VALID: 5}},
+        org_scoped=org_scoped,
+    )
+
+    assert r.org_scoped == {"stray-org": {"pinecone": 12, "Profiler.Company_Profile": 3}}
+
+    rendered = r.render()
+    assert "== ORG-SCOPED (manual reconciliation required) ==" in rendered
+    assert "org=stray-org" in rendered
+    assert "pinecone=12" in rendered
+    assert "Profiler.Company_Profile=3" in rendered
+    assert f"org={VALID}" not in rendered
+    assert "zero-org" not in rendered
+
+
+def test_build_report_without_org_scoped_arg_omits_the_section():
+    """Backward compatibility: callers that don't pass org_scoped (the
+    pre-existing 3-arg tests above) get an empty section, not a crash."""
+    r = build_report({"u3": VALID}, [VALID], {"u3": {VALID: 5}})
+    assert r.org_scoped == {}
+    assert "ORG-SCOPED" not in r.render()
+
+
+def test_scan_org_scoped_reads_pinecone_namespaces_and_org_only_mongo_counts():
+    """_scan_org_scoped (Fix A): read-only per-org counts across Pinecone
+    namespaces and the org-only Mongo collections, keyed the way build_report
+    expects (org_id -> {store_label: count})."""
+    from app.services.org_auth.reconcile import _scan_org_scoped, _MONGO_ORG_ONLY_COLLECTIONS
+
+    class FakeNamespaceSummary:
+        def __init__(self, vector_count):
+            self.vector_count = vector_count
+
+    class FakeStats:
+        def __init__(self, namespaces):
+            self.namespaces = namespaces
+
+    class FakePineconeIndex:
+        def __init__(self, stats):
+            self._stats = stats
+
+        def describe_index_stats(self):
+            return self._stats
+
+    class FakePineconeClient:
+        def __init__(self, stats):
+            self._index = stats
+
+        def Index(self, name):
+            assert name == "brewra-documents"
+            return FakePineconeIndex(self._index)
+
+    class FakeAggColl:
+        def __init__(self, rows):
+            self._rows = rows
+
+        def aggregate(self, pipeline):
+            return list(self._rows)
+
+    pc = FakePineconeClient(
+        FakeStats({"stray-org": FakeNamespaceSummary(12), VALID: FakeNamespaceSummary(0)})
+    )
+
+    (db1, coll1), (db2, coll2) = _MONGO_ORG_ONLY_COLLECTIONS
+    mongo: dict = {}
+    mongo.setdefault(db1, {})[coll1] = FakeAggColl([{"_id": "stray-org", "c": 3}])
+    mongo.setdefault(db2, {})[coll2] = FakeAggColl(
+        [{"_id": "stray-org", "c": 1}, {"_id": VALID, "c": 5}]
+    )
+
+    out = _scan_org_scoped(mongo, pc)
+
+    assert out["stray-org"]["pinecone"] == 12
+    assert out["stray-org"][f"{db1}.{coll1}"] == 3
+    assert out["stray-org"][f"{db2}.{coll2}"] == 1
+    assert out[VALID]["pinecone"] == 0
+    assert out[VALID][f"{db2}.{coll2}"] == 5
+
+
+# ---------------------------------------------------------------------------
 # Task 9: per-store repoint functions
 # ---------------------------------------------------------------------------
 
@@ -230,28 +325,32 @@ def test_repoint_pinecone_moves_vectors_and_deletes_source():
 
 
 # ---------------------------------------------------------------------------
-# Task 9: apply_report orchestration + cross-user/ambiguity guards
+# Final-review fix: --apply ALWAYS defers org-scoped stores (Fix B)
+#
+# These replace the old single-claimant auto-move tests. Pinecone namespaces
+# and the two org-only Mongo collections carry no user_id, so there is no
+# sound way to attribute them to one migrating user -- not even when that
+# user is the *only* claimant of a non-canonical from_org (a user whose sole
+# footprint under from_org is org-scoped data would never register as a
+# claimant of anything else). apply_report must therefore defer them
+# unconditionally, in every scenario below.
 # ---------------------------------------------------------------------------
 
 
-def test_apply_report_auto_repoints_unclaimed_noncanonical_org():
-    from app.services.org_auth.reconcile import (
-        apply_report,
-        ReconcileReport,
-        _PINECONE_INDEX_NAME,
+def test_apply_always_defers_org_scoped_even_for_unclaimed_noncanonical_org(capsys):
+    from app.services.org_auth.reconcile import apply_report, ReconcileReport
+
+    # "stray-org" is nobody's canonical org and claimed by exactly one user --
+    # the exact shape the old single-claimant heuristic treated as safe to
+    # auto-migrate. It must still be deferred: no user_id means no proof.
+    report = ReconcileReport(
+        migrations={"A5Bfx": {"stray-org": 4}},
+        org_scoped={"stray-org": {"pinecone": 4, "Profiler.Company_Profile": 2}},
     )
-
-    assert _PINECONE_INDEX_NAME == "brewra-documents"  # matches app/services/_retrieval.py
-
-    report = ReconcileReport(migrations={"A5Bfx": {"stray-org": 4}})
     mongo = FakeMongo()
     mongo["Org_Management"]["users"] = _UsersColl({"A5Bfx": VALID})
-
-    index_calls = []
     clients = SimpleNamespace(
-        driver=object(),
-        client=mongo,
-        pc=SimpleNamespace(Index=lambda name: index_calls.append(name) or "the-index"),
+        driver=object(), client=mongo, pc=SimpleNamespace(Index=lambda name: "the-index")
     )
 
     with patch(
@@ -259,25 +358,32 @@ def test_apply_report_auto_repoints_unclaimed_noncanonical_org():
     ) as m_neo, patch(
         "app.services.org_auth.reconcile.repoint_mongo", return_value=2
     ) as m_mongo, patch(
-        "app.services.org_auth.reconcile.repoint_mongo_org_only", return_value=3
+        "app.services.org_auth.reconcile.repoint_mongo_org_only"
     ) as m_mongo_only, patch(
-        "app.services.org_auth.reconcile.repoint_pinecone", return_value=4
+        "app.services.org_auth.reconcile.repoint_pinecone"
     ) as m_pc:
         apply_report(report, clients)
 
+    out = capsys.readouterr().out
+
     m_neo.assert_called_once_with(clients.driver, "A5Bfx", "stray-org", VALID)
     m_mongo.assert_called_once_with(mongo, "A5Bfx", "stray-org", VALID)
-    m_mongo_only.assert_called_once_with(mongo, "stray-org", VALID)
-    m_pc.assert_called_once_with("the-index", "stray-org", VALID)
-    assert index_calls == ["brewra-documents"]
+    m_mongo_only.assert_not_called()
+    m_pc.assert_not_called()
+
+    assert "DEFER org-scoped user=A5Bfx from=stray-org" in out
+    assert "pinecone=4" in out
+    assert "Profiler.Company_Profile=2" in out
+    assert "no user_id to attribute" in out
+    assert "APPLIED user=A5Bfx stray-org->" in out and "neo4j=1 mongo=2" in out
 
 
-def test_apply_defers_org_only_and_pinecone_for_shared_canonical_namespace():
+def test_apply_always_defers_org_scoped_for_shared_canonical_namespace(capsys):
     from app.services.org_auth.reconcile import apply_report, ReconcileReport
 
     # org_A is user A's own canonical org; user B happens to have stray data
-    # sitting in org_A. Auto-repointing org_A -> org_B at the org level would
-    # corrupt user A's canonical data.
+    # sitting in org_A. Still deferred (as before the fix), for the same
+    # unconditional reason as every other scenario now.
     report = ReconcileReport(migrations={"userB": {"org_A": 5}})
     mongo = FakeMongo()
     mongo["Org_Management"]["users"] = _UsersColl({"userA": "org_A", "userB": "org_B"})
@@ -299,16 +405,16 @@ def test_apply_defers_org_only_and_pinecone_for_shared_canonical_namespace():
     # user-scoped stores are always safe -- they only ever touch userB's own rows
     m_neo.assert_called_once_with(clients.driver, "userB", "org_A", "org_B")
     m_mongo.assert_called_once_with(mongo, "userB", "org_A", "org_B")
-    # org-scoped stores are deferred: org_A is userA's canonical org
     m_mongo_only.assert_not_called()
     m_pc.assert_not_called()
+    assert "DEFER org-scoped user=userB from=org_A" in capsys.readouterr().out
 
 
-def test_apply_defers_org_only_and_pinecone_for_ambiguous_multi_user_stray():
+def test_apply_always_defers_org_scoped_for_ambiguous_multi_user_stray(capsys):
     from app.services.org_auth.reconcile import apply_report, ReconcileReport
 
     # "stray-org" is nobody's canonical org, but BOTH userA and userB list it
-    # as a stray -- an org-scoped repoint can't tell whose data it actually is.
+    # as a stray -- still deferred, for the same unconditional reason.
     report = ReconcileReport(
         migrations={"userA": {"stray-org": 2}, "userB": {"stray-org": 3}}
     )
@@ -333,7 +439,7 @@ def test_apply_defers_org_only_and_pinecone_for_ambiguous_multi_user_stray():
     m_pc.assert_not_called()
 
 
-def test_apply_is_idempotent_second_run_moves_zero(capsys):
+def test_apply_is_idempotent_second_run_moves_zero_and_always_defers_org_scoped(capsys):
     from app.services.org_auth.reconcile import (
         apply_report,
         ReconcileReport,
@@ -380,7 +486,10 @@ def test_apply_is_idempotent_second_run_moves_zero(capsys):
     mongo[user_keyed_db][user_keyed_coll] = StatefulColl(
         docs=[{"user_id": "A5Bfx", "org_id": "brewra"}]
     )
-    mongo[org_only_db][org_only_coll] = StatefulColl(docs=[{"org_id": "brewra"}])
+    # Org-only doc: present to prove apply_report never touches it (no
+    # repoint_mongo_org_only call exists in apply_report at all any more).
+    org_only_docs = [{"org_id": "brewra"}]
+    mongo[org_only_db][org_only_coll] = StatefulColl(docs=org_only_docs)
 
     class StatefulNeoSession:
         def __init__(self, nodes):
@@ -412,43 +521,36 @@ def test_apply_is_idempotent_second_run_moves_zero(capsys):
 
     driver = StatefulNeoDriver([{"user_id": "A5Bfx", "org_id": "brewra"}])
 
-    class FakeVector:
-        def __init__(self, id):
-            self.id = id
-
-    class StatefulPineconeIndex:
-        def __init__(self, namespaces):
-            self.namespaces = namespaces
-
-        def list(self, namespace, limit=100):
-            ids = list(self.namespaces.get(namespace, {}).keys())
-            for i in range(0, len(ids), limit):
-                yield ids[i : i + limit]
-
-        def fetch(self, ids, namespace):
-            ns = self.namespaces.get(namespace, {})
-            return type("R", (), {"vectors": {i: ns[i] for i in ids if i in ns}})()
-
-        def upsert(self, vectors, namespace):
-            ns = self.namespaces.setdefault(namespace, {})
-            for v in vectors:
-                ns[v.id] = v
-
-        def delete(self, delete_all, namespace):
-            self.namespaces[namespace] = {}
-
-    index = StatefulPineconeIndex({"brewra": {"v1": FakeVector("v1")}})
+    # clients.pc is unused by apply_report post-fix (org-scoped stores are
+    # never touched here) -- kept only for ClientBundle shape parity.
     clients = SimpleNamespace(
-        driver=driver, client=mongo, pc=SimpleNamespace(Index=lambda name: index)
+        driver=driver, client=mongo, pc=SimpleNamespace(Index=lambda name: None)
     )
-    report = ReconcileReport(migrations={"A5Bfx": {"brewra": 1}})
+    report = ReconcileReport(
+        migrations={"A5Bfx": {"brewra": 1}},
+        org_scoped={"brewra": {"pinecone": 1, f"{org_only_db}.{org_only_coll}": 1}},
+    )
 
-    apply_report(report, clients)
-    first_out = capsys.readouterr().out
-    assert "neo4j=1 mongo=1 mongo_org_only=1 pinecone=1" in first_out
-    assert "DEFER" not in first_out
+    with patch(
+        "app.services.org_auth.reconcile.repoint_mongo_org_only"
+    ) as m_mongo_only, patch(
+        "app.services.org_auth.reconcile.repoint_pinecone"
+    ) as m_pc:
+        apply_report(report, clients)
+        first_out = capsys.readouterr().out
 
-    apply_report(report, clients)  # re-run against already-migrated state
-    second_out = capsys.readouterr().out
-    assert "neo4j=0 mongo=0 mongo_org_only=0 pinecone=0" in second_out
-    assert "DEFER" not in second_out
+        apply_report(report, clients)  # re-run against already-migrated state
+        second_out = capsys.readouterr().out
+
+    m_mongo_only.assert_not_called()
+    m_pc.assert_not_called()
+
+    assert "neo4j=1 mongo=1" in first_out  # user-scoped stores migrate for real
+    assert "DEFER org-scoped user=A5Bfx from=brewra" in first_out
+
+    assert "neo4j=0 mongo=0" in second_out  # idempotent: already migrated
+    assert "DEFER org-scoped user=A5Bfx from=brewra" in second_out  # still deferred every run
+
+    # Org-scoped data genuinely never moved -- still sitting under "brewra"
+    # after two apply_report runs, not just "the mock wasn't called".
+    assert org_only_docs == [{"org_id": "brewra"}]

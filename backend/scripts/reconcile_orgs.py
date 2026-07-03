@@ -19,9 +19,12 @@ def main() -> None:
 
     clients = build_clients()
     # ClientBundle field names (app/core/clients.py): `.client` is the Mongo
-    # client, `.driver` is the Neo4j driver — NOT `.mongo` / `.neo4j`.
-    user_mappings, org_list, data = load_inputs(clients.client, clients.driver)
-    report = build_report(user_mappings, org_list, data)
+    # client, `.driver` is the Neo4j driver, `.pc` is the Pinecone client —
+    # NOT `.mongo` / `.neo4j` / `.pinecone`.
+    user_mappings, org_list, data, org_scoped = load_inputs(
+        clients.client, clients.driver, clients.pc
+    )
+    report = build_report(user_mappings, org_list, data, org_scoped)
     print(report.render())
 
     if args.apply:
