@@ -92,6 +92,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           else localStorage.removeItem(`org_name_${userId}`);
           return { orgId: fetchedOrgId, orgName: fetchedOrgName };
         }
+        // 200 but no usable org (status !== "success" or org_id absent). Behaviour
+        // matches the !response.ok path (keep the cache), but warn so a future
+        // "why isn't my org updating?" on this anti-stale path is debuggable.
+        console.warn(
+          "GET /org returned 200 without a usable org; keeping cached org. status:",
+          data?.status,
+        );
         return { orgId: cachedOrgId, orgName: cachedOrgName };
       } catch (error) {
         console.error("Error fetching org data:", error);
