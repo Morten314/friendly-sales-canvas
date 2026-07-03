@@ -31,9 +31,7 @@ const LEADS = [{ lead_id: "l1", company: "Acme", relevance: "high", why: "fit" }
 
 vi.mock("@/shared/auth", () => ({
   useAuth: () => ({ currentUser: { uid: "u1" }, orgId: "org1" }),
-}));
-vi.mock("@/shared/tenant", () => ({
-  useTenant: () => ({ selectedTenant: null }),
+  useOrgId: () => "org1",
 }));
 vi.mock("../../hooks/useSignalLeadMap", () => ({
   useSignalLeadMap: () => ({

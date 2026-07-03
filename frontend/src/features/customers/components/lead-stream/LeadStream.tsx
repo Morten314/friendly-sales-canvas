@@ -28,8 +28,7 @@ import {
   type LeadSourceFilter,
 } from "@/features/connectors";
 import { useSignalLeadMap } from "@/features/signals";
-import { useAuth } from "@/shared/auth/AuthContext";
-import { useTenant } from "@/shared/tenant";
+import { useOrgId } from "@/shared/auth";
 
 interface LeadStreamPanelProps {
   orgId?: string | null;
@@ -40,11 +39,10 @@ interface LeadStreamPanelProps {
 }
 
 export function LeadStreamPanel({ orgId: orgIdProp }: LeadStreamPanelProps) {
-  const { orgId: authOrgId } = useAuth();
-  const { selectedTenant } = useTenant();
-  // Resolve org the same way LeadsTable does (tenant-aware), so both surfaces
-  // feed useSignalLeadMap the same org under an active tenant selection.
-  const orgId = orgIdProp ?? selectedTenant?.id ?? authOrgId ?? null;
+  // Hooks can't be called conditionally, so resolve useOrgId() unconditionally;
+  // an explicit orgId prop (call-site override) still takes precedence.
+  const hookOrgId = useOrgId();
+  const orgId = orgIdProp ?? hookOrgId;
   const leadsQuery = useLeads(orgId);
   const { signalsForLead } = useSignalLeadMap(orgId);
   const [sourceFilter, setSourceFilter] = useState<LeadSourceFilter>("all");

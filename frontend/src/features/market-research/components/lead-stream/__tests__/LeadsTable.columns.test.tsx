@@ -13,8 +13,8 @@ beforeAll(() => {
 
 vi.mock("@/shared/auth", () => ({
   useAuthToken: () => ({ currentUser: { uid: "u1" }, orgId: "o1", fetchOrgId: undefined }),
+  useOrgId: () => "o1",
 }));
-vi.mock("@/shared/tenant", () => ({ useTenant: () => ({ selectedTenant: { id: "o1" } }) }));
 vi.mock("@/components/ui/use-toast", () => ({ useToast: () => ({ toast: vi.fn() }) }));
 vi.mock("@/shared/auth/jwt", () => ({ default: { getAuthHeader: async () => null } }));
 vi.mock("@/shared/api/transport", () => ({

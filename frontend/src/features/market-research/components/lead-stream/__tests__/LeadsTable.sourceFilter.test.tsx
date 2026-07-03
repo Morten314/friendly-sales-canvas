@@ -28,14 +28,14 @@ beforeAll(() => {
 // Stable mock refs (module-level) — an unstable identity returned per render would
 // loop the container's sync-effects.
 const STABLE_AUTH = { currentUser: null, orgId: "", fetchOrgId: undefined };
-vi.mock("@/shared/auth", () => ({ useAuthToken: () => STABLE_AUTH }));
+vi.mock("@/shared/auth", () => ({
+  useAuthToken: () => STABLE_AUTH,
+  useOrgId: () => null,
+}));
 
 // LeadsTable now calls useSignalLeadMap (Task 15), which reads useAuth from AuthContext.
 // With no orgId/user the hook stays disabled (no fetch); it just needs the context to exist.
 vi.mock("@/shared/auth/AuthContext", () => ({ useAuth: () => ({ currentUser: null, orgId: "" }) }));
-
-const STABLE_TENANT = { selectedTenant: null };
-vi.mock("@/shared/tenant", () => ({ useTenant: () => STABLE_TENANT }));
 
 const STABLE_TOAST = { toast: vi.fn() };
 vi.mock("@/components/ui/use-toast", () => ({ useToast: () => STABLE_TOAST }));

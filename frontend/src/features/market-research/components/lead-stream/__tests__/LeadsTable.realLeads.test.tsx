@@ -40,11 +40,12 @@ beforeAll(() => {
   }
 });
 
-// An org is present (tenant + auth), so the table loads real leads and never demo.
+// An org is present (auth-resolved), so the table loads real leads and never demo.
 const STABLE_AUTH = { currentUser: { uid: "u1" }, orgId: "org1", fetchOrgId: undefined };
-vi.mock("@/shared/auth", () => ({ useAuthToken: () => STABLE_AUTH }));
-const STABLE_TENANT = { selectedTenant: { id: "org1" } };
-vi.mock("@/shared/tenant", () => ({ useTenant: () => STABLE_TENANT }));
+vi.mock("@/shared/auth", () => ({
+  useAuthToken: () => STABLE_AUTH,
+  useOrgId: () => "org1",
+}));
 const STABLE_TOAST = { toast: vi.fn() };
 vi.mock("@/components/ui/use-toast", () => ({ useToast: () => STABLE_TOAST }));
 vi.mock("@/shared/auth/jwt", () => ({ default: { getAuthHeader: async () => null } }));

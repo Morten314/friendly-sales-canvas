@@ -11,9 +11,7 @@ import { server } from "@/test/msw/server";
 vi.mock("@/shared/auth/AuthContext", () => ({
   useAuth: () => ({ orgId: "org1", currentUser: { uid: "u1" } }),
 }));
-vi.mock("@/shared/tenant", () => ({
-  useTenant: () => ({ selectedTenant: null }),
-}));
+vi.mock("@/shared/auth", () => ({ useOrgId: () => "org1" }));
 
 function wrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
