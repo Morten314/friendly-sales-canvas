@@ -10,7 +10,7 @@ export const insightsRoutes = [
     key="insights"
     path="/insights"
     element={
-      <ProtectedRoute requireTenant>
+      <ProtectedRoute>
         <FeatureErrorBoundary featureName="Insights">
           <InsightsPage />
         </FeatureErrorBoundary>

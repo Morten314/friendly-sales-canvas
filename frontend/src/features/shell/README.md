@@ -2,14 +2,14 @@
 
 ## Purpose
 
-The application frame that authenticated features render inside: the sidebar, header, page layout, and profile dialog, plus the route guard. The shell renders only on authenticated screens — Login and TenantSelection do not use `Layout`.
+The application frame that authenticated features render inside: the sidebar, header, page layout, and profile dialog, plus the route guard. The shell renders only on authenticated screens — Login does not use `Layout`.
 
 ## Public surface
 
 Re-exported from `index.ts`; consume only these, only via `@/features/shell`:
 
 - `Layout` — the page frame (header + sidebar + content slot). Composed per-page by feature pages.
-- `ProtectedRoute` — route guard; redirects unauthenticated users to `/login` and auto-selects a tenant when `requireTenant` is set but none is chosen.
+- `ProtectedRoute` — route guard; redirects unauthenticated users to `/login`. Auth-only — no tenant involvement.
 - `SidebarProvider` — provides the app sidebar (mobile-open) state. Nested in `App.tsx`.
 - `useAppSidebar` — the app sidebar hook (renamed from the internal `useSidebar` to avoid the shadcn `ui/sidebar` name-twin — see TECH_DEBT TD-FE).
 - `DeploymentData` (type) — surfaced for `MarketResearch` (retained for that surface).
@@ -29,5 +29,5 @@ Internals (`components/Header`, `components/Sidebar`, `components/ProfileDialog`
 
 ## Dependency notes
 
-- Consumes `@/shared/auth` (`useAuth`), `@/shared/tenant` (`useTenant`, `Tenant`), `@/components/ui/*`, and npm packages.
+- Consumes `@/shared/auth` (`useAuth`), `@/components/ui/*`, and npm packages.
 - Does **not** import from other features. App-wide state lives in `@/shared`, not here (ADR-0002).

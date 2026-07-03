@@ -8,10 +8,9 @@ import SignalsPage from "../SignalsPage";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-// Mutable holders so each test can drive the org id sources the page reads.
+// Mutable holder so each test can drive the org id useOrgId() resolves to.
 const h = vi.hoisted(() => ({
-  authOrgId: null as string | null,
-  selectedTenant: null as { id: string; name: string } | null,
+  orgId: null as string | null,
   leadMapCalls: [] as (string | null | undefined)[],
 }));
 
@@ -30,11 +29,12 @@ const SIGNAL = {
   contextualSuggestions: [],
 };
 
+// SignalsPage resolves org solely from useOrgId() (spec 46 WS1) — the retired
+// tenant-context module (spec 46 WS1 deleted it) is not mocked here because it
+// no longer exists.
 vi.mock("@/shared/auth", () => ({
-  useAuth: () => ({ currentUser: { uid: "u1" }, orgId: h.authOrgId }),
-}));
-vi.mock("@/shared/tenant", () => ({
-  useTenant: () => ({ selectedTenant: h.selectedTenant }),
+  useAuth: () => ({ currentUser: { uid: "u1" } }),
+  useOrgId: () => h.orgId,
 }));
 vi.mock("../../hooks/useSignalLeadMap", () => ({
   useSignalLeadMap: (orgId: string | null | undefined) => {
@@ -96,30 +96,31 @@ function renderPage() {
 beforeEach(() => {
   localStorage.clear();
   vi.clearAllMocks();
-  h.authOrgId = null;
-  h.selectedTenant = null;
+  h.orgId = null;
   h.leadMapCalls = [];
 });
 afterEach(() => localStorage.clear());
 
 describe("SignalsPage — org id resolution for matched leads", () => {
-  it("falls back to the selected tenant id when AuthContext orgId is null", async () => {
-    // The CSV upload path defaults a missing org to "brewra" (selectedTenant);
-    // Find Matched Leads must read leads under the SAME id, not the raw null
-    // (which disables useSignalLeadMap and silently shows zero matched leads).
-    h.authOrgId = null;
-    h.selectedTenant = { id: "brewra", name: "Brewra" };
-    renderPage();
-    await waitFor(() => expect(screen.getByText("Hiring surge")).toBeInTheDocument());
-    expect(h.leadMapCalls.at(-1)).toBe("brewra");
-    expect(h.leadMapCalls).not.toContain(null);
-  });
-
-  it("prefers the AuthContext orgId when it is present", async () => {
-    h.authOrgId = "org1";
-    h.selectedTenant = { id: "brewra", name: "Brewra" };
+  it("resolves org solely from useOrgId, ignoring any stale legacy tenant-selection left in localStorage", async () => {
+    // A leftover legacy tenant-selection entry (e.g. the CSV-upload path's old
+    // "brewra" default, or a previous session) must never leak into org-scoped
+    // reads — useOrgId() (spec 46 WS1/WS2) is the only resolution path now.
+    localStorage.setItem(
+      "legacyTenantSelection_u1",
+      JSON.stringify({ id: "brewra", name: "Brewra" }),
+    );
+    h.orgId = "org1";
     renderPage();
     await waitFor(() => expect(screen.getByText("Hiring surge")).toBeInTheDocument());
     expect(h.leadMapCalls.at(-1)).toBe("org1");
+    expect(h.leadMapCalls).not.toContain("brewra");
+  });
+
+  it("passes null through to useSignalLeadMap when useOrgId has not resolved yet", async () => {
+    h.orgId = null;
+    renderPage();
+    await waitFor(() => expect(screen.getByText("Hiring surge")).toBeInTheDocument());
+    expect(h.leadMapCalls.at(-1)).toBeNull();
   });
 });

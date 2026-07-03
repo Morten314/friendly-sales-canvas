@@ -11,7 +11,7 @@ export const settingsRoutes = [
     key="settings"
     path="/settings"
     element={
-      <ProtectedRoute requireTenant>
+      <ProtectedRoute>
         <FeatureErrorBoundary featureName="Settings">
           <SettingsPage />
         </FeatureErrorBoundary>

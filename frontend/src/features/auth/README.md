@@ -19,5 +19,5 @@ Re-exported from `index.ts`:
 
 ## Dependency notes
 
-- Consumes app-wide auth/tenant primitives from `@/shared/auth` and `@/shared/tenant`.
+- Consumes app-wide auth primitives from `@/shared/auth`.
 - May import another feature only via its `index.ts`.

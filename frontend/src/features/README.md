@@ -19,22 +19,21 @@ src/features/<feature>/
 
 Add a feature's name here **before** scaffolding it. Backend uses snake_case; the frontend uses kebab-case per JS convention.
 
-| Feature           | Phase                                        |
-| ----------------- | -------------------------------------------- |
-| `artifacts`       | 12                                           |
-| `auth`            | 10 (UI) — primitive lives in `shared/auth`   |
-| `calendar`        | 12                                           |
-| `customers`       | 7                                            |
-| `insights`        | 12                                           |
-| `market-research` | 5                                            |
-| `mission-control` | 6                                            |
-| `reports`         | 12                                           |
-| `scout`           | 9                                            |
-| `settings`        | 10                                           |
-| `shell`           | 4b                                           |
-| `signals`         | 8                                            |
-| `strategist`      | 8                                            |
-| `tenant`          | 10 (UI) — primitive lives in `shared/tenant` |
+| Feature           | Phase                                      |
+| ----------------- | ------------------------------------------ |
+| `artifacts`       | 12                                         |
+| `auth`            | 10 (UI) — primitive lives in `shared/auth` |
+| `calendar`        | 12                                         |
+| `customers`       | 7                                          |
+| `insights`        | 12                                         |
+| `market-research` | 5                                          |
+| `mission-control` | 6                                          |
+| `reports`         | 12                                         |
+| `scout`           | 9                                          |
+| `settings`        | 10                                         |
+| `shell`           | 4b                                         |
+| `signals`         | 8                                          |
+| `strategist`      | 8                                          |
 
 There is intentionally **no `features/profiler/`** — Spec 14 §8 Q10 was resolved by distributing Profiler across `customers` + `mission-control` + `shared/profiler`. The ICP-merge algorithm lives in `@/shared/profiler`; the inline view-model mapper in `ICPManager.tsx` is a container data-transform upheld by Plan-25 T21. `features/scout/` is intentionally thin (Spec 30 §1.1): it holds only the Scout deployment surface; Scout chat and shared infrastructure live in `shared/`. Both decisions are recorded as TD-FE-60. The small-page names (`calendar`, `insights`, `reports`, `artifacts`) were appended later (rows above). The scaffolder only _warns_ (does not block) on a name that is not yet on this map.
 

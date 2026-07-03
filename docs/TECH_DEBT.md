@@ -64,7 +64,7 @@ Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases
 | TD-FE-52 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-52--no-strategist-playwrightvr-journey-coverage-is-behavioral-only) |
 | TD-FE-53 | open | [below](#td-fe-53--signals-page-data-flow-not-migrated-to-tanstack-phase-8-was-structure-only) |
 | TD-FE-54 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-54--libjwtts--hooksuseauthts-still-live-in-legacy-srclibsrchooks-rather-than-sharedauth) |
-| TD-FE-55 | open | [below](#td-fe-55--featurestenanthooksusetenantsts-serves-a-hardcoded-mock_tenants-list-no-real-list-tenants-backend-endpoint-exists) |
+| TD-FE-55 | resolved | [below](#td-fe-55--featurestenanthooksusetenantsts-serves-a-hardcoded-mock_tenants-list-no-real-list-tenants-backend-endpoint-exists) |
 | TD-FE-56 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-56--featuressettingscomponentsagentprofiletsx-and-featuresscoutcomponentsscoutdeploymenttsx-are-near-duplicate-forms) |
 | TD-FE-57 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-57--phase-12-features-still-import-legacy-hooksusepagetitle) |
 | TD-FE-58 | open | [below](#td-fe-58--artefacts-cross-component-coupling-via-untyped-window-customevents) |
@@ -399,6 +399,22 @@ Either make the blocking handlers sync `def` (FastAPI dispatches them to the thr
 
 **Pull-forward trigger:**
 - A pre-launch load/performance pass, or the first measured event-loop contention / p99 latency anomaly traced to blocking I/O in async handlers. Decide sync-handlers-vs-motor for the connector router then, and apply the same lens to any other async handler doing blocking I/O.
+
+**Owner:** TBD.
+
+---
+
+## TD-013 — `connect_user_to_org` reverse-uniqueness is a read-then-write (TOCTOU)
+
+**Date logged:** 2026-07-03 (Spec 46 WS4 impl-review round 1, glm-5.2 finding #3).
+
+**What was done:** `connect_user_to_org` (`backend/app/services/org_auth/orgs.py`) enforces the bijective 1:1 invariant by scanning the in-memory `user_mappings` for reverse-uniqueness, then writing the whole `users` doc back with `update_one`. Read-then-write, not atomic.
+
+**What should be done:** an atomic conditional update (`update_one` with a filter guard on the current mapping state) so two concurrent connects targeting the same pre-existing org can't both pass the scan and both write.
+
+**Why deferred:** unreachable at MVP. Registration mints a fresh UUID org per user (passes all three checks trivially); the only way to a colliding write is two operator-driven `connect_user_to_org` / `POST /connect_org` calls to the same pre-existing org, simultaneously, against a single FastAPI process with 0 live users — low likelihood, low blast radius.
+
+**Trigger:** a multi-worker/multi-process deploy lands, OR an automated (non-admin) path can call `connect_user_to_org`, OR the admin connect flow becomes concurrent with real users.
 
 **Owner:** TBD.
 
@@ -813,6 +829,8 @@ The tenant-selection UI shows mock data to real users if the route is ever reach
 Product decision on multi-org support, or a real list-tenants backend endpoint being added.
 
 **Owner:** TBD.
+
+**Resolved (2026-07-03):** Spec 46 WS1 (org/tenant reunification) resolved the open product question as option (b) — the app is single-org-per-user (`GET /org` is authoritative via `useOrgId()`). `features/tenant/` (including this hook and the `/tenant-selection` route) was deleted wholesale; `shared/tenant/` (the `TenantProvider`/`useTenant` context it depended on) was deleted alongside it. No mock-data-to-real-users risk remains because the surface no longer exists.
 
 ---
 

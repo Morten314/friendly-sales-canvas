@@ -10,7 +10,7 @@ export const artifactsRoutes = [
     key="artifacts"
     path="/artifacts"
     element={
-      <ProtectedRoute requireTenant>
+      <ProtectedRoute>
         <FeatureErrorBoundary featureName="Artifacts">
           <ArtifactsPage />
         </FeatureErrorBoundary>

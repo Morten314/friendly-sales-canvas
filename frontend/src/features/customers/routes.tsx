@@ -11,7 +11,7 @@ export const customersRoutes = [
     key="customers"
     path="/customers"
     element={
-      <ProtectedRoute requireTenant>
+      <ProtectedRoute>
         <FeatureErrorBoundary featureName="Customers">
           <CustomersPage />
         </FeatureErrorBoundary>

@@ -11,7 +11,7 @@ export const strategistRoutes = [
     key="strategist-tab"
     path="/your-ai-team/strategist/:tab"
     element={
-      <ProtectedRoute requireTenant>
+      <ProtectedRoute>
         <FeatureErrorBoundary featureName="Strategist">
           <StrategistPage />
         </FeatureErrorBoundary>

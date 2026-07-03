@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/select";
 import { useIsMobile } from "@/components/ui/use-mobile";
 import { cn } from "@/components/ui/utils";
-import { useTenant } from "@/shared/tenant";
+import { useAuth } from "@/shared/auth";
 
 // Define our deployment data type
 export interface DeploymentData {
@@ -51,7 +51,8 @@ export function Header() {
   const [isSignalsRefreshing, setIsSignalsRefreshing] = useState(false);
   const isMobile = useIsMobile();
   const { setMobileOpen } = useAppSidebar();
-  const { selectedTenant } = useTenant();
+  const { orgName, orgId } = useAuth();
+  const workspaceLabel = orgName ?? orgId ?? "";
 
   // Listen for signals refresh state changes
   useEffect(() => {
@@ -546,14 +547,14 @@ export function Header() {
         )}
 
         {/* Organization Badge - Ready for future dropdown when multiple orgs are available */}
-        {selectedTenant && (
+        {workspaceLabel && (
           <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/50 shadow-sm">
             <Building2 className="h-5 w-5 text-blue-600 flex-shrink-0" />
             <span className="text-base font-bold text-blue-700 hidden sm:inline whitespace-nowrap">
-              {selectedTenant.name}
+              {workspaceLabel}
             </span>
             <span className="text-base font-bold text-blue-700 sm:hidden">
-              {selectedTenant.name.substring(0, 1)}
+              {workspaceLabel.substring(0, 1)}
             </span>
           </div>
         )}

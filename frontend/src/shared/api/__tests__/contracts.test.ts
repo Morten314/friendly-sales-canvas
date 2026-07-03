@@ -1,12 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ZodError } from "zod";
 
-import {
-  AuthTokenResponseSchema,
-  CompanyProfileSchema,
-  TenantListSchema,
-  TenantSchema,
-} from "@/shared/api/contracts";
+import { AuthTokenResponseSchema, CompanyProfileSchema } from "@/shared/api/contracts";
 
 describe("CompanyProfileSchema", () => {
   it("parses a full profile", () => {
@@ -36,23 +31,6 @@ describe("CompanyProfileSchema", () => {
 
   it("rejects a wrong-typed field", () => {
     expect(() => CompanyProfileSchema.parse({ industry: 42 })).toThrow(ZodError);
-  });
-});
-
-describe("TenantSchema / TenantListSchema", () => {
-  it("parses a tenant with optional domain/logo", () => {
-    expect(TenantSchema.parse({ id: "1", name: "Acme" }).name).toBe("Acme");
-  });
-
-  it("parses the mock tenant list", () => {
-    const list = TenantListSchema.parse([
-      { id: "1", name: "Acme Corporation", domain: "acme.com", logo: "🏢" },
-    ]);
-    expect(list).toHaveLength(1);
-  });
-
-  it("rejects a tenant missing required id", () => {
-    expect(() => TenantSchema.parse({ name: "Acme" })).toThrow(ZodError);
   });
 });
 

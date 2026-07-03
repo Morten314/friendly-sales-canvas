@@ -24,7 +24,7 @@ vi.mock("../../../hooks/useLeads", () => ({
 }));
 vi.mock("@/features/signals", () => ({ useSignalLeadMap: () => ({ signalsForLead: () => [] }) }));
 vi.mock("@/shared/auth/AuthContext", () => ({ useAuth: () => ({ orgId: "o1" }) }));
-vi.mock("@/shared/tenant", () => ({ useTenant: () => ({ selectedTenant: { id: "o1" } }) }));
+vi.mock("@/shared/auth", () => ({ useOrgId: () => "o1" }));
 vi.mock("@/features/connectors", () => ({
   LEAD_SOURCE_OPTIONS: [{ value: "all", label: "All leads" }],
   LeadSourceBadge: () => null,

@@ -17,7 +17,6 @@ import { scoutRoutes } from "@/features/scout";
 import { settingsRoutes } from "@/features/settings";
 import { signalsRoutes } from "@/features/signals";
 import { strategistRoutes } from "@/features/strategist";
-import { tenantRoutes } from "@/features/tenant";
 
 export const featureRoutes = [
   ...marketResearchRoutes,
@@ -27,7 +26,6 @@ export const featureRoutes = [
   ...signalsRoutes,
   ...strategistRoutes,
   ...authRoutes,
-  ...tenantRoutes,
   ...settingsRoutes,
   ...calendarRoutes,
   ...insightsRoutes,

@@ -17,6 +17,11 @@ import pytest
 from tests.helpers import scrub_dynamic
 from tests.identities import TEST_USER_ID, TEST_ORG_ID
 
+# A syntactically valid org_id (UUID) that connect_user_to_org will accept.
+# TEST_ORG_ID ("test_org_abc") is uid-shaped and now correctly rejected under
+# the bijective 1:1 invariant (a valid org_id must be a UUID in orgs.org_list).
+VALID_ORG = "b75ce29e-344c-4e6c-964e-5ac236d0b49a"
+
 
 @contextmanager
 def _override_mongo(mongo_instance):
@@ -52,6 +57,25 @@ def _mongo_client_mock_returning(users_doc, orgs_doc=None):
     m.__getitem__.return_value.__getitem__.return_value = col
     col.find_one.side_effect = [users_doc, orgs_doc]
     return m, col
+
+
+def _connect_mongo_mock(users_doc, org_list):
+    """Mongo mock for POST /connect_org.
+
+    connect_user_to_org accesses db["users"] and db["orgs"] as distinct
+    collections and (unlike list_orgs) reads orgs first for the membership
+    check, so the collection mocks are keyed by name rather than relying on
+    find_one call ordering. Returns (mongo_mock, users_collection_mock).
+    """
+    users_col = MagicMock()
+    orgs_col = MagicMock()
+    users_col.find_one.return_value = users_doc
+    orgs_col.find_one.return_value = {"_id": "orgs", "org_list": org_list}
+    db = MagicMock()
+    db.__getitem__.side_effect = lambda k: users_col if k == "users" else orgs_col
+    m = MagicMock()
+    m.__getitem__.return_value = db
+    return m, users_col
 
 
 # ---------------------------------------------------------------------------
@@ -126,12 +150,12 @@ def test_post_org_creates_new_org(client, snapshot):
 
 def test_post_connect_org_links_user_to_org_new_doc(client, snapshot):
     """No existing users document → insert_one called."""
-    mongo_instance, users_col = _mongo_client_mock_returning(None)
+    mongo_instance, users_col = _connect_mongo_mock(None, [VALID_ORG])
 
     with _override_mongo(mongo_instance):
         response = client.post(
             "/connect_org",
-            json={"user_id": TEST_USER_ID, "org_id": TEST_ORG_ID},
+            json={"user_id": TEST_USER_ID, "org_id": VALID_ORG},
         )
 
     assert response.status_code == 200
@@ -141,21 +165,59 @@ def test_post_connect_org_links_user_to_org_new_doc(client, snapshot):
 
 
 def test_post_connect_org_links_user_to_org_existing_doc(client):
-    """Existing users document → update_one called."""
+    """Existing users document (owned by another user of a *different* org) →
+    update_one called; the bijective invariant permits the new mapping."""
     existing_doc = {
         "_id": "users",
         "user_mappings": {"other_user": "other_org"},
     }
-    mongo_instance, users_col = _mongo_client_mock_returning(existing_doc)
+    mongo_instance, users_col = _connect_mongo_mock(existing_doc, [VALID_ORG])
 
     with _override_mongo(mongo_instance):
         response = client.post(
             "/connect_org",
-            json={"user_id": TEST_USER_ID, "org_id": TEST_ORG_ID},
+            json={"user_id": TEST_USER_ID, "org_id": VALID_ORG},
         )
 
     assert response.status_code == 200
     assert users_col.update_one.called, "Refactor must preserve user-org link update"
+
+
+def test_post_connect_org_rejects_non_uuid_org_id(client):
+    """org_id must be a UUID -- lock the 400 contract (Task 7's bijective
+    invariant) at the HTTP layer, not just the service-level unit tests."""
+    mongo_instance, users_col = _connect_mongo_mock(None, [VALID_ORG])
+
+    with _override_mongo(mongo_instance):
+        response = client.post(
+            "/connect_org",
+            json={"user_id": TEST_USER_ID, "org_id": "not-a-uuid"},
+        )
+
+    assert response.status_code == 400
+    assert not users_col.insert_one.called
+    assert not users_col.update_one.called
+
+
+def test_post_connect_org_rejects_org_already_owned_by_another_user(client):
+    """Reverse-uniqueness: an org already claimed by a different user must
+    be rejected (409), not silently re-keyed onto the requesting user --
+    locks the 409 contract from Task 7 at the HTTP layer."""
+    existing_doc = {
+        "_id": "users",
+        "user_mappings": {"other_user": VALID_ORG},
+    }
+    mongo_instance, users_col = _connect_mongo_mock(existing_doc, [VALID_ORG])
+
+    with _override_mongo(mongo_instance):
+        response = client.post(
+            "/connect_org",
+            json={"user_id": TEST_USER_ID, "org_id": VALID_ORG},
+        )
+
+    assert response.status_code == 409
+    assert not users_col.insert_one.called
+    assert not users_col.update_one.called
 
 
 # ---------------------------------------------------------------------------

@@ -26,8 +26,8 @@
 # ---
 # name: test_post_connect_org_links_user_to_org_new_doc
   dict({
-    'message': 'User test_user_123 connected to org test_org_abc',
-    'org_id': 'test_org_abc',
+    'message': 'User test_user_123 connected to org b75ce29e-344c-4e6c-964e-5ac236d0b49a',
+    'org_id': 'b75ce29e-344c-4e6c-964e-5ac236d0b49a',
     'org_name': None,
     'status': 'success',
     'user_id': 'test_user_123',

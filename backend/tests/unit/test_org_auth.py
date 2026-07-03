@@ -13,7 +13,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.core.exceptions import OrgNotFoundError, UsersDocumentNotFoundError
+from app.core.exceptions import (
+    ConflictError,
+    OrgNotFoundError,
+    UsersDocumentNotFoundError,
+    ValidationError,
+)
 from app.models.org_auth import RegistrationRequest
 from app.services.org_auth import (
     connect_user_to_org,
@@ -23,6 +28,30 @@ from app.services.org_auth import (
     list_registrations,
 )
 from tests.identities import TEST_ORG_ID, TEST_USER_ID
+
+# A syntactically valid org_id (UUID) present in the org_list. The shared
+# TEST_ORG_ID ("test_org_abc") is intentionally NOT used for connect tests:
+# under the bijective 1:1 invariant a valid org_id must be a UUID in
+# Org_Management.orgs.org_list, and TEST_ORG_ID is uid-shaped/malformed.
+VALID_ORG = "b75ce29e-344c-4e6c-964e-5ac236d0b49a"
+
+
+def _mongo_with(users_map, org_list):
+    """Return a fake mongo whose Org_Management.users/.orgs docs reflect args.
+
+    Mirrors the in-memory fake-mongo double (`_FakeMongoClient`) defined in
+    tests/unit/conftest.py so that ``find_one({"_id": "users"})`` returns
+    ``{"user_mappings": users_map}``, ``find_one({"_id": "orgs"})`` returns
+    ``{"org_list": org_list}``, and ``update_one``/``insert_one`` mutate the
+    in-memory store like the real service code expects.
+    """
+    from tests.unit.conftest import _FakeMongoClient
+
+    mongo = _FakeMongoClient()
+    db = mongo["Org_Management"]
+    db["users"].insert_one({"_id": "users", "user_mappings": dict(users_map)})
+    db["orgs"].insert_one({"_id": "orgs", "org_list": list(org_list)})
+    return mongo
 
 
 # ---------------------------------------------------------------------------
@@ -126,33 +155,89 @@ def test_create_org_handles_missing_org_name(mock_mongo_client):
 # ---------------------------------------------------------------------------
 
 def test_connect_user_to_org_creates_new_document(mock_mongo_client):
-    coll = MagicMock()
-    coll.find_one.return_value = None
-    mock_mongo_client["Org_Management"].__getitem__.return_value = coll
+    users_coll = MagicMock()
+    orgs_coll = MagicMock()
+    users_coll.find_one.return_value = None
+    orgs_coll.find_one.return_value = {"_id": "orgs", "org_list": [VALID_ORG]}
+    mock_mongo_client["Org_Management"].__getitem__.side_effect = lambda k: (
+        users_coll if k == "users" else orgs_coll
+    )
 
-    result = connect_user_to_org(mock_mongo_client, TEST_USER_ID, TEST_ORG_ID)
+    result = connect_user_to_org(mock_mongo_client, TEST_USER_ID, VALID_ORG)
 
     assert result["status"] == "success"
     assert result["user_id"] == TEST_USER_ID
-    assert result["org_id"] == TEST_ORG_ID
-    coll.insert_one.assert_called_once()
+    assert result["org_id"] == VALID_ORG
+    users_coll.insert_one.assert_called_once()
 
 
 def test_connect_user_to_org_updates_existing_document(mock_mongo_client):
-    coll = MagicMock()
-    coll.find_one.return_value = {
+    users_coll = MagicMock()
+    orgs_coll = MagicMock()
+    users_coll.find_one.return_value = {
         "_id": "users",
         "user_mappings": {"other_user": "other_org"},
     }
-    mock_mongo_client["Org_Management"].__getitem__.return_value = coll
+    orgs_coll.find_one.return_value = {"_id": "orgs", "org_list": [VALID_ORG]}
+    mock_mongo_client["Org_Management"].__getitem__.side_effect = lambda k: (
+        users_coll if k == "users" else orgs_coll
+    )
 
-    result = connect_user_to_org(mock_mongo_client, TEST_USER_ID, TEST_ORG_ID)
+    result = connect_user_to_org(mock_mongo_client, TEST_USER_ID, VALID_ORG)
 
     assert result["status"] == "success"
-    coll.update_one.assert_called_once()
-    update_doc = coll.update_one.call_args.args[1]["$set"]
-    assert update_doc["user_mappings"][TEST_USER_ID] == TEST_ORG_ID
+    users_coll.update_one.assert_called_once()
+    update_doc = users_coll.update_one.call_args.args[1]["$set"]
+    assert update_doc["user_mappings"][TEST_USER_ID] == VALID_ORG
     assert update_doc["user_mappings"]["other_user"] == "other_org"  # preserved
+
+
+# ---------------------------------------------------------------------------
+# connect_user_to_org — WS4 bijective 1:1 invariant
+# ---------------------------------------------------------------------------
+
+def test_connect_new_user_to_valid_org_succeeds():
+    mongo = _mongo_with({}, [VALID_ORG])
+    out = connect_user_to_org(mongo, "newuid", VALID_ORG)
+    assert out["org_id"] == VALID_ORG
+
+
+def test_connect_rejects_non_uuid_org():
+    mongo = _mongo_with({}, [VALID_ORG])
+    with pytest.raises(ValidationError):
+        connect_user_to_org(mongo, "newuid", "A5BfxUidAsOrg")
+
+
+def test_connect_rejects_org_not_in_org_list():
+    mongo = _mongo_with({}, [VALID_ORG])
+    with pytest.raises(ValidationError):
+        connect_user_to_org(mongo, "newuid", "11111111-1111-1111-1111-111111111111")
+
+
+def test_connect_rejects_org_owned_by_another_user():
+    mongo = _mongo_with({"other": VALID_ORG}, [VALID_ORG])
+    with pytest.raises(ConflictError):
+        connect_user_to_org(mongo, "newuid", VALID_ORG)
+
+
+def test_connect_rejects_silent_rekey_without_migrate():
+    other = "22222222-2222-2222-2222-222222222222"
+    mongo = _mongo_with({"u1": VALID_ORG}, [VALID_ORG, other])
+    with pytest.raises(ConflictError):
+        connect_user_to_org(mongo, "u1", other)  # already mapped elsewhere
+
+
+def test_connect_allows_rekey_with_migrate():
+    other = "22222222-2222-2222-2222-222222222222"
+    mongo = _mongo_with({"u1": VALID_ORG}, [VALID_ORG, other])
+    out = connect_user_to_org(mongo, "u1", other, migrate=True)
+    assert out["org_id"] == other
+
+
+def test_connect_idempotent_same_mapping():
+    mongo = _mongo_with({"u1": VALID_ORG}, [VALID_ORG])
+    out = connect_user_to_org(mongo, "u1", VALID_ORG)  # unchanged
+    assert out["org_id"] == VALID_ORG
 
 
 # ---------------------------------------------------------------------------

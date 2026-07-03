@@ -60,7 +60,7 @@ import {
 } from "@/features/connectors";
 import { useSignalLeadMap } from "@/features/signals";
 import { buildApiUrl } from "@/shared/api/transport";
-import { useAuthToken } from "@/shared/auth";
+import { useAuthToken, useOrgId } from "@/shared/auth";
 import jwtManager from "@/shared/auth/jwt";
 import {
   type Rating,
@@ -70,7 +70,6 @@ import {
   TIER_INTELLIGENCE,
   heatmapLeads,
 } from "@/shared/lib/leadData";
-import { useTenant } from "@/shared/tenant";
 
 // ─── Score Breakdown Popover ────────────────────────────────────────────────
 
@@ -372,9 +371,9 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
   onHeatmapRowsForDashboardChange,
 }) => {
   const navigate = useNavigate();
-  const { currentUser, orgId: authOrgId, fetchOrgId } = useAuthToken();
-  const { selectedTenant } = useTenant();
-  const leadMapOrgId = selectedTenant?.id ?? authOrgId ?? "";
+  const { currentUser } = useAuthToken();
+  const orgId = useOrgId();
+  const leadMapOrgId = orgId ?? "";
   const { signalsForLead } = useSignalLeadMap(leadMapOrgId);
   const { toast } = useToast();
   const [apiHeatmapLeads, setApiHeatmapLeads] = useState<HeatmapLead[] | null>(null);
@@ -397,18 +396,9 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
     orgId: string;
   } | null> => {
     const userId = currentUser?.uid;
-    let orgId = selectedTenant?.id ?? authOrgId ?? "";
-    if (!orgId && userId) {
-      const stored = localStorage.getItem(`org_id_${userId}`);
-      if (stored) orgId = stored;
-    }
-    if (!orgId && userId && fetchOrgId) {
-      const resolved = await fetchOrgId(userId);
-      orgId = resolved?.orgId ?? "";
-    }
     if (!userId || !orgId) return null;
     return { userId, orgId };
-  }, [currentUser?.uid, selectedTenant?.id, authOrgId, fetchOrgId]);
+  }, [currentUser?.uid, orgId]);
 
   const fetchMarketScores = useCallback(async () => {
     const ctx = await resolveUserIdOrgId();
@@ -579,7 +569,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
   // Merge real leads with market-scores by lead id (scored rows win), so every
   // real lead shows and scored ones are enriched. Demo data is used ONLY when there
   // is no org context (dev/storybook) and nothing real to show — never for a real org.
-  const hasOrgContext = Boolean(selectedTenant?.id ?? authOrgId);
+  const hasOrgContext = Boolean(orgId);
   const baseLeads = useMemo<HeatmapLead[]>(() => {
     const scored = apiHeatmapLeads ?? [];
     const real = realLeads ?? [];
