@@ -1,8 +1,9 @@
 import { z } from "zod";
 
-// Matches the Tenant shape declared in src/shared/tenant/TenantContext.tsx.
+// Historical: matched the Tenant shape from the now-retired tenant-context
+// module (spec 46 WS1 collapsed the tenant abstraction; TD-FE-55 resolved).
 // Mock-derived (no live endpoint exists — spec 20 §3.7); structural, not a drift
-// guard. Re-validate against the real endpoint once one exists (TD-FE-55).
+// guard.
 export const TenantSchema = z.object({
   id: z.string(),
   name: z.string(),

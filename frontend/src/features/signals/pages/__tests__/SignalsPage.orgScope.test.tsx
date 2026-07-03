@@ -29,8 +29,9 @@ const SIGNAL = {
   contextualSuggestions: [],
 };
 
-// SignalsPage resolves org solely from useOrgId() (spec 46 WS1) — it never reads
-// @/shared/tenant, so that module is not mocked here at all.
+// SignalsPage resolves org solely from useOrgId() (spec 46 WS1) — the retired
+// tenant-context module (spec 46 WS1 deleted it) is not mocked here because it
+// no longer exists.
 vi.mock("@/shared/auth", () => ({
   useAuth: () => ({ currentUser: { uid: "u1" } }),
   useOrgId: () => h.orgId,
@@ -101,11 +102,14 @@ beforeEach(() => {
 afterEach(() => localStorage.clear());
 
 describe("SignalsPage — org id resolution for matched leads", () => {
-  it("resolves org solely from useOrgId, ignoring any stale selectedTenant left in localStorage", async () => {
-    // A leftover selectedTenant entry (e.g. the CSV-upload path's old "brewra"
-    // default, or a previous session) must never leak into org-scoped reads —
-    // useOrgId() (spec 46 WS1/WS2) is the only resolution path now.
-    localStorage.setItem("selectedTenant_u1", JSON.stringify({ id: "brewra", name: "Brewra" }));
+  it("resolves org solely from useOrgId, ignoring any stale legacy tenant-selection left in localStorage", async () => {
+    // A leftover legacy tenant-selection entry (e.g. the CSV-upload path's old
+    // "brewra" default, or a previous session) must never leak into org-scoped
+    // reads — useOrgId() (spec 46 WS1/WS2) is the only resolution path now.
+    localStorage.setItem(
+      "legacyTenantSelection_u1",
+      JSON.stringify({ id: "brewra", name: "Brewra" }),
+    );
     h.orgId = "org1";
     renderPage();
     await waitFor(() => expect(screen.getByText("Hiring surge")).toBeInTheDocument());

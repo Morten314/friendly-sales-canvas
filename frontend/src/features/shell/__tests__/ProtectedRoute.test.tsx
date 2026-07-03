@@ -43,13 +43,12 @@ function renderProtected(initialPath: string) {
 }
 
 describe("ProtectedRoute", () => {
-  it("renders children for an authed user without touching tenant", () => {
+  it("renders children for an authed user", () => {
     authState.currentUser = { uid: "u1" };
 
     renderProtected("/mission-control");
 
     expect(screen.getByText("ok")).toBeInTheDocument();
-    expect(localStorage.getItem("selectedTenant_u1")).toBeNull();
   });
 
   it("redirects an unauthenticated user to /login", () => {

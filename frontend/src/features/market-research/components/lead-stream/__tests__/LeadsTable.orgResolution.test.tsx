@@ -1,10 +1,10 @@
 // Regression test for the org-tenant reunification bug (spec 46). LeadsTable
-// used to resolve org as `selectedTenant?.id ?? authOrgId ?? ""`, so a stale
-// tenant selection persisted in localStorage (e.g. the default "brewra" slug
-// written at login) would win the resolution and silently scope every
-// lead-stream read to the wrong org. useOrgId() (spec 46 WS1/WS2) is now the
-// sole resolution path — it folds in the authoritative GET /org fetch and
-// never reads a persisted/stale tenant.
+// used to fold a legacy tenant-selection value read from localStorage (e.g.
+// the default "brewra" slug written at login) into org resolution ahead of
+// the authenticated org, silently scoping every lead-stream read to the wrong
+// org. useOrgId() (spec 46 WS1/WS2) is now the sole resolution path — it
+// folds in the authoritative GET /org fetch and never reads any persisted
+// tenant state (that state is fully retired — see src/app/clearStaleTenantKeys.ts).
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, waitFor } from "@testing-library/react";
@@ -27,18 +27,6 @@ const STABLE_AUTH = { currentUser: { uid: "u1" }, orgId: REAL_ORG_ID, fetchOrgId
 vi.mock("@/shared/auth", () => ({
   useAuthToken: () => STABLE_AUTH,
   useOrgId: () => REAL_ORG_ID,
-}));
-
-// Mocked (not the real TenantProvider-backed module — see LeadsTable.realLeads.test.tsx
-// for the same convention) so it reflects whatever a stale tenant selection left in
-// localStorage, without requiring a real TenantProvider/Firebase context. This is the
-// bug's actual failure mode: a leftover `selectedTenant_<uid>` entry from a previous
-// session or the CSV-upload path's "brewra" default.
-vi.mock("@/shared/tenant", () => ({
-  useTenant: () => {
-    const stored = localStorage.getItem("selectedTenant_u1");
-    return { selectedTenant: stored ? JSON.parse(stored) : null };
-  },
 }));
 
 const STABLE_TOAST = { toast: vi.fn() };
@@ -69,8 +57,11 @@ function renderTable() {
 }
 
 describe("LeadsTable org resolution (spec 46 — kills the tenant-first bug)", () => {
-  it("resolves org from auth, ignoring any stale selectedTenant localStorage", async () => {
-    localStorage.setItem("selectedTenant_u1", JSON.stringify({ id: "brewra", name: "Brewra" }));
+  it("resolves org from auth, ignoring any stale legacy tenant-selection localStorage", async () => {
+    localStorage.setItem(
+      "legacyTenantSelection_u1",
+      JSON.stringify({ id: "brewra", name: "Brewra" }),
+    );
 
     renderTable();
 

@@ -64,7 +64,7 @@ Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases
 | TD-FE-52 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-52--no-strategist-playwrightvr-journey-coverage-is-behavioral-only) |
 | TD-FE-53 | open | [below](#td-fe-53--signals-page-data-flow-not-migrated-to-tanstack-phase-8-was-structure-only) |
 | TD-FE-54 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-54--libjwtts--hooksuseauthts-still-live-in-legacy-srclibsrchooks-rather-than-sharedauth) |
-| TD-FE-55 | open | [below](#td-fe-55--featurestenanthooksusetenantsts-serves-a-hardcoded-mock_tenants-list-no-real-list-tenants-backend-endpoint-exists) |
+| TD-FE-55 | resolved | [below](#td-fe-55--featurestenanthooksusetenantsts-serves-a-hardcoded-mock_tenants-list-no-real-list-tenants-backend-endpoint-exists) |
 | TD-FE-56 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-56--featuressettingscomponentsagentprofiletsx-and-featuresscoutcomponentsscoutdeploymenttsx-are-near-duplicate-forms) |
 | TD-FE-57 | resolved | [archive](TECH_DEBT_ARCHIVE.md#td-fe-57--phase-12-features-still-import-legacy-hooksusepagetitle) |
 | TD-FE-58 | open | [below](#td-fe-58--artefacts-cross-component-coupling-via-untyped-window-customevents) |
@@ -813,6 +813,8 @@ The tenant-selection UI shows mock data to real users if the route is ever reach
 Product decision on multi-org support, or a real list-tenants backend endpoint being added.
 
 **Owner:** TBD.
+
+**Resolved (2026-07-03):** Spec 46 WS1 (org/tenant reunification) resolved the open product question as option (b) — the app is single-org-per-user (`GET /org` is authoritative via `useOrgId()`). `features/tenant/` (including this hook and the `/tenant-selection` route) was deleted wholesale; `shared/tenant/` (the `TenantProvider`/`useTenant` context it depended on) was deleted alongside it. No mock-data-to-real-users risk remains because the surface no longer exists.
 
 ---
 

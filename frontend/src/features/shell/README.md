@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The application frame that authenticated features render inside: the sidebar, header, page layout, and profile dialog, plus the route guard. The shell renders only on authenticated screens — Login and TenantSelection do not use `Layout`.
+The application frame that authenticated features render inside: the sidebar, header, page layout, and profile dialog, plus the route guard. The shell renders only on authenticated screens — Login does not use `Layout`.
 
 ## Public surface
 

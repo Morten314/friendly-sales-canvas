@@ -6,6 +6,10 @@ import "@/shared/styles/index.css";
 import "@/shared/styles/scrollbar-hide.css";
 import App from "./App.tsx";
 
+import { clearStaleTenantKeys } from "@/app/clearStaleTenantKeys";
+
+clearStaleTenantKeys();
+
 // PWA Service Worker Registration
 // Important: avoid stale cached assets during Lovable preview/dev.
 if (import.meta.env.PROD) {
