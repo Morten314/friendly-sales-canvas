@@ -11,7 +11,7 @@ export const scoutRoutes = [
     key="scout-deployment"
     path="/scout-deployment"
     element={
-      <ProtectedRoute requireTenant>
+      <ProtectedRoute>
         <FeatureErrorBoundary featureName="Scout Deployment">
           <ScoutDeploymentPage />
         </FeatureErrorBoundary>

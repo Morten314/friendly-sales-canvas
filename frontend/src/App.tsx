@@ -9,7 +9,6 @@ import { useApolloUnlockToast } from "@/features/connectors";
 import { NotFound, PWAInstallPrompt, SidebarProvider } from "@/features/shell";
 import { queryClient } from "@/shared/api/queryClient";
 import { AuthProvider } from "@/shared/auth";
-import { TenantProvider } from "@/shared/tenant";
 
 function ApolloUnlockWatcher() {
   useApolloUnlockToast();
@@ -19,23 +18,21 @@ function ApolloUnlockWatcher() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TenantProvider>
-        <SidebarProvider>
-          <TooltipProvider>
-            <BrowserRouter>
-              <Routes>
-                {featureRoutes}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-            <Toaster />
-            <Sonner />
-            <ApolloUnlockWatcher />
-            {/* Show fixed install button on login/signup pages */}
-            <PWAInstallPrompt variant="fixed" />
-          </TooltipProvider>
-        </SidebarProvider>
-      </TenantProvider>
+      <SidebarProvider>
+        <TooltipProvider>
+          <BrowserRouter>
+            <Routes>
+              {featureRoutes}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+          <Toaster />
+          <Sonner />
+          <ApolloUnlockWatcher />
+          {/* Show fixed install button on login/signup pages */}
+          <PWAInstallPrompt variant="fixed" />
+        </TooltipProvider>
+      </SidebarProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

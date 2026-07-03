@@ -10,7 +10,7 @@ export const calendarRoutes = [
     key="calendar"
     path="/calendar"
     element={
-      <ProtectedRoute requireTenant>
+      <ProtectedRoute>
         <FeatureErrorBoundary featureName="Calendar">
           <CalendarPage />
         </FeatureErrorBoundary>

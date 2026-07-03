@@ -4,7 +4,7 @@ The Artefacts library surface (route `/artifacts`). Presentational / local-state
 
 ## Public surface
 
-- `artifactsRoutes` — registry entry (`/artifacts`, `ProtectedRoute requireTenant` + `FeatureErrorBoundary`), composed by `src/app/routes.tsx`.
+- `artifactsRoutes` — registry entry (`/artifacts`, `ProtectedRoute` + `FeatureErrorBoundary`), composed by `src/app/routes.tsx`.
 
 ## Key files
 
