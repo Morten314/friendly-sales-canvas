@@ -21,10 +21,10 @@ Ishani's browser held:
 ```
 selectedTenant_A5BfxZtDTNau2mtgXhUwEXJyBQD3 = {"id":"brewra","name":"Brewra","domain":"brewra.com"}
 ```
-`tenant.id` is the slug `"brewra"`, while her authoritative org is the UUID `b75ce29e-…`. The `domain:"brewra.com"` exactly matches the `${orgId}.com` template in `TenantContext.tsx:90`, proving the tenant was auto-built from her auth `orgId` *at a time when that org was the slug `"brewra"`* — then the backend re-keyed her org to the UUID and the frozen tenant never caught up.
+`tenant.id` is the slug `"brewra"`, while her authoritative org is the UUID `b75ce29e-…`. That value is **hardcoded**: `ProtectedRoute.tsx:19-25` auto-selects `selectTenant({ id: "brewra", name: "Brewra", domain: "brewra.com" })` whenever a `requireTenant` route mounts with no tenant selected (and `selectTenant` persists it to `localStorage`). This is **systemic, not Ishani-specific** — `requireTenant` guards ~11 routes (scout, market-research, signals, customers, mission-control, strategist, settings, calendar, reports, insights, artifacts), i.e. effectively the whole authed app, so *every* user without a real tenant selection gets the `"brewra"` slug, and every tenant-first surface then queries `org_id="brewra"` instead of their real org.
 
 Failure chain:
-1. `TenantContext.tsx:67-84` loads the stored tenant. The reconcile check at line 72 (`orgName && parsedTenant.id === orgId`) is **false** (`"brewra" !== b75ce29e-…`), so line 78 keeps the stale value **uncorrected** — a stale tenant is stickier than no tenant (the self-heal branch at line 85 only runs when nothing is stored).
+1. `ProtectedRoute.tsx:19-25` sets `selectedTenant = {id:"brewra"}` on any `requireTenant` route with no prior selection; `TenantContext.tsx:67-84` then reloads that persisted value on later mounts — its reconcile check at line 72 (`orgName && parsedTenant.id === orgId`) only corrects the *name* when ids already match, and **never repairs a mismatched id** (`"brewra" !== b75ce29e-…`), so the slug is sticky.
 2. `LeadsTable.tsx:400` resolves `orgId = selectedTenant?.id ?? authOrgId ?? ""`. `"brewra"` is truthy, so `??` **short-circuits** and the correct `authOrgId` is never consulted.
 3. Scout Lead Stream queries `org_id="brewra"` → her leads live under `b75ce29e-…` → **empty stream**. Profiler/Customers is auth-first, resolves the UUID, and shows all 396 — the exact asymmetry in the report.
 
@@ -85,7 +85,7 @@ There are **two classes** of `useTenant` consumer, and both must be handled for 
 - `<TenantProvider>` wrapper from the app tree (its mount site)
 - `src/features/tenant/*` — `TenantSelectionPage`, `useTenants`/`MOCK_TENANTS`, `routes.tsx`, tests
 - The `/tenant-selection` route registration in `App.tsx`
-- The post-login tenant gate in `features/shell/ProtectedRoute.tsx` (login → app directly). *Confirm the exact gate condition at plan time and repoint any redirect that targeted `/tenant-selection`.*
+- The post-login tenant gate in `features/shell/ProtectedRoute.tsx`: remove the hardcoded `selectTenant({id:"brewra",…})` auto-select (lines 19-25), the `tenantLoading` wait, and the `requireTenant` gate — `ProtectedRoute` keeps only the auth check (login → app directly). Drop the now-meaningless `requireTenant` prop from the interface **and from all ~11 route files that pass it** (scout, market-research, signals, customers, mission-control, strategist, settings, calendar, reports, insights, artifacts).
 
 **Stale-localStorage handling:**
 - The new resolver ignores `selectedTenant_*` entirely, so Ishani (and everyone) is fixed on next load with **no cleanup required**.
