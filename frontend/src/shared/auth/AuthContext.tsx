@@ -64,49 +64,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const fetchOrgId = useCallback(
     async (userId: string): Promise<{ orgId: string | null; orgName: string | null }> => {
-      try {
-        // Check localStorage first
-        const storedOrgId = localStorage.getItem(`org_id_${userId}`);
-        const storedOrgName = localStorage.getItem(`org_name_${userId}`);
-        if (storedOrgId && storedOrgName) {
-          setOrgId(storedOrgId);
-          setOrgName(storedOrgName);
-          return { orgId: storedOrgId, orgName: storedOrgName };
-        }
+      // Optimistic: surface any cached value immediately so first paint isn't blocked.
+      const cachedOrgId = localStorage.getItem(`org_id_${userId}`);
+      const cachedOrgName = localStorage.getItem(`org_name_${userId}`);
+      if (cachedOrgId) {
+        setOrgId(cachedOrgId);
+        if (cachedOrgName) setOrgName(cachedOrgName);
+      }
 
-        // Fetch from API
+      try {
         const response = await fetch(`${buildApiUrl("org")}?user_id=${userId}`, {
           method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
         });
-
         if (!response.ok) {
           console.error("Failed to fetch org data:", response.status, response.statusText);
-          return { orgId: null, orgName: null };
+          return { orgId: cachedOrgId, orgName: cachedOrgName }; // keep optimistic cache
         }
-
         const data = await response.json();
-
         if (data.status === "success" && data.org_id) {
-          // Store in state and localStorage
-          const fetchedOrgId = data.org_id;
-          const fetchedOrgName = data.org_name || null;
-
+          const fetchedOrgId: string = data.org_id;
+          const fetchedOrgName: string | null = data.org_name || null;
           setOrgId(fetchedOrgId);
           setOrgName(fetchedOrgName);
           localStorage.setItem(`org_id_${userId}`, fetchedOrgId);
-          if (fetchedOrgName) {
-            localStorage.setItem(`org_name_${userId}`, fetchedOrgName);
-          }
+          if (fetchedOrgName) localStorage.setItem(`org_name_${userId}`, fetchedOrgName);
+          else localStorage.removeItem(`org_name_${userId}`);
           return { orgId: fetchedOrgId, orgName: fetchedOrgName };
         }
-
-        return { orgId: null, orgName: null };
+        return { orgId: cachedOrgId, orgName: cachedOrgName };
       } catch (error) {
         console.error("Error fetching org data:", error);
-        return { orgId: null, orgName: null };
+        return { orgId: cachedOrgId, orgName: cachedOrgName };
       }
     },
     [],
@@ -116,19 +105,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
 
-      // Load org_id and org_name from localStorage when user changes
       if (user?.uid) {
-        const storedOrgId = localStorage.getItem(`org_id_${user.uid}`);
-        const storedOrgName = localStorage.getItem(`org_name_${user.uid}`);
-        if (storedOrgId) {
-          setOrgId(storedOrgId);
-          if (storedOrgName) {
-            setOrgName(storedOrgName);
-          }
-        } else {
-          // Fetch org data if not in localStorage
-          void fetchOrgId(user.uid);
-        }
+        // fetchOrgId sets an optimistic value from cache, then reconciles against GET /org
+        void fetchOrgId(user.uid);
       } else {
         setOrgId(null);
         setOrgName(null);
