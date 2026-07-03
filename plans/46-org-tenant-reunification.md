@@ -21,9 +21,19 @@
 - **Commits:** `type(scope): subject` (`feat(fe):`, `refactor(fe):`, `feat(be):`, `chore(be):`, `test(be):`). No `Co-Authored-By` footer. One logical step per commit.
 - **Branch:** `worktree-org-tenant-reunification` (already cut from `origin/master`).
 
-## Rollout sequence (deploy order ≠ code order)
+## Rollout sequence
 
-The tasks below are ordered for a green, reviewable branch. **Operational rollout** is: (1) run WS3 `reconcile_orgs.py --report` on Render and review; (2) ship WS1+WS2 (Tasks 1-6) — the forward-fix that unblocks users; (3) run WS3 `--apply` (Task 9) after review; (4) deploy WS4 enforcement (Task 7) once data is clean. Task 7 enforcement must not be live before the `--apply` cleanup, or existing violations would reject legitimate calls.
+All tasks ship in **one atomic merge** (single branch, per repo cross-stack atomicity). WS4 enforcement is safe to go live at merge: `connect_user_to_org` is reachable only via the **admin console** (`features/admin/services/admin.ts` → `POST /connect_org`) and the reconciliation script — **never in the normal user/login flow** (signup is firebase-only; the old tenant-selection caller is deleted in Task 5). So live enforcement rejects nothing legitimate; it only stops an admin (or the script) from writing an invariant-violating mapping, which is the intent. (This corrects an earlier draft that gated WS4 behind `--apply`; verification showed the gate was unnecessary — see synthesis round 1, finding #1.)
+
+**Operational steps on Render (post-merge), in order:**
+1. `python backend/scripts/reconcile_orgs.py --report` — review the migration plan (read-only). This is genuinely runnable on merge (the scan lives in Task 8, not deferred).
+2. `python backend/scripts/reconcile_orgs.py --apply` — re-point stray data after the report is approved.
+
+The FE forward-fix (Tasks 1-6) unblocks users immediately at merge, independent of when `--apply` runs. The script's mapping changes use `connect_user_to_org(migrate=True)`, so `--apply` operates correctly with WS4 live.
+
+## Parallelization
+
+The FE chain (Tasks 1-6) and the backend workstreams (Task 7; Tasks 8-9) share no code and can run **concurrently** under subagent-driven-development / executing-plans (matching the repo's concurrent-worktree practice). Within backend, Task 9 depends on Task 8 (shares `reconcile.py`); within FE, Tasks 1→2→3→4→5→6 are dependency-ordered. Merge order doesn't matter as long as the branch is green at merge.
 
 ## File Structure
 
@@ -52,8 +62,9 @@ The tasks below are ordered for a green, reviewable branch. **Operational rollou
 - `backend/tests/unit/test_org_auth.py` — WS4 tests.
 
 **Backend — created:**
-- `backend/scripts/reconcile_orgs.py` — WS3 dry-run-first reconciliation.
-- `backend/tests/unit/test_reconcile_orgs.py` — WS3 planning + apply logic tests (mocked clients).
+- `backend/app/services/org_auth/reconcile.py` — WS3 reconciliation **logic** (report builder + per-store repoint + apply), testable in the normal pytest suite via house-style `from app.services.org_auth.reconcile import …`.
+- `backend/scripts/reconcile_orgs.py` — thin CLI wrapper (`argparse` + `build_clients`) that imports and drives `reconcile.py`. Runnable on Render as `python backend/scripts/reconcile_orgs.py …`.
+- `backend/tests/unit/test_reconcile_orgs.py` — planning + apply-logic tests (mocked clients).
 
 ---
 
@@ -501,9 +512,22 @@ In each of the 11 `features/*/routes.tsx`, change `<ProtectedRoute requireTenant
 - `App.tsx`: remove `import { TenantProvider } from "@/shared/tenant";` and the `<TenantProvider>…</TenantProvider>` wrapper (keep children).
 - `app/routes.tsx` (or wherever `featureRoutes` is assembled): remove the tenant-selection route contribution (the entry from `features/tenant/routes.tsx`).
 
-- [ ] **Step 6: Run tests + typecheck to verify**
+- [ ] **Step 6: Run tests + typecheck + route smoke to verify**
 
-Run: `cd frontend && npx vitest run src/features/shell/__tests__/ProtectedRoute.test.tsx && npm run typecheck`
+Add a smoke render that mounts a couple of the `requireTenant`-stripped protected routes through `featureRoutes` inside a `MemoryRouter` (auth mocked to a logged-in user), asserting they render without throwing (`useTenant must be used within a TenantProvider` would surface here if a consumer was missed, and a dropped sibling prop / dangling barrel import would fail to mount):
+
+```tsx
+// features/shell/__tests__/routes.smoke.test.tsx
+it.each(["/mission-control", "/your-ai-team/scout/research"])(
+  "protected route %s mounts without tenant provider",
+  (path) => {
+    // mock useAuth -> logged-in; render <MemoryRouter initialEntries={[path]}> with <Routes>{featureRoutes}</Routes>
+    expect(() => renderRoute(path)).not.toThrow();
+  },
+);
+```
+
+Run: `cd frontend && npx vitest run src/features/shell/__tests__ && npm run typecheck`
 Expected: PASS. (Typecheck still green: `shared/tenant` deletion happens in Task 6; here it's merely unreferenced except by the soon-deleted `features/tenant`.)
 
 - [ ] **Step 7: Verify + commit**
@@ -774,12 +798,13 @@ git commit -m "feat(be): enforce bijective 1:1 user<->org in connect_user_to_org
 
 ---
 
-### Task 8: WS3 — Reconciliation script `--report` (read-only)
+### Task 8: WS3 — Reconciliation `--report` (read-only, genuinely runnable)
 
-A Render-run script that classifies every user's non-canonical org data and prints a migration plan, writing nothing. The plan-building logic is a pure function so it's unit-testable without live DBs.
+Classify every user's non-canonical org data and print a migration plan, writing nothing. Logic lives in `app/services/org_auth/reconcile.py` (house-style importable + unit-testable); the CLI is a thin wrapper. **The read-only scan (`_scan_data_orgs`) is implemented here, not deferred** — `--report` must produce real output as the first rollout action.
 
 **Files:**
-- Create: `backend/scripts/reconcile_orgs.py`
+- Create: `backend/app/services/org_auth/reconcile.py` (logic — `build_report`, `ReconcileReport`, `_scan_data_orgs`)
+- Create: `backend/scripts/reconcile_orgs.py` (thin CLI: `argparse` + `build_clients`, imports `reconcile.py`)
 - Test: `backend/tests/unit/test_reconcile_orgs.py`
 
 **Interfaces:**
@@ -789,7 +814,7 @@ A Render-run script that classifies every user's non-canonical org data and prin
 
 ```python
 # backend/tests/unit/test_reconcile_orgs.py
-from backend.scripts.reconcile_orgs import build_report
+from app.services.org_auth.reconcile import build_report
 
 VALID = "b75ce29e-344c-4e6c-964e-5ac236d0b49a"
 
@@ -824,16 +849,28 @@ Expected: FAIL — module not found.
 - [ ] **Step 3: Implement `build_report` + a read-only `--report` main**
 
 ```python
-# backend/scripts/reconcile_orgs.py
-"""Read-only-by-default org reconciliation (spec 46 WS3). Run on Render.
-
-  python backend/scripts/reconcile_orgs.py --report        # default, no writes
-  python backend/scripts/reconcile_orgs.py --apply         # destructive (Task 9)
-"""
+# backend/app/services/org_auth/reconcile.py
+"""Org reconciliation logic (spec 46 WS3). Testable; the CLI in
+backend/scripts/reconcile_orgs.py drives it against live clients on Render."""
 from __future__ import annotations
-import argparse
 import uuid
 from dataclasses import dataclass, field
+
+# The exact org_id-keyed Mongo collections — the SINGLE source of truth shared by
+# --report scanning and --apply re-pointing so they cannot drift (finding #5).
+# Verified against app/services persistence; confirm completeness in Step 3's audit.
+_MONGO_ORG_COLLECTIONS: list[tuple[str, str]] = [
+    ("Scout_Agent", "Market_Intelligence"),
+    ("Signals", "signals"),
+    ("Signals", "signal_track"),
+    ("Profiler", "Company_Profile"),
+    ("Profiler", "ICP_config"),
+    ("Profiler", "ICP_ID_REGISTRY"),
+    ("Profiler", "Lead_Stream_Files"),
+    ("File_Processing", "file_status"),
+    # + Profiler enrich/discovery/credentials run-docs — import their constant names
+    #   from app/services/connectors persistence rather than re-typing (audit step).
+]
 
 
 def _is_uuid(v: str) -> bool:
@@ -877,33 +914,69 @@ def build_report(user_mappings, org_list, data_orgs_by_user) -> ReconcileReport:
     return report
 
 
-def _load_inputs(mongo, neo4j_driver):
-    """Read user_mappings, org_list, and per-user data-org counts across stores. Read-only."""
+def _scan_data_orgs(mongo, neo4j_driver, user_mappings) -> dict[str, dict[str, int]]:
+    """Read-only: per user, count records under each distinct org_id across stores."""
+    out: dict[str, dict[str, int]] = {u: {} for u in user_mappings}
+    # Neo4j: nodes carrying user_id + org_id (Lead/Company/Contact/…)
+    with neo4j_driver.session() as s:
+        for rec in s.run(
+            "MATCH (n) WHERE n.user_id IS NOT NULL AND n.org_id IS NOT NULL "
+            "RETURN n.user_id AS uid, n.org_id AS org, count(n) AS c"
+        ):
+            if rec["uid"] in out:
+                out[rec["uid"]][rec["org"]] = out[rec["uid"]].get(rec["org"], 0) + int(rec["c"])
+    # Mongo: the shared org-keyed collection set
+    for dbname, coll in _MONGO_ORG_COLLECTIONS:
+        for doc in mongo[dbname][coll].aggregate([
+            {"$match": {"user_id": {"$exists": True}, "org_id": {"$exists": True}}},
+            {"$group": {"_id": {"u": "$user_id", "o": "$org_id"}, "c": {"$sum": 1}}},
+        ]):
+            uid, org = doc["_id"]["u"], doc["_id"]["o"]
+            if uid in out:
+                out[uid][org] = out[uid].get(org, 0) + int(doc["c"])
+    return out
+
+
+def load_inputs(mongo, neo4j_driver):
+    """Read user_mappings, org_list, and per-user data-org counts. Read-only."""
     db = mongo["Org_Management"]
     user_mappings = (db["users"].find_one({"_id": "users"}) or {}).get("user_mappings", {})
     org_list = (db["orgs"].find_one({"_id": "orgs"}) or {}).get("org_list", [])
-    # data_orgs_by_user: per user, count of records under each org_id, across Neo4j + Mongo (+ Pinecone).
-    # Neo4j example (leads): MATCH (l:Lead) WHERE l.user_id=$uid RETURN l.org_id, count(*)
-    data_orgs_by_user = _scan_data_orgs(mongo, neo4j_driver, user_mappings)
-    return user_mappings, org_list, data_orgs_by_user
+    return user_mappings, org_list, _scan_data_orgs(mongo, neo4j_driver, user_mappings)
+```
+
+The thin CLI (created in this task, extended for `--apply` in Task 9):
+
+```python
+# backend/scripts/reconcile_orgs.py
+"""Org reconciliation CLI (spec 46 WS3). Run on Render:
+  python backend/scripts/reconcile_orgs.py            # --report (default, read-only)
+  python backend/scripts/reconcile_orgs.py --apply    # destructive (Task 9)
+"""
+import argparse
+from app.core.clients import build_clients
+from app.services.org_auth.reconcile import load_inputs, build_report, apply_report
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--apply", action="store_true", help="perform writes (default: report only)")
     args = ap.parse_args()
-    from app.core.clients import build_clients  # lazy: only when run on Render
     clients = build_clients()
-    user_mappings, org_list, data = _load_inputs(clients.mongo, clients.neo4j)
+    user_mappings, org_list, data = load_inputs(clients.mongo, clients.neo4j)
     report = build_report(user_mappings, org_list, data)
     print(report.render())
     if args.apply:
-        apply_report(report, clients)   # Task 9
+        apply_report(report, clients)     # Task 9
     else:
         print("\n(dry-run; re-run with --apply to migrate)")
+
+
+if __name__ == "__main__":
+    main()
 ```
 
-`_scan_data_orgs` and `apply_report` are thin I/O; `_scan_data_orgs` is stubbed here (implemented alongside apply in Task 9) — for Task 8 it may return `{}` so `--report` runs, but the unit-tested contract is `build_report`.
+**Audit step (before considering Task 8 done):** grep `app/services` for every `mongo[...][...]` access that filters on `org_id`, and confirm `_MONGO_ORG_COLLECTIONS` covers them all (import run-doc collection-name constants rather than re-typing). A missing collection silently strands data at `--apply`; `--report`'s per-store counts also make any gap visible.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -913,23 +986,23 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/scripts/reconcile_orgs.py backend/tests/unit/test_reconcile_orgs.py
+git add backend/app/services/org_auth/reconcile.py backend/scripts/reconcile_orgs.py backend/tests/unit/test_reconcile_orgs.py
 git commit -m "feat(be): org reconciliation --report (read-only, dry-run)"
 ```
 
 ---
 
-### Task 9: WS3 — Reconciliation script `--apply` (idempotent re-point)
+### Task 9: WS3 — Reconciliation `--apply` (idempotent re-point)
 
-Re-point each reviewed user's stray data onto their canonical org across Neo4j, Mongo, and Pinecone. Idempotent per user; logged.
+Re-point each reviewed user's stray data onto their canonical org. Neo4j + Mongo are **user-scoped** (safe). Pinecone is **org-namespace-scoped** (no user granularity), so it only moves namespaces that are **nobody's canonical org**; a shared/canonical namespace is deferred to a logged manual step (finding #3). Idempotent per user; logged.
 
 **Files:**
-- Modify: `backend/scripts/reconcile_orgs.py` (add `_scan_data_orgs`, `apply_report`, per-store repoint fns)
+- Modify: `backend/app/services/org_auth/reconcile.py` (add `apply_report`, per-store repoint fns; `_scan_data_orgs` already landed in Task 8)
 - Test: `backend/tests/unit/test_reconcile_orgs.py` (add apply-logic tests with mocked clients)
 
 **Interfaces:**
 - Consumes: `ReconcileReport` (Task 8); client handles (`mongo`, `neo4j` driver, `pinecone` index).
-- Produces: `apply_report(report, clients) -> None`; `repoint_neo4j(driver, user_id, from_org, to_org) -> int`, `repoint_mongo(mongo, user_id, from_org, to_org) -> int`, `repoint_pinecone(index, from_ns, to_ns) -> int`.
+- Produces: `apply_report(report, clients) -> None` (derives `canonical_orgs = set(user_mappings.values())` internally to guard Pinecone); `repoint_neo4j(driver, user_id, from_org, to_org) -> int`, `repoint_mongo(mongo, user_id, from_org, to_org) -> int`, `repoint_pinecone(index, from_ns, to_ns) -> int`.
 
 - [ ] **Step 1: Write the failing tests (mocked clients)**
 
@@ -942,7 +1015,7 @@ def test_repoint_neo4j_issues_setter_cypher_scoped_to_user_and_org():
         def __exit__(self, *a): return False
     class FakeDriver:
         def session(self): return FakeSession()
-    from backend.scripts.reconcile_orgs import repoint_neo4j
+    from app.services.org_auth.reconcile import repoint_neo4j
     n = repoint_neo4j(FakeDriver(), "A5Bfx", "brewra", "b75ce29e")
     assert n == 3
     q, p = calls[0]
@@ -957,6 +1030,12 @@ def test_repoint_mongo_updates_all_matching_docs():
 
 def test_apply_is_idempotent_second_run_moves_zero():
     # given a report whose strays are already re-pointed, apply moves 0 (re-run safe)
+    ...
+
+def test_apply_defers_pinecone_for_shared_canonical_namespace():
+    # from_org is user B's stray but also user A's canonical org.
+    # Assert: neo4j/mongo repoint (user-scoped) run for B, but repoint_pinecone is NOT
+    # called for that namespace (deferred) — A's vectors must not be copied+deleted.
     ...
 ```
 
@@ -1003,16 +1082,27 @@ def repoint_pinecone(index, from_ns: str, to_ns: str) -> int:
 
 
 def apply_report(report, clients) -> None:
+    users = (clients.mongo["Org_Management"]["users"].find_one({"_id": "users"}) or {}).get("user_mappings", {})
+    canonical_orgs = set(users.values())   # every org that is SOME user's canonical org
     for user_id, strays in report.migrations.items():
-        canonical = _canonical_for(clients.mongo, user_id)   # user_mappings[user_id], re-read
+        canonical = users.get(user_id)
+        if not canonical:
+            continue
         for from_org in list(strays):
-            n4 = repoint_neo4j(clients.neo4j, user_id, from_org, canonical)
-            nm = repoint_mongo(clients.mongo, user_id, from_org, canonical)
-            npc = repoint_pinecone(clients.pinecone, from_org, canonical)
+            n4 = repoint_neo4j(clients.neo4j, user_id, from_org, canonical)   # user-scoped, safe
+            nm = repoint_mongo(clients.mongo, user_id, from_org, canonical)   # user-scoped, safe
+            # Pinecone namespaces are org-only (no user_id). Copying+deleting a namespace that
+            # is another user's canonical org would corrupt them (finding #3). Only move a
+            # namespace nobody calls canonical; otherwise defer to a logged manual step.
+            if from_org in canonical_orgs:
+                npc = "deferred(manual)"
+                print(f"DEFER pinecone user={user_id} ns={from_org}: shared/canonical namespace")
+            else:
+                npc = repoint_pinecone(clients.pinecone, from_org, canonical)
             print(f"APPLIED user={user_id} {from_org}->{canonical}: neo4j={n4} mongo={nm} pinecone={npc}")
 ```
 
-Idempotency: `SET n.org_id` / `$set org_id` on rows already at `to_org` match nothing on re-run (the filter is `org_id = from_org`); Pinecone upsert-by-id overwrites in place. `_MONGO_ORG_COLLECTIONS`, `_iter_vector_ids`, `_canonical_for` are concrete module constants/helpers (enumerate the report's store list from the spec: market reports, lead scores, signals, file-processing status, customer profiles).
+Idempotency: `SET n.org_id` / `$set org_id` on rows already at `to_org` match nothing on re-run (the filter is `org_id = from_org`); Pinecone upsert-by-id overwrites in place. `_iter_vector_ids` is a concrete paging helper over the source namespace; `_MONGO_ORG_COLLECTIONS` is the shared constant from Task 8 (same set drives `--report` and `--apply`, so counts reconcile).
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -1022,7 +1112,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/scripts/reconcile_orgs.py backend/tests/unit/test_reconcile_orgs.py
+git add backend/app/services/org_auth/reconcile.py backend/tests/unit/test_reconcile_orgs.py
 git commit -m "feat(be): org reconciliation --apply (idempotent re-point across neo4j/mongo/pinecone)"
 ```
 
@@ -1035,10 +1125,10 @@ git commit -m "feat(be): org reconciliation --apply (idempotent re-point across 
 - [ ] Grep completeness (success criterion #2): `grep -rn "useTenant\b\|shared/tenant\|features/tenant" frontend/src` → none; `grep -rn "selectedTenant" frontend/src` → only `clearStaleTenantKeys.ts` + its test.
 - [ ] `grep -rn "requireTenant" frontend/src` → none.
 - [ ] Update `docs/TECH_DEBT.md`: mark TD-FE-55 resolved (tenant-selection + mock deleted).
-- [ ] Rollout per the sequence above (report → FE fix deploy → apply → enable WS4 enforcement).
+- [ ] After merge, run the Render operational steps (`--report` → review → `--apply`); WS4 enforcement is already live from the merge (safe — admin/script-only write path).
 
 ## Self-review notes
 
 - **Spec coverage:** WS1 → Tasks 2-6; WS2 → Task 1; WS3 → Tasks 8-9; WS4 → Task 7. Success criteria #1 (stale tenant ignored) → Task 3 test; #2 (grep) → Task 6 + final grep; #3 (re-key propagation) → Task 1 test; #4 (reconcile) → Tasks 8-9; #5 (connect hardening) → Task 7; #6 (green gates) → Final verification.
-- **Type consistency:** `useOrgId(): string | null` used identically in Tasks 2-3; `connect_user_to_org(mongo, user_id, org_id, migrate=False)` defined in Task 7 and referenced by WS3's `--apply` (Task 9) via `_canonical_for`/`connect_user_to_org(migrate=True)` for mapping changes; `build_report` / `ReconcileReport` signatures match between Tasks 8 and 9.
+- **Type consistency:** `useOrgId(): string | null` used identically in Tasks 2-3; `build_report` / `ReconcileReport` / `_scan_data_orgs` / `_MONGO_ORG_COLLECTIONS` in `reconcile.py` are shared between Tasks 8 and 9 (one module, one constant → `--report` and `--apply` can't drift). Note: `apply_report` re-points *data* only and does not call `connect_user_to_org`; the `connect_user_to_org(migrate=True)` path (Task 7) is used by the operator to fix *ambiguous mappings* (users whose own mapping is non-canonical, surfaced by `--report`), a manual step — not part of the automated data repoint.
 - **Out of scope (separate spec):** 100→500 Find-Matched-Leads cap + admin Settings page. **Deferred:** tightening the permissive `OrgResponse` model (FE `orgName ?? orgId` fallback covers it).
