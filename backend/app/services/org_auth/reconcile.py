@@ -326,6 +326,11 @@ def apply_report(report: ReconcileReport, clients) -> None:
     for user_id, strays in report.migrations.items():
         canonical = user_mappings.get(user_id)
         if not canonical:
+            # --report found stray data for this user, but their canonical
+            # mapping is gone at apply time. Skipping silently would read as
+            # "done"; log it so the operator sees the gap (spec 46 WS3 leans
+            # on the run being fully reviewable).
+            print(f"SKIPPED user={user_id}: no canonical mapping at apply time (stray data left in place)")
             continue
         for from_org in list(strays):
             # User-scoped stores (Neo4j + the 8 user-keyed Mongo collections)
