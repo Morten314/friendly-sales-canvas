@@ -124,12 +124,15 @@ def create_org(mongo, request: dict) -> Dict:
 
 
 def connect_user_to_org(mongo, user_id: str, org_id: str, migrate: bool = False) -> Dict:
-    """Connect a user to an org, enforcing the bijective 1:1 invariant.
+    """Connect a user to an org (one-org-per-user; orgs may be team-shared).
 
     - org_id must be a UUID present in orgs.org_list.
-    - reverse-uniqueness: the org must not already belong to a different user.
     - no silent re-key: if the user is already mapped to a different org,
       require migrate=True (service-internal; not exposed on POST /connect_org).
+
+    An org MAY be shared by multiple users (a team workspace) — see ADR-0009.
+    Reverse-uniqueness ("an org has one user") is intentionally NOT enforced;
+    reads are org-scoped, so a shared org is a shared workspace by design.
     """
     db = mongo["Org_Management"]
     users_collection = db["users"]
@@ -144,13 +147,6 @@ def connect_user_to_org(mongo, user_id: str, org_id: str, migrate: bool = False)
 
     users_doc = users_collection.find_one({"_id": "users"})
     user_mappings = (users_doc or {}).get("user_mappings", {})
-
-    # reverse-uniqueness: org owned by another user
-    for mapped_user, mapped_org in user_mappings.items():
-        if mapped_org == org_id and mapped_user != user_id:
-            raise ConflictError(
-                f"org {org_id} is already owned by another user"
-            )
 
     # no silent re-key
     existing = user_mappings.get(user_id)

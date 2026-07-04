@@ -193,7 +193,7 @@ def test_connect_user_to_org_updates_existing_document(mock_mongo_client):
 
 
 # ---------------------------------------------------------------------------
-# connect_user_to_org — WS4 bijective 1:1 invariant
+# connect_user_to_org — one-org-per-user (orgs may be team-shared, ADR-0009)
 # ---------------------------------------------------------------------------
 
 def test_connect_new_user_to_valid_org_succeeds():
@@ -214,10 +214,14 @@ def test_connect_rejects_org_not_in_org_list():
         connect_user_to_org(mongo, "newuid", "11111111-1111-1111-1111-111111111111")
 
 
-def test_connect_rejects_org_owned_by_another_user():
+def test_connect_allows_org_shared_by_multiple_users():
+    # Shared-team org model (ADR-0009): an org MAY be shared by multiple users;
+    # reverse-uniqueness is intentionally NOT enforced.
     mongo = _mongo_with({"other": VALID_ORG}, [VALID_ORG])
-    with pytest.raises(ConflictError):
-        connect_user_to_org(mongo, "newuid", VALID_ORG)
+    out = connect_user_to_org(mongo, "newuid", VALID_ORG)
+    assert out["org_id"] == VALID_ORG
+    mappings = mongo["Org_Management"]["users"].find_one({"_id": "users"})["user_mappings"]
+    assert mappings == {"other": VALID_ORG, "newuid": VALID_ORG}
 
 
 def test_connect_rejects_silent_rekey_without_migrate():
