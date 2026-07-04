@@ -22,7 +22,7 @@ from app.services._retrieval import (
     _fetch_pinecone_supporting_context,
     format_supporting_documents,
 )
-from app.services.leads import get_leads_for_org
+from app.services.signals.lead_fetch import fetch_org_leads_for_signals
 from app.services.signals import persistence
 from app.services.signals.llm import _signals_agent_output
 from app.services.signals.parsing import (
@@ -214,24 +214,13 @@ async def run_signals_research(driver, mongo, pc, agent_chain, request: MarketRe
         pre_data["pinecone_context_queries"] = signal_context_queries
         pre_data["pinecone_supporting_context"] = pinecone_context
 
-    # Fetch leads for org_id if available
+    # Fetch leads for org_id if available, capped by the admin lead_fetch_limit
+    # setting (spec 47). pre_data is always a dict by this point.
     leads_data = []
     if request.org_id:
-        try:
-            leads_data, _ = get_leads_for_org(driver, org_id=request.org_id, limit=100, offset=0)
-            if isinstance(pre_data, dict):
-                pre_data["leads_data"] = leads_data
-            else:
-                if not isinstance(pre_data, dict):
-                    try:
-                        pre_data = json.loads(pre_data) if isinstance(pre_data, str) else {}
-                    except Exception:
-                        pre_data = {}
-                pre_data["leads_data"] = leads_data
-                if "company_profile" not in pre_data:
-                    pre_data["company_profile"] = request.data
-        except Exception as e:
-            logger.warning(f"Could not fetch leads: {e}")
+        leads_data = fetch_org_leads_for_signals(driver, mongo, request.org_id)
+        if isinstance(pre_data, dict):
+            pre_data["leads_data"] = leads_data
 
     # For profiler agent, also include ICP data if available - filter by user_id
     if agent_name == "profiler":

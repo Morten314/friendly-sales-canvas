@@ -12,6 +12,7 @@ from app.core.dependencies import (
     get_pinecone,
 )
 from app.models.admin import AdminHealthResponse, AdminOrgSummary
+from app.models.settings import AppSettings
 from app.services.admin import (
     list_all_orgs,
     probe_llm_health,
@@ -19,6 +20,7 @@ from app.services.admin import (
     probe_neo4j,
     probe_pinecone,
 )
+from app.services.settings import get_app_settings, update_app_settings
 
 # Every /admin route requires a verified, allowlisted Firebase operator. This is
 # the one backend-enforced surface (spec 44 / TD-FE-79); reused endpoints stay open.
@@ -46,6 +48,17 @@ async def _run_probe(name: str, timeout: float, fn: Callable, *args) -> Dict:
 @router.get("/orgs", response_model=List[AdminOrgSummary])
 async def admin_list_orgs(mongo=Depends(get_mongo)):
     return list_all_orgs(mongo)
+
+
+@router.get("/settings", response_model=AppSettings)
+async def admin_get_settings(mongo=Depends(get_mongo)):
+    return get_app_settings(mongo)
+
+
+@router.put("/settings", response_model=AppSettings)
+async def admin_update_settings(settings: AppSettings, mongo=Depends(get_mongo)):
+    # Pydantic bounds (1..500) reject out-of-range values with 422 before we get here.
+    return update_app_settings(mongo, settings)
 
 
 @router.get("/health", response_model=AdminHealthResponse)
