@@ -23,6 +23,7 @@ export const qk = {
   leads: (orgId: string) => ["leads", orgId] as const,
   adminOrgs: () => ["admin", "orgs"] as const,
   adminHealth: () => ["admin", "health"] as const,
+  adminSettings: () => ["admin", "settings"] as const,
   adminRegistrations: (limit: number, offset: number) =>
     ["admin", "registrations", limit, offset] as const,
   adminOrgByUser: (userId: string) => ["admin", "org-by-user", userId] as const,

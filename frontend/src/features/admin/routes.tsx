@@ -9,6 +9,7 @@ const TenantsOverviewPage = lazy(() => import("./pages/TenantsOverviewPage"));
 const OrgDetailPage = lazy(() => import("./pages/OrgDetailPage"));
 const RegistrationsPage = lazy(() => import("./pages/RegistrationsPage"));
 const SystemHealthPage = lazy(() => import("./pages/SystemHealthPage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 
 export const adminRoutes = [
   <Route
@@ -25,5 +26,6 @@ export const adminRoutes = [
     <Route path="tenants/:orgId" element={<OrgDetailPage />} />
     <Route path="registrations" element={<RegistrationsPage />} />
     <Route path="health" element={<SystemHealthPage />} />
+    <Route path="settings" element={<SettingsPage />} />
   </Route>,
 ];
