@@ -16,6 +16,7 @@ from app.core.logging import logger
 from app.services import _llm_helpers
 from app.services.signals import persistence
 from app.services.leads import persistence as leads_persistence
+from app.services.settings import get_app_settings
 
 _CACHE_DB = "Signals"
 _CACHE_COLL = "signal_lead_map"
@@ -62,7 +63,6 @@ def _save_lead_map(
 # Task-10: parse helpers + async orchestration service
 # ---------------------------------------------------------------------------
 _MAX_SIGNALS = 50
-_MAX_LEADS = 100
 _MAX_RETRIES = 2
 _RELEVANCE = {"high", "medium", "low"}
 
@@ -258,9 +258,10 @@ def _parse_mapping(
 
 
 async def build_signal_lead_map_claude(driver, mongo, request) -> Dict[str, Any]:
-    """One Claude call over (newest-50 signals × ≤100 leads) → mapping[]; cached
-    per (org, user) by an input-set fingerprint. Never raises to a 500: a Claude
-    failure degrades to an empty mapping (the router handles the missing-key 500)."""
+    """One Claude call over (newest-50 signals × ≤N leads, N = admin lead_fetch_limit)
+    → mapping[]; cached per (org, user) by an input-set fingerprint. Never raises to
+    a 500: a Claude failure degrades to an empty mapping (the router handles the
+    missing-key 500)."""
     now = datetime.now(timezone.utc).isoformat()
 
     # 1. signals (user-scoped feed read; async)
@@ -268,9 +269,10 @@ async def build_signal_lead_map_claude(driver, mongo, request) -> Dict[str, Any]
     if not signals:
         return _build_result([], now, False)
 
-    # 2. leads (org-scoped; sync → thread)
+    # 2. leads (org-scoped; sync → thread). Cap = admin lead_fetch_limit (spec 47).
+    lead_fetch_limit = (await asyncio.to_thread(get_app_settings, mongo)).lead_fetch_limit
     leads, _ = await asyncio.to_thread(
-        leads_persistence.get_leads_for_org, driver, request.org_id, _MAX_LEADS, 0
+        leads_persistence.get_leads_for_org, driver, request.org_id, lead_fetch_limit, 0
     )
     if not leads:
         return _build_result([], now, False)

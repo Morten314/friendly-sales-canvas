@@ -1176,3 +1176,19 @@ out of this entry's scope.
 the same Firebase-verification treatment.
 
 **Owner:** TBD.
+
+---
+
+## TD-014 — Matched-leads map sends up to `lead_fetch_limit` leads in a single Claude call
+
+**Date logged:** 2026-07-03 (Spec 47 — admin-configurable lead-fetch limit).
+
+**What was done:** the hardcoded 100-lead cap became the admin `lead_fetch_limit` setting (default & ceiling 500). `build_signal_lead_map_claude` (`backend/app/services/signals/lead_map.py`) still sends newest-50 signals × ≤`lead_fetch_limit` leads in ONE Claude call, so raising the cap 100→500 is up to 5× the lead payload per call — higher token cost and possible match-quality dilution.
+
+**What should be done:** if cost/quality degrades at higher limits, chunk the leads across multiple Claude calls and merge the returned `mapping[]` (the signal set is constant; only the lead batch varies), keeping each call's payload bounded.
+
+**Why deferred:** MVP, 0 live users; the 500 ceiling bounds the worst-case payload and Sonnet's context window absorbs it. Not worth the chunking complexity until real usage shows a cost or match-quality problem.
+
+**Trigger:** matched-leads Claude calls show elevated cost, truncation, or degraded match quality at high `lead_fetch_limit` values; OR the ceiling is raised beyond 500.
+
+**Owner:** TBD.

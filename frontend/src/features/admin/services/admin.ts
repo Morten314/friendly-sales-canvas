@@ -3,10 +3,12 @@ import type { ZodType } from "zod";
 
 import {
   AdminOrgListSchema,
+  AppSettingsSchema,
   OrgResponseSchema,
   RegistrationSchema,
   SystemHealthSchema,
   type AdminOrgSummary,
+  type AppSettings,
   type OrgResponse,
   type Registration,
   type SystemHealth,
@@ -38,6 +40,21 @@ export async function fetchAdminOrgs(): Promise<AdminOrgSummary[]> {
 export async function fetchSystemHealth(): Promise<SystemHealth> {
   return apiRequest("admin/health", SystemHealthSchema, {
     method: "GET",
+    headers: await adminAuthHeaders(),
+  });
+}
+
+export async function fetchAppSettings(): Promise<AppSettings> {
+  return apiRequest("admin/settings", AppSettingsSchema, {
+    method: "GET",
+    headers: await adminAuthHeaders(),
+  });
+}
+
+export async function updateAppSettings(settings: AppSettings): Promise<AppSettings> {
+  return apiRequest("admin/settings", AppSettingsSchema, {
+    method: "PUT",
+    body: settings,
     headers: await adminAuthHeaders(),
   });
 }

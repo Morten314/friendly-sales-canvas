@@ -12,6 +12,13 @@ export const AdminOrgSummarySchema = z
 export type AdminOrgSummary = z.infer<typeof AdminOrgSummarySchema>;
 export const AdminOrgListSchema = z.array(AdminOrgSummarySchema);
 
+// GET/PUT /admin/settings — global app settings (spec 47). Mirrors the backend
+// AppSettings bound (1..500); the FE validates against the same range before PUT.
+export const AppSettingsSchema = z.object({
+  lead_fetch_limit: z.number().int().min(1).max(500),
+});
+export type AppSettings = z.infer<typeof AppSettingsSchema>;
+
 // GET /admin/health
 export const HealthProbeSchema = z.object({
   name: z.string(),

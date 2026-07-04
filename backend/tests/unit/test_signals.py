@@ -113,7 +113,7 @@ def test_run_signals_research_scout_labels_supporting_documents(
         "app.services.signals.search._fetch_pinecone_supporting_context",
         return_value=SUPPORTING_DOC_ROWS,
     )
-    mocker.patch("app.services.signals.search.get_leads_for_org", return_value=([], 0))
+    mocker.patch("app.services.signals.search.fetch_org_leads_for_signals", return_value=[])
     mocker.patch("app.services.signals.persistence._get_existing_headlines", return_value=[])
     mocker.patch("app.services.signals.persistence._get_user_icp_config", return_value=None)
     mocker.patch("app.services.signals.persistence._save_signal_and_track_headline", return_value=None)
@@ -147,7 +147,7 @@ def test_run_signals_research_profiler_includes_supporting_documents(
         "app.services.signals.search._fetch_pinecone_supporting_context",
         return_value=SUPPORTING_DOC_ROWS,
     )
-    mocker.patch("app.services.signals.search.get_leads_for_org", return_value=([], 0))
+    mocker.patch("app.services.signals.search.fetch_org_leads_for_signals", return_value=[])
     mocker.patch("app.services.signals.persistence._get_existing_headlines", return_value=[])
     mocker.patch("app.services.signals.persistence._get_user_icp_config", return_value=None)
     mocker.patch("app.services.signals.persistence._save_signal_and_track_headline", return_value=None)
@@ -181,7 +181,7 @@ def test_run_signals_research_scout_omits_section_when_no_docs(
         "app.services.signals.search._fetch_pinecone_supporting_context",
         return_value=[],
     )
-    mocker.patch("app.services.signals.search.get_leads_for_org", return_value=([], 0))
+    mocker.patch("app.services.signals.search.fetch_org_leads_for_signals", return_value=[])
     mocker.patch("app.services.signals.persistence._get_existing_headlines", return_value=[])
     mocker.patch("app.services.signals.persistence._get_user_icp_config", return_value=None)
     mocker.patch("app.services.signals.persistence._save_signal_and_track_headline", return_value=None)

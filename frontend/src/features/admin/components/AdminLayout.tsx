@@ -23,6 +23,9 @@ export default function AdminLayout() {
           <NavLink to="/admin/health" className={link}>
             System Health
           </NavLink>
+          <NavLink to="/admin/settings" className={link}>
+            Settings
+          </NavLink>
         </nav>
       </aside>
       <main className="flex-1 p-6">
