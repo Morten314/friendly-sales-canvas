@@ -48,7 +48,11 @@ export default function SettingsPage() {
             max={MAX}
             className="w-32 rounded border px-2 py-1"
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={(e) => {
+              setValue(e.target.value);
+              // Editing after a save/failure clears the stale result banner.
+              if (update.isSuccess || update.isError) update.reset();
+            }}
           />
           {value !== "" && !valid && (
             <p className="text-sm text-red-600">

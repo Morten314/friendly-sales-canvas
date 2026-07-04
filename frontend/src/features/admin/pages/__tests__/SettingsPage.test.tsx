@@ -45,6 +45,23 @@ describe("SettingsPage", () => {
     expect(await screen.findByText(/saved/i)).toBeInTheDocument();
   });
 
+  it("clears the saved confirmation when the value is edited again", async () => {
+    server.use(
+      http.get("/api/admin/settings", () => HttpResponse.json({ lead_fetch_limit: 250 })),
+      http.put("/api/admin/settings", async ({ request }) =>
+        HttpResponse.json((await request.json()) as { lead_fetch_limit: number }),
+      ),
+    );
+    renderPage(<SettingsPage />);
+    const input = await screen.findByDisplayValue("250");
+    fireEvent.change(input, { target: { value: "400" } });
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    expect(await screen.findByText(/saved/i)).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: "300" } });
+    expect(screen.queryByText(/saved/i)).not.toBeInTheDocument();
+  });
+
   it("rejects an out-of-range value client-side and disables save", async () => {
     server.use(http.get("/api/admin/settings", () => HttpResponse.json({ lead_fetch_limit: 250 })));
     renderPage(<SettingsPage />);
