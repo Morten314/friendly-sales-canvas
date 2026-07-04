@@ -199,10 +199,12 @@ def test_post_connect_org_rejects_non_uuid_org_id(client):
     assert not users_col.update_one.called
 
 
-def test_post_connect_org_rejects_org_already_owned_by_another_user(client):
-    """Reverse-uniqueness: an org already claimed by a different user must
-    be rejected (409), not silently re-keyed onto the requesting user --
-    locks the 409 contract from Task 7 at the HTTP layer."""
+def test_post_connect_org_allows_org_shared_by_multiple_users(client):
+    """Shared-team org model (ADR-0009): an org already mapped to another user
+    is NOT rejected -- a second user may connect to the same org (200) and the
+    mapping is written. Reverse-uniqueness was dropped; one-org-per-user (no
+    silent re-key) is still enforced. Locks the shared-org contract at the HTTP
+    layer."""
     existing_doc = {
         "_id": "users",
         "user_mappings": {"other_user": VALID_ORG},
@@ -215,9 +217,8 @@ def test_post_connect_org_rejects_org_already_owned_by_another_user(client):
             json={"user_id": TEST_USER_ID, "org_id": VALID_ORG},
         )
 
-    assert response.status_code == 409
-    assert not users_col.insert_one.called
-    assert not users_col.update_one.called
+    assert response.status_code == 200
+    assert users_col.update_one.called
 
 
 # ---------------------------------------------------------------------------
