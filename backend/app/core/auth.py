@@ -35,6 +35,7 @@ ADMIN_EMAILS = {
     "ishani@brewra.com",
     "mortenevensen@brewra.com",
     "sunnyghosh@brewra.com",
+    "sunny@brewra.com",
 }
 
 # PyJWKClient caches the fetched signing keys (Google rotates them ~daily).
