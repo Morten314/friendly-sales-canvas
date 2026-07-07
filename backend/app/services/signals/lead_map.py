@@ -79,8 +79,10 @@ _LEAD_BATCH_SIZE = max(1, int(os.getenv("SIGNAL_LEAD_MAP_BATCH_SIZE") or "50"))
 _MAP_MAX_CONCURRENCY = max(1, int(os.getenv("SIGNAL_LEAD_MAP_MAX_CONCURRENCY") or "8"))
 
 
-def _build_result(mapping: List[Dict[str, Any]], generated_at: str, cached: bool) -> Dict[str, Any]:
-    return {"status": "success", "data": {"mapping": mapping, "generated_at": generated_at, "cached": cached}}
+def _build_result(
+    mapping: List[Dict[str, Any]], generated_at: str, cached: bool, status: str = "success"
+) -> Dict[str, Any]:
+    return {"status": status, "data": {"mapping": mapping, "generated_at": generated_at, "cached": cached}}
 
 
 def _signals_for_prompt(signals: List[Dict[str, Any]]) -> str:
@@ -297,8 +299,11 @@ async def build_signal_lead_map_claude(driver, mongo, request) -> Dict[str, Any]
     cached per (org, user) by an input-set fingerprint. The leads are split into
     bounded batches mapped in concurrent Claude calls and merged (TD-014), so the
     payload per call stays parseable and the request stays under the upstream proxy
-    timeout. Never raises to a 500: a batch failure degrades that batch to empty
-    (all-fail → empty mapping; the router handles the missing-key 500)."""
+    timeout. Never raises to a 500: a batch failure degrades that batch to empty; if
+    that leaves nothing AND a batch failed, the result carries status:"error" (still
+    HTTP 200) so the FE surfaces its error state instead of a misleading empty map.
+    A genuine zero-match result keeps status:"success". (Router handles the
+    missing-key 500.)"""
     now = datetime.now(timezone.utc).isoformat()
 
     # 1. signals (user-scoped feed read; async)
@@ -379,10 +384,14 @@ async def build_signal_lead_map_claude(driver, mongo, request) -> Dict[str, Any]
     mapping = _merge_batch_mappings([m for m, _ in batch_results], sig_ids, headline_by_id)
     all_ok = all(ok for _, ok in batch_results)
 
-    # Nothing produced AND a batch failed → degrade to empty, don't cache (as before).
+    # Nothing produced AND a batch failed → the compute FAILED (vs genuinely no
+    # matches). Surface status:"error" (HTTP still 200, no cache) so the FE shows
+    # its error state ("Could not load matched leads" + retry) instead of masking
+    # it as an empty "No matched leads found". A true empty (all batches ok, zero
+    # matches) keeps status:"success" and falls through to the success return.
     if not mapping and not all_ok:
-        logger.warning("signal_lead_map: all lead batches failed, empty mapping")
-        return _build_result([], now, False)
+        logger.warning("signal_lead_map: all lead batches failed, returning error status")
+        return _build_result([], now, False, status="error")
 
     # 7. cache write — only a COMPLETE map (every batch succeeded), so a partial
     # result from a mid-run batch failure is never cached as if it were the whole

@@ -242,9 +242,11 @@ def test_build_map_tolerates_truncated_json():
     assert [e["signal_id"] for e in result["data"]["mapping"]] == ["s1"]  # valid prefix kept
 
 
-def test_build_map_degrades_to_empty_on_claude_failure():
+def test_build_map_surfaces_error_status_on_claude_failure():
+    # Total failure (single batch, Claude errors after retries) → status:"error"
+    # so the FE shows its error state instead of masking it as an empty map.
     result, _ = _run([{"signal_id": "s1"}], [{"lead_id": "l1"}], RuntimeError("boom"))
-    assert result["status"] == "success"
+    assert result["status"] == "error"
     assert result["data"]["mapping"] == []
 
 
@@ -304,12 +306,25 @@ def test_build_map_partial_batch_failure_keeps_good_leads_and_skips_cache(monkey
     assert "o1:u1" not in store          # partial result not cached
 
 
-def test_build_map_all_batches_fail_degrades_to_empty(monkeypatch):
+def test_build_map_all_batches_fail_surfaces_error_status(monkeypatch):
     from app.services.signals import lead_map
     monkeypatch.setattr(lead_map, "_LEAD_BATCH_SIZE", 1)
     result, _ = _run([{"signal_id": "s1"}], [{"lead_id": "l1"}, {"lead_id": "l2"}], RuntimeError("boom"))
+    assert result["status"] == "error"      # every batch failed → surfaced, not masked
+    assert result["data"]["mapping"] == []
+
+
+def test_build_map_genuine_zero_matches_stays_success(monkeypatch):
+    # All batches succeed but Claude found no matches → a TRUE empty, not a failure:
+    # status stays "success" so the FE shows "No matched leads found", not an error.
+    from app.services.signals import lead_map
+    monkeypatch.setattr(lead_map, "_LEAD_BATCH_SIZE", 1)
+    mongo, store = _fake_cache_mongo()
+    result, _ = _run([{"signal_id": "s1"}], [{"lead_id": "l1"}, {"lead_id": "l2"}],
+                     '{"mapping":[]}', mongo=mongo)
     assert result["status"] == "success"
     assert result["data"]["mapping"] == []
+    assert "o1:u1" in store                  # a complete (if empty) map is still cached
 
 
 # ---------------------------------------------------------------------------
