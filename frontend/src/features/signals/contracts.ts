@@ -37,7 +37,10 @@ export const SignalLeadMapEntrySchema = z.object({
 });
 
 export const SignalLeadMapResponseSchema = z.object({
-  // _build_result always returns status:"success" — modeled, not passthrough-tolerated.
+  // Backend returns status:"success" normally, or status:"error" (still HTTP 200)
+  // when the mapping compute failed. Kept as a permissive string (not a literal) so
+  // the error body still parses — fetchSignalLeadMap then throws on "error" so the
+  // query surfaces its error state. Do NOT tighten to z.literal("success").
   status: z.string().optional(),
   data: z.object({
     mapping: z.array(SignalLeadMapEntrySchema).default([]),

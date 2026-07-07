@@ -1,7 +1,12 @@
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 
-import { fetchSignals, generateRecommendationArtefact, generateSignalsBatch } from "../signals";
+import {
+  fetchSignalLeadMap,
+  fetchSignals,
+  generateRecommendationArtefact,
+  generateSignalsBatch,
+} from "../signals";
 
 import { server } from "@/test/msw/server";
 
@@ -169,5 +174,39 @@ describe("generateRecommendationArtefact", () => {
 
     await generateRecommendationArtefact("u1", null, body);
     expect("org_id" in seen[1]).toBe(false); // omitted when null
+  });
+});
+
+describe("fetchSignalLeadMap", () => {
+  it("returns the parsed mapping on a success response", async () => {
+    server.use(
+      http.post("/api/signal-lead-map_claude", () =>
+        HttpResponse.json({
+          status: "success",
+          data: {
+            mapping: [{ signal_id: "s1", headline: "h", leads: [] }],
+            generated_at: "t0",
+            cached: false,
+          },
+        }),
+      ),
+    );
+    const res = await fetchSignalLeadMap("u1", "o1");
+    expect(res.data.mapping[0].signal_id).toBe("s1");
+  });
+
+  it("throws on a status:error response so the query surfaces its error state", async () => {
+    // The backend returns HTTP 200 + status:"error" when the compute failed (vs
+    // genuinely no matches); the service must reject so the card shows the error
+    // state, not a misleading empty "No matched leads found".
+    server.use(
+      http.post("/api/signal-lead-map_claude", () =>
+        HttpResponse.json({
+          status: "error",
+          data: { mapping: [], generated_at: "t0", cached: false },
+        }),
+      ),
+    );
+    await expect(fetchSignalLeadMap("u1", "o1")).rejects.toThrow(/computation failed/);
   });
 });

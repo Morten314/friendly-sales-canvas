@@ -106,9 +106,17 @@ export async function fetchSignalLeadMap(
   orgId: string,
   opts: { refresh?: boolean } = {},
 ): Promise<SignalLeadMapResponse> {
-  return apiPost(
+  const res = await apiPost(
     "signal-lead-map_claude",
     { user_id: userId, org_id: orgId, refresh: opts.refresh ?? false },
     SignalLeadMapResponseSchema as ZodType<SignalLeadMapResponse>,
   );
+  // The backend returns HTTP 200 with status:"error" when the mapping compute
+  // failed (vs genuinely finding no matches). Throw so TanStack Query enters its
+  // error state and the card shows "Could not load matched leads" + retry, rather
+  // than masking a failure as an empty "No matched leads found".
+  if (res.status === "error") {
+    throw new Error("signal-lead-map computation failed");
+  }
+  return res;
 }

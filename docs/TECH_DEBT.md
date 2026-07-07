@@ -1181,6 +1181,8 @@ the same Firebase-verification treatment.
 
 ## TD-014 — Matched-leads map sends up to `lead_fetch_limit` leads in a single Claude call
 
+**Status:** RESOLVED 2026-07-07. The single call over up to 500 leads was measured at ~180s with a truncated (→ empty) 8192-token output, which surfaced live as a Vercel `502 ROUTER_EXTERNAL_TARGET_ERROR` and a cached empty mapping. `build_signal_lead_map_claude` now splits the leads into bounded batches (`SIGNAL_LEAD_MAP_BATCH_SIZE`, default 50), maps each batch (full signal set × one lead batch) in its own Claude call run concurrently (`SIGNAL_LEAD_MAP_MAX_CONCURRENCY`, default 8), and merges per signal. A batch failure degrades that batch only; only a fully complete map is cached. The two env vars let ops tune batch size / concurrency without a deploy.
+
 **Date logged:** 2026-07-03 (Spec 47 — admin-configurable lead-fetch limit).
 
 **What was done:** the hardcoded 100-lead cap became the admin `lead_fetch_limit` setting (default & ceiling 500). `build_signal_lead_map_claude` (`backend/app/services/signals/lead_map.py`) still sends newest-50 signals × ≤`lead_fetch_limit` leads in ONE Claude call, so raising the cap 100→500 is up to 5× the lead payload per call — higher token cost and possible match-quality dilution.
