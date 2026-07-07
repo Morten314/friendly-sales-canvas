@@ -873,7 +873,7 @@ def test_supporting_docs_label_matches_partial():
         Path(__file__).resolve().parents[2]
         / "prompts" / "_shared" / "supporting_documents_section.md.j2"
     )
-    lines = partial.read_text().splitlines()
+    lines = partial.read_text(encoding="utf-8").splitlines()
     label_line = lines[lines.index("{% if supporting_documents %}") + 1]
     assert label_line == _SUPPORTING_DOCS_LABEL
 

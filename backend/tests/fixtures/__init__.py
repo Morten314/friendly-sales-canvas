@@ -18,7 +18,7 @@ def load_captured(name: str) -> dict:
     Example: load_captured("market_research_market_size_qwen")
     """
     stem = name[:-5] if name.endswith(".json") else name
-    return json.loads((CAPTURED_DIR / f"{stem}.json").read_text())
+    return json.loads((CAPTURED_DIR / f"{stem}.json").read_text(encoding="utf-8"))
 
 
 def load_seed(name: str) -> dict:
@@ -27,4 +27,4 @@ def load_seed(name: str) -> dict:
     Example: load_seed("company_profile")
     """
     stem = name[:-5] if name.endswith(".json") else name
-    return json.loads((SEED_DIR / f"{stem}.json").read_text())
+    return json.loads((SEED_DIR / f"{stem}.json").read_text(encoding="utf-8"))

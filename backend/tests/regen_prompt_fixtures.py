@@ -25,7 +25,7 @@ def _ensure_input_skeleton(name: str, declared_inputs: list[str]) -> None:
     if p.exists():
         return
     skeleton = {key: "REPLACE_ME" for key in declared_inputs}
-    p.write_text(json.dumps(skeleton, indent=2) + "\n")
+    p.write_text(json.dumps(skeleton, indent=2) + "\n", encoding="utf-8")
     print(f"[regen] scaffolded {p} — fill in REPLACE_ME values before next run", file=sys.stderr)
 
 
@@ -37,14 +37,14 @@ def _regen_one(name: str) -> bool:
     _ensure_input_skeleton(name, sorted(entry.declared_inputs))
 
     inputs_path = INPUTS_DIR / f"{name}.json"
-    inputs = json.loads(inputs_path.read_text())
+    inputs = json.loads(inputs_path.read_text(encoding="utf-8"))
     if any(v == "REPLACE_ME" for v in inputs.values()):
         print(f"[regen] {name}: skipped (REPLACE_ME values in {inputs_path})", file=sys.stderr)
         return False
 
     rp = render(name, **inputs)
     out_path = RENDERED_DIR / f"{name}.txt"
-    out_path.write_text(rp.body)
+    out_path.write_text(rp.body, encoding="utf-8")
     print(f"[regen] wrote {out_path}", file=sys.stderr)
     return True
 

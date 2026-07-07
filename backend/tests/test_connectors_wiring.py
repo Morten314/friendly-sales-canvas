@@ -2,8 +2,30 @@
 from app.main import app
 
 
+def _all_paths(routes):
+    """Collect every route path, descending into included sub-routers.
+
+    Starlette 1.3.x mounts `app.include_router(...)` as lazy `_IncludedRouter`
+    objects that have no `.path` and expose their real routes via
+    `.original_router.routes` (older versions flattened sub-routes into
+    `app.routes` directly). Walk both shapes so the guard survives the change.
+    """
+    paths = set()
+    for route in routes:
+        path = getattr(route, "path", None)
+        if path is not None:
+            paths.add(path)
+        original = getattr(route, "original_router", None)
+        if original is not None:
+            paths |= _all_paths(original.routes)
+        sub = getattr(route, "routes", None)
+        if sub:
+            paths |= _all_paths(sub)
+    return paths
+
+
 def test_connectors_routes_registered():
-    paths = {route.path for route in app.routes}
+    paths = _all_paths(app.routes)
     assert "/connectors/apollo/connect" in paths
     assert "/connectors/apollo/import" in paths
     assert "/connectors/apollo/enrich" in paths
