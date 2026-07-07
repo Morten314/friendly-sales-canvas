@@ -2,7 +2,7 @@
 
 Running list of debt items the team has consciously accepted. Each entry: what was done, what should be done, why we deferred, and the trigger that should pull it forward.
 
-Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases E and F) were removed on 2026-05-23; their IDs are not reused so commit/spec references stay traceable. TD-006 (market_scoring callers recomputing len(leads)) was resolved 2026-05-24 by Phase H Task 4. TD-007 (Phase G plan-verbatim cosmetic cruft) was resolved 2026-05-25 by Phase I commit 11/11. TD-008 (backend LOC reduction) and TD-009 (docstring/comment drift) were resolved 2026-05-25 by Phase L (audit + 7 K-tasks + I2 promotion, commit `7f169f9`). TD-010 (prompt management overhaul) was resolved 2026-05-26 by plan-13 (Phase 0 audit + render/registry infrastructure + 6 service migrations, commits `5238fb7..1c94e29`); the resolved entry is retained below with original context preserved. TD-011 (stale Claude Sonnet model pin) was resolved 2026-06-15 — `backend/app/core/config.py` now defaults to `claude-sonnet-4-6` (the Render `CLAUDE_SONNET_MODEL` env matches); the resolved entry is retained below with original context preserved. TD-005 (v1 `count`-as-page-size envelope) and TD-012 (Apollo connector router doing blocking Mongo I/O on the event loop) were both resolved 2026-06-16 by Phase 37 (commits `77c7e9d`, `7fe2818`); their resolved entries are retained below with original context preserved.
+Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases E and F) were removed on 2026-05-23; their IDs are not reused so commit/spec references stay traceable. TD-006 (market_scoring callers recomputing len(leads)) was resolved 2026-05-24 by Phase H Task 4. TD-007 (Phase G plan-verbatim cosmetic cruft) was resolved 2026-05-25 by Phase I commit 11/11. TD-008 (backend LOC reduction) and TD-009 (docstring/comment drift) were resolved 2026-05-25 by Phase L (audit + 7 K-tasks + I2 promotion, commit `7f169f9`). TD-010 (prompt management overhaul) was resolved 2026-05-26 by plan-13 (Phase 0 audit + render/registry infrastructure + 6 service migrations, commits `5238fb7..1c94e29`); the resolved entry is retained below with original context preserved. TD-011 (stale Claude Sonnet model pin) was resolved 2026-06-15 — `backend/app/core/config.py` now defaults to `claude-sonnet-4-6` (the Render `CLAUDE_SONNET_MODEL` env matches); the resolved entry is retained below with original context preserved. TD-005 (v1 `count`-as-page-size envelope) and TD-012 (Apollo connector router doing blocking Mongo I/O on the event loop) were both resolved 2026-06-16 by Phase 37 (commits `77c7e9d`, `7fe2818`); their resolved entries are retained below with original context preserved. TD-013 (`connect_user_to_org` reverse-uniqueness TOCTOU) was resolved 2026-07-07 — obviated by ADR-0009, which deliberately dropped reverse-uniqueness (commit `7e7216d8`), so the scan the race depended on no longer exists; its entry was moved to `docs/TECH_DEBT_ARCHIVE.md`.
 
 ---
 
@@ -399,22 +399,6 @@ Either make the blocking handlers sync `def` (FastAPI dispatches them to the thr
 
 **Pull-forward trigger:**
 - A pre-launch load/performance pass, or the first measured event-loop contention / p99 latency anomaly traced to blocking I/O in async handlers. Decide sync-handlers-vs-motor for the connector router then, and apply the same lens to any other async handler doing blocking I/O.
-
-**Owner:** TBD.
-
----
-
-## TD-013 — `connect_user_to_org` reverse-uniqueness is a read-then-write (TOCTOU)
-
-**Date logged:** 2026-07-03 (Spec 46 WS4 impl-review round 1, glm-5.2 finding #3).
-
-**What was done:** `connect_user_to_org` (`backend/app/services/org_auth/orgs.py`) enforces the bijective 1:1 invariant by scanning the in-memory `user_mappings` for reverse-uniqueness, then writing the whole `users` doc back with `update_one`. Read-then-write, not atomic.
-
-**What should be done:** an atomic conditional update (`update_one` with a filter guard on the current mapping state) so two concurrent connects targeting the same pre-existing org can't both pass the scan and both write.
-
-**Why deferred:** unreachable at MVP. Registration mints a fresh UUID org per user (passes all three checks trivially); the only way to a colliding write is two operator-driven `connect_user_to_org` / `POST /connect_org` calls to the same pre-existing org, simultaneously, against a single FastAPI process with 0 live users — low likelihood, low blast radius.
-
-**Trigger:** a multi-worker/multi-process deploy lands, OR an automated (non-admin) path can call `connect_user_to_org`, OR the admin connect flow becomes concurrent with real users.
 
 **Owner:** TBD.
 

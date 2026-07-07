@@ -1,6 +1,6 @@
 # Brewra — Resolved Technical Debt (Archive)
 
-Fully-resolved frontend tech-debt entries, moved here from `docs/TECH_DEBT.md` to keep the active register focused. Entry text and numbering are preserved verbatim — IDs are never reused. Open and carried-forward entries (including partially-resolved ones) remain in the main register. Index: see the table at the top of `docs/TECH_DEBT.md`.
+Fully-resolved tech-debt entries (mostly frontend, plus backend items), moved here from `docs/TECH_DEBT.md` to keep the active register focused. Entry text and numbering are preserved verbatim — IDs are never reused. Open and carried-forward entries (including partially-resolved ones) remain in the main register. Index: see the table at the top of `docs/TECH_DEBT.md`.
 
 ---
 
@@ -1304,5 +1304,23 @@ Profiler grows a standalone surface that is not naturally customers or mission-c
 **Owner:** TBD.
 
 **Resolved (2026-06-27, audit):** confirmed accepted architectural decision (Spec 30 §1.1 / ADR-0006), not a defect — there is intentionally no `features/profiler/`; Profiler lives across `features/customers/`, `features/mission-control/`, and `src/shared/profiler/` (verified — no `profiler/` feature dir exists). The pull-forward (Profiler grows a standalone surface) has not occurred. Closed as a recorded accepted decision.
+
+---
+
+## TD-013 — `connect_user_to_org` reverse-uniqueness is a read-then-write (TOCTOU)
+
+**Resolved (2026-07-07):** obviated by ADR-0009. Commit `7e7216d8` ("allow shared-team orgs — drop reverse-uniqueness in `connect_user_to_org`") deliberately removed reverse-uniqueness enforcement entirely — orgs are now shared team workspaces, so multiple users mapping to one org is intended, not a race. `backend/app/services/org_auth/orgs.py::connect_user_to_org` no longer scans `user_mappings` for reverse-uniqueness (docstring: "Reverse-uniqueness … is intentionally NOT enforced"), so the specific read-then-write TOCTOU this entry tracked no longer exists. (A benign forward-mapping read-then-write remains, guarded by the no-silent-re-key check; that is not what this entry described.) See `docs/adr/0009-org-is-shared-team-workspace.md`. Original entry preserved below.
+
+**Date logged:** 2026-07-03 (Spec 46 WS4 impl-review round 1, glm-5.2 finding #3).
+
+**What was done:** `connect_user_to_org` (`backend/app/services/org_auth/orgs.py`) enforces the bijective 1:1 invariant by scanning the in-memory `user_mappings` for reverse-uniqueness, then writing the whole `users` doc back with `update_one`. Read-then-write, not atomic.
+
+**What should be done:** an atomic conditional update (`update_one` with a filter guard on the current mapping state) so two concurrent connects targeting the same pre-existing org can't both pass the scan and both write.
+
+**Why deferred:** unreachable at MVP. Registration mints a fresh UUID org per user (passes all three checks trivially); the only way to a colliding write is two operator-driven `connect_user_to_org` / `POST /connect_org` calls to the same pre-existing org, simultaneously, against a single FastAPI process with 0 live users — low likelihood, low blast radius.
+
+**Trigger:** a multi-worker/multi-process deploy lands, OR an automated (non-admin) path can call `connect_user_to_org`, OR the admin connect flow becomes concurrent with real users.
+
+**Owner:** TBD.
 
 ---
