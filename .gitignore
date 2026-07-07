@@ -52,6 +52,7 @@ playwright/.cache/
 *.temp
 
 # Claude Code (agent tooling)
-# Per-user permissions and local agent state. Shared config like .claude/settings.json
-# or .claude/skills/ should be committed; only the .local.json belongs to the user.
+# Per-user permissions, plugin enablement, and local agent state stay local;
+# shared config like .claude/skills/ should be committed.
+.claude/settings.json
 .claude/settings.local.json
