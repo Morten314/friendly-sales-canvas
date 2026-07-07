@@ -84,12 +84,18 @@ celerybeat-schedule
 
 # Environments
 .env
+*.env
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Local credential / secret dumps — never commit these (see backend.env, check_it.txt)
+check_it.txt
+secrets.txt
+*.secret
 
 # Spyder project settings
 .spyderproject

@@ -62,7 +62,7 @@ def test_no_unannotated_lazy_service_imports() -> None:
     """All lazy `from app.services` imports inside services/ must be annotated."""
     all_violations: dict[str, list[tuple[int, str]]] = {}
     for py_file in SERVICES_DIR.rglob("*.py"):
-        source = py_file.read_text()
+        source = py_file.read_text(encoding="utf-8")
         violations = _find_violations(source, source.splitlines())
         if violations:
             rel = py_file.relative_to(SERVICES_DIR.parent.parent)
