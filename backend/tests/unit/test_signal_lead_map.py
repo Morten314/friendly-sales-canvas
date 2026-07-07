@@ -115,6 +115,7 @@ def test_save_and_get_cached_lead_map_roundtrip():
 # Task-10: build_signal_lead_map_claude orchestration tests
 # ---------------------------------------------------------------------------
 import asyncio
+import threading
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.models.signals import SignalLeadMapRequest
@@ -255,13 +256,21 @@ def test_build_map_surfaces_error_status_on_claude_failure():
 # ---------------------------------------------------------------------------
 
 def test_build_map_batches_by_configured_size(monkeypatch):
-    """N leads / batch_size → one Claude call per batch."""
+    """N leads / batch_size -> one Claude call per batch. Counted under a lock
+    because the batches run concurrently on a real ThreadPoolExecutor."""
     from app.services.signals import lead_map
     monkeypatch.setattr(lead_map, "_LEAD_BATCH_SIZE", 2)
     signals = [{"signal_id": "s1", "headline": "h"}]
     leads = [{"lead_id": f"l{i}"} for i in range(1, 6)]  # 5 leads / 2 -> 3 batches
-    _, claude = _run(signals, leads, '{"mapping":[]}')
-    assert claude.call_count == 3
+    lock, calls = threading.Lock(), []
+
+    def echo_empty(_body, _tokens):
+        with lock:
+            calls.append(1)
+        return '{"mapping":[{"signal_id":"s1","leads":[]}]}'  # prompt-mandated echo shape
+
+    _run(signals, leads, echo_empty)
+    assert len(calls) == 3
 
 
 def test_build_map_merges_leads_across_batches(monkeypatch):
@@ -279,16 +288,20 @@ def test_build_map_merges_leads_across_batches(monkeypatch):
         return '{"mapping":[{"signal_id":"s1","leads":[{"lead_id":"l2","company":"Globex","relevance":"low","why":"y"}]}]}'
 
     mongo, store = _fake_cache_mongo()
-    result, claude = _run(signals, leads, fake, mongo=mongo)
-    assert claude.call_count == 2
+    result, _ = _run(signals, leads, fake, mongo=mongo)
     ids = sorted(l["lead_id"] for l in result["data"]["mapping"][0]["leads"])
-    assert ids == ["l1", "l2"]           # both batches merged into one signal entry
-    assert "o1:u1" in store              # complete map → cached
+    # The merged output containing BOTH ids proves both batches ran and merged,
+    # without a timing-sensitive call_count assertion under concurrency.
+    assert ids == ["l1", "l2"]
+    assert "o1:u1" in store              # complete map -> cached
 
 
-def test_build_map_partial_batch_failure_keeps_good_leads_and_skips_cache(monkeypatch):
-    """One batch fails after retries; the surviving batch's leads are still
-    returned, and a partial map is NOT cached as if it were complete."""
+def test_build_map_partial_batch_failure_surfaces_error(monkeypatch):
+    """One batch fails after retries while another SUCCEEDS with a real match: the
+    map is incomplete (the failed batch's leads are missing), so surface
+    status:"error" (not a masked success) and do not cache. The FE's retry then
+    re-runs the full compute. This is the partial-failure gap that deciding on
+    `all_ok` (not `not mapping`) closes."""
     from app.services.signals import lead_map
     monkeypatch.setattr(lead_map, "_LEAD_BATCH_SIZE", 1)
     signals = [{"signal_id": "s1", "headline": "h"}]
@@ -301,9 +314,8 @@ def test_build_map_partial_batch_failure_keeps_good_leads_and_skips_cache(monkey
 
     mongo, store = _fake_cache_mongo()
     result, _ = _run(signals, leads, fake, mongo=mongo)
-    ids = [l["lead_id"] for l in result["data"]["mapping"][0]["leads"]]
-    assert ids == ["l1"]                 # good batch survived the sibling's failure
-    assert "o1:u1" not in store          # partial result not cached
+    assert result["status"] == "error"   # incomplete compute surfaced, not masked as success
+    assert "o1:u1" not in store          # partial result never cached
 
 
 def test_build_map_all_batches_fail_surfaces_error_status(monkeypatch):
@@ -315,16 +327,20 @@ def test_build_map_all_batches_fail_surfaces_error_status(monkeypatch):
 
 
 def test_build_map_genuine_zero_matches_stays_success(monkeypatch):
-    # All batches succeed but Claude found no matches → a TRUE empty, not a failure:
-    # status stays "success" so the FE shows "No matched leads found", not an error.
+    # All batches succeed but Claude finds no matches -> a TRUE empty, not a failure.
+    # The prompt (signals_lead_map.md.j2) mandates echoing EVERY signal with an empty
+    # "leads" array, so the realistic zero-match response is the echo shape below (not
+    # {"mapping":[]}). status stays "success" (cached) and the FE shows "No matched
+    # leads found" rather than an error.
     from app.services.signals import lead_map
     monkeypatch.setattr(lead_map, "_LEAD_BATCH_SIZE", 1)
+    echo_empty = '{"mapping":[{"signal_id":"s1","leads":[]}]}'  # prompt-mandated shape
     mongo, store = _fake_cache_mongo()
-    result, _ = _run([{"signal_id": "s1"}], [{"lead_id": "l1"}, {"lead_id": "l2"}],
-                     '{"mapping":[]}', mongo=mongo)
+    result, _ = _run([{"signal_id": "s1", "headline": "h"}],
+                     [{"lead_id": "l1"}, {"lead_id": "l2"}], echo_empty, mongo=mongo)
     assert result["status"] == "success"
-    assert result["data"]["mapping"] == []
-    assert "o1:u1" in store                  # a complete (if empty) map is still cached
+    assert result["data"]["mapping"] == [{"signal_id": "s1", "headline": "h", "leads": []}]
+    assert "o1:u1" in store                  # a complete (zero-match) map is still cached
 
 
 # ---------------------------------------------------------------------------

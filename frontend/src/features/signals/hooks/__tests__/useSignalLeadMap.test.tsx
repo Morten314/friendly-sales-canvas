@@ -90,6 +90,20 @@ describe("useSignalLeadMap", () => {
     expect(calls).toBeGreaterThanOrEqual(2);
   });
 
+  it("surfaces isError on a status:error body (HTTP 200) — a failed compute is not masked as empty", async () => {
+    // The backend returns 200 + status:"error" when the mapping compute failed; the
+    // service throws, so the query retries then lands in isError (drives SignalCard's
+    // error state) instead of silently showing an empty "No matched leads found".
+    server.use(
+      http.post("/api/signal-lead-map_claude", () =>
+        HttpResponse.json({ status: "error", data: { mapping: [] } }),
+      ),
+    );
+    const { result } = renderHook(() => useSignalLeadMap("org1"), { wrapper });
+    await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 5000 });
+    expect(result.current.leadsForSignal("s1")).toEqual([]);
+  });
+
   it("recompute exits the error state on a successful refetch", async () => {
     let calls = 0;
     server.use(

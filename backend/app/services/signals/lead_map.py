@@ -8,6 +8,7 @@ import asyncio
 import hashlib
 import json
 import os
+import random
 import re
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -68,6 +69,16 @@ _MAX_SIGNALS = 50
 _MAX_RETRIES = 2
 _RELEVANCE = {"high", "medium", "low"}
 
+def _int_env(name: str, default: int) -> int:
+    """Positive-int env override, falling back to `default` on unset/invalid (a bad
+    value must not crash module import — and thus the whole app)."""
+    try:
+        return max(1, int(os.getenv(name) or default))
+    except (TypeError, ValueError):
+        logger.warning("invalid %s=%r; using default %d", name, os.getenv(name), default)
+        return default
+
+
 # TD-014: instead of one Claude call over all ≤lead_fetch_limit (500) leads —
 # which both blew the 8192-token output budget (truncated → empty mapping) and
 # ran ~180s (past the upstream proxy timeout → 502) — split the leads into
@@ -75,8 +86,12 @@ _RELEVANCE = {"high", "medium", "low"}
 # and run the batches concurrently. Bounded payload keeps each call's output
 # parseable; concurrency keeps wall-clock ~ one batch, not the sum. Both are
 # env-overridable so ops can tune per model/limit without a code change.
-_LEAD_BATCH_SIZE = max(1, int(os.getenv("SIGNAL_LEAD_MAP_BATCH_SIZE") or "50"))
-_MAP_MAX_CONCURRENCY = max(1, int(os.getenv("SIGNAL_LEAD_MAP_MAX_CONCURRENCY") or "8"))
+_LEAD_BATCH_SIZE = _int_env("SIGNAL_LEAD_MAP_BATCH_SIZE", 50)
+_MAP_MAX_CONCURRENCY = _int_env("SIGNAL_LEAD_MAP_MAX_CONCURRENCY", 8)
+# Per-batch retry backoff: base * 2**(attempt-1) + U(0, jitter). Jitter de-syncs
+# the concurrent batches so they don't retry in lockstep against a throttling API.
+_RETRY_BASE_S = 1.0
+_RETRY_JITTER_S = 0.5
 
 
 def _build_result(
@@ -300,9 +315,10 @@ async def build_signal_lead_map_claude(driver, mongo, request) -> Dict[str, Any]
     bounded batches mapped in concurrent Claude calls and merged (TD-014), so the
     payload per call stays parseable and the request stays under the upstream proxy
     timeout. Never raises to a 500: a batch failure degrades that batch to empty; if
-    that leaves nothing AND a batch failed, the result carries status:"error" (still
-    HTTP 200) so the FE surfaces its error state instead of a misleading empty map.
-    A genuine zero-match result keeps status:"success". (Router handles the
+    ANY batch fails the map is incomplete, so the result carries status:"error"
+    (still HTTP 200, not cached) — the FE surfaces its error/retry state instead of
+    a silently incomplete map. Only an all-batches-ok result is cached and returned
+    as status:"success" (including a genuine zero-match). (Router handles the
     missing-key 500.)"""
     now = datetime.now(timezone.utc).isoformat()
 
@@ -352,16 +368,18 @@ async def build_signal_lead_map_claude(driver, mongo, request) -> Dict[str, Any]
     loop = asyncio.get_running_loop()
 
     async def _map_batch(executor, batch: List[Dict[str, Any]]):
-        """(parsed_mapping, ok) for one lead batch. ok=False after exhausted retries."""
-        rendered = prompts.render(
-            "signals_lead_map",
-            signals_json=signals_json,
-            leads_json=_leads_for_prompt(batch),
-            context_json=context_json,
-        )
+        """(parsed_mapping, ok) for one lead batch; ok=False after exhausted retries.
+        ALL work (render + call + parse) is inside the try so nothing escapes to a
+        500 — a failing batch degrades to ([], False) and the caller surfaces it."""
         batch_lead_ids = _lead_ids(batch)
         for attempt in range(1, _MAX_RETRIES + 1):
             try:
+                rendered = prompts.render(
+                    "signals_lead_map",
+                    signals_json=signals_json,
+                    leads_json=_leads_for_prompt(batch),
+                    context_json=context_json,
+                )
                 raw = await loop.run_in_executor(
                     executor,
                     _llm_helpers._claude_messages_text,
@@ -371,7 +389,9 @@ async def build_signal_lead_map_claude(driver, mongo, request) -> Dict[str, Any]
                 return _parse_mapping(raw, signals, sig_ids, batch_lead_ids), True
             except Exception as e:  # degrade this batch; never surface a 500
                 if attempt < _MAX_RETRIES:
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(
+                        _RETRY_BASE_S * (2 ** (attempt - 1)) + random.uniform(0, _RETRY_JITTER_S)
+                    )
                 else:
                     logger.warning("signal_lead_map: lead batch failed after retries: %s", e)
                     return [], False
@@ -384,24 +404,29 @@ async def build_signal_lead_map_claude(driver, mongo, request) -> Dict[str, Any]
     mapping = _merge_batch_mappings([m for m, _ in batch_results], sig_ids, headline_by_id)
     all_ok = all(ok for _, ok in batch_results)
 
-    # Nothing produced AND a batch failed → the compute FAILED (vs genuinely no
-    # matches). Surface status:"error" (HTTP still 200, no cache) so the FE shows
-    # its error state ("Could not load matched leads" + retry) instead of masking
-    # it as an empty "No matched leads found". A true empty (all batches ok, zero
-    # matches) keeps status:"success" and falls through to the success return.
-    if not mapping and not all_ok:
-        logger.warning("signal_lead_map: all lead batches failed, returning error status")
+    # A batch that failed after retries makes the map INCOMPLETE — its leads are
+    # missing. We can't infer that from an empty `mapping`: the prompt echoes every
+    # signal with a (possibly empty) "leads" array, so any surviving batch leaves
+    # `mapping` non-empty even on a zero-match batch. Decide on `all_ok` instead —
+    # surface status:"error" (HTTP 200, not cached) so the FE shows its retry state
+    # (whose refetch re-runs the full compute) rather than presenting a silently
+    # incomplete map as success. A genuine zero-match with every batch OK falls
+    # through to the success return below.
+    if not all_ok:
+        n_failed = sum(1 for _, ok in batch_results if not ok)
+        logger.warning(
+            "signal_lead_map: %d/%d lead batches failed; returning error status (not cached)",
+            n_failed, len(batch_results),
+        )
         return _build_result([], now, False, status="error")
 
-    # 7. cache write — only a COMPLETE map (every batch succeeded), so a partial
-    # result from a mid-run batch failure is never cached as if it were the whole
-    # map. Log + swallow on write failure.
-    if all_ok:
-        try:
-            await asyncio.to_thread(
-                _save_lead_map, mongo, request.org_id, request.user_id, mapping, fingerprint, now
-            )
-        except Exception as e:
-            logger.warning("signal_lead_map: cache write failed: %s", e)
+    # 7. cache write — every batch succeeded, so the map is complete. Log + swallow
+    # on write failure.
+    try:
+        await asyncio.to_thread(
+            _save_lead_map, mongo, request.org_id, request.user_id, mapping, fingerprint, now
+        )
+    except Exception as e:
+        logger.warning("signal_lead_map: cache write failed: %s", e)
 
     return _build_result(_enrich_matched_leads(mapping, leads_by_id), now, False)
