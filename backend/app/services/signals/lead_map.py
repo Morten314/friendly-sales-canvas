@@ -86,12 +86,22 @@ def _int_env(name: str, default: int) -> int:
 # and run the batches concurrently. Bounded payload keeps each call's output
 # parseable; concurrency keeps wall-clock ~ one batch, not the sum. Both are
 # env-overridable so ops can tune per model/limit without a code change.
-_LEAD_BATCH_SIZE = _int_env("SIGNAL_LEAD_MAP_BATCH_SIZE", 50)
-_MAP_MAX_CONCURRENCY = _int_env("SIGNAL_LEAD_MAP_MAX_CONCURRENCY", 8)
+# Defaults tuned from live profiling (see docs/TECH_DEBT.md TD-014): wall-clock is
+# floored by total Claude output / an Anthropic-rate-limited ~4.4 effective
+# concurrency, so B and C above ~5 don't speed it up. B=40 keeps each batch's raw
+# output well under the 8192-token cap (shrinking the truncation failure mode);
+# C=5 saturates the throughput ceiling while minimizing peak memory / 429 pressure
+# on the small Render instance. L (lead_fetch_limit) is the only real speed lever
+# and trades against coverage, so it's left at its admin default.
+_LEAD_BATCH_SIZE = _int_env("SIGNAL_LEAD_MAP_BATCH_SIZE", 40)
+_MAP_MAX_CONCURRENCY = _int_env("SIGNAL_LEAD_MAP_MAX_CONCURRENCY", 5)
 # Per-batch retry backoff: base * 2**(attempt-1) + U(0, jitter). Jitter de-syncs
 # the concurrent batches so they don't retry in lockstep against a throttling API.
 _RETRY_BASE_S = 1.0
 _RETRY_JITTER_S = 0.5
+# On a truncated/unparseable batch, split it in half and re-map — bounded so a
+# pathological batch can't recurse without end (40→20→10→5 covers any realistic case).
+_MAX_SPLIT_DEPTH = 3
 
 
 def _build_result(
@@ -243,7 +253,10 @@ def _recover_mapping_entries(raw: str) -> List[Dict[str, Any]]:
 def _parse_mapping(
     raw: str, signals: List[Dict[str, Any]],
     valid_signal_ids: List[str], valid_lead_ids: List[str],
-) -> List[Dict[str, Any]]:
+) -> tuple[List[Dict[str, Any]], bool]:
+    """Return (mapping, clean). clean=False means the model's JSON was
+    incomplete/unparseable (almost always a max_tokens truncation) and we only
+    recovered a prefix — the caller should split-and-retry rather than trust it."""
     sig_set = set(valid_signal_ids)
     lead_set = set(valid_lead_ids)
     headline_by_id = {
@@ -251,13 +264,18 @@ def _parse_mapping(
         for s in signals
         if (s.get("signal_id") or s.get("id"))
     }
+    clean = True
     try:
         parsed = _llm_helpers._extract_research_json(
             raw, escape_keys=("why",), trim_braces=True, strip_final_answer=True
         )
         raw_mapping = parsed.get("mapping", []) if isinstance(parsed, dict) else []
     except (ValueError, TypeError):
-        raw_mapping = _recover_mapping_entries(raw)  # truncated-prefix tolerance
+        # Incomplete/invalid JSON — recover the complete-object prefix for best-effort
+        # data, but flag clean=False so the caller splits instead of silently caching
+        # a truncated (tail-leads-dropped) map as a success.
+        clean = False
+        raw_mapping = _recover_mapping_entries(raw)
 
     out: List[Dict[str, Any]] = []
     for entry in raw_mapping:
@@ -283,7 +301,7 @@ def _parse_mapping(
                 "why": str(lead.get("why") or ""),
             })
         out.append({"signal_id": sid, "headline": headline_by_id.get(sid, ""), "leads": leads_out})
-    return out
+    return out, clean
 
 
 def _merge_batch_mappings(
@@ -367,10 +385,12 @@ async def build_signal_lead_map_claude(driver, mongo, request) -> Dict[str, Any]
     batches = [leads[i:i + _LEAD_BATCH_SIZE] for i in range(0, len(leads), _LEAD_BATCH_SIZE)]
     loop = asyncio.get_running_loop()
 
-    async def _map_batch(executor, batch: List[Dict[str, Any]]):
+    async def _map_batch(executor, batch: List[Dict[str, Any]], depth: int = 0):
         """(parsed_mapping, ok) for one lead batch; ok=False after exhausted retries.
         ALL work (render + call + parse) is inside the try so nothing escapes to a
-        500 — a failing batch degrades to ([], False) and the caller surfaces it."""
+        500. If the model's output is truncated/unparseable, split the batch in half
+        and re-map the halves (bounded by _MAX_SPLIT_DEPTH) so no leads are silently
+        dropped; a batch that can't be split further degrades loudly to ([], False)."""
         batch_lead_ids = _lead_ids(batch)
         for attempt in range(1, _MAX_RETRIES + 1):
             try:
@@ -386,7 +406,34 @@ async def build_signal_lead_map_claude(driver, mongo, request) -> Dict[str, Any]
                     rendered.body,
                     _llm_helpers.CLAUDE_RESEARCH_MAX_TOKENS,
                 )
-                return _parse_mapping(raw, signals, sig_ids, batch_lead_ids), True
+                mapping, clean = _parse_mapping(raw, signals, sig_ids, batch_lead_ids)
+                if clean:
+                    return mapping, True
+                # Truncated/unparseable output. Rather than silently caching the
+                # recovered prefix as a success (dropping the tail leads), split the
+                # batch so each half's output fits, and re-map. Retrying the same
+                # batch would just truncate again, so we split instead of looping.
+                if len(batch) > 1 and depth < _MAX_SPLIT_DEPTH:
+                    logger.warning(
+                        "signal_lead_map: batch output truncated (%d leads, depth %d); splitting",
+                        len(batch), depth,
+                    )
+                    mid = len(batch) // 2
+                    halves = await asyncio.gather(
+                        _map_batch(executor, batch[:mid], depth + 1),
+                        _map_batch(executor, batch[mid:], depth + 1),
+                    )
+                    merged = _merge_batch_mappings(
+                        [m for m, _ in halves], sig_ids, headline_by_id
+                    )
+                    return merged, all(ok for _, ok in halves)
+                # Single lead (or hit the split cap) and STILL truncated → fail loudly
+                # (uncached, surfaced) instead of returning a silently-partial map.
+                logger.warning(
+                    "signal_lead_map: batch truncated and unsplittable (%d leads, depth %d); marking failed",
+                    len(batch), depth,
+                )
+                return [], False
             except Exception as e:  # degrade this batch; never surface a 500
                 if attempt < _MAX_RETRIES:
                     await asyncio.sleep(

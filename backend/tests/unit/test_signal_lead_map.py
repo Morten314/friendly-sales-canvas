@@ -231,16 +231,45 @@ def test_build_map_drops_invented_ids():
     assert [l["lead_id"] for l in mapping[0]["leads"]] == ["l1"]  # lX dropped
 
 
-def test_build_map_tolerates_truncated_json():
-    signals = [{"signal_id": "s1"}, {"signal_id": "s2"}]
+def test_build_map_truncation_splits_and_recovers(monkeypatch):
+    """A truncated batch is SPLIT and re-mapped so no leads are silently dropped:
+    the full-batch call truncates, but each single-lead sub-batch parses cleanly
+    and the halves merge into the complete result (status success, cached). This
+    replaces the old 'keep the recovered prefix' behavior, which silently dropped
+    the truncated tail leads."""
+    from app.services.signals import lead_map
+    monkeypatch.setattr(lead_map, "_LEAD_BATCH_SIZE", 2)  # 2 leads -> one batch of 2
+    signals = [{"signal_id": "s1", "headline": "h"}]
     leads = [{"lead_id": "l1"}, {"lead_id": "l2"}]
-    truncated = (
-        '{"mapping":[{"signal_id":"s1","leads":'
-        '[{"lead_id":"l1","company":"A","relevance":"high","why":"x"}]},'
-        '{"signal_id":"s2","leads":[{"lead_id":"l2","compa'  # cut off mid-token
-    )
-    result, _ = _run(signals, leads, truncated)
-    assert [e["signal_id"] for e in result["data"]["mapping"]] == ["s1"]  # valid prefix kept
+
+    def fake(body, _tokens):
+        # Full batch (both leads) truncates; each single-lead sub-batch returns clean.
+        if "l1" in body and "l2" in body:
+            return '{"mapping":[{"signal_id":"s1","leads":[{"lead_id":"l1","compa'  # cut off
+        if "l1" in body:
+            return '{"mapping":[{"signal_id":"s1","leads":[{"lead_id":"l1","company":"A","relevance":"high","why":"x"}]}]}'
+        return '{"mapping":[{"signal_id":"s1","leads":[{"lead_id":"l2","company":"B","relevance":"low","why":"y"}]}]}'
+
+    mongo, store = _fake_cache_mongo()
+    result, _ = _run(signals, leads, fake, mongo=mongo)
+    assert result["status"] == "success"
+    ids = sorted(l["lead_id"] for l in result["data"]["mapping"][0]["leads"])
+    assert ids == ["l1", "l2"]           # split recovered BOTH leads — none dropped
+    assert "o1:u1" in store              # complete map cached
+
+
+def test_build_map_truncation_unsplittable_surfaces_error(monkeypatch):
+    """A single-lead batch that still truncates can't be split further, so it fails
+    loudly (status:error, uncached) instead of caching a silently-partial map."""
+    from app.services.signals import lead_map
+    monkeypatch.setattr(lead_map, "_LEAD_BATCH_SIZE", 1)
+    signals = [{"signal_id": "s1", "headline": "h"}]
+    leads = [{"lead_id": "l1"}]
+    truncated = '{"mapping":[{"signal_id":"s1","leads":[{"lead_id":"l1","compa'  # always cut off
+    mongo, store = _fake_cache_mongo()
+    result, _ = _run(signals, leads, truncated, mongo=mongo)
+    assert result["status"] == "error"   # unsplittable truncation surfaced, not masked
+    assert "o1:u1" not in store           # not cached
 
 
 def test_build_map_surfaces_error_status_on_claude_failure():
