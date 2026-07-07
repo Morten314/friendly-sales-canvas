@@ -88,6 +88,7 @@ Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases
 | TD-FE-76 | open | [below](#td-fe-76--settings-profile-reads-bypass-the-apifetch-transport-and-rate-limiter) |
 | TD-FE-77 | open | [below](#td-fe-77--signal-briefings-delivered-to-the-artefacts-library-do-not-survive-navigation) |
 | TD-FE-78 | partial | [below](#td-fe-78--shared-pdf-generator-emits-structurally-non-compliant-output-and-mojibakes-non-winansi-glyphs) |
+| TD-FE-79 | partial | [below](#td-fe-79--internal-admin-endpoints-firebase-verified-resolved-reused-endpoints-remain-open) |
 
 ---
 
@@ -1133,6 +1134,8 @@ internationalisation pass.
 prioritized.
 
 **Owner:** TBD.
+
+---
 
 ## TD-FE-79 — internal `/admin/*` endpoints: Firebase-verified (resolved); reused endpoints remain open
 
