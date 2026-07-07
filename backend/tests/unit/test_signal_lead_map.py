@@ -145,7 +145,9 @@ def _run(signals, leads, claude_return, *, mongo=None, refresh=False):
                return_value={"icps": []}), \
          patch("asyncio.sleep", new=AsyncMock()), \
          patch("app.services._llm_helpers._claude_messages_text") as claude:
-        if isinstance(claude_return, Exception):
+        if isinstance(claude_return, Exception) or callable(claude_return) or isinstance(claude_return, list):
+            # Exception -> every call raises; callable -> per-input response
+            # (deterministic under concurrency); list -> per-call in order.
             claude.side_effect = claude_return
         else:
             claude.return_value = claude_return
@@ -242,6 +244,70 @@ def test_build_map_tolerates_truncated_json():
 
 def test_build_map_degrades_to_empty_on_claude_failure():
     result, _ = _run([{"signal_id": "s1"}], [{"lead_id": "l1"}], RuntimeError("boom"))
+    assert result["status"] == "success"
+    assert result["data"]["mapping"] == []
+
+
+# ---------------------------------------------------------------------------
+# TD-014: chunk leads across bounded batches, run concurrently, merge
+# ---------------------------------------------------------------------------
+
+def test_build_map_batches_by_configured_size(monkeypatch):
+    """N leads / batch_size → one Claude call per batch."""
+    from app.services.signals import lead_map
+    monkeypatch.setattr(lead_map, "_LEAD_BATCH_SIZE", 2)
+    signals = [{"signal_id": "s1", "headline": "h"}]
+    leads = [{"lead_id": f"l{i}"} for i in range(1, 6)]  # 5 leads / 2 -> 3 batches
+    _, claude = _run(signals, leads, '{"mapping":[]}')
+    assert claude.call_count == 3
+
+
+def test_build_map_merges_leads_across_batches(monkeypatch):
+    """Each lead is mapped in its own batch; the per-signal leads are unioned.
+    The mock keys off the prompt body so responses match batches regardless of
+    concurrent call order."""
+    from app.services.signals import lead_map
+    monkeypatch.setattr(lead_map, "_LEAD_BATCH_SIZE", 1)  # one lead per batch
+    signals = [{"signal_id": "s1", "headline": "Hiring surge"}]
+    leads = [{"lead_id": "l1", "company_name": "Acme"}, {"lead_id": "l2", "company_name": "Globex"}]
+
+    def fake(body, _tokens):
+        if "l1" in body:
+            return '{"mapping":[{"signal_id":"s1","leads":[{"lead_id":"l1","company":"Acme","relevance":"high","why":"x"}]}]}'
+        return '{"mapping":[{"signal_id":"s1","leads":[{"lead_id":"l2","company":"Globex","relevance":"low","why":"y"}]}]}'
+
+    mongo, store = _fake_cache_mongo()
+    result, claude = _run(signals, leads, fake, mongo=mongo)
+    assert claude.call_count == 2
+    ids = sorted(l["lead_id"] for l in result["data"]["mapping"][0]["leads"])
+    assert ids == ["l1", "l2"]           # both batches merged into one signal entry
+    assert "o1:u1" in store              # complete map → cached
+
+
+def test_build_map_partial_batch_failure_keeps_good_leads_and_skips_cache(monkeypatch):
+    """One batch fails after retries; the surviving batch's leads are still
+    returned, and a partial map is NOT cached as if it were complete."""
+    from app.services.signals import lead_map
+    monkeypatch.setattr(lead_map, "_LEAD_BATCH_SIZE", 1)
+    signals = [{"signal_id": "s1", "headline": "h"}]
+    leads = [{"lead_id": "l1"}, {"lead_id": "l2"}]
+
+    def fake(body, _tokens):
+        if "l2" in body:
+            raise RuntimeError("boom")
+        return '{"mapping":[{"signal_id":"s1","leads":[{"lead_id":"l1","company":"A","relevance":"high","why":"x"}]}]}'
+
+    mongo, store = _fake_cache_mongo()
+    result, _ = _run(signals, leads, fake, mongo=mongo)
+    ids = [l["lead_id"] for l in result["data"]["mapping"][0]["leads"]]
+    assert ids == ["l1"]                 # good batch survived the sibling's failure
+    assert "o1:u1" not in store          # partial result not cached
+
+
+def test_build_map_all_batches_fail_degrades_to_empty(monkeypatch):
+    from app.services.signals import lead_map
+    monkeypatch.setattr(lead_map, "_LEAD_BATCH_SIZE", 1)
+    result, _ = _run([{"signal_id": "s1"}], [{"lead_id": "l1"}, {"lead_id": "l2"}], RuntimeError("boom"))
     assert result["status"] == "success"
     assert result["data"]["mapping"] == []
 

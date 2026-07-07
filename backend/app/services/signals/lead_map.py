@@ -7,7 +7,9 @@ No signal-schema change; no persisted hard link.
 import asyncio
 import hashlib
 import json
+import os
 import re
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -65,6 +67,16 @@ def _save_lead_map(
 _MAX_SIGNALS = 50
 _MAX_RETRIES = 2
 _RELEVANCE = {"high", "medium", "low"}
+
+# TD-014: instead of one Claude call over all ≤lead_fetch_limit (500) leads —
+# which both blew the 8192-token output budget (truncated → empty mapping) and
+# ran ~180s (past the upstream proxy timeout → 502) — split the leads into
+# bounded batches, map each (full signal set × one lead batch) in its own call,
+# and run the batches concurrently. Bounded payload keeps each call's output
+# parseable; concurrency keeps wall-clock ~ one batch, not the sum. Both are
+# env-overridable so ops can tune per model/limit without a code change.
+_LEAD_BATCH_SIZE = max(1, int(os.getenv("SIGNAL_LEAD_MAP_BATCH_SIZE") or "50"))
+_MAP_MAX_CONCURRENCY = max(1, int(os.getenv("SIGNAL_LEAD_MAP_MAX_CONCURRENCY") or "8"))
 
 
 def _build_result(mapping: List[Dict[str, Any]], generated_at: str, cached: bool) -> Dict[str, Any]:
@@ -257,11 +269,36 @@ def _parse_mapping(
     return out
 
 
+def _merge_batch_mappings(
+    batch_mappings: List[List[Dict[str, Any]]],
+    signal_order: List[str],
+    headline_by_id: Dict[str, str],
+) -> List[Dict[str, Any]]:
+    """Merge the per-batch mappings into one. Every lead_id lives in exactly one
+    batch, so a signal's matched leads are simply concatenated across batches.
+    Entries are emitted in signal-feed order, only for signals that at least one
+    batch returned (matches the single-call shape the FE already consumes)."""
+    leads_by_signal: Dict[str, List[Dict[str, Any]]] = {}
+    for batch_mapping in batch_mappings:
+        for entry in batch_mapping:
+            sid = str(entry.get("signal_id", ""))
+            if not sid:
+                continue
+            leads_by_signal.setdefault(sid, []).extend(entry.get("leads", []) or [])
+    return [
+        {"signal_id": sid, "headline": headline_by_id.get(sid, ""), "leads": leads_by_signal[sid]}
+        for sid in signal_order
+        if sid in leads_by_signal
+    ]
+
+
 async def build_signal_lead_map_claude(driver, mongo, request) -> Dict[str, Any]:
-    """One Claude call over (newest-50 signals × ≤N leads, N = admin lead_fetch_limit)
-    → mapping[]; cached per (org, user) by an input-set fingerprint. Never raises to
-    a 500: a Claude failure degrades to an empty mapping (the router handles the
-    missing-key 500)."""
+    """Map newest-50 signals × ≤N leads (N = admin lead_fetch_limit) → mapping[];
+    cached per (org, user) by an input-set fingerprint. The leads are split into
+    bounded batches mapped in concurrent Claude calls and merged (TD-014), so the
+    payload per call stays parseable and the request stays under the upstream proxy
+    timeout. Never raises to a 500: a batch failure degrades that batch to empty
+    (all-fail → empty mapping; the router handles the missing-key 500)."""
     now = datetime.now(timezone.utc).isoformat()
 
     # 1. signals (user-scoped feed read; async)
@@ -295,37 +332,67 @@ async def build_signal_lead_map_claude(driver, mongo, request) -> Dict[str, Any]
         persistence._get_signal_ask_customer_profile, mongo, request.org_id
     ) or {}
 
-    # 5. render + 6. one Claude call (retries=2) + parse
-    rendered = prompts.render(
-        "signals_lead_map",
-        signals_json=_signals_for_prompt(signals),
-        leads_json=_leads_for_prompt(leads),
-        context_json=json.dumps(context, default=str),
-    )
-    mapping: List[Dict[str, Any]] = []
-    last_err: Optional[Exception] = None
-    for attempt in range(1, _MAX_RETRIES + 1):
-        try:
-            raw = await asyncio.to_thread(
-                _llm_helpers._claude_messages_text, rendered.body, _llm_helpers.CLAUDE_RESEARCH_MAX_TOKENS
-            )
-            mapping = _parse_mapping(raw, signals, sig_ids, ld_ids)
-            last_err = None
-            break
-        except Exception as e:  # degrade, never surface a 500
-            last_err = e
-            if attempt < _MAX_RETRIES:
-                await asyncio.sleep(1)
-    if last_err is not None:
-        logger.warning("signal_lead_map: claude failed after retries, empty mapping: %s", last_err)
+    # 5-6. Chunked, concurrent Claude mapping (TD-014). Split the leads into
+    # bounded batches; map each (full signal set × one lead batch) in its own
+    # call with the same per-call retry; run the batches concurrently. A batch
+    # that fails after retries contributes nothing but does not sink the others.
+    signals_json = _signals_for_prompt(signals)
+    context_json = json.dumps(context, default=str)
+    headline_by_id = {
+        str(s.get("signal_id") or s.get("id")): s.get("headline", "")
+        for s in signals
+        if (s.get("signal_id") or s.get("id"))
+    }
+    batches = [leads[i:i + _LEAD_BATCH_SIZE] for i in range(0, len(leads), _LEAD_BATCH_SIZE)]
+    loop = asyncio.get_running_loop()
+
+    async def _map_batch(executor, batch: List[Dict[str, Any]]):
+        """(parsed_mapping, ok) for one lead batch. ok=False after exhausted retries."""
+        rendered = prompts.render(
+            "signals_lead_map",
+            signals_json=signals_json,
+            leads_json=_leads_for_prompt(batch),
+            context_json=context_json,
+        )
+        batch_lead_ids = _lead_ids(batch)
+        for attempt in range(1, _MAX_RETRIES + 1):
+            try:
+                raw = await loop.run_in_executor(
+                    executor,
+                    _llm_helpers._claude_messages_text,
+                    rendered.body,
+                    _llm_helpers.CLAUDE_RESEARCH_MAX_TOKENS,
+                )
+                return _parse_mapping(raw, signals, sig_ids, batch_lead_ids), True
+            except Exception as e:  # degrade this batch; never surface a 500
+                if attempt < _MAX_RETRIES:
+                    await asyncio.sleep(1)
+                else:
+                    logger.warning("signal_lead_map: lead batch failed after retries: %s", e)
+                    return [], False
+
+    with ThreadPoolExecutor(
+        max_workers=min(_MAP_MAX_CONCURRENCY, len(batches)), thread_name_prefix="leadmap"
+    ) as executor:
+        batch_results = await asyncio.gather(*[_map_batch(executor, b) for b in batches])
+
+    mapping = _merge_batch_mappings([m for m, _ in batch_results], sig_ids, headline_by_id)
+    all_ok = all(ok for _, ok in batch_results)
+
+    # Nothing produced AND a batch failed → degrade to empty, don't cache (as before).
+    if not mapping and not all_ok:
+        logger.warning("signal_lead_map: all lead batches failed, empty mapping")
         return _build_result([], now, False)
 
-    # 7. cache write (log + swallow on failure)
-    try:
-        await asyncio.to_thread(
-            _save_lead_map, mongo, request.org_id, request.user_id, mapping, fingerprint, now
-        )
-    except Exception as e:
-        logger.warning("signal_lead_map: cache write failed: %s", e)
+    # 7. cache write — only a COMPLETE map (every batch succeeded), so a partial
+    # result from a mid-run batch failure is never cached as if it were the whole
+    # map. Log + swallow on write failure.
+    if all_ok:
+        try:
+            await asyncio.to_thread(
+                _save_lead_map, mongo, request.org_id, request.user_id, mapping, fingerprint, now
+            )
+        except Exception as e:
+            logger.warning("signal_lead_map: cache write failed: %s", e)
 
     return _build_result(_enrich_matched_leads(mapping, leads_by_id), now, False)
