@@ -1194,3 +1194,34 @@ the same Firebase-verification treatment.
 **Trigger:** matched-leads Claude calls show elevated cost, truncation, or degraded match quality at high `lead_fetch_limit` values; OR the ceiling is raised beyond 500.
 
 **Owner:** TBD.
+
+---
+
+## TD-015 — Matched-leads *uncached* compute is slow + unreliable on the small Render instance (needs infra and/or async)
+
+**Date logged:** 2026-07-07.
+
+**Current state:** After TD-014 (chunking + `B=40`/`C=5` defaults + adaptive-split + FE error-surfacing), the matched-leads map is *correct* (real matches, no silent truncation) and *cached reads are fast + reliable* (~5 s). But the **first, uncached compute is slow and unreliable**, and — verified live — **no `(lead_fetch_limit L, batch_size B, concurrency C)` tuning fixes it**. `build_signal_lead_map_claude` runs synchronously inside the request; the fix is infrastructure and/or async, not a knob.
+
+**Numbers (measured live 2026-07-07 — org `4ab92719…`, 500 leads, high match density → 867 matched (signal,lead) pairs, ~342 KB output):**
+- Wall-clock ≈ *total Claude output ÷ ~190 output tok/s* ≈ **4.4 effective concurrent streams** (Anthropic-rate-limited — NOT the configured `C`), i.e. **≈ 0.45 × L + ~5 s overhead**.
+- **`L` is the only real speed lever**; it trades ~linearly against coverage (leads are fetched newest-first, so lower `L` silently drops the oldest leads, and `L` is a *global* admin setting that also shrinks signal-generation grounding). **`B` and `C` above ~5 do not reduce latency.**
+- Uncached `refresh:true` outcomes observed: **229 s (200 OK) · 198 s (Render 502) · >290 s (client timeout) · ~2 s (early 500)** — ~200–290 s and genuinely **unreliable** (variously completes, 502s, 500s, or hangs).
+- **Noisy neighbor:** while a heavy compute runs, light cached reads on the same instance began returning 500 — the compute degrades the *whole* backend, not just itself.
+- **Vercel proxy window ≈ 30 s:** any uncached compute (≥ ~200 s) 502s at the proxy on the first load *regardless of instance health* (backend finishes + caches → a reload then shows leads).
+- Cached read (`refresh:false`): **~5 s, reliable.**
+- Render free tier: instance spins down after ~15 min idle; `fastapi.BackgroundTasks` are in-process and lost on restart/spin-down (no queue, no retries).
+- No usable sub-30 s synchronous config exists: only `L ≈ 40–55` (8–11 % coverage) even approaches the proxy window, and unreliably.
+
+**What should be done (options with rough cost/time):**
+1. **Bigger / paid Render instance** (~$7–25/mo, ~0 eng): most direct reliability win — lets the ~200 s compute complete without buckling and stops the noisy-neighbor degradation, so the "load → 502 → reload → leads" flow becomes *dependable*. **Does not remove the first-load 502 + manual reload** (Vercel proxy unchanged). Also effectively a prerequisite for option 2 (else spin-down kills background tasks).
+2. **Async background-compute + poll** (~**3–4 engineer-days**): the only fix that removes the **first-load 502** → "load → *computing…* → leads appear," no error/reload. Endpoint returns `status:"pending"` immediately + enqueues a `BackgroundTasks` compute; FE polls (`refetchInterval`) until cached. Tricky parts: an **atomic in-progress marker** (else every poll re-triggers a full ~200 s compute) + a **stale-reclaim timeout** (Render loses bg tasks on restart). Pair with **low background concurrency** (latency no longer matters → gentle on the instance). Anthropic cost ~neutral-to-**cheaper** (de-dup kills the current FE `retry:2` re-compute storm = up to 3× the bill per slow load). Wants a paid/always-on instance (see #1). A production queue (Celery/RQ/Render cron) is a larger lift — not recommended at MVP.
+3. **Higher Anthropic tier** (secondary): raises the ~4.4 effective-concurrency ceiling → shorter compute; complements #1/#2, doesn't replace them.
+
+**Why deferred:** MVP, 0 live users. Working orgs are served from the warm cache; the failure only bites *uncached* first loads (new orgs, cache busts, refreshes). Not worth 3–4 eng-days for the async UX until real users hit uncached loads.
+
+**Trigger:** real users load matched-leads for orgs not already cached; OR the noisy-neighbor 500s begin affecting unrelated endpoints in prod; OR product wants a no-502 first-load experience.
+
+**Recommendation:** do #1 first (cheap; unblocks reliability and lets us re-measure a clean uncached run without noisy-neighbor noise), then decide whether the no-502 UX justifies #2. See TD-014 for the completed chunking/tuning work this builds on.
+
+**Owner:** TBD.
