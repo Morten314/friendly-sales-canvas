@@ -82,9 +82,9 @@ def test_golden_render(name):
         f"Missing golden render for prompt {name!r}. "
         f"Run: python tests/regen_prompt_fixtures.py {name}"
     )
-    inputs = json.loads(inputs_path.read_text())
+    inputs = json.loads(inputs_path.read_text(encoding="utf-8"))
     rp = render(name, **inputs)
-    expected = rendered_path.read_text()
+    expected = rendered_path.read_text(encoding="utf-8")
     assert rp.body == expected, (
         f"Prompt {name!r} rendered body differs from golden fixture.\n"
         f"If intentional, regenerate with:\n"
@@ -101,7 +101,7 @@ def test_as_langchain_byte_equal_to_render(name):
     inputs_path = FIXTURE_DIR / "_inputs" / f"{name}.json"
     if not inputs_path.exists():
         pytest.skip(f"no canonical inputs for {name}")
-    inputs = json.loads(inputs_path.read_text())
+    inputs = json.loads(inputs_path.read_text(encoding="utf-8"))
     rp = render(name, **inputs)
     lc = as_langchain(name).format(**inputs)
     assert rp.body == lc, f"LangChain parity drift for prompt {name!r}"

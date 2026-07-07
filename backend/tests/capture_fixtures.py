@@ -73,12 +73,12 @@ def _check_env() -> None:
 
 
 def _load_seed(name: str) -> Dict[str, Any]:
-    return json.loads((SEED_DIR / f"{name}.json").read_text())
+    return json.loads((SEED_DIR / f"{name}.json").read_text(encoding="utf-8"))
 
 
 def _write_capture(stem: str, payload: Any) -> None:
     out = CAPTURED_DIR / f"{stem}.json"
-    out.write_text(json.dumps(payload, indent=2, default=str))
+    out.write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8")
     print(f"  wrote {out.relative_to(_BACKEND_DIR)}")
 
 
