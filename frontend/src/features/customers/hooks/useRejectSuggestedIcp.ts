@@ -16,12 +16,12 @@ export function useRejectSuggestedIcp(userId: string) {
 }
 
 /** DELETE an accepted/current ICP; invalidate the current-ICP read. */
-export function useDeleteCurrentIcp(userId: string, orgId: string) {
+export function useDeleteCurrentIcp(orgId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (icpId: string) => deleteCurrentIcp(orgId, icpId),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: qk.customersProfile(userId, orgId) });
+      void queryClient.invalidateQueries({ queryKey: qk.customersProfile(orgId) });
     },
   });
 }

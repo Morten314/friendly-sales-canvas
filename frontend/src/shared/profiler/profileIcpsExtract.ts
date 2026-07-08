@@ -89,6 +89,12 @@ export type IcpRow = z.infer<typeof IcpRowSchema>;
  * (customer_profiles.icps), then legacy GET /customer_profile?org_id=.
  */
 export async function fetchIcpsRowsForOrg(uid: string, orgId: string): Promise<IcpRow[]> {
+  // Track whether the server actually answered (any 2xx). We must distinguish a
+  // genuinely empty profile (2xx with no ICPs → return []) from an unreachable
+  // backend (network error / non-2xx → throw). Returning [] on failure lets
+  // callers blank Current ICPs right after a successful accept; throwing lets
+  // them keep the rows they already have.
+  let sawSuccessfulRead = false;
   const companyUrl = `/api/profile/company?user_id=${encodeURIComponent(uid)}&org_id=${encodeURIComponent(orgId)}`;
   try {
     const companyRes = await fetch(companyUrl, {
@@ -96,12 +102,13 @@ export async function fetchIcpsRowsForOrg(uid: string, orgId: string): Promise<I
       headers: { "Content-Type": "application/json" },
     });
     if (companyRes.ok) {
+      sawSuccessfulRead = true;
       const json = (await companyRes.json()) as Record<string, unknown>;
       const rows = IcpRowSchema.array().parse(extractIcpsDataFromFlexibleApiResponse(json));
       if (rows.length > 0) return rows;
     }
   } catch {
-    /* try legacy */
+    /* transport error — try legacy */
   }
   try {
     const legacyUrl = `/api/customer_profile?org_id=${encodeURIComponent(orgId)}`;
@@ -110,11 +117,15 @@ export async function fetchIcpsRowsForOrg(uid: string, orgId: string): Promise<I
       headers: { "Content-Type": "application/json" },
     });
     if (legacyRes.ok) {
+      sawSuccessfulRead = true;
       const json = (await legacyRes.json()) as Record<string, unknown>;
       return IcpRowSchema.array().parse(extractIcpsDataFromFlexibleApiResponse(json));
     }
   } catch {
-    /* empty */
+    /* transport error */
+  }
+  if (!sawSuccessfulRead) {
+    throw new Error("Failed to read customer-profile ICPs: backend unavailable");
   }
   return [];
 }

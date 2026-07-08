@@ -6,7 +6,7 @@ import { qk } from "@/shared/api/queryKeys";
 import type { SuggestedIcpCardFields } from "@/shared/profiler";
 
 /** Firmographics save after accept; invalidate the current-ICP read on success. */
-export function useSaveCustomerProfile(userId: string, orgId: string) {
+export function useSaveCustomerProfile(orgId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (vars: { suggested: SuggestedIcpCardFields; targetIcpId: string }) =>
@@ -16,7 +16,7 @@ export function useSaveCustomerProfile(userId: string, orgId: string) {
         targetIcpId: vars.targetIcpId,
       }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: qk.customersProfile(userId, orgId) });
+      void queryClient.invalidateQueries({ queryKey: qk.customersProfile(orgId) });
     },
   });
 }

@@ -13,7 +13,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { qk } from "@/shared/api/queryKeys";
 import { apiFetch } from "@/shared/api/transport";
 import { useAuthToken } from "@/shared/auth";
-import { setUserLocalStorage, removeUserLocalStorage } from "@/shared/lib/cacheUtils";
+import { setOrgLocalStorage, removeOrgLocalStorage } from "@/shared/lib/cacheUtils";
 import {
   buildCustomerProfileSavePayload,
   invalidateMissionControlCache,
@@ -88,8 +88,8 @@ const ICPManager: React.FC = () => {
       const payload = buildCustomerProfileSavePayload(icpsToApiRows(icpsToSave), orgIdToUse);
 
       try {
-        setUserLocalStorage("customerProfile", JSON.stringify(icpsToSave), currentUser.uid);
-        setUserLocalStorage("customerProfile_pending", JSON.stringify(payload), currentUser.uid);
+        setOrgLocalStorage("customerProfile", JSON.stringify(icpsToSave), orgIdToUse);
+        setOrgLocalStorage("customerProfile_pending", JSON.stringify(payload), orgIdToUse);
       } catch {
         /* ignore */
       }
@@ -102,8 +102,8 @@ const ICPManager: React.FC = () => {
       await response.json();
 
       try {
-        setUserLocalStorage("customerProfile", JSON.stringify(icpsToSave), currentUser.uid);
-        removeUserLocalStorage("customerProfile_pending", currentUser.uid);
+        setOrgLocalStorage("customerProfile", JSON.stringify(icpsToSave), orgIdToUse);
+        removeOrgLocalStorage("customerProfile_pending", orgIdToUse);
       } catch {
         /* ignore */
       }

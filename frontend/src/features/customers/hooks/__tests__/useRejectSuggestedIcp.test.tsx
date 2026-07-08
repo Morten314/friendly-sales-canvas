@@ -25,7 +25,7 @@ describe("reject + delete mutations", () => {
     server.use(
       http.delete("/api/customer_profile/icp/:id", () => HttpResponse.json({ success: true })),
     );
-    const { result } = renderHook(() => useDeleteCurrentIcp("u1", "org1"), { wrapper });
+    const { result } = renderHook(() => useDeleteCurrentIcp("org1"), { wrapper });
     result.current.mutate("icp1");
     await waitFor(() => expect(result.current.isSuccess).toBe(true), { timeout: 5000 });
   });

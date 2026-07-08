@@ -88,6 +88,16 @@ export function extractPersistedIcpIdFromSuggestedProfileResponse(
     tryStr(d.customer_profile_icp_id);
   if (direct) return direct;
 
+  // Actual success shape from POST /customer_profile/from_suggested_icp is
+  // `{data:{icp:{id,...}}}` — a single `icp` object. Read its id before falling
+  // back to the fragile before/after diff (this was previously never checked,
+  // so the server-authoritative id was always thrown away).
+  const singleIcp = d.icp;
+  if (singleIcp && typeof singleIcp === "object") {
+    const id = tryStr((singleIcp as Record<string, unknown>).id);
+    if (id) return id;
+  }
+
   const icps = d.icps;
   if (Array.isArray(icps) && icps.length > 0) {
     const last = icps[icps.length - 1];
@@ -327,6 +337,15 @@ export function buildCustomerProfileSavePayload(icps: IcpRecord[], orgId: string
     org_id: orgId,
     icps: icps.map((row: IcpRecord) => ({
       id: row.id ?? row.icp_id,
+      // Preserve backend provenance fields. `upsert_customer_profile` REPLACES the
+      // stored row with what we send, so omitting these silently wipes
+      // `source_suggested_icp_id` — the key the backend's duplicate-accept guard
+      // (ICPAlreadyExistsError) depends on — turning re-accepts into silent dupes.
+      ...(row.source_suggested_icp_id != null
+        ? { source_suggested_icp_id: row.source_suggested_icp_id }
+        : {}),
+      ...(row.source_user_id != null ? { source_user_id: row.source_user_id } : {}),
+      ...(row.source_payload != null ? { source_payload: row.source_payload } : {}),
       primary_region: row.primary_region ?? row.primaryRegion ?? "",
       location: Array.isArray(row.location) ? row.location : [],
       industry: Array.isArray(row.industry) ? row.industry : [],
@@ -428,5 +447,10 @@ export function resolveAcceptedPersistedIcpId(
   const newOnes = idsAfter.filter((id) => !idsBefore.has(id));
   if (newOnes.length === 1) return newOnes[0];
   if (idsAfter.includes(suggestedId)) return suggestedId;
-  return newOnes[0];
+  // Ambiguous (e.g. idsBefore was stale/mock so >1 "new" id appears). Return
+  // undefined rather than guessing newOnes[0] — guessing merges the accepted
+  // card's firmographics into an ARBITRARY existing Current ICP, corrupting it.
+  // Skipping the firmographics save instead just leaves the real new row with
+  // backend placeholders, which is recoverable and non-destructive.
+  return undefined;
 }
