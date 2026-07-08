@@ -89,6 +89,7 @@ Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases
 | TD-FE-77 | open | [below](#td-fe-77--signal-briefings-delivered-to-the-artefacts-library-do-not-survive-navigation) |
 | TD-FE-78 | partial | [below](#td-fe-78--shared-pdf-generator-emits-structurally-non-compliant-output-and-mojibakes-non-winansi-glyphs) |
 | TD-FE-79 | partial | [below](#td-fe-79--internal-admin-endpoints-firebase-verified-resolved-reused-endpoints-remain-open) |
+| TD-FE-80 | open | [below](#td-fe-80--frontend-npm-dependency-vulnerabilities-71-open-dependabot-advisories) |
 
 ---
 
@@ -1210,5 +1211,36 @@ the same Firebase-verification treatment.
 **Trigger:** real users load matched-leads for orgs not already cached; OR the noisy-neighbor 500s begin affecting unrelated endpoints in prod; OR product wants a no-502 first-load experience.
 
 **Recommendation:** do #1 first (cheap; unblocks reliability and lets us re-measure a clean uncached run without noisy-neighbor noise), then decide whether the no-502 UX justifies #2. See TD-014 for the completed chunking/tuning work this builds on.
+
+**Owner:** TBD.
+
+---
+
+## TD-FE-80 — Frontend npm dependency vulnerabilities (71 open Dependabot advisories)
+
+**Date logged:** 2026-07-08
+**Origin:** Surfaced by GitHub Dependabot on the `master` push during the Profiler-ICP fix merge (2026-07-08, commit `0e71af8b`). The backlog predates that change — no dependencies were added by it.
+
+**Current state:**
+71 open Dependabot advisories, **all `npm`** (frontend `package-lock.json`); the backend (`pip`) has none flagged. Severity: **2 critical, 31 high, 31 moderate, 7 low**. Scope: **30 runtime, 41 development/build-only**. Relationship: **14 direct, 57 transitive**. Every alert has a published `first_patched_version` — all are fixable by upgrade.
+
+- **Critical (runtime):** `protobufjs` — arbitrary code execution (CVE-2026-41242), transitive (via `@grpc/grpc-js` → Firebase), fixed in ≥ 7.5.5.
+- **Critical (dev-only):** `vitest` — Vitest UI server arbitrary file read/exec (CVE-2026-47429), direct devDependency, fixed in ≥ 3.2.6. Only reachable when the Vitest UI server is running (never in production).
+- **Runtime highs** (all transitive): `@grpc/grpc-js`, `@remix-run/router`, `glob`, `lodash`, `minimatch` (×3), `picomatch`, `protobufjs` (×5) — mostly via Firebase and react-router.
+- **Direct deps flagged:** `vitest` (dev, critical), `vite` (dev, moderate), `postcss` (runtime, moderate).
+
+**What it should be:**
+Advisories triaged and cleared to ~zero on the default branch. Concretely: `npm audit` in `frontend/`, apply the non-breaking transitive fixes (`npm audit fix`), bump the flagged direct deps (`vitest` ≥ 3.2.6, `vite`, `postcss`), and pin `protobufjs` ≥ 7.5.5 via a lockfile `overrides` (or by bumping the Firebase/@grpc chain) — then re-verify with `npm run preflight` and confirm Firebase auth + gRPC paths still work. Enable Dependabot version-update PRs so the backlog doesn't re-accumulate.
+
+**Why we deferred:**
+- MVP, 0 live users. The two criticals are (a) dev-only (`vitest`, never shipped) and (b) a transitive RCE (`protobufjs`) reachable only through protobuf/gRPC input paths the app does not currently expose to untrusted data — no user-facing exploit path today.
+- A blanket upgrade risks breaking the Firebase / react-router / build toolchain; it wants its own verify + preflight cycle rather than riding an unrelated fix.
+
+**What we lose by staying as-is:**
+- A real runtime RCE (`protobufjs`) sits in the shipped dependency graph; the risk becomes live the moment the app processes attacker-influenced protobuf/gRPC input.
+- A growing backlog desensitizes the team to the Dependabot signal (alert fatigue), making a future genuinely-exploitable advisory easier to miss.
+
+**Pull-forward triggers:**
+- Pre-launch security pass / first real users; OR any runtime-scoped critical/high that becomes directly reachable from user input; OR the open count climbs materially past ~71.
 
 **Owner:** TBD.
