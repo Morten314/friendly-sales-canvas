@@ -11,7 +11,7 @@ import { qk } from "@/shared/api/queryKeys";
  */
 export function useCustomerProfile(userId: string, orgId: string, enabled = true) {
   return useQuery({
-    queryKey: qk.customersProfile(userId, orgId),
+    queryKey: qk.customersProfile(orgId),
     enabled: enabled && !!userId && !!orgId,
     queryFn: () => fetchCustomerProfileIcps(userId, orgId),
     retry: false,

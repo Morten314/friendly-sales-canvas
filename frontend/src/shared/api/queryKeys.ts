@@ -10,8 +10,9 @@ export const qk = {
   dataSources: (orgId: string) => ["mission-control", "data-sources", orgId] as const,
   leadStreamStatus: (userId: string, orgId: string) =>
     ["mission-control", "lead-stream-status", userId, orgId] as const,
-  customersProfile: (userId: string, orgId: string) =>
-    ["customers", "profile", userId, orgId] as const,
+  // Current / Customer-Profile ICPs are org-owned — key by org only (never uid or
+  // uid+org) so the cache entry is shared across a tenant and does not leak per-user.
+  customersProfile: (orgId: string) => ["customers", "profile", orgId] as const,
   customersSuggestedIcps: (userId: string) => ["customers", "suggested-icps", userId] as const,
   signalsFeed: (userId: string) => ["signals", "feed", userId] as const,
   apolloStatus: (orgId: string) => ["connectors", "apollo", "status", orgId] as const,

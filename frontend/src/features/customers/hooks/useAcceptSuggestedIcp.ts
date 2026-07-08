@@ -10,7 +10,7 @@ export function useAcceptSuggestedIcp(userId: string, orgId: string) {
   return useMutation({
     mutationFn: (icpId: string) => acceptSuggestedIcp(userId, orgId, icpId),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: qk.customersProfile(userId, orgId) });
+      void queryClient.invalidateQueries({ queryKey: qk.customersProfile(orgId) });
     },
   });
 }

@@ -101,3 +101,41 @@ export const removeUserLocalStorage = (key: string, userId: string | null | unde
   // Also remove old format for backward compatibility
   localStorage.removeItem(key);
 };
+
+/**
+ * Get org-specific cache key. Org-owned data (Customer-Profile / Current ICPs)
+ * must be keyed by org, never by uid or uid+org, so one org's tenant data never
+ * leaks into another org on a shared browser. Namespaced (`_org_`) to avoid
+ * colliding with the uid-scoped keys above.
+ */
+export const getOrgCacheKey = (baseKey: string, orgId: string | null | undefined): string => {
+  if (!orgId) {
+    return baseKey; // Fallback to base key if no org ID
+  }
+  return `${baseKey}_org_${orgId}`;
+};
+
+/**
+ * Get org-specific localStorage item. Deliberately NO uid/global fallback —
+ * org isolation is the point; falling back would re-introduce the cross-org leak.
+ */
+export const getOrgLocalStorage = (key: string, orgId: string | null | undefined): string | null =>
+  localStorage.getItem(getOrgCacheKey(key, orgId));
+
+/**
+ * Set org-specific localStorage item
+ */
+export const setOrgLocalStorage = (
+  key: string,
+  value: string,
+  orgId: string | null | undefined,
+): void => {
+  localStorage.setItem(getOrgCacheKey(key, orgId), value);
+};
+
+/**
+ * Remove org-specific localStorage item
+ */
+export const removeOrgLocalStorage = (key: string, orgId: string | null | undefined): void => {
+  localStorage.removeItem(getOrgCacheKey(key, orgId));
+};

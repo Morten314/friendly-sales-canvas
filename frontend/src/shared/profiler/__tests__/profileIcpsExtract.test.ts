@@ -24,3 +24,23 @@ describe("fetchIcpsRowsForOrg schema", () => {
     expect(rows[1]).toMatchObject({ icpId: "i2", extra: "kept" }); // passthrough kept
   });
 });
+
+describe("fetchIcpsRowsForOrg empty-vs-error", () => {
+  it("returns [] when the backend responds 2xx with no ICPs (genuinely empty profile)", async () => {
+    server.use(
+      http.get("/api/profile/company", () =>
+        HttpResponse.json({ customer_profiles: { icps: [] } }),
+      ),
+      http.get("/api/customer_profile", () => HttpResponse.json({ data: { icps: [] } })),
+    );
+    await expect(fetchIcpsRowsForOrg("u1", "org1")).resolves.toEqual([]);
+  });
+
+  it("throws when both endpoints are unreachable (so callers keep prior rows, not blank them)", async () => {
+    server.use(
+      http.get("/api/profile/company", () => new HttpResponse(null, { status: 500 })),
+      http.get("/api/customer_profile", () => new HttpResponse(null, { status: 500 })),
+    );
+    await expect(fetchIcpsRowsForOrg("u1", "org1")).rejects.toThrow();
+  });
+});

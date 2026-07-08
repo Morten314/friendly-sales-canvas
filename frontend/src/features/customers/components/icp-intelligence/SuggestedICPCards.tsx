@@ -28,6 +28,8 @@ import {
   removeFromProfilerRecommendedCached,
   filterDismissedFromSuggested,
   isRecommendedDeleteNotFound,
+  profilerRecommendedCacheKey,
+  profilerCardStatusesKey,
 } from "./suggestedIcpStorage";
 
 import {
@@ -48,12 +50,13 @@ import { ToastAction } from "@/components/ui/toast";
 import { useToast } from "@/components/ui/use-toast";
 import { buildApiUrl } from "@/shared/api/transport";
 import { useAuth } from "@/shared/auth";
-import { getUserLocalStorage, setUserLocalStorage } from "@/shared/lib/cacheUtils";
+import { getOrgLocalStorage, setOrgLocalStorage } from "@/shared/lib/cacheUtils";
 import {
   ensureMissionProfilerScope,
   isProfilerCacheValid,
   getProfilerSnapshot,
   commitProfilerSnapshot,
+  invalidateProfilerCache,
   saveProfilerAcceptedIcpDisplayMeta,
   copyProfilerDisplayMetaToProfileId,
   extractPersistedIcpIdFromSuggestedProfileResponse,
@@ -117,8 +120,10 @@ async function loadProfilerPagePayload(options: {
     /* fall through to fallbacks */
   }
   if (icps.length === 0) {
+    // Org-scoped resilience cache only (org-owned data — never uid/global, so no
+    // cross-org leak). Used as a fallback when the backend read is unavailable.
     try {
-      const customerProfileData = getUserLocalStorage("customerProfile", uid);
+      const customerProfileData = getOrgLocalStorage("customerProfile", orgIdToUse);
       if (customerProfileData) {
         const parsed = JSON.parse(customerProfileData);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -131,50 +136,10 @@ async function loadProfilerPagePayload(options: {
       /* ignore */
     }
   }
-  if (icps.length === 0) {
-    try {
-      const persistedExisting = localStorage.getItem("profiler_existingICPs");
-      if (persistedExisting) {
-        const parsed = JSON.parse(persistedExisting);
-        if (parsed.length > 0) icps = parsed;
-      }
-    } catch {
-      /* ignore */
-    }
-  }
-  if (icps.length === 0) {
-    try {
-      const stored =
-        localStorage.getItem("customerICPs") || localStorage.getItem("missionControlICPs");
-      if (stored) icps = JSON.parse(stored);
-    } catch {
-      /* ignore */
-    }
-  }
-  if (icps.length === 0) {
-    icps = [
-      {
-        id: "existing-1",
-        name: "ICP 1",
-        geography: "North America",
-        industry: "Software & Technology",
-        companySize: "100-500 employees",
-        buyerRole: "CTO / VP Engineering",
-        fitConfidence: "High",
-        status: "active",
-      },
-      {
-        id: "existing-2",
-        name: "ICP 2",
-        geography: "US, UK",
-        industry: "Healthcare",
-        companySize: "200-1000 employees",
-        buyerRole: "CIO / Chief Digital Officer",
-        fitConfidence: "Medium",
-        status: "active",
-      },
-    ];
-  }
+  // No hardcoded mock ICPs and no cross-org/global localStorage fallbacks: an org
+  // with no saved Current ICPs must render an empty Current-ICPs table, not two
+  // fabricated ICPs or another org's data. `icps` stays [] here when both the
+  // backend and the org resilience cache are empty.
 
   let refined: SuggestedICP[] = [];
   let newSuggestions: SuggestedICP[] = [];
@@ -261,7 +226,7 @@ async function loadProfilerPagePayload(options: {
 
   if (newSuggestions.length === 0 && refined.length === 0) {
     try {
-      const cached = localStorage.getItem("profiler_recommendedICPs");
+      const cached = localStorage.getItem(profilerRecommendedCacheKey(uid));
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -281,97 +246,9 @@ async function loadProfilerPagePayload(options: {
     }
   }
 
-  if (newSuggestions.length === 0 && refined.length === 0) {
-    refined = [
-      {
-        id: "refined-1",
-        name: "Mid-Market SaaS – RevOps Teams",
-        type: "refined",
-        sourceICPId: icps[0]?.id,
-        sourceICPName: icps[0]?.name || "ICP 1",
-        industry: "Software & Technology",
-        segment: "RevOps Focus",
-        companySize: "100-500 employees",
-        regions: ["North America", "UK"],
-        decisionMakers: ["VP of RevOps", "Head of Sales Operations", "CRO"],
-        keyAttributes: ["High growth stage", "Using Salesforce or HubSpot", "Series B+"],
-        whySuggested: [
-          "RevOps roles show 3x higher engagement with your content",
-          "Faster sales cycles when RevOps is involved early",
-          "Higher average deal size in this segment",
-        ],
-        confidenceScore: "High",
-        marketSize: "$45B",
-        growth: "+18% YoY",
-        topPainPoint: "Sales & marketing alignment",
-        buyingTriggers: ["New CRO hire", "Revenue target increase", "Tech stack consolidation"],
-        competitors: ["Clari", "Gong", "Outreach"],
-      },
-    ];
-    newSuggestions = [
-      {
-        id: "new-1",
-        name: "Enterprise FinTech Decision Makers",
-        type: "new",
-        tag: "New ICP",
-        industry: "Financial Services",
-        segment: "FinTech",
-        companySize: "500-2000 employees",
-        regions: ["US", "EU"],
-        decisionMakers: ["Chief Digital Officer", "VP of Innovation", "Head of Partnerships"],
-        keyAttributes: [
-          "Digital transformation focus",
-          "API-first strategy",
-          "Regulatory compliance needs",
-        ],
-        whySuggested: [
-          "High overlap with your current product capabilities",
-          "Growing market with 24% YoY expansion",
-          "Lower competition in this segment",
-        ],
-        opportunityUnlocked:
-          "Access to $2.4B addressable market with strong product-market fit signals",
-        confidenceScore: "Medium",
-        marketSize: "$28B",
-        growth: "+24% YoY",
-        topPainPoint: "Legacy system modernization",
-        buyingTriggers: [
-          "Regulatory changes",
-          "Digital transformation initiative",
-          "Competitor pressure",
-        ],
-        competitors: ["Stripe", "Plaid", "Marqeta"],
-      },
-      {
-        id: "new-2",
-        name: "Growth-Stage E-commerce Leaders",
-        type: "new",
-        sourceICPName: icps[0]?.name || "ICP 1",
-        tag: `Lookalike of ${icps[0]?.name || "ICP 1"}`,
-        industry: "E-commerce & Retail",
-        segment: "D2C Brands",
-        companySize: "50-200 employees",
-        regions: ["North America"],
-        decisionMakers: ["Head of Growth", "VP of Marketing", "COO"],
-        keyAttributes: ["Shopify Plus users", "High ad spend", "Scaling operations"],
-        whySuggested: [
-          "Similar buying patterns to your best customers",
-          "Strong intent signals detected in this segment",
-          "Complementary to existing ICP focus",
-        ],
-        opportunityUnlocked: "Expand into adjacent market with proven playbook from ICP 1",
-        confidenceScore: "High",
-        marketSize: "$18B",
-        growth: "+22% YoY",
-        topPainPoint: "Scaling customer acquisition",
-        buyingTriggers: ["Series A+ funding", "New market expansion", "Holiday season prep"],
-        competitors: ["Shopify", "Klaviyo", "Attentive"],
-      },
-    ];
-    profilerIcpDebug(
-      "Recommended ICPs source: built-in mock data (no backend response and no profiler_recommendedICPs cache)",
-    );
-  }
+  // No built-in mock recommendations: fabricated cards (ids new-1/new-2/refined-1)
+  // have no backend ICP_config row, so accepting one 404s. When the backend and
+  // the uid-scoped cache yield nothing, the Recommended section simply stays empty.
 
   {
     const filtered = filterDismissedFromSuggested(uid, refined, newSuggestions);
@@ -382,7 +259,7 @@ async function loadProfilerPagePayload(options: {
   try {
     if (newSuggestions.length > 0 || refined.length > 0) {
       localStorage.setItem(
-        "profiler_recommendedICPs",
+        profilerRecommendedCacheKey(uid),
         JSON.stringify([...refined, ...newSuggestions]),
       );
     }
@@ -392,7 +269,7 @@ async function loadProfilerPagePayload(options: {
 
   let mergedCardStatuses: Record<string, ICPCardStatus>;
   try {
-    const persistedStatuses = localStorage.getItem("profiler_cardStatuses");
+    const persistedStatuses = localStorage.getItem(profilerCardStatusesKey(uid));
     if (persistedStatuses && Object.keys(JSON.parse(persistedStatuses || "{}")).length > 0) {
       mergedCardStatuses = JSON.parse(persistedStatuses) as Record<string, ICPCardStatus>;
     } else {
@@ -431,9 +308,9 @@ export const SuggestedICPCards = ({
   // markers, display-meta, the customerProfileSaved event, toasts) stays in the
   // container below, byte-for-behavior with the pre-hook inline writes.
   const acceptIcpMutation = useAcceptSuggestedIcp(currentUser?.uid ?? "", orgId || "brewra");
-  const saveProfileMutation = useSaveCustomerProfile(currentUser?.uid ?? "", orgId || "brewra");
+  const saveProfileMutation = useSaveCustomerProfile(orgId || "brewra");
   const rejectIcpMutation = useRejectSuggestedIcp(currentUser?.uid ?? "");
-  const deleteCurrentIcpMutation = useDeleteCurrentIcp(currentUser?.uid ?? "", orgId || "brewra");
+  const deleteCurrentIcpMutation = useDeleteCurrentIcp(orgId || "brewra");
 
   /** Always filled from GET /profile/company (or legacy); avoid hydrating stale localStorage before fetch. */
   const [existingICPs, setExistingICPs] = useState<ExistingICP[]>([]);
@@ -441,7 +318,7 @@ export const SuggestedICPCards = ({
   const [newICPs, setNewICPs] = useState<SuggestedICP[]>([]);
   const [cardStatuses, setCardStatuses] = useState<Record<string, ICPCardStatus>>(() => {
     try {
-      const saved = localStorage.getItem("profiler_cardStatuses");
+      const saved = localStorage.getItem(profilerCardStatusesKey(currentUser?.uid));
       if (saved) return JSON.parse(saved);
     } catch {
       // intentional: ignore corrupt localStorage payload
@@ -483,10 +360,10 @@ export const SuggestedICPCards = ({
         ),
       );
       try {
-        setUserLocalStorage(
+        setOrgLocalStorage(
           "customerProfile",
           JSON.stringify(mapCustomerProfileApiRowsToStoredIcps(rows as UntypedProfilerIcpRecord[])),
-          uid,
+          orgIdToUse,
         );
       } catch {
         /* ignore */
@@ -503,6 +380,7 @@ export const SuggestedICPCards = ({
   const handleDeleteCurrentIcp = useCallback(
     async (icp: ExistingICP) => {
       const orgIdToUse = orgId || "brewra";
+      const uid = currentUser?.uid;
       const icpId = icp.id;
       console.log("[Profiler Current ICPs] DELETE customer_profile/icp: request", {
         icp_id: icpId,
@@ -527,6 +405,10 @@ export const SuggestedICPCards = ({
           );
         }
         await refetchCustomerProfileIcps();
+        // Drop the stale profiler session snapshot so returning to this tab
+        // re-fetches instead of restoring the deleted ICP (see accept for why the
+        // MissionControlPage listener can't cover the Profiler's own mutations).
+        if (uid) invalidateProfilerCache(uid, orgIdToUse);
         window.dispatchEvent(
           new CustomEvent("customerProfileSaved", { detail: { fromProfiler: true } }),
         );
@@ -541,17 +423,17 @@ export const SuggestedICPCards = ({
         });
       }
     },
-    [orgId, toast, refetchCustomerProfileIcps, deleteCurrentIcpMutation],
+    [orgId, currentUser?.uid, toast, refetchCustomerProfileIcps, deleteCurrentIcpMutation],
   );
 
-  // Persist state changes
+  // Persist state changes. cardStatuses is per-user (uid-scoped). We deliberately
+  // no longer mirror existingICPs to localStorage: it is org-owned, its cache is
+  // written from the authoritative backend read (refetchCustomerProfileIcps /
+  // accept), and the old global `profiler_existingICPs` mirror was both a
+  // cross-org leak and the vector that re-hydrated the removed mock ICPs.
   useEffect(() => {
-    localStorage.setItem("profiler_cardStatuses", JSON.stringify(cardStatuses));
-  }, [cardStatuses]);
-
-  useEffect(() => {
-    localStorage.setItem("profiler_existingICPs", JSON.stringify(existingICPs));
-  }, [existingICPs]);
+    localStorage.setItem(profilerCardStatusesKey(currentUser?.uid), JSON.stringify(cardStatuses));
+  }, [cardStatuses, currentUser?.uid]);
 
   useEffect(() => {
     localStorage.setItem("profiler_showRecommendations", String(showRecommendations));
@@ -700,10 +582,10 @@ export const SuggestedICPCards = ({
             if (verifyRes.ok) {
               const vd = await verifyRes.json();
               const icpsData = extractIcpsArrayFromCustomerProfileResponse(vd);
-              setUserLocalStorage(
+              setOrgLocalStorage(
                 "customerProfile",
                 JSON.stringify(mapCustomerProfileApiRowsToStoredIcps(icpsData)),
-                uid,
+                orgIdToUse,
               );
             }
           } catch {
@@ -717,6 +599,12 @@ export const SuggestedICPCards = ({
         copyProfilerDisplayMetaToProfileId(icp.id, newProfileIds[0]);
       }
       await refetchCustomerProfileIcps();
+      // Profiler mutated the org's customer profile — drop the stale session
+      // snapshot so returning to this tab re-fetches instead of restoring the
+      // pre-accept state (the accepted ICP would otherwise "disappear"). The
+      // MissionControlPage customerProfileSaved listener can't do this: it is
+      // unmounted while the user is on the Profiler.
+      invalidateProfilerCache(uid, orgIdToUse);
       window.dispatchEvent(
         new CustomEvent("customerProfileSaved", { detail: { fromProfiler: true } }),
       );
@@ -726,11 +614,31 @@ export const SuggestedICPCards = ({
         description: `"${icp.name}" has been saved to your Customer Profile and Current ICPs.`,
       });
     } catch (err) {
-      toast({
-        title: "Could not save ICP",
-        description: err instanceof Error ? err.message : "Please try again.",
-        variant: "destructive",
-      });
+      const msg = err instanceof Error ? err.message : "";
+      // ICPAlreadyExistsError → 409: the ICP is already saved for this org. Treat
+      // it as success (reconcile the UI) instead of a misleading destructive error.
+      if (/\b409\b/.test(msg) || /already/i.test(msg)) {
+        setCardStatuses((prev) => ({
+          ...prev,
+          [icp.id]: { status: "accepted", acceptedAt: new Date() },
+        }));
+        onICPAccepted?.(icp);
+        await refetchCustomerProfileIcps();
+        invalidateProfilerCache(uid, orgIdToUse);
+        window.dispatchEvent(
+          new CustomEvent("customerProfileSaved", { detail: { fromProfiler: true } }),
+        );
+        toast({
+          title: "Already in your Customer Profile",
+          description: `"${icp.name}" is already saved to your Current ICPs.`,
+        });
+      } else {
+        toast({
+          title: "Could not save ICP",
+          description: msg || "Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsSavingAccept(false);
       setConfirmAcceptICP(null);
@@ -789,8 +697,12 @@ export const SuggestedICPCards = ({
         refinedICPs.find((i) => i.id === icpId) ?? newICPs.find((i) => i.id === icpId);
 
       const applyDeleteSuccess = () => {
-        removeFromProfilerRecommendedCached(icpId);
+        removeFromProfilerRecommendedCached(userId, icpId);
         recordDismissedRecommendedIcp(userId, icpId);
+        // The profiler session snapshot still holds the now-dismissed card;
+        // invalidate so navigate-back re-fetches (and the dismissed filter runs)
+        // instead of the short-circuit restoring it un-dismissed.
+        invalidateProfilerCache(userId, orgId || "brewra");
         setRefinedICPs((prev) => prev.filter((x) => x.id !== icpId));
         setNewICPs((prev) => prev.filter((x) => x.id !== icpId));
         setCardStatuses((prev) => {
@@ -825,7 +737,7 @@ export const SuggestedICPCards = ({
         }));
       }
     },
-    [refinedICPs, newICPs, toast, onICPRejected, rejectIcpMutation],
+    [refinedICPs, newICPs, orgId, toast, onICPRejected, rejectIcpMutation],
   );
 
   const finalizeRecommendedRejectRef = useRef(finalizeRecommendedReject);
