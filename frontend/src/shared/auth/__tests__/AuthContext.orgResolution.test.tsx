@@ -2,7 +2,8 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 let authCb: (u: unknown) => void = () => {};
-vi.mock("../firebase", () => ({ auth: { currentUser: null } }));
+const mockAuth = vi.hoisted(() => ({ currentUser: null as { uid: string } | null }));
+vi.mock("../firebase", () => ({ auth: mockAuth }));
 vi.mock("firebase/auth", () => ({
   onAuthStateChanged: (_auth: unknown, cb: (u: unknown) => void) => {
     authCb = cb;
@@ -14,6 +15,14 @@ vi.mock("firebase/auth", () => ({
 }));
 
 import { AuthProvider, useAuth } from "../AuthContext";
+
+// Faithful to real Firebase: auth.currentUser is set on auth-state change, and
+// retryOrgResolution reads auth.currentUser — so the mock MUST reflect the
+// signed-in user or the manual retry is a silent no-op.
+function signIn(user: { uid: string } | null) {
+  mockAuth.currentUser = user;
+  authCb(user);
+}
 
 function Probe() {
   const { orgId, orgStatus, orgResolved, retryOrgResolution } = useAuth();
@@ -37,6 +46,7 @@ describe("AuthContext org resolution state machine", () => {
   beforeEach(() => {
     localStorage.clear();
     vi.restoreAllMocks();
+    mockAuth.currentUser = null;
   });
 
   it("resolves with org on a 2xx GET /org (no cache)", async () => {
@@ -49,7 +59,7 @@ describe("AuthContext org resolution state machine", () => {
       }),
     );
     renderProbe();
-    authCb({ uid: "u1" });
+    signIn({ uid: "u1" });
     await waitFor(() =>
       expect(screen.getByText("status:resolved org:real-org resolved:true")).toBeInTheDocument(),
     );
@@ -61,32 +71,34 @@ describe("AuthContext org resolution state machine", () => {
       vi.fn().mockResolvedValue({ ok: false, status: 404, statusText: "not found" }),
     );
     renderProbe();
-    authCb({ uid: "u1" });
+    signIn({ uid: "u1" });
     await waitFor(() =>
       expect(screen.getByText("status:no-org org:none resolved:true")).toBeInTheDocument(),
     );
   });
 
   it("routes a persistent network failure (no cache) to the transient outcome", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+    const fetchMock = vi.fn().mockRejectedValue(new Error("network down"));
+    vi.stubGlobal("fetch", fetchMock);
     renderProbe();
-    authCb({ uid: "u1" });
+    signIn({ uid: "u1" });
     await waitFor(
       () =>
         expect(screen.getByText("status:transient org:none resolved:false")).toBeInTheDocument(),
       { timeout: 4000 },
     );
+    // Let the bounded auto-retry loop fully settle (3 attempts) so it can't leak
+    // a dangling fetch call into a later test.
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3), { timeout: 4000 });
   });
 
   it("keeps a warm cached org mounted through a transient failure (no teardown)", async () => {
     localStorage.setItem("org_id_u1", "cached-org");
     localStorage.setItem("org_name_u1", "Cached");
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({ ok: false, status: 503, statusText: "cold" }),
-    );
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 503, statusText: "cold" });
+    vi.stubGlobal("fetch", fetchMock);
     renderProbe();
-    authCb({ uid: "u1" });
+    signIn({ uid: "u1" });
     await waitFor(
       () =>
         expect(
@@ -94,6 +106,9 @@ describe("AuthContext org resolution state machine", () => {
         ).toBeInTheDocument(),
       { timeout: 4000 },
     );
+    // Let the bounded auto-retry loop fully settle (3 attempts) so it can't leak
+    // a dangling fetch call into a later test.
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3), { timeout: 4000 });
   });
 
   it("discards a resolution for a superseded user (generation guard)", async () => {
@@ -117,8 +132,8 @@ describe("AuthContext org resolution state machine", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     renderProbe();
-    authCb({ uid: "u1" });
-    authCb({ uid: "u2" });
+    signIn({ uid: "u1" });
+    signIn({ uid: "u2" });
     await waitFor(() => expect(screen.getByText(/org:org-u2/)).toBeInTheDocument());
     // wait past u1's delayed (superseded) response to prove it is discarded, not applied
     await new Promise((r) => setTimeout(r, 120));
@@ -139,17 +154,20 @@ describe("AuthContext org resolution state machine", () => {
       });
     vi.stubGlobal("fetch", fetchMock);
     renderProbe();
-    authCb({ uid: "u1" });
-    await waitFor(
-      () =>
-        expect(screen.getByText("status:transient org:none resolved:false")).toBeInTheDocument(),
-      { timeout: 4000 },
+    signIn({ uid: "u1" });
+    // Let the bounded auto-retry reach its ceiling (3 attempts) and RETURN, so the
+    // manual retry below is the only live resolveOrg loop (no race, no pollution).
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3), { timeout: 4000 });
+    await waitFor(() =>
+      expect(screen.getByText("status:transient org:none resolved:false")).toBeInTheDocument(),
     );
     fireEvent.click(screen.getByRole("button", { name: /retry-org/i }));
+    // The manual retry fires a fresh attempt (the 4th fetch) → success → resolved.
     await waitFor(() =>
       expect(
         screen.getByText("status:resolved org:recovered-org resolved:true"),
       ).toBeInTheDocument(),
     );
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 });
