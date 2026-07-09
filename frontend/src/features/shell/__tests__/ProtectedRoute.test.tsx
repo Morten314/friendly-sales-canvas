@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -19,6 +19,7 @@ afterEach(() => {
   authState.currentUser = null;
   authState.loading = false;
   authState.orgStatus = "resolved";
+  authState.retryOrgResolution.mockClear();
   localStorage.clear();
 });
 
@@ -105,6 +106,14 @@ describe("ProtectedRoute requireOrg gate", () => {
     expect(screen.queryByText("org content")).not.toBeInTheDocument();
     expect(screen.queryByText(/isn't set up yet/i)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument();
+  });
+
+  it("invokes retryOrgResolution when the reconnecting 'Try again' button is clicked", () => {
+    authState.currentUser = { uid: "u1" };
+    authState.orgStatus = "transient";
+    renderOrgGated("/mission-control");
+    fireEvent.click(screen.getByRole("button", { name: /try again/i }));
+    expect(authState.retryOrgResolution).toHaveBeenCalledTimes(1);
   });
 
   it("does NOT gate a plain ProtectedRoute (no requireOrg) on org status", () => {
