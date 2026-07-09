@@ -22,7 +22,7 @@ export const marketResearchRoutes = [
     key="scout-tab"
     path="/your-ai-team/scout/:tab"
     element={
-      <ProtectedRoute>
+      <ProtectedRoute requireOrg>
         <FeatureErrorBoundary featureName="Market Research">
           <MarketResearchPage />
         </FeatureErrorBoundary>

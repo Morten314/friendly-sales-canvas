@@ -7,6 +7,8 @@ import ProtectedRoute from "../ProtectedRoute";
 const authState = vi.hoisted(() => ({
   currentUser: null as { uid: string } | null,
   loading: false,
+  orgStatus: "resolved" as "pending" | "resolved" | "no-org" | "transient",
+  retryOrgResolution: vi.fn(),
 }));
 
 vi.mock("@/shared/auth", () => ({
@@ -16,6 +18,7 @@ vi.mock("@/shared/auth", () => ({
 afterEach(() => {
   authState.currentUser = null;
   authState.loading = false;
+  authState.orgStatus = "resolved";
   localStorage.clear();
 });
 
@@ -58,5 +61,69 @@ describe("ProtectedRoute", () => {
 
     expect(screen.queryByText("ok")).not.toBeInTheDocument();
     expect(screen.getByText("login page")).toBeInTheDocument();
+  });
+});
+
+describe("ProtectedRoute requireOrg gate", () => {
+  function renderOrgGated(path: string) {
+    return render(
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route
+            path="/mission-control"
+            element={
+              <ProtectedRoute requireOrg>
+                <div>org content</div>
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/login" element={<div>login page</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+  }
+
+  it("renders children on the has-org (resolved) outcome", () => {
+    authState.currentUser = { uid: "u1" };
+    authState.orgStatus = "resolved";
+    renderOrgGated("/mission-control");
+    expect(screen.getByText("org content")).toBeInTheDocument();
+  });
+
+  it("shows the no-org state (not org content) on the authoritative no-org outcome", () => {
+    authState.currentUser = { uid: "u1" };
+    authState.orgStatus = "no-org";
+    renderOrgGated("/mission-control");
+    expect(screen.queryByText("org content")).not.toBeInTheDocument();
+    expect(screen.getByText(/isn't set up yet/i)).toBeInTheDocument();
+  });
+
+  it("shows the reconnecting state (not org content, not no-org) on a transient outcome", () => {
+    authState.currentUser = { uid: "u1" };
+    authState.orgStatus = "transient";
+    renderOrgGated("/mission-control");
+    expect(screen.queryByText("org content")).not.toBeInTheDocument();
+    expect(screen.queryByText(/isn't set up yet/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument();
+  });
+
+  it("does NOT gate a plain ProtectedRoute (no requireOrg) on org status", () => {
+    authState.currentUser = { uid: "u1" };
+    authState.orgStatus = "no-org";
+    render(
+      <MemoryRouter initialEntries={["/settings"]}>
+        <Routes>
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <div>settings content</div>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("settings content")).toBeInTheDocument();
   });
 });

@@ -11,7 +11,7 @@ export const missionControlRoutes = [
     key="mission-control"
     path="/mission-control"
     element={
-      <ProtectedRoute>
+      <ProtectedRoute requireOrg>
         <FeatureErrorBoundary featureName="Mission Control">
           <MissionControlPage />
         </FeatureErrorBoundary>
