@@ -66,13 +66,18 @@ async function attemptGetOrg(userId: string): Promise<OrgOutcome> {
       signal: controller.signal,
     });
     if (response.status === 404) return { kind: "no-org" };
-    if (!response.ok) return { kind: "transient" }; // 5xx / other non-2xx
+    if (!response.ok) {
+      console.warn(`AuthContext: GET /org failed with status ${response.status}`);
+      return { kind: "transient" }; // 5xx / other non-2xx
+    }
     const data = await response.json();
     if (data.status === "success" && data.org_id) {
       return { kind: "org", orgId: data.org_id, orgName: data.org_name || null };
     }
+    console.warn("AuthContext: GET /org returned 2xx without a usable org", data);
     return { kind: "no-org" }; // 2xx but no usable org → authoritative onboarding gap
-  } catch {
+  } catch (error) {
+    console.error("AuthContext: GET /org request failed", error);
     return { kind: "transient" }; // network error or timeout (abort)
   } finally {
     clearTimeout(timer);
@@ -183,7 +188,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const retryOrgResolution = useCallback(() => {
     const user = auth.currentUser;
-    if (user?.uid) void resolveOrg(user.uid);
+    if (user?.uid) {
+      orgGenerationRef.current += 1; // supersede any in-flight auto-retry before a manual retry
+      void resolveOrg(user.uid);
+    }
   }, [resolveOrg]);
 
   useEffect(() => {
