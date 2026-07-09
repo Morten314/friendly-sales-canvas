@@ -10,6 +10,9 @@ services:
     # instance type is set in the Render dashboard (Settings → Instance Type) — this
     # field only governs Blueprint-managed deploys, so update both.
     plan: starter
-    autoDeploy: false
+    # Auto-deploy master on push. Like `plan` above, this field only governs
+    # Blueprint-managed deploys — if the service isn't Blueprint-managed, the
+    # Render dashboard's Auto-Deploy toggle governs, so set both.
+    autoDeploy: true
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
