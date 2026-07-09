@@ -1,4 +1,4 @@
-"""LLM-side artifacts (chat models, transformers, memory, chains, ReAct
+"""LLM-side artifacts (chat models, transformers, chains, ReAct
 agent). `build_llm_config()` constructs an `LLMBundle` holding all
 components; invoked once per process by `app.main.lifespan`. Services receive
 bundle fields via FastAPI dependency injection — no module-level state.
@@ -9,7 +9,6 @@ from typing import Any, Optional
 from langchain_openai import ChatOpenAI
 from langchain_experimental.graph_transformers import LLMGraphTransformer
 from langchain_neo4j import GraphCypherQAChain
-from langchain_classic.memory import ConversationBufferMemory
 from langchain_classic.agents import initialize_agent, Tool
 from langchain_classic.agents.agent_types import AgentType
 from langchain_community.tools.tavily_search.tool import TavilySearchResults
@@ -21,7 +20,6 @@ from app.core.clients import ClientBundle
 class LLMBundle:
     llm2: Any                                     # ChatOpenAI (Together — Qwen3-235B)
     llm_transformer: Any                          # LLMGraphTransformer
-    memory: Any                                   # ConversationBufferMemory
     chain: Optional[Any]                          # GraphCypherQAChain — None when clients.graph is None
     chain2: Optional[Any]                         # GraphCypherQAChain — None when clients.graph is None
     agent_chain: Any                              # LangChain AgentExecutor
@@ -57,7 +55,6 @@ def build_llm_config(clients_bundle: ClientBundle) -> LLMBundle:
     # Graph extraction runs on Qwen via Together (function/tool-calling — validated
     # live). Previously ChatGroq llama-3.3; Groq has been retired from the stack.
     llm_transformer = LLMGraphTransformer(llm=llm2)
-    memory = ConversationBufferMemory(return_messages=True)
 
     from app.core import prompts as _prompts
 
@@ -72,12 +69,12 @@ def build_llm_config(clients_bundle: ClientBundle) -> LLMBundle:
         chain = GraphCypherQAChain.from_llm(
             llm=llm2, graph=clients_bundle.graph,
             cypher_prompt=cypher_prompt, qa_prompt=qa_prompt,
-            verbose=True, memory=memory, allow_dangerous_requests=True,
+            verbose=True, allow_dangerous_requests=True,
         )
         chain2 = GraphCypherQAChain.from_llm(
             llm=llm2, graph=clients_bundle.graph,
             cypher_prompt=cypher_prompt_alt, qa_prompt=qa_prompt_alt,
-            verbose=True, memory=memory, allow_dangerous_requests=True,
+            verbose=True, allow_dangerous_requests=True,
         )
 
     search_tool = TavilySearchResults(
@@ -109,6 +106,6 @@ def build_llm_config(clients_bundle: ClientBundle) -> LLMBundle:
 
     return LLMBundle(
         llm2=llm2,
-        llm_transformer=llm_transformer, memory=memory,
+        llm_transformer=llm_transformer,
         chain=chain, chain2=chain2, agent_chain=agent_chain,
     )

@@ -39,10 +39,6 @@ def get_llm_transformer(request: Request):
     return request.app.state.llm.llm_transformer
 
 
-def get_memory(request: Request):
-    return request.app.state.llm.memory
-
-
 def get_agent_chain(request: Request):
     return request.app.state.llm.agent_chain
 
