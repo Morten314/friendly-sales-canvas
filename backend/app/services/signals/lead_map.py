@@ -88,13 +88,20 @@ def _int_env(name: str, default: int) -> int:
 # env-overridable so ops can tune per model/limit without a code change.
 # Defaults tuned from live profiling (see docs/TECH_DEBT.md TD-014): wall-clock is
 # floored by total Claude output / an Anthropic-rate-limited ~4.4 effective
-# concurrency, so B and C above ~5 don't speed it up. B=40 keeps each batch's raw
-# output well under the 8192-token cap (shrinking the truncation failure mode);
-# C=5 saturates the throughput ceiling while minimizing peak memory / 429 pressure
-# on the small Render instance. L (lead_fetch_limit) is the only real speed lever
-# and trades against coverage, so it's left at its admin default.
+# concurrency, so B and C above ~5 don't speed it up. C=5 saturates the throughput
+# ceiling while minimizing peak memory / 429 pressure on the small Render instance.
+# L (lead_fetch_limit) is the only real speed lever and trades against coverage,
+# so it's left at its admin default.
 _LEAD_BATCH_SIZE = _int_env("SIGNAL_LEAD_MAP_BATCH_SIZE", 40)
 _MAP_MAX_CONCURRENCY = _int_env("SIGNAL_LEAD_MAP_MAX_CONCURRENCY", 5)
+# Per-batch output cap. The shared CLAUDE_RESEARCH_MAX_TOKENS default (8192) was
+# too small here: a full signal set × 40 leads routinely overflowed it, so nearly
+# every batch truncated and paid the adaptive-split penalty (extra discarded
+# calls). Lead-map gets its own, larger cap so most batches parse on the first
+# call. Kept env-overridable; do not raise so high that a single non-streaming
+# call (blocking requests.post, 300s socket) risks the ~120s edge ceiling on the
+# client path — see docs/TECH_DEBT.md TD-014.
+_LEAD_MAP_MAX_TOKENS = _int_env("SIGNAL_LEAD_MAP_MAX_TOKENS", 24000)
 # Per-batch retry backoff: base * 2**(attempt-1) + U(0, jitter). Jitter de-syncs
 # the concurrent batches so they don't retry in lockstep against a throttling API.
 _RETRY_BASE_S = 1.0
@@ -404,7 +411,7 @@ async def build_signal_lead_map_claude(driver, mongo, request) -> Dict[str, Any]
                     executor,
                     _llm_helpers._claude_messages_text,
                     rendered.body,
-                    _llm_helpers.CLAUDE_RESEARCH_MAX_TOKENS,
+                    _LEAD_MAP_MAX_TOKENS,
                 )
                 mapping, clean = _parse_mapping(raw, signals, sig_ids, batch_lead_ids)
                 if clean:
@@ -446,7 +453,21 @@ async def build_signal_lead_map_claude(driver, mongo, request) -> Dict[str, Any]
     with ThreadPoolExecutor(
         max_workers=min(_MAP_MAX_CONCURRENCY, len(batches)), thread_name_prefix="leadmap"
     ) as executor:
-        batch_results = await asyncio.gather(*[_map_batch(executor, b) for b in batches])
+        # Warm the prompt cache with the first batch alone, THEN fan out the rest.
+        # The signal-set + ICP context prefix is identical across batches and
+        # cache_control-marked (see signals_lead_map.md.j2 / PROMPT_CACHE_SPLIT_MARKER).
+        # A cache entry only becomes readable once the first response has been
+        # written, so firing every batch at once makes the whole first concurrent
+        # wave miss and each pays full input price. Running batch 0 to completion
+        # first lets every remaining batch — and every split-recursion sub-call —
+        # read the prefix at ~0.1x. Costs one batch of extra serial latency, which
+        # the direct-to-Render path (no ~120s edge ceiling) affords. TD-014.
+        if len(batches) > 1:
+            first = await _map_batch(executor, batches[0])
+            rest = await asyncio.gather(*[_map_batch(executor, b) for b in batches[1:]])
+            batch_results = [first, *rest]
+        else:
+            batch_results = await asyncio.gather(*[_map_batch(executor, b) for b in batches])
 
     mapping = _merge_batch_mappings([m for m, _ in batch_results], sig_ids, headline_by_id)
     all_ok = all(ok for _, ok in batch_results)

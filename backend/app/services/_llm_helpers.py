@@ -30,6 +30,7 @@ from typing import Iterable, List
 import requests
 
 from app.core.config import claude_sonnet_model, tavily_api_key
+from app.core.logging import logger
 from app.core.exceptions import ServiceError
 
 
@@ -38,6 +39,16 @@ from app.core.exceptions import ServiceError
 # ---------------------------------------------------------------------------
 
 CLAUDE_RESEARCH_MAX_TOKENS = int(os.getenv("CLAUDE_RESEARCH_MAX_TOKENS") or "8192")
+
+# A prompt may embed this marker to opt into *prefix* prompt-caching: everything
+# before it is sent as a cache_control:ephemeral block (billed ~0.1x on repeats),
+# everything after stays volatile. The marker is stripped before sending, so the
+# model never sees it. Used by the signals_lead_map template, whose stable
+# signal-set + ICP context prefix is re-sent across every lead batch — caching it
+# turns ~N full-price prefix sends into 1 write + (N-1) cache reads. Prompt
+# caching is GA (no beta header). This literal MUST match the marker in the
+# signals_lead_map.md.j2 template exactly.
+PROMPT_CACHE_SPLIT_MARKER = "===PROMPT_CACHE_SPLIT==="
 
 # Matches http(s) URLs in free-form text. The negated class stops only at
 # whitespace and the delimiters that wrap URLs in HTML/markdown/JSON (< > " `),
@@ -140,7 +151,10 @@ def _tavily_context_and_urls(search_query: str, k: int = 10) -> tuple:
     return context, _filter_source_urls(urls)[:10]
 
 
-def _claude_messages_text(user_prompt: str, max_tokens: int = CLAUDE_RESEARCH_MAX_TOKENS) -> str:
+def _post_claude_messages(content, max_tokens: int) -> str:
+    """POST one user message to Claude and return its concatenated text blocks.
+    `content` is either a plain string or a list of content-block dicts (the
+    latter lets callers attach cache_control for prefix caching)."""
     api_key = os.getenv("ANTHROPIC_API_KEY") or ""
     if not api_key:
         raise ServiceError("ANTHROPIC_API_KEY is not configured")
@@ -155,18 +169,51 @@ def _claude_messages_text(user_prompt: str, max_tokens: int = CLAUDE_RESEARCH_MA
             "model": claude_sonnet_model,
             "max_tokens": max_tokens,
             "temperature": 0.2,
-            "messages": [{"role": "user", "content": user_prompt}],
+            "messages": [{"role": "user", "content": content}],
         },
         timeout=300,
     )
     if r.status_code >= 400:
         raise ServiceError(f"Claude API failed ({r.status_code}): {r.text[:800]}")
     payload = r.json()
+    # Cost / caching observability (TD-014): cache_read_input_tokens > 0 proves the
+    # prefix cache is being hit; input_tokens is the full-price (uncached) remainder.
+    # Emitted per call so cache behaviour is visible in prod logs — dial to debug
+    # once confirmed.
+    usage = payload.get("usage") or {}
+    logger.info(
+        "claude usage: input=%s cache_write=%s cache_read=%s output=%s",
+        usage.get("input_tokens"),
+        usage.get("cache_creation_input_tokens"),
+        usage.get("cache_read_input_tokens"),
+        usage.get("output_tokens"),
+    )
     out: List[str] = []
     for block in payload.get("content", []) or []:
         if isinstance(block, dict) and block.get("type") == "text":
             out.append(block.get("text", ""))
     return "\n".join(out).strip()
+
+
+def _claude_messages_text(user_prompt: str, max_tokens: int = CLAUDE_RESEARCH_MAX_TOKENS) -> str:
+    # Opt-in prefix caching: if the prompt carries PROMPT_CACHE_SPLIT_MARKER, send
+    # the stable prefix as a cache_control:ephemeral block and the volatile
+    # remainder as a plain block, so a prefix reused across many calls (the signal
+    # set + ICP context in signal_lead_map batches) is billed at cache-read rates
+    # after the first write. Prompts without the marker are sent unchanged.
+    prefix, sep, suffix = user_prompt.partition(PROMPT_CACHE_SPLIT_MARKER)
+    if sep:
+        content = [
+            {
+                "type": "text",
+                "text": prefix.strip(),
+                "cache_control": {"type": "ephemeral"},
+            },
+            {"type": "text", "text": suffix.strip()},
+        ]
+    else:
+        content = user_prompt
+    return _post_claude_messages(content, max_tokens)
 
 
 # ---------------------------------------------------------------------------
