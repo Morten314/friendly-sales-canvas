@@ -1246,3 +1246,27 @@ Advisories triaged and cleared to ~zero on the default branch. Concretely: `npm 
 - Pre-launch security pass / first real users; OR any runtime-scoped critical/high that becomes directly reachable from user input; OR the open count climbs materially past ~71.
 
 **Owner:** TBD.
+
+---
+
+## TD-016 — Neo4j driver 500s on the first request after a restart/deploy (defunct pooled connection, no retry)
+
+**Date logged:** 2026-07-09
+**Origin:** Surfaced live during TD-014/TD-015 lead-map verification (2026-07-09) — a Render deploy restarted the backend mid-compute and the next `POST /signal-lead-map_claude` returned HTTP 500 from a Neo4j `SessionExpired`.
+
+**Current state:**
+The first Neo4j-backed request after a backend restart/redeploy can fail → HTTP 500, in two forms sharing one cause (a connection that went defunct across the restart): `neo4j.exceptions.SessionExpired: Failed to read from defunct connection …` (observed 15:01:04) and `neo4j.exceptions.ServiceUnavailable: Unable to retrieve routing information` when the defunct connection is the *router* and the routing-table refresh fails (observed 15:06:36). Both from `get_leads_for_org` (`backend/app/services/leads/persistence.py:34`) on `s.run(...)`, verified live 2026-07-09 (isolated repro on `/v2/leads`: 500 → 200 → 200 — the first request evicts the stale connection, the next reconnects). Root cause: reads run through a **raw** `driver.session()` + `s.run(...)` rather than a managed transaction function, so they get none of the Neo4j driver's built-in transient-error retry; a pooled connection that went defunct across the restart (Neo4j Aura also drops idle connections) is handed to the first query and fails instead of transparently reconnecting. The driver (`app/core/clients.py:44`) is created without `liveness_check_timeout` / `max_connection_lifetime`, and `verify_connectivity()` runs only once at startup. This is the cold-start 500/502 the `backend/render.yaml` comment already alludes to. **Scope: every Neo4j-backed endpoint** (leads, CRM graph, graph-chat, ICP) — not just lead-map.
+
+**What it should be:**
+Neo4j reads/writes go through managed transaction functions (`session.execute_read` / `execute_write`), which acquire a fresh connection and auto-retry transient failures (`SessionExpired`, `ServiceUnavailable`); and/or the driver is configured with `liveness_check_timeout` (ping idle pooled connections before reuse) and a bounded `max_connection_lifetime`. Cheaper stopgap: a single reconnect-and-retry on `SessionExpired`/`ServiceUnavailable` in the persistence helpers.
+
+**Why we deferred:**
+- MVP, 0 live users. It only bites the *first* request after a restart/deploy; a reload succeeds once the pool re-establishes.
+
+**What we lose by staying as-is:**
+- Every deploy/restart makes the first hit to any Neo4j endpoint 500 — now **more frequent** with `autoDeploy: true` (commit `eeb4a0f4`) restarting prod on each master push. Undermines the "always-on starter instance" reliability goal and compounds TD-015 (a future async lead-map compute depends on dependable Neo4j reads).
+
+**Pull-forward triggers:**
+- Real users hit post-deploy 500s; OR TD-015's async/background lead-map work lands; OR restart frequency rises.
+
+**Owner:** TBD.
