@@ -25,19 +25,20 @@ beforeEach(() => {
   localStorage.clear();
   login.mockResolvedValue(undefined);
   signup.mockResolvedValue(undefined);
-  fetchOrgId.mockResolvedValue({ orgId: "brewra", orgName: "Brewra" });
 });
 afterEach(() => vi.clearAllMocks());
 
 describe("useLogin", () => {
-  it("delegates login -> fetchOrgId in order", async () => {
+  it("calls login but does not call/await fetchOrgId (route gate is the single waiter)", async () => {
     const { result } = renderHook(() => useLogin(), { wrapper: wrapper() });
     await act(async () => {
       await result.current.mutateAsync({ email: "a@b.co", password: "pw" });
     });
     expect(login).toHaveBeenCalledWith("a@b.co", "pw");
-    expect(fetchOrgId).toHaveBeenCalledWith("u1");
-    expect(login.mock.invocationCallOrder[0]).toBeLessThan(fetchOrgId.mock.invocationCallOrder[0]);
+    // Org resolution is now driven by AuthContext's onAuthStateChanged + the
+    // requireOrg route gate (spec 48 WS1 / Task 2) — login must not duplicate
+    // or block on that resolution (this regresses the ~28s cold-backend hang).
+    expect(fetchOrgId).not.toHaveBeenCalled();
   });
 
   it("propagates a login error and does not call fetchOrgId", async () => {
