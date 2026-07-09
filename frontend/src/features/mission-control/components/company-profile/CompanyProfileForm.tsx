@@ -49,7 +49,7 @@ interface CompanyProfileFormProps {
 export default function CompanyProfileForm({ onSavedChange }: CompanyProfileFormProps) {
   const { toast } = useToast();
   const { currentUser, orgId } = useAuthToken();
-  const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
+  const orgIdToUse = orgId ?? "";
   const queryClient = useQueryClient();
 
   const [isSaving, setIsSaving] = useState(false);

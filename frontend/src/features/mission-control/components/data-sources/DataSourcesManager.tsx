@@ -28,7 +28,7 @@ interface CompanyProfile {
 const DataSourcesManager: React.FC = () => {
   const { toast } = useToast();
   const { currentUser, orgId } = useAuthToken();
-  const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
+  const orgIdToUse = orgId ?? "";
 
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
 
@@ -99,8 +99,7 @@ const DataSourcesManager: React.FC = () => {
       throw new Error("User not authenticated");
     }
 
-    // Use org_id fetched from login API, fallback to 'brewra' for backward compatibility
-    const orgIdToUse = orgId || "brewra";
+    const orgIdToUse = orgId ?? "";
 
     const authHeader = await getAuthHeader();
     const url = buildApiUrl("upload-document");
@@ -164,8 +163,7 @@ const DataSourcesManager: React.FC = () => {
       throw new Error("User not authenticated");
     }
 
-    // Use org_id fetched from login API, fallback to 'brewra' for backward compatibility
-    const orgIdToUse = orgId || "brewra";
+    const orgIdToUse = orgId ?? "";
 
     const authHeader = await getAuthHeader();
     const apiUrl = buildApiUrl("upload-document");

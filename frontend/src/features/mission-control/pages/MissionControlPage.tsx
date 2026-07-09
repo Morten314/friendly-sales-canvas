@@ -52,7 +52,7 @@ const MissionControlPage = () => {
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
 
   const { currentUser, orgId } = useAuthToken();
-  const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
+  const orgIdToUse = orgId ?? "";
   /** Fresh GET of ICP rows whenever the Customer Profile tab is opened or Profiler mutates ICPs.
    *  Loading UI is the inline three-dot overlay inside ICPManager (same as Data Sources). */
   const refreshCustomerProfileIcps = useCallback(async () => {

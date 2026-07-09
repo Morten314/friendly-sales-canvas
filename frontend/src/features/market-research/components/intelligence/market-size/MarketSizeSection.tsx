@@ -94,7 +94,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   // (The props remain on the interface until a later task removes them.)
 }) => {
   const { currentUser, orgId } = useAuth();
-  const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
+  const orgIdToUse = orgId ?? "";
   const userId = currentUser?.uid ?? "";
   // 5b section-data hook (memory-only TanStack cache) replaces the raw fetch.
   const marketSize = useMarketSize(userId, orgIdToUse);

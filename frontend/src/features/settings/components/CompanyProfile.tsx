@@ -50,7 +50,7 @@ const EMPTY_FORM = {
 
 export function CompanyProfile(_props: CompanyProfileProps) {
   const { currentUser, orgId } = useAuth();
-  const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
+  const orgIdToUse = orgId ?? "";
 
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [targetMarkets, setTargetMarkets] = useState<string[]>([""]);

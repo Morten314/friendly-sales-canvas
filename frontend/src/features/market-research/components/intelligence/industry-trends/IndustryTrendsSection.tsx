@@ -88,7 +88,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   onIndustryTrendSnapshotsChange,
 }) => {
   const { currentUser, orgId } = useAuth();
-  const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
+  const orgIdToUse = orgId ?? "";
 
   // Section SERVER data now comes exclusively from the useIndustryTrends hook
   // (TanStack-backed). This replaces the former dormant raw fetch + mirror useState.

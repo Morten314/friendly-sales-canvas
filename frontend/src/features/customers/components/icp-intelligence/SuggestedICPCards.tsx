@@ -298,7 +298,7 @@ export const SuggestedICPCards = ({
 
   // Registered for cache-key ownership + the canonical queryFn; fetching is still
   // driven by the imperative loader below until TD-FE-43 collapses it cache-native.
-  const profileQuery = useCustomerProfile(currentUser?.uid ?? "", orgId || "brewra", false);
+  const profileQuery = useCustomerProfile(currentUser?.uid ?? "", orgId ?? "", false);
   const suggestedQuery = useSuggestedIcps(currentUser?.uid ?? "", { enabled: false });
   void profileQuery;
   void suggestedQuery;
@@ -307,10 +307,10 @@ export const SuggestedICPCards = ({
   // invalidates a customers query on success; the optimism (timers, localStorage
   // markers, display-meta, the customerProfileSaved event, toasts) stays in the
   // container below, byte-for-behavior with the pre-hook inline writes.
-  const acceptIcpMutation = useAcceptSuggestedIcp(currentUser?.uid ?? "", orgId || "brewra");
-  const saveProfileMutation = useSaveCustomerProfile(orgId || "brewra");
+  const acceptIcpMutation = useAcceptSuggestedIcp(currentUser?.uid ?? "", orgId ?? "");
+  const saveProfileMutation = useSaveCustomerProfile(orgId ?? "");
   const rejectIcpMutation = useRejectSuggestedIcp(currentUser?.uid ?? "");
-  const deleteCurrentIcpMutation = useDeleteCurrentIcp(orgId || "brewra");
+  const deleteCurrentIcpMutation = useDeleteCurrentIcp(orgId ?? "");
 
   /** Always filled from GET /profile/company (or legacy); avoid hydrating stale localStorage before fetch. */
   const [existingICPs, setExistingICPs] = useState<ExistingICP[]>([]);
@@ -345,7 +345,7 @@ export const SuggestedICPCards = ({
 
   /** Reload Current ICPs from GET /profile/company (same source as Mission Control / Swagger). */
   const refetchCustomerProfileIcps = useCallback(async (): Promise<string[]> => {
-    const orgIdToUse = orgId || "brewra";
+    const orgIdToUse = orgId ?? "";
     const uid = currentUser?.uid;
     if (!uid) return [];
     try {
@@ -379,7 +379,7 @@ export const SuggestedICPCards = ({
 
   const handleDeleteCurrentIcp = useCallback(
     async (icp: ExistingICP) => {
-      const orgIdToUse = orgId || "brewra";
+      const orgIdToUse = orgId ?? "";
       const uid = currentUser?.uid;
       const icpId = icp.id;
       console.log("[Profiler Current ICPs] DELETE customer_profile/icp: request", {
@@ -440,7 +440,7 @@ export const SuggestedICPCards = ({
   }, [showRecommendations]);
 
   useEffect(() => {
-    const orgIdToUse = orgId || "brewra";
+    const orgIdToUse = orgId ?? "";
     const uid = currentUser?.uid;
     if (!uid) {
       setLoading(false);
@@ -522,7 +522,7 @@ export const SuggestedICPCards = ({
     if (!confirmAcceptICP || isSavingAccept) return;
     const icp = confirmAcceptICP;
     const uid = currentUser?.uid;
-    const orgIdToUse = orgId || "brewra";
+    const orgIdToUse = orgId ?? "";
     if (!uid) {
       toast({
         title: "Cannot save ICP",
@@ -702,7 +702,7 @@ export const SuggestedICPCards = ({
         // The profiler session snapshot still holds the now-dismissed card;
         // invalidate so navigate-back re-fetches (and the dismissed filter runs)
         // instead of the short-circuit restoring it un-dismissed.
-        invalidateProfilerCache(userId, orgId || "brewra");
+        invalidateProfilerCache(userId, orgId ?? "");
         setRefinedICPs((prev) => prev.filter((x) => x.id !== icpId));
         setNewICPs((prev) => prev.filter((x) => x.id !== icpId));
         setCardStatuses((prev) => {

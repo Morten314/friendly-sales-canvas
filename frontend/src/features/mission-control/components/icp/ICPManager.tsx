@@ -45,7 +45,7 @@ const ICPManager: React.FC = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { currentUser, orgId } = useAuthToken();
-  const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
+  const orgIdToUse = orgId ?? "";
   const [icps, setIcps] = useState<ICP[]>([]);
   // While a local add/edit/delete is in flight, skip syncing from stale TanStack rows.
   const skipServerSyncRef = useRef(false);
