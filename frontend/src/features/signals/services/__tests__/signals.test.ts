@@ -8,6 +8,7 @@ import {
   generateSignalsBatch,
 } from "../signals";
 
+import { BACKEND_BASE_URL } from "@/shared/api/transport";
 import { server } from "@/test/msw/server";
 
 describe("fetchSignals", () => {
@@ -180,7 +181,7 @@ describe("generateRecommendationArtefact", () => {
 describe("fetchSignalLeadMap", () => {
   it("returns the parsed mapping on a success response", async () => {
     server.use(
-      http.post("/api/signal-lead-map_claude", () =>
+      http.post(`${BACKEND_BASE_URL}/signal-lead-map_claude`, () =>
         HttpResponse.json({
           status: "success",
           data: {
@@ -200,7 +201,7 @@ describe("fetchSignalLeadMap", () => {
     // genuinely no matches); the service must reject so the card shows the error
     // state, not a misleading empty "No matched leads found".
     server.use(
-      http.post("/api/signal-lead-map_claude", () =>
+      http.post(`${BACKEND_BASE_URL}/signal-lead-map_claude`, () =>
         HttpResponse.json({
           status: "error",
           data: { mapping: [], generated_at: "t0", cached: false },

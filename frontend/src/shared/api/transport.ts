@@ -18,10 +18,18 @@ export const BACKEND_BASE_URL = "https://brewra-gtm-intelligence.onrender.com";
 const API_BASE_URL = "/api";
 
 // Helper function to build API URLs
-export const buildApiUrl = (endpoint: string): string => {
+export const buildApiUrl = (endpoint: string, opts: { direct?: boolean } = {}): string => {
   // Remove leading slash if present to avoid double slashes
   const cleanEndpoint = endpoint.startsWith("/") ? endpoint.slice(1) : endpoint;
 
+  // `direct` bypasses the `/api` path — and in production the `vercel.json`
+  // rewrite's ~120s edge gateway timeout — by hitting Render directly. Reserved
+  // for slow endpoints whose wall-clock can approach that ceiling (currently only
+  // the lead-map compute); relies on the backend CORS wildcard, same as the
+  // streaming `/chat/` callers. See docs/TECH_DEBT.md TD-014.
+  if (opts.direct) {
+    return `${BACKEND_BASE_URL}/${cleanEndpoint}`;
+  }
   // Use proxy for all endpoints in development to avoid CORS issues
   return `${API_BASE_URL}/${cleanEndpoint}`;
 };
@@ -29,11 +37,13 @@ export const buildApiUrl = (endpoint: string): string => {
 // Extended options type that allows object body (will be JSON stringified)
 export interface ApiFetchOptions extends Omit<RequestInit, "body"> {
   body?: BodyInit | Record<string, unknown> | null;
+  // Route straight to the backend host instead of the `/api` proxy (see buildApiUrl).
+  direct?: boolean;
 }
 
 // Helper function for fetch with common configuration
 export const apiFetch = async (endpoint: string, options: ApiFetchOptions = {}) => {
-  const url = buildApiUrl(endpoint);
+  const url = buildApiUrl(endpoint, { direct: options.direct });
 
   // Handle body stringification for JSON requests
   let processedBody = options.body;

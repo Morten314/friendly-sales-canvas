@@ -14,6 +14,8 @@
 // adds handlers. Spec §3.2 last paragraph.
 import { http, HttpResponse } from "msw";
 
+import { BACKEND_BASE_URL } from "@/shared/api/transport";
+
 export const handlers = [
   // 1. Proof-of-pipeline
   http.get("/api/_health", () => HttpResponse.json({ ok: true })),
@@ -283,8 +285,8 @@ export const handlers = [
     }),
   ),
 
-  // ── signals / lead-map ────────────────────────────────────────────────────────
-  http.post("/api/signal-lead-map_claude", () =>
+  // ── signals / lead-map (sent direct to Render, not via /api — see fetchSignalLeadMap) ──
+  http.post(`${BACKEND_BASE_URL}/signal-lead-map_claude`, () =>
     HttpResponse.json({
       status: "success",
       data: { mapping: [], generated_at: "t", cached: false },

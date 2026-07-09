@@ -29,8 +29,9 @@ export function apiPost<T>(
   endpoint: string,
   body: Record<string, unknown>,
   schema: ZodType<T>,
+  opts: { direct?: boolean } = {},
 ): Promise<T> {
-  return apiRequest(endpoint, schema, { method: "POST", body });
+  return apiRequest(endpoint, schema, { method: "POST", body, direct: opts.direct });
 }
 
 // ── Auth-endpoint path ───────────────────────────────────────────────────────

@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import { useSignalLeadMap } from "../useSignalLeadMap";
 
 import { qk } from "@/shared/api/queryKeys";
+import { BACKEND_BASE_URL } from "@/shared/api/transport";
 import { server } from "@/test/msw/server";
 
 vi.mock("@/shared/auth/AuthContext", () => ({
@@ -38,7 +39,7 @@ const RESPONSE = {
 
 describe("useSignalLeadMap", () => {
   it("inverts the mapping for both directions", async () => {
-    server.use(http.post("/api/signal-lead-map_claude", () => HttpResponse.json(RESPONSE)));
+    server.use(http.post(`${BACKEND_BASE_URL}/signal-lead-map_claude`, () => HttpResponse.json(RESPONSE)));
     const { result } = renderHook(() => useSignalLeadMap("org1"), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 5000 });
     expect(result.current.leadsForSignal("s1")).toHaveLength(1);
@@ -59,7 +60,7 @@ describe("useSignalLeadMap", () => {
   it("sends refresh:true when refresh() is invoked", async () => {
     let lastBody: unknown;
     server.use(
-      http.post("/api/signal-lead-map_claude", async ({ request }) => {
+      http.post(`${BACKEND_BASE_URL}/signal-lead-map_claude`, async ({ request }) => {
         lastBody = await request.json();
         return HttpResponse.json({ data: { mapping: [] } });
       }),
@@ -75,7 +76,7 @@ describe("useSignalLeadMap", () => {
   it("auto-retries a transient failure and recovers without surfacing an error (S5)", async () => {
     let calls = 0;
     server.use(
-      http.post("/api/signal-lead-map_claude", () => {
+      http.post(`${BACKEND_BASE_URL}/signal-lead-map_claude`, () => {
         calls += 1;
         // First attempt 502s (cold start), the retry succeeds.
         if (calls === 1) return new HttpResponse(null, { status: 502 });
@@ -95,7 +96,7 @@ describe("useSignalLeadMap", () => {
     // service throws, so the query retries then lands in isError (drives SignalCard's
     // error state) instead of silently showing an empty "No matched leads found".
     server.use(
-      http.post("/api/signal-lead-map_claude", () =>
+      http.post(`${BACKEND_BASE_URL}/signal-lead-map_claude`, () =>
         HttpResponse.json({ status: "error", data: { mapping: [] } }),
       ),
     );
@@ -107,7 +108,7 @@ describe("useSignalLeadMap", () => {
   it("recompute exits the error state on a successful refetch", async () => {
     let calls = 0;
     server.use(
-      http.post("/api/signal-lead-map_claude", () => {
+      http.post(`${BACKEND_BASE_URL}/signal-lead-map_claude`, () => {
         calls += 1;
         // Initial load fails across all retry attempts (retry: 2 → 3 attempts);
         // the explicit recompute (calls > 3) then succeeds.
@@ -127,7 +128,7 @@ describe("useSignalLeadMap", () => {
   it("recompute surfaces the error state when the refetch fails (old setQueryData path swallowed it)", async () => {
     let calls = 0;
     server.use(
-      http.post("/api/signal-lead-map_claude", () => {
+      http.post(`${BACKEND_BASE_URL}/signal-lead-map_claude`, () => {
         calls += 1;
         if (calls === 1) return HttpResponse.json(RESPONSE);
         return new HttpResponse(null, { status: 500 });

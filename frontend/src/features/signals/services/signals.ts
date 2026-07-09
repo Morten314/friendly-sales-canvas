@@ -98,8 +98,12 @@ export async function generateRecommendationArtefact(
 }
 
 /**
- * POST /api/signal-lead-map_claude — one read-time mapping over the org's
- * newest-50 signals × leads. `refresh` forces a recompute past the cache.
+ * POST signal-lead-map_claude — one read-time mapping over the org's newest-50
+ * signals × leads. `refresh` forces a recompute past the cache.
+ *
+ * Sent `direct` to Render (bypassing the `/api` Vercel rewrite) because the
+ * uncached compute can run long enough to approach Vercel's ~120s edge gateway
+ * timeout on large orgs — see docs/TECH_DEBT.md TD-014.
  */
 export async function fetchSignalLeadMap(
   userId: string,
@@ -110,6 +114,7 @@ export async function fetchSignalLeadMap(
     "signal-lead-map_claude",
     { user_id: userId, org_id: orgId, refresh: opts.refresh ?? false },
     SignalLeadMapResponseSchema as ZodType<SignalLeadMapResponse>,
+    { direct: true },
   );
   // The backend returns HTTP 200 with status:"error" when the mapping compute
   // failed (vs genuinely finding no matches). Throw so TanStack Query enters its

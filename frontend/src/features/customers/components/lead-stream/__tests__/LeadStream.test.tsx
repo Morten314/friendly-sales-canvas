@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { LeadStreamPanel } from "../LeadStream";
 
+import { BACKEND_BASE_URL } from "@/shared/api/transport";
 import { server } from "@/test/msw/server";
 
 vi.mock("@/shared/auth/AuthContext", () => ({
@@ -56,7 +57,7 @@ describe("LeadStreamPanel (real leads)", () => {
           offset: 0,
         }),
       ),
-      http.post("/api/signal-lead-map_claude", () =>
+      http.post(`${BACKEND_BASE_URL}/signal-lead-map_claude`, () =>
         HttpResponse.json({
           status: "success",
           data: {
