@@ -46,7 +46,11 @@ def test_get_settings_returns_default_when_unset(client):
     with _override(get_mongo, mongo):
         resp = client.get("/admin/settings")
     assert resp.status_code == 200
-    assert resp.json() == {"lead_fetch_limit": 500}
+    assert resp.json() == {
+        "lead_fetch_limit": 500,
+        "signal_lead_map_lead_limit": 100,
+        "signal_lead_map_batch_size": 15,
+    }
 
 
 def test_get_settings_returns_stored_value(client):
@@ -55,7 +59,11 @@ def test_get_settings_returns_stored_value(client):
     with _override(get_mongo, mongo):
         resp = client.get("/admin/settings")
     assert resp.status_code == 200
-    assert resp.json() == {"lead_fetch_limit": 250}
+    assert resp.json() == {
+        "lead_fetch_limit": 250,
+        "signal_lead_map_lead_limit": 100,
+        "signal_lead_map_batch_size": 15,
+    }
 
 
 def test_put_settings_upserts_and_returns(client):
@@ -64,9 +72,16 @@ def test_put_settings_upserts_and_returns(client):
     with _override(get_mongo, mongo):
         resp = client.put("/admin/settings", json={"lead_fetch_limit": 300})
     assert resp.status_code == 200
-    assert resp.json() == {"lead_fetch_limit": 300}
+    # Partial PUT: the omitted map-tuning fields fall back to their model defaults
+    # (so the FE must send the full object — see SettingsPage).
+    expected = {
+        "lead_fetch_limit": 300,
+        "signal_lead_map_lead_limit": 100,
+        "signal_lead_map_batch_size": 15,
+    }
+    assert resp.json() == expected
     col.update_one.assert_called_once_with(
-        {"_id": "settings"}, {"$set": {"lead_fetch_limit": 300}}, upsert=True
+        {"_id": "settings"}, {"$set": expected}, upsert=True
     )
 
 

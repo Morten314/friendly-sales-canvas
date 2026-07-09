@@ -133,17 +133,26 @@ def _fake_cache_mongo(initial=None):
     return mongo, store
 
 
-def _run(signals, leads, claude_return, *, mongo=None, refresh=False):
+def _run(signals, leads, claude_return, *, mongo=None, refresh=False, batch_size=15, lead_limit=500):
     from app.services.signals import lead_map
+    from app.models.settings import AppSettings
     mongo = mongo or _fake_cache_mongo()[0]
     driver = MagicMock()
     req = SignalLeadMapRequest(user_id="u1", org_id="o1", refresh=refresh)
+    # batch size + lead cap are admin settings, read via get_app_settings — inject
+    # them through that (patch-where-used) rather than a module constant.
+    settings = AppSettings(
+        lead_fetch_limit=500,
+        signal_lead_map_lead_limit=lead_limit,
+        signal_lead_map_batch_size=batch_size,
+    )
     with patch("app.services.signals.persistence.fetch_signals",
                new=AsyncMock(return_value=(signals, len(signals)))), \
          patch("app.services.leads.persistence.get_leads_for_org",
                return_value=(leads, len(leads))), \
          patch("app.services.signals.persistence._get_signal_ask_customer_profile",
                return_value={"icps": []}), \
+         patch("app.services.signals.lead_map.get_app_settings", return_value=settings), \
          patch("asyncio.sleep", new=AsyncMock()), \
          patch("app.services._llm_helpers._claude_messages_text") as claude:
         if isinstance(claude_return, Exception) or callable(claude_return) or isinstance(claude_return, list):
@@ -231,14 +240,12 @@ def test_build_map_drops_invented_ids():
     assert [l["lead_id"] for l in mapping[0]["leads"]] == ["l1"]  # lX dropped
 
 
-def test_build_map_truncation_splits_and_recovers(monkeypatch):
+def test_build_map_truncation_splits_and_recovers():
     """A truncated batch is SPLIT and re-mapped so no leads are silently dropped:
     the full-batch call truncates, but each single-lead sub-batch parses cleanly
     and the halves merge into the complete result (status success, cached). This
     replaces the old 'keep the recovered prefix' behavior, which silently dropped
     the truncated tail leads."""
-    from app.services.signals import lead_map
-    monkeypatch.setattr(lead_map, "_LEAD_BATCH_SIZE", 2)  # 2 leads -> one batch of 2
     signals = [{"signal_id": "s1", "headline": "h"}]
     leads = [{"lead_id": "l1"}, {"lead_id": "l2"}]
 
@@ -251,23 +258,21 @@ def test_build_map_truncation_splits_and_recovers(monkeypatch):
         return '{"mapping":[{"signal_id":"s1","leads":[{"lead_id":"l2","company":"B","relevance":"low","why":"y"}]}]}'
 
     mongo, store = _fake_cache_mongo()
-    result, _ = _run(signals, leads, fake, mongo=mongo)
+    result, _ = _run(signals, leads, fake, mongo=mongo, batch_size=2)  # one batch of 2
     assert result["status"] == "success"
     ids = sorted(l["lead_id"] for l in result["data"]["mapping"][0]["leads"])
     assert ids == ["l1", "l2"]           # split recovered BOTH leads — none dropped
     assert "o1:u1" in store              # complete map cached
 
 
-def test_build_map_truncation_unsplittable_surfaces_error(monkeypatch):
+def test_build_map_truncation_unsplittable_surfaces_error():
     """A single-lead batch that still truncates can't be split further, so it fails
     loudly (status:error, uncached) instead of caching a silently-partial map."""
-    from app.services.signals import lead_map
-    monkeypatch.setattr(lead_map, "_LEAD_BATCH_SIZE", 1)
     signals = [{"signal_id": "s1", "headline": "h"}]
     leads = [{"lead_id": "l1"}]
     truncated = '{"mapping":[{"signal_id":"s1","leads":[{"lead_id":"l1","compa'  # always cut off
     mongo, store = _fake_cache_mongo()
-    result, _ = _run(signals, leads, truncated, mongo=mongo)
+    result, _ = _run(signals, leads, truncated, mongo=mongo, batch_size=1)
     assert result["status"] == "error"   # unsplittable truncation surfaced, not masked
     assert "o1:u1" not in store           # not cached
 
@@ -284,11 +289,9 @@ def test_build_map_surfaces_error_status_on_claude_failure():
 # TD-014: chunk leads across bounded batches, run concurrently, merge
 # ---------------------------------------------------------------------------
 
-def test_build_map_batches_by_configured_size(monkeypatch):
+def test_build_map_batches_by_configured_size():
     """N leads / batch_size -> one Claude call per batch. Counted under a lock
     because the batches run concurrently on a real ThreadPoolExecutor."""
-    from app.services.signals import lead_map
-    monkeypatch.setattr(lead_map, "_LEAD_BATCH_SIZE", 2)
     signals = [{"signal_id": "s1", "headline": "h"}]
     leads = [{"lead_id": f"l{i}"} for i in range(1, 6)]  # 5 leads / 2 -> 3 batches
     lock, calls = threading.Lock(), []
@@ -298,16 +301,14 @@ def test_build_map_batches_by_configured_size(monkeypatch):
             calls.append(1)
         return '{"mapping":[{"signal_id":"s1","leads":[]}]}'  # prompt-mandated echo shape
 
-    _run(signals, leads, echo_empty)
+    _run(signals, leads, echo_empty, batch_size=2)
     assert len(calls) == 3
 
 
-def test_build_map_merges_leads_across_batches(monkeypatch):
+def test_build_map_merges_leads_across_batches():
     """Each lead is mapped in its own batch; the per-signal leads are unioned.
     The mock keys off the prompt body so responses match batches regardless of
     concurrent call order."""
-    from app.services.signals import lead_map
-    monkeypatch.setattr(lead_map, "_LEAD_BATCH_SIZE", 1)  # one lead per batch
     signals = [{"signal_id": "s1", "headline": "Hiring surge"}]
     leads = [{"lead_id": "l1", "company_name": "Acme"}, {"lead_id": "l2", "company_name": "Globex"}]
 
@@ -317,7 +318,7 @@ def test_build_map_merges_leads_across_batches(monkeypatch):
         return '{"mapping":[{"signal_id":"s1","leads":[{"lead_id":"l2","company":"Globex","relevance":"low","why":"y"}]}]}'
 
     mongo, store = _fake_cache_mongo()
-    result, _ = _run(signals, leads, fake, mongo=mongo)
+    result, _ = _run(signals, leads, fake, mongo=mongo, batch_size=1)  # one lead per batch
     ids = sorted(l["lead_id"] for l in result["data"]["mapping"][0]["leads"])
     # The merged output containing BOTH ids proves both batches ran and merged,
     # without a timing-sensitive call_count assertion under concurrency.
@@ -325,14 +326,12 @@ def test_build_map_merges_leads_across_batches(monkeypatch):
     assert "o1:u1" in store              # complete map -> cached
 
 
-def test_build_map_partial_batch_failure_surfaces_error(monkeypatch):
+def test_build_map_partial_batch_failure_surfaces_error():
     """One batch fails after retries while another SUCCEEDS with a real match: the
     map is incomplete (the failed batch's leads are missing), so surface
     status:"error" (not a masked success) and do not cache. The FE's retry then
     re-runs the full compute. This is the partial-failure gap that deciding on
     `all_ok` (not `not mapping`) closes."""
-    from app.services.signals import lead_map
-    monkeypatch.setattr(lead_map, "_LEAD_BATCH_SIZE", 1)
     signals = [{"signal_id": "s1", "headline": "h"}]
     leads = [{"lead_id": "l1"}, {"lead_id": "l2"}]
 
@@ -342,31 +341,28 @@ def test_build_map_partial_batch_failure_surfaces_error(monkeypatch):
         return '{"mapping":[{"signal_id":"s1","leads":[{"lead_id":"l1","company":"A","relevance":"high","why":"x"}]}]}'
 
     mongo, store = _fake_cache_mongo()
-    result, _ = _run(signals, leads, fake, mongo=mongo)
+    result, _ = _run(signals, leads, fake, mongo=mongo, batch_size=1)
     assert result["status"] == "error"   # incomplete compute surfaced, not masked as success
     assert "o1:u1" not in store          # partial result never cached
 
 
-def test_build_map_all_batches_fail_surfaces_error_status(monkeypatch):
-    from app.services.signals import lead_map
-    monkeypatch.setattr(lead_map, "_LEAD_BATCH_SIZE", 1)
-    result, _ = _run([{"signal_id": "s1"}], [{"lead_id": "l1"}, {"lead_id": "l2"}], RuntimeError("boom"))
+def test_build_map_all_batches_fail_surfaces_error_status():
+    result, _ = _run([{"signal_id": "s1"}], [{"lead_id": "l1"}, {"lead_id": "l2"}],
+                     RuntimeError("boom"), batch_size=1)
     assert result["status"] == "error"      # every batch failed → surfaced, not masked
     assert result["data"]["mapping"] == []
 
 
-def test_build_map_genuine_zero_matches_stays_success(monkeypatch):
+def test_build_map_genuine_zero_matches_stays_success():
     # All batches succeed but Claude finds no matches -> a TRUE empty, not a failure.
     # The prompt (signals_lead_map.md.j2) mandates echoing EVERY signal with an empty
     # "leads" array, so the realistic zero-match response is the echo shape below (not
     # {"mapping":[]}). status stays "success" (cached) and the FE shows "No matched
     # leads found" rather than an error.
-    from app.services.signals import lead_map
-    monkeypatch.setattr(lead_map, "_LEAD_BATCH_SIZE", 1)
     echo_empty = '{"mapping":[{"signal_id":"s1","leads":[]}]}'  # prompt-mandated shape
     mongo, store = _fake_cache_mongo()
     result, _ = _run([{"signal_id": "s1", "headline": "h"}],
-                     [{"lead_id": "l1"}, {"lead_id": "l2"}], echo_empty, mongo=mongo)
+                     [{"lead_id": "l1"}, {"lead_id": "l2"}], echo_empty, mongo=mongo, batch_size=1)
     assert result["status"] == "success"
     assert result["data"]["mapping"] == [{"signal_id": "s1", "headline": "h", "leads": []}]
     assert "o1:u1" in store                  # a complete (zero-match) map is still cached

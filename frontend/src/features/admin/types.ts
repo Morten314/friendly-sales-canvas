@@ -16,6 +16,9 @@ export const AdminOrgListSchema = z.array(AdminOrgSummarySchema);
 // AppSettings bound (1..500); the FE validates against the same range before PUT.
 export const AppSettingsSchema = z.object({
   lead_fetch_limit: z.number().int().min(1).max(500),
+  // Matched-leads (signal↔lead map) tuning — bounds mirror the backend AppSettings.
+  signal_lead_map_lead_limit: z.number().int().min(1).max(500),
+  signal_lead_map_batch_size: z.number().int().min(1).max(100),
 });
 export type AppSettings = z.infer<typeof AppSettingsSchema>;
 

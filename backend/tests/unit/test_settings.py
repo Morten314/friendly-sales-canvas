@@ -91,7 +91,10 @@ def test_update_app_settings_upserts_and_returns():
 
     assert result.lead_fetch_limit == 300
     col.update_one.assert_called_once_with(
-        {"_id": "settings"}, {"$set": {"lead_fetch_limit": 300}}, upsert=True
+        {"_id": "settings"},
+        {"$set": {"lead_fetch_limit": 300, "signal_lead_map_lead_limit": 100,
+                  "signal_lead_map_batch_size": 15}},
+        upsert=True,
     )
 
 
@@ -127,9 +130,12 @@ def test_fetch_org_leads_returns_empty_on_error(monkeypatch):
 
 
 # --------------------------------------------------------------------------- #
-# Matched-leads map wiring — lead_map passes the admin limit to the lead fetch
+# Matched-leads map wiring — lead_map fetches at min(map lead limit, admin limit)
 # --------------------------------------------------------------------------- #
-def test_lead_map_fetches_leads_at_admin_limit(monkeypatch):
+def test_lead_map_fetches_leads_at_map_limit(monkeypatch):
+    """lead_map uses its own signal_lead_map_lead_limit, bounded by the admin
+    lead_fetch_limit — i.e. min(map limit, admin limit) — so tuning the map's
+    coverage never touches signal-generation grounding (TD-015)."""
     import app.services.signals.lead_map as lead_map
     from app.models.settings import AppSettings
 
@@ -137,7 +143,11 @@ def test_lead_map_fetches_leads_at_admin_limit(monkeypatch):
         return ([{"signal_id": "s1", "headline": "h"}], 1)
 
     monkeypatch.setattr(lead_map.persistence, "fetch_signals", _fake_fetch_signals)
-    monkeypatch.setattr(lead_map, "get_app_settings", lambda _m: AppSettings(lead_fetch_limit=250))
+    monkeypatch.setattr(
+        lead_map,
+        "get_app_settings",
+        lambda _m: AppSettings(lead_fetch_limit=250, signal_lead_map_lead_limit=100),
+    )
     get_leads = MagicMock(return_value=([], 0))  # empty -> early return, no Claude call
     monkeypatch.setattr(lead_map.leads_persistence, "get_leads_for_org", get_leads)
 
@@ -145,4 +155,4 @@ def test_lead_map_fetches_leads_at_admin_limit(monkeypatch):
     request = SimpleNamespace(user_id="u1", org_id="o1", refresh=True)
     asyncio.run(lead_map.build_signal_lead_map_claude(driver, mongo, request))
 
-    assert get_leads.call_args == call(driver, "o1", 250, 0)
+    assert get_leads.call_args == call(driver, "o1", 100, 0)  # min(100, 250)

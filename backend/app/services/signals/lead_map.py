@@ -79,20 +79,17 @@ def _int_env(name: str, default: int) -> int:
         return default
 
 
-# TD-014: instead of one Claude call over all ≤lead_fetch_limit (500) leads —
-# which both blew the 8192-token output budget (truncated → empty mapping) and
-# ran ~180s (past the upstream proxy timeout → 502) — split the leads into
-# bounded batches, map each (full signal set × one lead batch) in its own call,
-# and run the batches concurrently. Bounded payload keeps each call's output
-# parseable; concurrency keeps wall-clock ~ one batch, not the sum. Both are
-# env-overridable so ops can tune per model/limit without a code change.
-# Defaults tuned from live profiling (see docs/TECH_DEBT.md TD-014): wall-clock is
-# floored by total Claude output / an Anthropic-rate-limited ~4.4 effective
-# concurrency, so B and C above ~5 don't speed it up. C=5 saturates the throughput
-# ceiling while minimizing peak memory / 429 pressure on the small Render instance.
-# L (lead_fetch_limit) is the only real speed lever and trades against coverage,
-# so it's left at its admin default.
-_LEAD_BATCH_SIZE = _int_env("SIGNAL_LEAD_MAP_BATCH_SIZE", 40)
+# TD-014/TD-015: instead of one Claude call over all leads — which blew the output
+# budget (truncated → empty mapping) and ran ~180s (past the proxy → 502) — split
+# the leads into bounded batches, map each (full signal set × one lead batch) in its
+# own call, and run them concurrently. Two knobs are now admin settings (AppSettings,
+# read per-request in build_signal_lead_map_claude → tunable from the ops panel with
+# no deploy): `signal_lead_map_lead_limit` (max newest leads the map covers — the only
+# real latency lever, since wall-clock is floored by total Claude output ÷ the
+# Anthropic OTPM ceiling) and `signal_lead_map_batch_size` (leads per call — smaller =
+# faster, non-truncating outputs + less peak memory). Concurrency and the per-call
+# output cap stay env-tuned: C=5 sits near the ~4.4 effective-stream OTPM ceiling with
+# low 429/memory pressure.
 _MAP_MAX_CONCURRENCY = _int_env("SIGNAL_LEAD_MAP_MAX_CONCURRENCY", 5)
 # Per-batch output cap. The shared CLAUDE_RESEARCH_MAX_TOKENS default (8192) was
 # too small here: a full signal set × 40 leads routinely overflowed it, so nearly
@@ -352,10 +349,15 @@ async def build_signal_lead_map_claude(driver, mongo, request) -> Dict[str, Any]
     if not signals:
         return _build_result([], now, False)
 
-    # 2. leads (org-scoped; sync → thread). Cap = admin lead_fetch_limit (spec 47).
-    lead_fetch_limit = (await asyncio.to_thread(get_app_settings, mongo)).lead_fetch_limit
+    # 2. leads (org-scoped; sync → thread). The map's lead cap and batch size are
+    # admin settings (AppSettings), read once here. Lead cap = min(map limit, admin
+    # lead_fetch_limit) so the map never exceeds the global fetch (spec 47); fewer
+    # leads is the only real latency lever (TD-015).
+    settings = await asyncio.to_thread(get_app_settings, mongo)
+    lead_limit = min(settings.signal_lead_map_lead_limit, settings.lead_fetch_limit)
+    batch_size = settings.signal_lead_map_batch_size
     leads, _ = await asyncio.to_thread(
-        leads_persistence.get_leads_for_org, driver, request.org_id, lead_fetch_limit, 0
+        leads_persistence.get_leads_for_org, driver, request.org_id, lead_limit, 0
     )
     if not leads:
         return _build_result([], now, False)
@@ -389,7 +391,7 @@ async def build_signal_lead_map_claude(driver, mongo, request) -> Dict[str, Any]
         for s in signals
         if (s.get("signal_id") or s.get("id"))
     }
-    batches = [leads[i:i + _LEAD_BATCH_SIZE] for i in range(0, len(leads), _LEAD_BATCH_SIZE)]
+    batches = [leads[i:i + batch_size] for i in range(0, len(leads), batch_size)]
     loop = asyncio.get_running_loop()
 
     async def _map_batch(executor, batch: List[Dict[str, Any]], depth: int = 0):

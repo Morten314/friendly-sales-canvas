@@ -11,6 +11,13 @@ import { server } from "@/test/msw/server";
 
 vi.mock("@/shared/auth/firebase", () => ({ auth: { currentUser: null } }));
 
+// Full AppSettings shape — the zod contract requires all three fields.
+const SETTINGS = {
+  lead_fetch_limit: 250,
+  signal_lead_map_lead_limit: 100,
+  signal_lead_map_batch_size: 15,
+};
+
 function renderPage(node: ReactNode) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -21,18 +28,20 @@ function renderPage(node: ReactNode) {
 }
 
 describe("SettingsPage", () => {
-  it("loads the current lead_fetch_limit into the input", async () => {
-    server.use(http.get("/api/admin/settings", () => HttpResponse.json({ lead_fetch_limit: 250 })));
+  it("loads all settings (lead fetch limit + matched-leads tuning) into inputs", async () => {
+    server.use(http.get("/api/admin/settings", () => HttpResponse.json(SETTINGS)));
     renderPage(<SettingsPage />);
-    expect(await screen.findByDisplayValue("250")).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("250")).toBeInTheDocument(); // lead_fetch_limit
+    expect(screen.getByDisplayValue("100")).toBeInTheDocument(); // signal_lead_map_lead_limit
+    expect(screen.getByDisplayValue("15")).toBeInTheDocument(); // signal_lead_map_batch_size
   });
 
-  it("saves an updated value via PUT and confirms success", async () => {
-    let putBody: { lead_fetch_limit: number } | null = null;
+  it("saves the full settings object via PUT and confirms success", async () => {
+    let putBody: typeof SETTINGS | null = null;
     server.use(
-      http.get("/api/admin/settings", () => HttpResponse.json({ lead_fetch_limit: 250 })),
+      http.get("/api/admin/settings", () => HttpResponse.json(SETTINGS)),
       http.put("/api/admin/settings", async ({ request }) => {
-        putBody = (await request.json()) as { lead_fetch_limit: number };
+        putBody = (await request.json()) as typeof SETTINGS;
         return HttpResponse.json(putBody);
       }),
     );
@@ -41,15 +50,22 @@ describe("SettingsPage", () => {
     fireEvent.change(input, { target: { value: "400" } });
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
 
-    await waitFor(() => expect(putBody).toEqual({ lead_fetch_limit: 400 }));
+    // The PUT carries the FULL object (unchanged fields included), not just the edit.
+    await waitFor(() =>
+      expect(putBody).toEqual({
+        lead_fetch_limit: 400,
+        signal_lead_map_lead_limit: 100,
+        signal_lead_map_batch_size: 15,
+      }),
+    );
     expect(await screen.findByText(/saved/i)).toBeInTheDocument();
   });
 
-  it("clears the saved confirmation when the value is edited again", async () => {
+  it("clears the saved confirmation when a value is edited again", async () => {
     server.use(
-      http.get("/api/admin/settings", () => HttpResponse.json({ lead_fetch_limit: 250 })),
+      http.get("/api/admin/settings", () => HttpResponse.json(SETTINGS)),
       http.put("/api/admin/settings", async ({ request }) =>
-        HttpResponse.json((await request.json()) as { lead_fetch_limit: number }),
+        HttpResponse.json((await request.json()) as typeof SETTINGS),
       ),
     );
     renderPage(<SettingsPage />);
@@ -63,7 +79,7 @@ describe("SettingsPage", () => {
   });
 
   it("rejects an out-of-range value client-side and disables save", async () => {
-    server.use(http.get("/api/admin/settings", () => HttpResponse.json({ lead_fetch_limit: 250 })));
+    server.use(http.get("/api/admin/settings", () => HttpResponse.json(SETTINGS)));
     renderPage(<SettingsPage />);
     const input = await screen.findByDisplayValue("250");
     fireEvent.change(input, { target: { value: "501" } });
