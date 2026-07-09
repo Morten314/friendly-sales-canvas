@@ -1270,3 +1270,30 @@ Neo4j reads/writes go through managed transaction functions (`session.execute_re
 - Real users hit post-deploy 500s; OR TD-015's async/background lead-map work lands; OR restart frequency rises.
 
 **Owner:** TBD.
+
+---
+
+## TD-017 — `starter` instance memory leak → periodic OOM restarts (dominant leaker unconfirmed)
+
+**Date logged:** 2026-07-09
+**Origin:** Surfaced while diagnosing repeated `starter`-instance restarts during TD-014/TD-015 lead-map work (2026-07-09). Render Metrics showed memory climbing **monotonically** from ~65% to 100% over ~5h, then a vertical drop — twice (~4:01am → the 4:10am "ran out of memory" event; ~9:46am → the 10:03am event). That sawtooth-up-then-cliff is a leak → OOM signature, distinct from the lead-map compute, which appears as short CPU spikes with immediate release. After the 2026-07-09 lead-map deploys, memory settled ~50% and flat — so the leak is time/traffic-driven, not lead-map.
+
+**Current state:**
+The 512 MB `starter` instance OOMs roughly every ~5–6h of steady traffic and restarts prod. Something accumulates monotonically across requests. One identified contributor has been **removed** (see partial resolution below), but it is not believed to be the dominant leaker (the graph-chat/Scout-chat features it affected are barely used). The dominant source is **unconfirmed** — leading suspects: LangChain `AgentExecutor` (`initialize_agent`) + `return_intermediate_steps=True` on the heavily-used Qwen `agent_chain` paths (signals / ICP / market-research) retaining large per-call objects; and/or Neo4j driver-pool / Together (`ChatOpenAI`) client retention. Confirmation needs in-process profiling (`tracemalloc`/`gc` snapshots or per-endpoint bisection against the Metrics graph) — deliberately **not** yet added.
+
+**Partial resolution (2026-07-09):** the shared process-wide `ConversationBufferMemory(return_messages=True)` in `build_llm_config()` — a single instance passed to both graph-chat chains (`chain`/`chain2`, backing `GET /ask/` and `GET /chat/`) — was removed. LangChain saved every Scout-chat turn from every user into that one never-trimmed buffer (unbounded growth + a latent cross-tenant conversation bleed), yet the cypher/QA prompts never read `history`/`chat_history`, so it was write-only dead weight. Removal (the `memory` field on `LLMBundle`, the construction, both `memory=memory` args, the unused `get_memory` dependency, the import) is behavior-neutral for outputs and broke no test. This plugs one unbounded structure and kills the latent bleed, but — given chat is barely used — is unlikely to be the OOM's dominant cause.
+
+**What it should be:**
+Identify the dominant leaker with data (profiling probe or per-endpoint bisection), then fix it (e.g. avoid retaining `intermediate_steps`, ensure per-call LangChain executors don't accumulate callbacks/state, bound any driver/client caches). Interim stopgaps: a larger instance *delays* but does not fix the OOM; scheduled restarts mask it.
+
+**Why we deferred:**
+- MVP, 0 live users; the crash only recycles a single always-on instance every few hours. The profiling step and the real fix are being scheduled deliberately rather than guessed at.
+
+**What we lose by staying as-is:**
+- The instance OOMs every ~5–6h, restarting prod and compounding TD-016 (each restart makes the first Neo4j request 500) — now more frequent under `autoDeploy: true`.
+- Undermines the "always-on starter instance" reliability goal; will worsen as traffic grows and bite real users at launch.
+
+**Pull-forward triggers:**
+- OOM restarts persist after the `ConversationBufferMemory` removal deploys; OR real users hit crashes / post-restart 500s; OR memory-driven latency (GC pressure) becomes observable.
+
+**Owner:** TBD.
