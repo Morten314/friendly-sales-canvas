@@ -1,9 +1,21 @@
 import type { Page } from "@playwright/test";
 
-import { leadList, signalList, icp, orgProfile, orgList } from "./seed-data";
+import { TEST_USER_ID, TEST_ORG_ID } from "./identities";
+import { leadList, signalList, icp, orgProfile } from "./seed-data";
 
 const apiMocks: Record<string, unknown> = {
-  "/api/org": { orgs: orgList },
+  // Real shape is backend's single-org `OrgResponse` (app/models/org_auth.py),
+  // returned by GET /org via list_orgs (app/services/org_auth/orgs.py) — NOT
+  // a `{ orgs: [...] }` list. AuthContext.attemptGetOrg treats a 2xx response
+  // lacking `status: "success"` + `org_id` as an authoritative no-org outcome,
+  // so a stale list-shaped mock here overrides the seeded org cache and trips
+  // the `requireOrg` route gate (blank NoOrgState) on every org-scoped journey.
+  "/api/org": {
+    status: "success",
+    user_id: TEST_USER_ID,
+    org_id: TEST_ORG_ID,
+    org_name: "Test Org",
+  },
   "/api/profile/company": orgProfile,
   "/api/profile/org": orgProfile,
   "/api/profile/user": { user_id: "test_user_123", display_name: "Test User" },
