@@ -27,6 +27,7 @@ from app.services.icp import (
     list_icps,
     run_icp_research,
 )
+from app.services.icp.dismissal import DISMISSED_FIELD, compute_icp_signature
 from tests.fixtures import load_captured, load_seed
 from tests.identities import TEST_ICP_ID_1, TEST_ICP_ID_2, TEST_ORG_ID, TEST_USER_ID
 
@@ -313,6 +314,70 @@ def test_delete_recommended_icp_happy_path(mocker, mock_mongo_client):
     assert result["success"] is True
     assert result["data"]["remaining_count"] == 1
     release_mock.assert_called_once()
+
+
+# --- WS3: dismissed-signature on delete -------------------------------------
+
+def test_delete_recommended_icp_records_signature(mocker, mock_mongo_client):
+    coll = MagicMock()
+    coll.find_one.return_value = {
+        "user_id": TEST_USER_ID,
+        "icps": {
+            "suggestedICPs": [
+                {"id": TEST_ICP_ID_1, "firmographics": {"industry": "SaaS", "segment": "SMB"}},
+                {"id": TEST_ICP_ID_2, "firmographics": {"industry": "SaaS", "segment": "Enterprise"}},
+            ]
+        },
+    }
+    mock_mongo_client["Profiler"].__getitem__.return_value = coll
+    mocker.patch("app.services.icp.persistence._release_icp_id")
+
+    delete_recommended_icp(mock_mongo_client, TEST_ICP_ID_1, TEST_USER_ID)
+
+    set_arg = coll.update_one.call_args[0][1]["$set"]
+    assert "saas|smb" in set_arg[DISMISSED_FIELD]
+
+
+# --- WS3: refresh filters out dismissed signatures --------------------------
+
+def test_list_icps_refresh_filters_dismissed_signatures(mocker, mock_session, mock_mongo_client):
+    coll = MagicMock()
+    # Existing doc already dismissed the "saas|smb" signature.
+    coll.find_one.return_value = {
+        "user_id": TEST_USER_ID,
+        "icps": {"suggestedICPs": []},
+        DISMISSED_FIELD: ["saas|smb"],
+    }
+    mock_mongo_client["Profiler"].__getitem__.return_value = coll
+    mocker.patch("app.services.icp.persistence._ensure_icp_indexes")
+    mocker.patch("app.services.icp.persistence._reserve_unique_icp_id", side_effect=lambda db, **k: "new-id")
+    mocker.patch("app.services.icp.persistence.fetch_company_profile", return_value={"industry": "SaaS"})
+    # ICP_generator returns one dismissed + one fresh ICP.
+    mocker.patch(
+        "app.services.icp.persistence.ICP_generator",
+        return_value=(
+            {"suggestedICPs": [
+                {"firmographics": {"industry": "SaaS", "segment": "SMB"}},       # dismissed
+                {"firmographics": {"industry": "SaaS", "segment": "Enterprise"}}, # kept
+            ]},
+            {"name": "icp_generator", "version": "1.0.0"},
+        ),
+    )
+
+    items, total = list_icps(
+        mock_session._driver, mock_mongo_client, MagicMock(), TEST_USER_ID, refresh=True,
+    )
+
+    sigs = {compute_icp_signature(i) for i in items}
+    assert "saas|smb" not in sigs
+    assert "saas|enterprise" in sigs
+    assert total == len(items)
+
+    # Durability guarantee: the generate-branch write is a partial $set that must
+    # NOT touch the sibling DISMISSED_FIELD (else every refresh would wipe prior
+    # dismissals). Pin it so a future $set-widening / replace_one is caught here.
+    set_arg = coll.update_one.call_args[0][1]["$set"]
+    assert DISMISSED_FIELD not in set_arg
 
 
 # ---------------------------------------------------------------------------

@@ -21,6 +21,12 @@ from app.core.exceptions import (
 )
 from app.core.logging import logger
 from app.services._neo4j_helpers import fetch_company_profile
+from app.services.icp.dismissal import (
+    DISMISSED_FIELD,
+    compute_icp_signature,
+    read_dismissed_signatures,
+    with_signature_added,
+)
 from app.services.icp.orchestrator import ICP_generator
 
 
@@ -233,6 +239,17 @@ def list_icps(
             logger.error(f"[ICP] ERROR in ICP_generator: {str(gen_error)}")
             raise ServiceError(f"ICP generation failed: {gen_error}") from gen_error
 
+        # Suppress recommended ICPs the user has dismissed (by content signature).
+        # Regeneration re-mints ids, so id-based suppression can't catch these;
+        # the signature is stable across refresh (spec 48 WS3).
+        dismissed = read_dismissed_signatures(existing_icp)
+        if dismissed:
+            kept = [
+                icp for icp in icp_result.get("suggestedICPs", [])
+                if compute_icp_signature(icp) not in dismissed
+            ]
+            icp_result = {"suggestedICPs": kept}
+
         # Upsert the result in MongoDB - filter by user_id only
         logger.info(f"[ICP] Saving to MongoDB for user_id: {user_id}")
         try:
@@ -284,11 +301,14 @@ def delete_recommended_icp(mongo, icp_id: str, user_id: str) -> Dict[str, Any]:
     if not deleted_icp:
         raise RecommendedICPNotFoundError(f"Recommended ICP not found for icp_id: {icp_id}")
 
+    dismissed = read_dismissed_signatures(document)
+    dismissed_list = with_signature_added(dismissed, compute_icp_signature(deleted_icp))
+
     new_payload = {"suggestedICPs": updated_suggested}
     collection.update_one(
         {"user_id": user_id},
-        {"$set": {"user_id": user_id, "icps": new_payload}},
-        upsert=True
+        {"$set": {"user_id": user_id, "icps": new_payload, DISMISSED_FIELD: dismissed_list}},
+        upsert=True,
     )
     _release_icp_id(db, icp_id)
 
