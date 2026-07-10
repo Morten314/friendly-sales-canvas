@@ -183,7 +183,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     [],
   );
 
-  // Back-compat alias: useLogin awaits this after form login.
+  // Alias retained for existing external references to the `fetchOrgId` name
+  // (test mocks under frontend/src) — not the primary resolution path. Org
+  // resolution is driven entirely by the onAuthStateChanged effect below;
+  // useLogin does NOT await this (spec 48 Task 2 removed that call — the
+  // requireOrg route gate is the single waiter on orgResolved/orgId).
   const fetchOrgId = resolveOrg;
 
   const retryOrgResolution = useCallback(() => {

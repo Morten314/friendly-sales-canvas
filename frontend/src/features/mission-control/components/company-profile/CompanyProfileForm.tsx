@@ -179,9 +179,11 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
 
   // Read effect: when the shared query resolves, hydrate the form fields from the
   // backend payload. The `=== null` branch is deliberate: the hook resolves to null
-  // ONLY when it swallowed a non-2xx / network failure (404/5xx/CORS) → run the
-  // localStorage failover; while the query is still loading `companyData` is
-  // `undefined` (not null), so loading is intentionally excluded and we do nothing.
+  // ONLY on a genuine 404/empty (no profile yet) → run the localStorage failover.
+  // A 5xx/network/CORS failure now surfaces as `isError` instead (spec 48 Task 12)
+  // and is handled by the error/retry branch below, NOT here. While the query is
+  // still loading `companyData` is `undefined` (not null), so loading is
+  // intentionally excluded and we do nothing.
   useEffect(() => {
     if (!currentUser?.uid) return;
     const userId = currentUser.uid;

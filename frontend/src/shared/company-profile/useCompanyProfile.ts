@@ -11,16 +11,22 @@ import { qk } from "@/shared/api/queryKeys";
 
 /** True when the transport's `HTTP error! status: NNN …` Error is a 404 — a
  *  genuine "no profile yet" — vs. a transient 5xx/network/CORS failure. Mirrors
- *  the isRecommendedDeleteNotFound house pattern. */
+ *  the isRecommendedDeleteNotFound house pattern. Matches ONLY the numeric
+ *  status (transport.ts always bakes it into the message as
+ *  `HTTP error! status: 404 - …`, so `/\b404\b/` alone reliably identifies a
+ *  real 404). Deliberately does NOT also match `/not found/i`: a 5xx whose
+ *  error body happens to echo "not found" would otherwise be misclassified as
+ *  a 404 → null → a silently blanked form — the exact regression WS4 exists
+ *  to prevent. */
 function isHttpNotFound(e: unknown): boolean {
-  return e instanceof Error && (/\b404\b/.test(e.message) || /not found/i.test(e.message));
+  return e instanceof Error && /\b404\b/.test(e.message);
 }
 
 /**
  * Reads GET /api/profile/company?org_id=… via the shared client + zod.
- * A genuine 404 (or "not found" message) resolves to `null` → the component
- * renders the empty form, exactly as the old bare-fetch path did for "no
- * profile yet" (spec 20 §3.6). A ZodError (response drift) surfaces to `error`.
+ * A genuine 404 resolves to `null` → the component renders the empty form,
+ * exactly as the old bare-fetch path did for "no profile yet" (spec 20 §3.6).
+ * A ZodError (response drift) surfaces to `error`.
  * Any other failure — HTTP 5xx, network, and CORS errors — now also surfaces to
  * `error` (retried once by the shared queryClient, keeping last-known data)
  * instead of being swallowed to `null`, so a transient outage is never shown as
