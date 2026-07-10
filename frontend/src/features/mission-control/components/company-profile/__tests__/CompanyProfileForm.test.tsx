@@ -79,12 +79,13 @@ describe("CompanyProfileForm", () => {
     await waitFor(() => expect(onSavedChange).toHaveBeenCalledWith(true));
   });
 
-  it("falls back to the localStorage profile when the company-profile GET fails", async () => {
-    // GET fails (5xx) → useCompanyProfile swallows the non-ZodError and resolves to
-    // null → the read effect runs the localStorage failover. This is the #1 parity
-    // edge case: offline-with-cache must still hydrate the form AND unlock the other
-    // tabs (onSavedChange(true)).
-    server.use(http.get("/api/profile/company", () => new HttpResponse(null, { status: 500 })));
+  it("falls back to the localStorage profile when the company-profile GET 404s", async () => {
+    // GET 404s (genuine no-profile-yet) → useCompanyProfile resolves to null (a 5xx
+    // now surfaces as `error` instead — spec 48 Task 12 — and preserves whatever was
+    // already hydrated rather than triggering this failover) → the read effect runs
+    // the localStorage failover. This is the #1 parity edge case: a stale local cache
+    // must still hydrate the form AND unlock the other tabs (onSavedChange(true)).
+    server.use(http.get("/api/profile/company", () => new HttpResponse(null, { status: 404 })));
 
     // Seed the saved profile under the user-scoped key getUserLocalStorage reads:
     // `${baseKey}_${userId}` = "companyProfile_u1". Mocked auth uid is "u1".

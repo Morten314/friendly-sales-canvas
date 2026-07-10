@@ -92,39 +92,35 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
         const localData = getUserLocalStorage("companyProfile", userId);
         if (localData) {
           const localProfile = JSON.parse(localData) as Record<string, unknown>;
-          if (localProfile.user_id === userId) {
-            const profileData = {
-              companyName: (localProfile.company_name || localProfile.companyName || "") as string,
-              headquarters: (localProfile.headquarters || "") as string,
-              employeeSize: (localProfile.employee_size ||
-                localProfile.employeeSize ||
-                "") as string,
-              industry: (localProfile.industry || "") as string,
-              revenue: (localProfile.revenue_band || localProfile.revenue || "") as string,
-              gtmModel: (localProfile.gtm_model || localProfile.gtmModel || "") as string,
-              regionFocus: (localProfile.region_focus || localProfile.regionFocus || "") as string,
-              dealSize: (localProfile.typical_deal_size || localProfile.dealSize || "") as string,
-              companyUrl: (localProfile.company_url || localProfile.companyUrl || "") as string,
-              keyBuyerPersona: (localProfile.key_buyer_persona ||
-                localProfile.keyBuyerPersona ||
-                "") as string,
-              goals: (localProfile.goals || "") as string,
-              painPoints: (localProfile.pain_points || localProfile.painPoints || "") as string,
-              targetSegments: (localProfile.target_segments ||
-                localProfile.targetSegments ||
-                "") as string,
-              excludeSegments: (localProfile.exclude_segments ||
-                localProfile.excludeSegments ||
-                "") as string,
-              compliance: (localProfile.compliance || "") as string,
-              constraints: (localProfile.constraints || "") as string,
-            };
-            setCompanyProfile(profileData);
-            if (localProfile.company_name || localProfile.companyName) {
-              onSavedChange?.(true);
-            }
-            return localProfile;
+          const profileData = {
+            companyName: (localProfile.company_name || localProfile.companyName || "") as string,
+            headquarters: (localProfile.headquarters || "") as string,
+            employeeSize: (localProfile.employee_size || localProfile.employeeSize || "") as string,
+            industry: (localProfile.industry || "") as string,
+            revenue: (localProfile.revenue_band || localProfile.revenue || "") as string,
+            gtmModel: (localProfile.gtm_model || localProfile.gtmModel || "") as string,
+            regionFocus: (localProfile.region_focus || localProfile.regionFocus || "") as string,
+            dealSize: (localProfile.typical_deal_size || localProfile.dealSize || "") as string,
+            companyUrl: (localProfile.company_url || localProfile.companyUrl || "") as string,
+            keyBuyerPersona: (localProfile.key_buyer_persona ||
+              localProfile.keyBuyerPersona ||
+              "") as string,
+            goals: (localProfile.goals || "") as string,
+            painPoints: (localProfile.pain_points || localProfile.painPoints || "") as string,
+            targetSegments: (localProfile.target_segments ||
+              localProfile.targetSegments ||
+              "") as string,
+            excludeSegments: (localProfile.exclude_segments ||
+              localProfile.excludeSegments ||
+              "") as string,
+            compliance: (localProfile.compliance || "") as string,
+            constraints: (localProfile.constraints || "") as string,
+          };
+          setCompanyProfile(profileData);
+          if (localProfile.company_name || localProfile.companyName) {
+            onSavedChange?.(true);
           }
+          return localProfile;
         }
       } catch (e) {
         console.error("MissionControl: Error loading from localStorage:", e);

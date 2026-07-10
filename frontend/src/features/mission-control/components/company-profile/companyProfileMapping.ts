@@ -24,19 +24,21 @@ export interface CompanyProfileFields {
 
 /**
  * Map a company-profile API payload → the form-shaped fields. Returns null for an
- * empty payload or a user_id mismatch (multi-tenancy safety). Shared by
+ * empty payload. The company profile is org-owned, not per-user, so a `user_id` on
+ * the payload that differs from the caller does NOT blank it — any member of the
+ * org may read/hydrate it (Plan 48 Task 13; previously a stray per-user guard
+ * incorrectly blanked the profile for other org members). Shared by
  * CompanyProfileForm (editable form hydration) and MissionControlPage (the
  * read-driven localStorage backup write) — both derived the same transform;
  * unified per phase-6 impl-review-1.
  */
 export const mapApiDataToCompanyProfileFields = (
   data: UntypedBackendApiResponse,
-  userId: string,
+  // Retained for call-site/signature stability (org-owned data no longer needs the
+  // caller's id to decide whether to map it — see the doc comment above).
+  _userId: string,
 ): CompanyProfileFields | null => {
   if (!data || (typeof data === "object" && Object.keys(data).length === 0)) {
-    return null;
-  }
-  if (data.user_id && data.user_id !== userId) {
     return null;
   }
   return {
