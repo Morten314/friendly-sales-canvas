@@ -7,29 +7,30 @@ import type { AppSettings } from "../types";
 // Field() bounds; each value is edited as a string and parsed/validated before
 // save. The PUT sends the FULL object — a partial PUT would reset the omitted
 // fields to their backend defaults (see test_settings_endpoints).
-const FIELDS: { key: keyof AppSettings; label: string; help: string; min: number; max: number }[] = [
-  {
-    key: "lead_fetch_limit",
-    label: "Lead fetch limit",
-    help: "Max leads fed into signal matching & generation per run.",
-    min: 1,
-    max: 500,
-  },
-  {
-    key: "signal_lead_map_lead_limit",
-    label: "Matched-leads · lead cap",
-    help: "Max newest leads the matched-leads map covers (capped at the lead fetch limit). Fewer = faster.",
-    min: 1,
-    max: 500,
-  },
-  {
-    key: "signal_lead_map_batch_size",
-    label: "Matched-leads · batch size",
-    help: "Leads per Claude call. Smaller = faster, non-truncating outputs.",
-    min: 1,
-    max: 100,
-  },
-];
+const FIELDS: { key: keyof AppSettings; label: string; help: string; min: number; max: number }[] =
+  [
+    {
+      key: "lead_fetch_limit",
+      label: "Lead fetch limit",
+      help: "Max leads fed into signal matching & generation per run.",
+      min: 1,
+      max: 500,
+    },
+    {
+      key: "signal_lead_map_lead_limit",
+      label: "Matched-leads · lead cap",
+      help: "Max newest leads the matched-leads map covers (capped at the lead fetch limit). Fewer = faster.",
+      min: 1,
+      max: 500,
+    },
+    {
+      key: "signal_lead_map_batch_size",
+      label: "Matched-leads · batch size",
+      help: "Leads per Claude call. Smaller = faster, non-truncating outputs.",
+      min: 1,
+      max: 100,
+    },
+  ];
 
 export default function SettingsPage() {
   const { data, isLoading, isError } = useAppSettings();
