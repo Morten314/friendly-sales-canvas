@@ -195,6 +195,13 @@ export function useLeadStream({
     const userId = currentUser?.uid || "";
     const leadOrgId = orgIdToUse;
 
+    if (!leadOrgId) {
+      // Refuse to write leads under a null/placeholder org — the #2 data-split
+      // vector, reached transitively via DataSourcesManager's coalesced prop
+      // (spec 48 WS1d).
+      throw new Error("Your workspace is still loading. Please try again in a moment.");
+    }
+
     if (!userId) {
       throw new Error("User ID is required");
     }
@@ -323,6 +330,13 @@ export function useLeadStream({
   const uploadCsvBatch = async (file: File) => {
     const userId = currentUser?.uid || "";
     const leadOrgId = orgIdToUse;
+
+    if (!leadOrgId) {
+      // Refuse to write leads under a null/placeholder org — the #2 data-split
+      // vector, reached transitively via DataSourcesManager's coalesced prop
+      // (spec 48 WS1d).
+      throw new Error("Your workspace is still loading. Please try again in a moment.");
+    }
 
     if (!userId) {
       throw new Error("User ID is required");

@@ -101,6 +101,11 @@ const DataSourcesManager: React.FC = () => {
 
     const orgIdToUse = orgId ?? "";
 
+    if (!orgIdToUse) {
+      // Never write a document under a null/placeholder org (spec 48 WS1d).
+      throw new Error("Your workspace is still loading. Please try again in a moment.");
+    }
+
     const authHeader = await getAuthHeader();
     const url = buildApiUrl("upload-document");
 
@@ -164,6 +169,11 @@ const DataSourcesManager: React.FC = () => {
     }
 
     const orgIdToUse = orgId ?? "";
+
+    if (!orgIdToUse) {
+      // Never write a document under a null/placeholder org (spec 48 WS1d).
+      throw new Error("Your workspace is still loading. Please try again in a moment.");
+    }
 
     const authHeader = await getAuthHeader();
     const apiUrl = buildApiUrl("upload-document");
@@ -1589,6 +1599,7 @@ const DataSourcesManager: React.FC = () => {
                 isDraggingLead={isDraggingLead}
                 isUploadingLeads={isUploadingLeads}
                 leadFileInputRef={leadFileInputRef}
+                disabled={!orgId}
                 onClose={() => {
                   setShowLeadUpload(false);
                   setSelectedLeadFile(null);

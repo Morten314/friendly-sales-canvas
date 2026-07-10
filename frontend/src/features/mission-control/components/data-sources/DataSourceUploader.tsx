@@ -21,6 +21,8 @@ interface DataSourceUploaderProps {
   onDrop: (e: React.DragEvent) => void | Promise<void>;
   onFileInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void | Promise<void>;
   onUpload: () => void | Promise<void>;
+  /** Disable the submit button (e.g. while the org is still resolving). */
+  disabled?: boolean;
 }
 
 /**
@@ -40,6 +42,7 @@ export default function DataSourceUploader({
   onDrop,
   onFileInputChange,
   onUpload,
+  disabled,
 }: DataSourceUploaderProps) {
   return (
     <Card className="mb-6">
@@ -95,7 +98,7 @@ export default function DataSourceUploader({
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={onUpload} disabled={!selectedLeadFile || isUploadingLeads}>
+          <Button onClick={onUpload} disabled={disabled || !selectedLeadFile || isUploadingLeads}>
             {isUploadingLeads ? "Uploading..." : "Add leads"}
           </Button>
         </div>
