@@ -700,7 +700,6 @@ export const SuggestedICPCards = ({
 
   const finalizeRecommendedReject = useCallback(
     async (icpId: string, userId: string) => {
-      removePendingRecommendedReject(icpId);
       const existingTimer = rejectTimersRef.current.get(icpId);
       if (existingTimer) {
         clearTimeout(existingTimer);
@@ -710,6 +709,7 @@ export const SuggestedICPCards = ({
         refinedICPs.find((i) => i.id === icpId) ?? newICPs.find((i) => i.id === icpId);
 
       const applyDeleteSuccess = () => {
+        removePendingRecommendedReject(icpId);
         removeFromProfilerRecommendedCached(userId, icpId);
         recordDismissedRecommendedIcp(userId, icpId);
         // The profiler session snapshot still holds the now-dismissed card;
@@ -739,15 +739,14 @@ export const SuggestedICPCards = ({
           applyDeleteSuccess();
           return;
         }
+        // Keep the pending-reject record and the rejected card state: the DELETE
+        // will be retried on the next mount rather than silently reverting and
+        // losing the dismissal (spec 48 WS3 FE).
         toast({
           title: "Could not remove recommendation",
           description: e instanceof Error ? e.message : "Please try again.",
           variant: "destructive",
         });
-        setCardStatuses((prev) => ({
-          ...prev,
-          [icpId]: { status: "suggested" },
-        }));
       }
     },
     [refinedICPs, newICPs, orgId, toast, onICPRejected, rejectIcpMutation],
@@ -765,7 +764,6 @@ export const SuggestedICPCards = ({
       if (rejectTimersRef.current.has(item.icp_id)) continue;
       const remaining = item.expiresAt - now;
       if (remaining <= 0) {
-        removePendingRecommendedReject(item.icp_id);
         void finalizeRecommendedRejectRef.current(item.icp_id, uid);
       } else {
         setCardStatuses((prev) => ({
