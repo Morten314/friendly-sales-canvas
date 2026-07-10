@@ -109,6 +109,50 @@ describe("CompanyProfileForm", () => {
     await waitFor(() => expect(onSavedChange).toHaveBeenCalledWith(true));
   });
 
+  it("shows an error/retry state (not a blank form) on a persistent 5xx, without falling back to localStorage", async () => {
+    // Spec 48 WS4 follow-up: useCompanyProfile surfaces a 5xx as `error` (Task 12)
+    // instead of resolving to null, but until this fix nothing rendered that error —
+    // the form silently showed its blank initial state. Seed a saved profile in
+    // localStorage first: the error branch must NOT read it — only the genuine
+    // 404/null path may fail over (that risk is what Task 12/WS4 removed).
+    localStorage.setItem(
+      "companyProfile_u1",
+      JSON.stringify({ user_id: "u1", company_name: "Cached Co" }),
+    );
+
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    let getCount = 0;
+    server.use(
+      http.get("/api/profile/company", () => {
+        getCount += 1;
+        if (getCount === 1) {
+          return new HttpResponse(null, { status: 500 });
+        }
+        return HttpResponse.json({ user_id: "u1", company_name: "Acme Corp" });
+      }),
+    );
+
+    renderForm();
+
+    // The error/retry state is shown …
+    await waitFor(() =>
+      expect(screen.getByText(/couldn.t load your company profile/i)).toBeInTheDocument(),
+    );
+    const retryButton = screen.getByRole("button", { name: /try again/i });
+
+    // … NOT the blank editable form, and NOT the seeded localStorage profile —
+    // proving there is no fallback-on-error (no stale-save risk).
+    expect(screen.queryByLabelText(/Company Name/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Cached Co/i)).not.toBeInTheDocument();
+
+    // "Try again" triggers a refetch — flip the mock to success on the 2nd call
+    // and confirm the form then populates.
+    fireEvent.click(retryButton);
+    await waitFor(() => expect(screen.getByLabelText(/Company Name/i)).toHaveValue("Acme Corp"));
+    expect(getCount).toBe(2);
+  });
+
   it("POSTs the profile on Save and reports saved-state", async () => {
     // Suppress only the post-save 2s verify GET (handleSave schedules it via
     // setTimeout(…, 2000)). If it fired after teardown it would hit an un-mocked

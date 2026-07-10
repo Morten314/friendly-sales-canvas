@@ -76,10 +76,16 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
 
   // Read path — shares ONE TanStack cache entry with the page's own
   // useCompanyProfile(orgIdToUse) call (a single GET /api/profile/company). The
-  // hook resolves to null on any non-ZodError failure (404/5xx/CORS), which we
-  // treat as "no profile yet" and fall back to localStorage — matching the old
-  // bare-fetch + retry behavior.
-  const { data: companyData } = useCompanyProfile(orgIdToUse, !!currentUser?.uid);
+  // hook resolves to null ONLY on a genuine 404/empty (no profile yet), which we
+  // treat as such and fall back to localStorage — matching the old bare-fetch +
+  // retry behavior. A 5xx/network/CORS failure surfaces as `isError` instead
+  // (spec 48 Task 12) and is handled by the error/retry branch below — it must
+  // NOT run the localStorage failover (spec 48 WS4 follow-up).
+  const {
+    data: companyData,
+    isError: isCompanyProfileError,
+    refetch: refetchCompanyProfile,
+  } = useCompanyProfile(orgIdToUse, !!currentUser?.uid);
 
   // Helper: load profile from localStorage — the form's failover. Returns the raw
   // payload when successful. Seeds form fields and reports saved-state. Wrapped in
@@ -359,6 +365,30 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
       setIsSaving(false);
     }
   };
+
+  // Persistent 5xx/network failure with no usable data (spec 48 WS4 follow-up):
+  // show a brief error/retry state instead of silently rendering the blank
+  // initial form state. Deliberately does NOT fall back to localStorage here —
+  // that would reintroduce the "empty save overwriting a real profile" risk
+  // Task 12 removed; error ⇒ show the error state, not stale cache, not a
+  // blank form. Gated on `!companyData` (not just isError) so a background
+  // refetch failure that still has last-known-good data keeps showing the
+  // populated form instead of blanking it.
+  if (isCompanyProfileError && !companyData) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Company Information</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+          <p role="alert" className="text-sm text-muted-foreground">
+            We couldn&apos;t load your company profile.
+          </p>
+          <Button onClick={() => refetchCompanyProfile()}>Try again</Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
