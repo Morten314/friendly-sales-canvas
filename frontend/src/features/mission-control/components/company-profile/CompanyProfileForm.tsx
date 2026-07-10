@@ -208,6 +208,19 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
       return;
     }
 
+    // Defense-in-depth (spec 48 final review): this page is org-gated
+    // (requireOrg route gate), so orgIdToUse should never be empty here in
+    // practice — but guard the write anyway for symmetry with the Settings
+    // company-profile save, which has no such gate (spec 48 WS1d gap).
+    if (!orgIdToUse) {
+      toast({
+        title: "Error",
+        description: "Your workspace is still loading. Please try again in a moment.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Validate required fields before saving
     const trimmedCompanyName = companyProfile.companyName.trim();
     if (!trimmedCompanyName) {

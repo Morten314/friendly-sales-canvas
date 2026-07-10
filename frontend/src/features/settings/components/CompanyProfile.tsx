@@ -159,6 +159,10 @@ export function CompanyProfile(_props: CompanyProfileProps) {
       alert("Please log in to save your company profile");
       return;
     }
+    if (!orgIdToUse) {
+      alert("Your workspace is still loading. Please try again in a moment.");
+      return;
+    }
     const payload = {
       org_id: orgIdToUse,
       industry: formData.industry,
