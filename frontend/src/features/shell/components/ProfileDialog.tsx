@@ -15,7 +15,8 @@ export function ProfileDialog({ open, onOpenChange, fullName, children }: Profil
   const userEmail = currentUser?.email || "";
 
   // Get organization domain (derived from orgId, matching the old tenant convention).
-  // No placeholder fallback (spec 48 WS1b) — an unmapped org renders an empty domain.
+  // No placeholder fallback (spec 48 WS1b) — an unmapped org has no domain, and the
+  // managed-by link is omitted entirely rather than rendering a dead https:// anchor.
   const organizationDomain = orgId ? `${orgId}.com` : "";
 
   // Get initials for profile picture
@@ -48,17 +49,19 @@ export function ProfileDialog({ open, onOpenChange, fullName, children }: Profil
                 {userEmail}
               </a>
             </div>
-            <div className="text-sm text-gray-700">
-              Managed by{" "}
-              <a
-                href={`https://${organizationDomain}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 underline hover:text-blue-800"
-              >
-                {organizationDomain}
-              </a>
-            </div>
+            {organizationDomain ? (
+              <div className="text-sm text-gray-700">
+                Managed by{" "}
+                <a
+                  href={`https://${organizationDomain}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 underline hover:text-blue-800"
+                >
+                  {organizationDomain}
+                </a>
+              </div>
+            ) : null}
           </div>
 
           {/* Profile Picture */}

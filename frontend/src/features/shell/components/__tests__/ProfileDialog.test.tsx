@@ -35,17 +35,16 @@ describe("ProfileDialog", () => {
     expect(screen.getByText("org-xyz.com")).toBeInTheDocument();
   });
 
-  it("shows no managed-by domain when orgId is absent (no placeholder tenant)", () => {
+  it("renders no managed-by link when orgId is absent (no placeholder, no dead anchor)", () => {
     authState.orgId = null;
     renderDialog();
     // No placeholder domain leaks in (spec 48 WS1b — was "brewra.com").
     expect(screen.queryByText("brewra.com")).not.toBeInTheDocument();
-    // The managed-by link itself still renders, just empty (cosmetic-only fix:
-    // organizationDomain is "" rather than a fallback host). PopoverContent
-    // renders via a Radix Portal onto document.body, outside RTL's `container`
-    // — query the document directly rather than the (portal-blind) container.
-    const managedByLink = document.querySelector('a[href="https://"]');
-    expect(managedByLink).toBeInTheDocument();
-    expect(managedByLink?.textContent).toBe("");
+    // With no org there is no domain, so the managed-by link is omitted entirely
+    // rather than rendering a dead href="https://" anchor (impl-review-1 F2).
+    // PopoverContent renders via a Radix Portal onto document.body, outside RTL's
+    // `container` — query the document directly rather than the (portal-blind) container.
+    expect(document.querySelector('a[href^="https://"]')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Managed by/)).not.toBeInTheDocument();
   });
 });
