@@ -60,12 +60,19 @@ export function LeadStreamPanel({ orgId: orgIdProp }: LeadStreamPanelProps) {
     [leads, sourceFilter],
   );
 
-  // While the org id is still resolving, or the leads query is loading /
-  // (re)fetching, show a spinner — never the empty card. A deferred query
+  // While the org id is still resolving, or the leads query's initial fetch
+  // is in flight, show a spinner — never the empty card. A deferred query
   // (useLeads is `enabled: !!orgId`) reports isLoading:false with
   // data:undefined while disabled; without this guard that read as a
   // genuine zero-result and flashed the empty card during org resolution.
-  if (orgUnresolved || leadsQuery.isLoading || leadsQuery.isFetching) {
+  //
+  // isFetching is deliberately excluded: it is true during pagination
+  // (fetchNextPage) and background refetches, when leads are already present —
+  // blanking the populated table then would defeat the Load-more button's own
+  // "Loading…" state. orgUnresolved covers the org-deferred (disabled-query) case
+  // and isLoading covers the initial fetch; both are the true "never had data yet"
+  // states where a full-panel spinner is correct.
+  if (orgUnresolved || leadsQuery.isLoading) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-16">
