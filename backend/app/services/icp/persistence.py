@@ -25,7 +25,6 @@ from app.services.icp.dismissal import (
     DISMISSED_FIELD,
     compute_icp_signature,
     read_dismissed_signatures,
-    with_signature_added,
 )
 from app.services.icp.orchestrator import ICP_generator
 
@@ -301,15 +300,19 @@ def delete_recommended_icp(mongo, icp_id: str, user_id: str) -> Dict[str, Any]:
     if not deleted_icp:
         raise RecommendedICPNotFoundError(f"Recommended ICP not found for icp_id: {icp_id}")
 
-    dismissed = read_dismissed_signatures(document)
-    dismissed_list = with_signature_added(dismissed, compute_icp_signature(deleted_icp))
-
+    # Record the dismissed content-signature with an atomic $addToSet rather than a
+    # read-modify-write of the whole list: two near-simultaneous deletes (e.g. rapid
+    # rejects whose 5s undo timers fire concurrently) would otherwise each $set the
+    # field from the same pre-delete snapshot, and the second write would clobber the
+    # first's addition (lost update -> the dismissed ICP re-surfaces on refresh).
+    # $addToSet is field-atomic and de-duplicates; an empty signature is never
+    # recorded, matching the dismissed-set contract (impl-review-1 F1, WS3).
     new_payload = {"suggestedICPs": updated_suggested}
-    collection.update_one(
-        {"user_id": user_id},
-        {"$set": {"user_id": user_id, "icps": new_payload, DISMISSED_FIELD: dismissed_list}},
-        upsert=True,
-    )
+    signature = compute_icp_signature(deleted_icp)
+    update: Dict[str, Any] = {"$set": {"user_id": user_id, "icps": new_payload}}
+    if signature:
+        update["$addToSet"] = {DISMISSED_FIELD: signature}
+    collection.update_one({"user_id": user_id}, update, upsert=True)
     _release_icp_id(db, icp_id)
 
     return {

@@ -334,8 +334,13 @@ def test_delete_recommended_icp_records_signature(mocker, mock_mongo_client):
 
     delete_recommended_icp(mock_mongo_client, TEST_ICP_ID_1, TEST_USER_ID)
 
-    set_arg = coll.update_one.call_args[0][1]["$set"]
-    assert "saas|smb" in set_arg[DISMISSED_FIELD]
+    # WS3 durability: the signature is recorded via an atomic $addToSet (not a
+    # read-modify-write $set of the whole list) so concurrent deletes can't clobber
+    # each other's additions (impl-review-1 F1). Pin both the value and that the
+    # field is NOT in $set (which would reintroduce the lost-update race).
+    update_arg = coll.update_one.call_args[0][1]
+    assert update_arg["$addToSet"][DISMISSED_FIELD] == "saas|smb"
+    assert DISMISSED_FIELD not in update_arg.get("$set", {})
 
 
 # --- WS3: refresh filters out dismissed signatures --------------------------
