@@ -249,7 +249,17 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
           return;
         }
         if (!orgId) {
-          // never POST a placeholder tenant (spec 48 WS1b)
+          // Never POST a placeholder tenant (spec 48 WS1b). Mirrors the sign-in
+          // guard above exactly so this turn is answered rather than left stuck.
+          setTranscript((prev) => [
+            ...prev,
+            {
+              id: newTurnId(),
+              role: "assistant",
+              content: "Your workspace is still loading. Please try again in a moment.",
+            },
+          ]);
+          setIsLoading(false);
           return;
         }
         url = buildApiUrl("signal_ask_claude");

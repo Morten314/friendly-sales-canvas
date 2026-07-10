@@ -37,7 +37,7 @@ beforeAll(() => {
 });
 
 describe("ContextChat org guard", () => {
-  it("does not POST /api/signal_ask_claude when orgId is null", async () => {
+  it("does not POST /api/signal_ask_claude when orgId is null, and answers the stuck turn instead of leaving it hanging", async () => {
     const asked = vi.fn();
     // Register a real handler (not left unhandled) so the assertion is "the
     // spy was never invoked" rather than an opaque MSW onUnhandledRequest:
@@ -68,5 +68,11 @@ describe("ContextChat org guard", () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(asked).not.toHaveBeenCalled();
+
+    // Task 4 review fix: the guard used to `return` silently — after the user's
+    // message was already appended to the transcript — leaving that turn stuck
+    // with no answer and no explanation. It must now surface feedback in the
+    // transcript so the optimistically-added user turn isn't left hanging.
+    expect(await screen.findByText(/workspace is still loading/i)).toBeInTheDocument();
   });
 });
