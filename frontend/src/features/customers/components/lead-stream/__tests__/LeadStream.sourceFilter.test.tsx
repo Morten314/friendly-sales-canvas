@@ -23,15 +23,23 @@ beforeAll(() => {
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
   server.use(
     http.get("/api/v2/leads", () =>
-      HttpResponse.json({ items: [], total: 0, limit: 50, offset: 0 }),
+      HttpResponse.json({
+        items: [{ lead_id: "l1", lead_name: "Tom", company_name: "Acme", source: "apollo" }],
+        total: 1,
+        limit: 50,
+        offset: 0,
+      }),
     ),
   );
 });
 
 describe("LeadStreamPanel source filter (G6)", () => {
-  it("renders the source-filter trigger defaulting to 'All leads'", () => {
+  it("renders the source-filter trigger defaulting to 'All leads'", async () => {
     render(<LeadStreamPanel />, { wrapper });
-    const trigger = screen.getByRole("combobox", { name: /filter by lead source/i });
+    // Query must settle before the filter (part of the loaded-table branch)
+    // appears — LeadStream now shows a loading spinner, not the table, while
+    // leadsQuery.isLoading/isFetching is true.
+    const trigger = await screen.findByRole("combobox", { name: /filter by lead source/i });
     expect(trigger).toBeInTheDocument();
     expect(trigger).toHaveTextContent(/all leads/i);
   });
