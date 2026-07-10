@@ -91,10 +91,11 @@ export const ContextChat = ({
   useEffect(() => {
     if (!context.prompt?.trim() || context.answer || fetchedAnswer || !currentUser?.uid || !orgId)
       return;
+    if (!orgId) return; // never POST a placeholder tenant (spec 48 WS1b)
     setIsFetchingAnswer(true);
     askMutation
       .mutateAsync({
-        org_id: orgId ?? "org-123",
+        org_id: orgId,
         user_id: currentUser.uid,
         question: context.prompt,
         history: [],
@@ -172,8 +173,9 @@ export const ContextChat = ({
         ? `${buildContextPrefix()}User question: ${userMessage}`
         : userMessage;
 
+      if (!orgId) return; // never POST a placeholder tenant (spec 48 WS1b)
       const res = await askMutation.mutateAsync({
-        org_id: orgId ?? "org-123",
+        org_id: orgId,
         user_id: currentUser.uid,
         question,
         history: historyForApi,

@@ -14,8 +14,9 @@ export function ProfileDialog({ open, onOpenChange, fullName, children }: Profil
   // Get user's email
   const userEmail = currentUser?.email || "";
 
-  // Get organization domain (derived from orgId, matching the old tenant convention) or default to Brewra.com
-  const organizationDomain = orgId ? `${orgId}.com` : "brewra.com";
+  // Get organization domain (derived from orgId, matching the old tenant convention).
+  // No placeholder fallback (spec 48 WS1b) — an unmapped org renders an empty domain.
+  const organizationDomain = orgId ? `${orgId}.com` : "";
 
   // Get initials for profile picture
   const getInitials = (name: string): string => {
