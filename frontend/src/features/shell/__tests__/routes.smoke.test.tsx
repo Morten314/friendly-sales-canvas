@@ -14,6 +14,7 @@ vi.mock("@/shared/auth", () => ({
     currentUser: { uid: "u1" },
     orgId: "org-xyz",
     orgName: "Org Xyz",
+    orgStatus: "resolved",
     loading: false,
     logout: vi.fn(),
   }),

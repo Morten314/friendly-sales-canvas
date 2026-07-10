@@ -14,8 +14,10 @@ export function ProfileDialog({ open, onOpenChange, fullName, children }: Profil
   // Get user's email
   const userEmail = currentUser?.email || "";
 
-  // Get organization domain (derived from orgId, matching the old tenant convention) or default to Brewra.com
-  const organizationDomain = orgId ? `${orgId}.com` : "brewra.com";
+  // Get organization domain (derived from orgId, matching the old tenant convention).
+  // No placeholder fallback (spec 48 WS1b) — an unmapped org has no domain, and the
+  // managed-by link is omitted entirely rather than rendering a dead https:// anchor.
+  const organizationDomain = orgId ? `${orgId}.com` : "";
 
   // Get initials for profile picture
   const getInitials = (name: string): string => {
@@ -47,17 +49,19 @@ export function ProfileDialog({ open, onOpenChange, fullName, children }: Profil
                 {userEmail}
               </a>
             </div>
-            <div className="text-sm text-gray-700">
-              Managed by{" "}
-              <a
-                href={`https://${organizationDomain}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 underline hover:text-blue-800"
-              >
-                {organizationDomain}
-              </a>
-            </div>
+            {organizationDomain ? (
+              <div className="text-sm text-gray-700">
+                Managed by{" "}
+                <a
+                  href={`https://${organizationDomain}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 underline hover:text-blue-800"
+                >
+                  {organizationDomain}
+                </a>
+              </div>
+            ) : null}
           </div>
 
           {/* Profile Picture */}

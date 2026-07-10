@@ -21,6 +21,11 @@ from app.core.exceptions import (
 )
 from app.core.logging import logger
 from app.services._neo4j_helpers import fetch_company_profile
+from app.services.icp.dismissal import (
+    DISMISSED_FIELD,
+    compute_icp_signature,
+    read_dismissed_signatures,
+)
 from app.services.icp.orchestrator import ICP_generator
 
 
@@ -233,6 +238,17 @@ def list_icps(
             logger.error(f"[ICP] ERROR in ICP_generator: {str(gen_error)}")
             raise ServiceError(f"ICP generation failed: {gen_error}") from gen_error
 
+        # Suppress recommended ICPs the user has dismissed (by content signature).
+        # Regeneration re-mints ids, so id-based suppression can't catch these;
+        # the signature is stable across refresh (spec 48 WS3).
+        dismissed = read_dismissed_signatures(existing_icp)
+        if dismissed:
+            kept = [
+                icp for icp in icp_result.get("suggestedICPs", [])
+                if compute_icp_signature(icp) not in dismissed
+            ]
+            icp_result = {"suggestedICPs": kept}
+
         # Upsert the result in MongoDB - filter by user_id only
         logger.info(f"[ICP] Saving to MongoDB for user_id: {user_id}")
         try:
@@ -284,12 +300,19 @@ def delete_recommended_icp(mongo, icp_id: str, user_id: str) -> Dict[str, Any]:
     if not deleted_icp:
         raise RecommendedICPNotFoundError(f"Recommended ICP not found for icp_id: {icp_id}")
 
+    # Record the dismissed content-signature with an atomic $addToSet rather than a
+    # read-modify-write of the whole list: two near-simultaneous deletes (e.g. rapid
+    # rejects whose 5s undo timers fire concurrently) would otherwise each $set the
+    # field from the same pre-delete snapshot, and the second write would clobber the
+    # first's addition (lost update -> the dismissed ICP re-surfaces on refresh).
+    # $addToSet is field-atomic and de-duplicates; an empty signature is never
+    # recorded, matching the dismissed-set contract (impl-review-1 F1, WS3).
     new_payload = {"suggestedICPs": updated_suggested}
-    collection.update_one(
-        {"user_id": user_id},
-        {"$set": {"user_id": user_id, "icps": new_payload}},
-        upsert=True
-    )
+    signature = compute_icp_signature(deleted_icp)
+    update: Dict[str, Any] = {"$set": {"user_id": user_id, "icps": new_payload}}
+    if signature:
+        update["$addToSet"] = {DISMISSED_FIELD: signature}
+    collection.update_one({"user_id": user_id}, update, upsert=True)
     _release_icp_id(db, icp_id)
 
     return {

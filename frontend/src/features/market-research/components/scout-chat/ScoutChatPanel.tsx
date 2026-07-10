@@ -248,6 +248,20 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
           setIsLoading(false);
           return;
         }
+        if (!orgId) {
+          // Never POST a placeholder tenant (spec 48 WS1b). Mirrors the sign-in
+          // guard above exactly so this turn is answered rather than left stuck.
+          setTranscript((prev) => [
+            ...prev,
+            {
+              id: newTurnId(),
+              role: "assistant",
+              content: "Your workspace is still loading. Please try again in a moment.",
+            },
+          ]);
+          setIsLoading(false);
+          return;
+        }
         url = buildApiUrl("signal_ask_claude");
         requestOptions = {
           method: "POST",
@@ -256,7 +270,7 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
             accept: "application/json",
           },
           body: JSON.stringify({
-            org_id: orgId ?? "org-123",
+            org_id: orgId,
             user_id: currentUser.uid,
             question,
             history: signalAskHistory,

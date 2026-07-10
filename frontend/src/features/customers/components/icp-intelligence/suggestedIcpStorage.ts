@@ -1,6 +1,6 @@
 import type { PendingRecommendedRejectItem, DismissedRecommendedStore } from "../../types";
 
-const PROFILER_PENDING_RECOMMENDED_REJECT_KEY = "profiler_pendingRecommendedRejects";
+export const PROFILER_PENDING_RECOMMENDED_REJECT_KEY = "profiler_pendingRecommendedRejects";
 export const PROFILER_DISMISSED_RECOMMENDED_IDS_KEY = "profiler_dismissedRecommendedIcpIds";
 
 /**

@@ -332,7 +332,7 @@ const getCachedData = (userId: string | null | undefined): MarketIntelligenceDat
 // listener can read the live tab without owning routing state (Spec 24 §9 delta 8).
 export function useMarketResearchData(activeTabRef: React.MutableRefObject<string>) {
   const { currentUser, orgId } = useAuth();
-  const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
+  const orgIdToUse = orgId ?? "";
   const previousUserIdRef = useRef<string | null | undefined>(currentUser?.uid);
   const queryClient = useQueryClient();
 

@@ -52,7 +52,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   companyProfile,
 }) => {
   const { currentUser, orgId } = useAuth();
-  const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
+  const orgIdToUse = orgId ?? "";
   // Section-data sourced via the dedicated hook (react-query, memory-only cache)
   const { regulatoryData, refresh } = useRegulatoryCompliance(currentUser?.uid ?? "", orgIdToUse);
 

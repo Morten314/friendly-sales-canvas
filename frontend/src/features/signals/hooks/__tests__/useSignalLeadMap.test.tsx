@@ -39,7 +39,9 @@ const RESPONSE = {
 
 describe("useSignalLeadMap", () => {
   it("inverts the mapping for both directions", async () => {
-    server.use(http.post(`${BACKEND_BASE_URL}/signal-lead-map_claude`, () => HttpResponse.json(RESPONSE)));
+    server.use(
+      http.post(`${BACKEND_BASE_URL}/signal-lead-map_claude`, () => HttpResponse.json(RESPONSE)),
+    );
     const { result } = renderHook(() => useSignalLeadMap("org1"), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false), { timeout: 5000 });
     expect(result.current.leadsForSignal("s1")).toHaveLength(1);

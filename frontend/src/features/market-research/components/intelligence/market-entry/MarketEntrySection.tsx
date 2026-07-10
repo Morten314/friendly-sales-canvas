@@ -80,7 +80,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   onGenerateShareableLink,
 }) => {
   const { currentUser, orgId } = useAuth();
-  const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
+  const orgIdToUse = orgId ?? "";
   const { toast } = useToast();
 
   // Section SERVER data now comes exclusively from the useMarketEntry hook

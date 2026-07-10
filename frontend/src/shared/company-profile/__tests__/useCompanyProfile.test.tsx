@@ -29,11 +29,24 @@ describe("useCompanyProfile", () => {
     expect(result.current.data?.industry).toBe("saas");
   });
 
-  it("resolves to null (not error) on a non-2xx — preserves empty-form path", async () => {
+  it("resolves to null on a 404 (genuine no-profile → empty form)", async () => {
     server.use(http.get("/api/profile/company", () => new HttpResponse(null, { status: 404 })));
     const { result } = renderHook(() => useCompanyProfile("brewra"), { wrapper: wrapper() });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toBeNull();
+  });
+
+  it("surfaces a 5xx as error (does NOT blank the form)", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    server.use(http.get("/api/profile/company", () => new HttpResponse(null, { status: 500 })));
+    const { result } = renderHook(() => useCompanyProfile("brewra"), { wrapper: wrapper() });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.data).toBeUndefined();
+  });
+
+  it("defers (does not fetch) when orgId is empty", async () => {
+    const { result } = renderHook(() => useCompanyProfile(""), { wrapper: wrapper() });
+    expect(result.current.fetchStatus).toBe("idle");
   });
 
   it("surfaces a ZodError on a 200 with a drifted shape", async () => {

@@ -72,7 +72,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   companyProfile,
 }) => {
   const { currentUser, orgId } = useAuth();
-  const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
+  const orgIdToUse = orgId ?? "";
   const { toast } = useToast();
   // Track previous user to detect user switches
   const previousUserRef = useRef<string | null | undefined>(currentUser?.uid);

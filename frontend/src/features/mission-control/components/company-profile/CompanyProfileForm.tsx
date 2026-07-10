@@ -49,7 +49,7 @@ interface CompanyProfileFormProps {
 export default function CompanyProfileForm({ onSavedChange }: CompanyProfileFormProps) {
   const { toast } = useToast();
   const { currentUser, orgId } = useAuthToken();
-  const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
+  const orgIdToUse = orgId ?? "";
   const queryClient = useQueryClient();
 
   const [isSaving, setIsSaving] = useState(false);
@@ -76,10 +76,16 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
 
   // Read path — shares ONE TanStack cache entry with the page's own
   // useCompanyProfile(orgIdToUse) call (a single GET /api/profile/company). The
-  // hook resolves to null on any non-ZodError failure (404/5xx/CORS), which we
-  // treat as "no profile yet" and fall back to localStorage — matching the old
-  // bare-fetch + retry behavior.
-  const { data: companyData } = useCompanyProfile(orgIdToUse, !!currentUser?.uid);
+  // hook resolves to null ONLY on a genuine 404/empty (no profile yet), which we
+  // treat as such and fall back to localStorage — matching the old bare-fetch +
+  // retry behavior. A 5xx/network/CORS failure surfaces as `isError` instead
+  // (spec 48 Task 12) and is handled by the error/retry branch below — it must
+  // NOT run the localStorage failover (spec 48 WS4 follow-up).
+  const {
+    data: companyData,
+    isError: isCompanyProfileError,
+    refetch: refetchCompanyProfile,
+  } = useCompanyProfile(orgIdToUse, !!currentUser?.uid);
 
   // Helper: load profile from localStorage — the form's failover. Returns the raw
   // payload when successful. Seeds form fields and reports saved-state. Wrapped in
@@ -92,39 +98,35 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
         const localData = getUserLocalStorage("companyProfile", userId);
         if (localData) {
           const localProfile = JSON.parse(localData) as Record<string, unknown>;
-          if (localProfile.user_id === userId) {
-            const profileData = {
-              companyName: (localProfile.company_name || localProfile.companyName || "") as string,
-              headquarters: (localProfile.headquarters || "") as string,
-              employeeSize: (localProfile.employee_size ||
-                localProfile.employeeSize ||
-                "") as string,
-              industry: (localProfile.industry || "") as string,
-              revenue: (localProfile.revenue_band || localProfile.revenue || "") as string,
-              gtmModel: (localProfile.gtm_model || localProfile.gtmModel || "") as string,
-              regionFocus: (localProfile.region_focus || localProfile.regionFocus || "") as string,
-              dealSize: (localProfile.typical_deal_size || localProfile.dealSize || "") as string,
-              companyUrl: (localProfile.company_url || localProfile.companyUrl || "") as string,
-              keyBuyerPersona: (localProfile.key_buyer_persona ||
-                localProfile.keyBuyerPersona ||
-                "") as string,
-              goals: (localProfile.goals || "") as string,
-              painPoints: (localProfile.pain_points || localProfile.painPoints || "") as string,
-              targetSegments: (localProfile.target_segments ||
-                localProfile.targetSegments ||
-                "") as string,
-              excludeSegments: (localProfile.exclude_segments ||
-                localProfile.excludeSegments ||
-                "") as string,
-              compliance: (localProfile.compliance || "") as string,
-              constraints: (localProfile.constraints || "") as string,
-            };
-            setCompanyProfile(profileData);
-            if (localProfile.company_name || localProfile.companyName) {
-              onSavedChange?.(true);
-            }
-            return localProfile;
+          const profileData = {
+            companyName: (localProfile.company_name || localProfile.companyName || "") as string,
+            headquarters: (localProfile.headquarters || "") as string,
+            employeeSize: (localProfile.employee_size || localProfile.employeeSize || "") as string,
+            industry: (localProfile.industry || "") as string,
+            revenue: (localProfile.revenue_band || localProfile.revenue || "") as string,
+            gtmModel: (localProfile.gtm_model || localProfile.gtmModel || "") as string,
+            regionFocus: (localProfile.region_focus || localProfile.regionFocus || "") as string,
+            dealSize: (localProfile.typical_deal_size || localProfile.dealSize || "") as string,
+            companyUrl: (localProfile.company_url || localProfile.companyUrl || "") as string,
+            keyBuyerPersona: (localProfile.key_buyer_persona ||
+              localProfile.keyBuyerPersona ||
+              "") as string,
+            goals: (localProfile.goals || "") as string,
+            painPoints: (localProfile.pain_points || localProfile.painPoints || "") as string,
+            targetSegments: (localProfile.target_segments ||
+              localProfile.targetSegments ||
+              "") as string,
+            excludeSegments: (localProfile.exclude_segments ||
+              localProfile.excludeSegments ||
+              "") as string,
+            compliance: (localProfile.compliance || "") as string,
+            constraints: (localProfile.constraints || "") as string,
+          };
+          setCompanyProfile(profileData);
+          if (localProfile.company_name || localProfile.companyName) {
+            onSavedChange?.(true);
           }
+          return localProfile;
         }
       } catch (e) {
         console.error("MissionControl: Error loading from localStorage:", e);
@@ -177,9 +179,11 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
 
   // Read effect: when the shared query resolves, hydrate the form fields from the
   // backend payload. The `=== null` branch is deliberate: the hook resolves to null
-  // ONLY when it swallowed a non-2xx / network failure (404/5xx/CORS) → run the
-  // localStorage failover; while the query is still loading `companyData` is
-  // `undefined` (not null), so loading is intentionally excluded and we do nothing.
+  // ONLY on a genuine 404/empty (no profile yet) → run the localStorage failover.
+  // A 5xx/network/CORS failure now surfaces as `isError` instead (spec 48 Task 12)
+  // and is handled by the error/retry branch below, NOT here. While the query is
+  // still loading `companyData` is `undefined` (not null), so loading is
+  // intentionally excluded and we do nothing.
   useEffect(() => {
     if (!currentUser?.uid) return;
     const userId = currentUser.uid;
@@ -201,6 +205,19 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
       toast({
         title: "Authentication required",
         description: "Please log in to save your profile.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Defense-in-depth (spec 48 final review): this page is org-gated
+    // (requireOrg route gate), so orgIdToUse should never be empty here in
+    // practice — but guard the write anyway for symmetry with the Settings
+    // company-profile save, which has no such gate (spec 48 WS1d gap).
+    if (!orgIdToUse) {
+      toast({
+        title: "Error",
+        description: "Your workspace is still loading. Please try again in a moment.",
         variant: "destructive",
       });
       return;
@@ -363,6 +380,30 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
       setIsSaving(false);
     }
   };
+
+  // Persistent 5xx/network failure with no usable data (spec 48 WS4 follow-up):
+  // show a brief error/retry state instead of silently rendering the blank
+  // initial form state. Deliberately does NOT fall back to localStorage here —
+  // that would reintroduce the "empty save overwriting a real profile" risk
+  // Task 12 removed; error ⇒ show the error state, not stale cache, not a
+  // blank form. Gated on `!companyData` (not just isError) so a background
+  // refetch failure that still has last-known-good data keeps showing the
+  // populated form instead of blanking it.
+  if (isCompanyProfileError && !companyData) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Company Information</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+          <p role="alert" className="text-sm text-muted-foreground">
+            We couldn&apos;t load your company profile.
+          </p>
+          <Button onClick={() => refetchCompanyProfile()}>Try again</Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>

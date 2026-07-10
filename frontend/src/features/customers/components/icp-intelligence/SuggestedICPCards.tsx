@@ -50,7 +50,11 @@ import { ToastAction } from "@/components/ui/toast";
 import { useToast } from "@/components/ui/use-toast";
 import { buildApiUrl } from "@/shared/api/transport";
 import { useAuth } from "@/shared/auth";
-import { getOrgLocalStorage, setOrgLocalStorage } from "@/shared/lib/cacheUtils";
+import {
+  getOrgLocalStorage,
+  removeOrgLocalStorage,
+  setOrgLocalStorage,
+} from "@/shared/lib/cacheUtils";
 import {
   ensureMissionProfilerScope,
   isProfilerCacheValid,
@@ -107,21 +111,22 @@ async function loadProfilerPagePayload(options: {
   } = options;
 
   let icps: ExistingICP[] = [];
-  try {
-    if (uid) {
+  let readFailed = false;
+  if (uid) {
+    try {
       const rows = await fetchCustomerProfileIcps(uid, orgIdToUse);
       if (rows.length > 0) {
         icps = rows.map((icp: UntypedProfilerIcpRecord, i: number) =>
           mapCustomerProfileICPToExisting(icp, i),
         );
       }
+    } catch {
+      readFailed = true; // backend unavailable — distinct from empty-success
     }
-  } catch {
-    /* fall through to fallbacks */
   }
-  if (icps.length === 0) {
-    // Org-scoped resilience cache only (org-owned data — never uid/global, so no
-    // cross-org leak). Used as a fallback when the backend read is unavailable.
+  if (readFailed) {
+    // Resilience cache ONLY on a real read failure — a successful-but-empty read
+    // renders an empty Current-ICPs table (spec 48 WS2, empty-vs-error).
     try {
       const customerProfileData = getOrgLocalStorage("customerProfile", orgIdToUse);
       if (customerProfileData) {
@@ -298,7 +303,7 @@ export const SuggestedICPCards = ({
 
   // Registered for cache-key ownership + the canonical queryFn; fetching is still
   // driven by the imperative loader below until TD-FE-43 collapses it cache-native.
-  const profileQuery = useCustomerProfile(currentUser?.uid ?? "", orgId || "brewra", false);
+  const profileQuery = useCustomerProfile(currentUser?.uid ?? "", orgId ?? "", false);
   const suggestedQuery = useSuggestedIcps(currentUser?.uid ?? "", { enabled: false });
   void profileQuery;
   void suggestedQuery;
@@ -307,10 +312,10 @@ export const SuggestedICPCards = ({
   // invalidates a customers query on success; the optimism (timers, localStorage
   // markers, display-meta, the customerProfileSaved event, toasts) stays in the
   // container below, byte-for-behavior with the pre-hook inline writes.
-  const acceptIcpMutation = useAcceptSuggestedIcp(currentUser?.uid ?? "", orgId || "brewra");
-  const saveProfileMutation = useSaveCustomerProfile(orgId || "brewra");
+  const acceptIcpMutation = useAcceptSuggestedIcp(currentUser?.uid ?? "", orgId ?? "");
+  const saveProfileMutation = useSaveCustomerProfile(orgId ?? "");
   const rejectIcpMutation = useRejectSuggestedIcp(currentUser?.uid ?? "");
-  const deleteCurrentIcpMutation = useDeleteCurrentIcp(orgId || "brewra");
+  const deleteCurrentIcpMutation = useDeleteCurrentIcp(orgId ?? "");
 
   /** Always filled from GET /profile/company (or legacy); avoid hydrating stale localStorage before fetch. */
   const [existingICPs, setExistingICPs] = useState<ExistingICP[]>([]);
@@ -345,13 +350,18 @@ export const SuggestedICPCards = ({
 
   /** Reload Current ICPs from GET /profile/company (same source as Mission Control / Swagger). */
   const refetchCustomerProfileIcps = useCallback(async (): Promise<string[]> => {
-    const orgIdToUse = orgId || "brewra";
+    const orgIdToUse = orgId ?? "";
     const uid = currentUser?.uid;
     if (!uid) return [];
     try {
       const rows = await fetchCustomerProfileIcps(uid, orgIdToUse);
       if (rows.length === 0) {
         setExistingICPs([]);
+        try {
+          removeOrgLocalStorage("customerProfile", orgIdToUse);
+        } catch {
+          /* ignore */
+        }
         return [];
       }
       setExistingICPs(
@@ -379,7 +389,7 @@ export const SuggestedICPCards = ({
 
   const handleDeleteCurrentIcp = useCallback(
     async (icp: ExistingICP) => {
-      const orgIdToUse = orgId || "brewra";
+      const orgIdToUse = orgId ?? "";
       const uid = currentUser?.uid;
       const icpId = icp.id;
       console.log("[Profiler Current ICPs] DELETE customer_profile/icp: request", {
@@ -440,7 +450,7 @@ export const SuggestedICPCards = ({
   }, [showRecommendations]);
 
   useEffect(() => {
-    const orgIdToUse = orgId || "brewra";
+    const orgIdToUse = orgId ?? "";
     const uid = currentUser?.uid;
     if (!uid) {
       setLoading(false);
@@ -463,11 +473,14 @@ export const SuggestedICPCards = ({
           const snapRefined = (snap?.refinedICPs as SuggestedICP[]) ?? [];
           // Skip snapshot short-circuit when recommendations are empty so API/mock can repopulate.
           if (snap && (snapNew.length > 0 || snapRefined.length > 0)) {
-            setExistingICPs(snap.existingICPs as ExistingICP[]);
+            setExistingICPs(snap.existingICPs as ExistingICP[]); // provisional (fast paint)
             setRefinedICPs(snapRefined);
             setNewICPs(snapNew);
             setCardStatuses(snap.cardStatuses as Record<string, ICPCardStatus>);
             setLoading(false);
+            // Current ICPs must reflect the authoritative read (deleted-elsewhere
+            // must disappear); recommendations still come from the fast snapshot.
+            void refetchCustomerProfileIcps(); // empty-success ⇒ [], read-failure ⇒ keep (spec 48 WS2)
             return;
           }
         }
@@ -522,7 +535,7 @@ export const SuggestedICPCards = ({
     if (!confirmAcceptICP || isSavingAccept) return;
     const icp = confirmAcceptICP;
     const uid = currentUser?.uid;
-    const orgIdToUse = orgId || "brewra";
+    const orgIdToUse = orgId ?? "";
     if (!uid) {
       toast({
         title: "Cannot save ICP",
@@ -687,7 +700,6 @@ export const SuggestedICPCards = ({
 
   const finalizeRecommendedReject = useCallback(
     async (icpId: string, userId: string) => {
-      removePendingRecommendedReject(icpId);
       const existingTimer = rejectTimersRef.current.get(icpId);
       if (existingTimer) {
         clearTimeout(existingTimer);
@@ -697,12 +709,13 @@ export const SuggestedICPCards = ({
         refinedICPs.find((i) => i.id === icpId) ?? newICPs.find((i) => i.id === icpId);
 
       const applyDeleteSuccess = () => {
+        removePendingRecommendedReject(icpId);
         removeFromProfilerRecommendedCached(userId, icpId);
         recordDismissedRecommendedIcp(userId, icpId);
         // The profiler session snapshot still holds the now-dismissed card;
         // invalidate so navigate-back re-fetches (and the dismissed filter runs)
         // instead of the short-circuit restoring it un-dismissed.
-        invalidateProfilerCache(userId, orgId || "brewra");
+        invalidateProfilerCache(userId, orgId ?? "");
         setRefinedICPs((prev) => prev.filter((x) => x.id !== icpId));
         setNewICPs((prev) => prev.filter((x) => x.id !== icpId));
         setCardStatuses((prev) => {
@@ -726,15 +739,14 @@ export const SuggestedICPCards = ({
           applyDeleteSuccess();
           return;
         }
+        // Keep the pending-reject record and the rejected card state: the DELETE
+        // will be retried on the next mount rather than silently reverting and
+        // losing the dismissal (spec 48 WS3 FE).
         toast({
           title: "Could not remove recommendation",
           description: e instanceof Error ? e.message : "Please try again.",
           variant: "destructive",
         });
-        setCardStatuses((prev) => ({
-          ...prev,
-          [icpId]: { status: "suggested" },
-        }));
       }
     },
     [refinedICPs, newICPs, orgId, toast, onICPRejected, rejectIcpMutation],
@@ -752,7 +764,6 @@ export const SuggestedICPCards = ({
       if (rejectTimersRef.current.has(item.icp_id)) continue;
       const remaining = item.expiresAt - now;
       if (remaining <= 0) {
-        removePendingRecommendedReject(item.icp_id);
         void finalizeRecommendedRejectRef.current(item.icp_id, uid);
       } else {
         setCardStatuses((prev) => ({

@@ -89,12 +89,13 @@ export const ContextChat = ({
 
   // Fetch answer when we have prompt but no answer (e.g. navigated before answer loaded on Signals)
   useEffect(() => {
+    // `|| !orgId` below: never POST a placeholder tenant (spec 48 WS1b).
     if (!context.prompt?.trim() || context.answer || fetchedAnswer || !currentUser?.uid || !orgId)
       return;
     setIsFetchingAnswer(true);
     askMutation
       .mutateAsync({
-        org_id: orgId ?? "org-123",
+        org_id: orgId,
         user_id: currentUser.uid,
         question: context.prompt,
         history: [],
@@ -172,8 +173,29 @@ export const ContextChat = ({
         ? `${buildContextPrefix()}User question: ${userMessage}`
         : userMessage;
 
+      if (!orgId) {
+        // Never POST a placeholder tenant (spec 48 WS1b). The user message was
+        // already appended above, so answer it rather than leaving the turn
+        // stuck — same destructive-toast convention as the accept/reject error
+        // paths below, plus an assistant message like the catch block's.
+        toast({
+          title: "Error",
+          description: "Your workspace is still loading. Please try again in a moment.",
+          variant: "destructive",
+        });
+        const orgPendingMessages = [
+          ...newMessages,
+          {
+            role: "assistant" as const,
+            content: "Your workspace is still loading. Please try again in a moment.",
+          },
+        ];
+        setMessages(orgPendingMessages);
+        onMessagesChange?.(orgPendingMessages);
+        return;
+      }
       const res = await askMutation.mutateAsync({
-        org_id: orgId ?? "org-123",
+        org_id: orgId,
         user_id: currentUser.uid,
         question,
         history: historyForApi,

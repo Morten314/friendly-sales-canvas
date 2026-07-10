@@ -43,6 +43,7 @@ export function LeadStreamPanel({ orgId: orgIdProp }: LeadStreamPanelProps) {
   // an explicit orgId prop (call-site override) still takes precedence.
   const hookOrgId = useOrgId();
   const orgId = orgIdProp ?? hookOrgId;
+  const orgUnresolved = !orgId;
   const leadsQuery = useLeads(orgId);
   const { signalsForLead } = useSignalLeadMap(orgId);
   const [sourceFilter, setSourceFilter] = useState<LeadSourceFilter>("all");
@@ -59,7 +60,29 @@ export function LeadStreamPanel({ orgId: orgIdProp }: LeadStreamPanelProps) {
     [leads, sourceFilter],
   );
 
-  if (!leadsQuery.isLoading && leads.length === 0) {
+  // While the org id is still resolving, or the leads query's initial fetch
+  // is in flight, show a spinner — never the empty card. A deferred query
+  // (useLeads is `enabled: !!orgId`) reports isLoading:false with
+  // data:undefined while disabled; without this guard that read as a
+  // genuine zero-result and flashed the empty card during org resolution.
+  //
+  // isFetching is deliberately excluded: it is true during pagination
+  // (fetchNextPage) and background refetches, when leads are already present —
+  // blanking the populated table then would defeat the Load-more button's own
+  // "Loading…" state. orgUnresolved covers the org-deferred (disabled-query) case
+  // and isLoading covers the initial fetch; both are the true "never had data yet"
+  // states where a full-panel spinner is correct.
+  if (orgUnresolved || leadsQuery.isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-16">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (leads.length === 0) {
     return (
       <Card className="border-dashed border-2 border-muted">
         <CardContent className="flex flex-col items-center justify-center py-16 text-center">
