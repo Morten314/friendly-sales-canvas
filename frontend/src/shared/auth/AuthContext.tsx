@@ -36,7 +36,6 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  fetchOrgId: (userId: string) => Promise<{ orgId: string | null; orgName: string | null }>;
   loading: boolean;
 }
 
@@ -183,13 +182,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     [],
   );
 
-  // Alias retained for existing external references to the `fetchOrgId` name
-  // (test mocks under frontend/src) — not the primary resolution path. Org
-  // resolution is driven entirely by the onAuthStateChanged effect below;
-  // useLogin does NOT await this (spec 48 Task 2 removed that call — the
-  // requireOrg route gate is the single waiter on orgResolved/orgId).
-  const fetchOrgId = resolveOrg;
-
   const retryOrgResolution = useCallback(() => {
     const user = auth.currentUser;
     if (user?.uid) {
@@ -227,7 +219,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     signup,
     logout,
-    fetchOrgId,
     loading,
   };
 
