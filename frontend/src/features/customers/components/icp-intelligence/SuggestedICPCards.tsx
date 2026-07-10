@@ -50,7 +50,11 @@ import { ToastAction } from "@/components/ui/toast";
 import { useToast } from "@/components/ui/use-toast";
 import { buildApiUrl } from "@/shared/api/transport";
 import { useAuth } from "@/shared/auth";
-import { getOrgLocalStorage, setOrgLocalStorage } from "@/shared/lib/cacheUtils";
+import {
+  getOrgLocalStorage,
+  removeOrgLocalStorage,
+  setOrgLocalStorage,
+} from "@/shared/lib/cacheUtils";
 import {
   ensureMissionProfilerScope,
   isProfilerCacheValid,
@@ -107,21 +111,22 @@ async function loadProfilerPagePayload(options: {
   } = options;
 
   let icps: ExistingICP[] = [];
-  try {
-    if (uid) {
+  let readFailed = false;
+  if (uid) {
+    try {
       const rows = await fetchCustomerProfileIcps(uid, orgIdToUse);
       if (rows.length > 0) {
         icps = rows.map((icp: UntypedProfilerIcpRecord, i: number) =>
           mapCustomerProfileICPToExisting(icp, i),
         );
       }
+    } catch {
+      readFailed = true; // backend unavailable — distinct from empty-success
     }
-  } catch {
-    /* fall through to fallbacks */
   }
-  if (icps.length === 0) {
-    // Org-scoped resilience cache only (org-owned data — never uid/global, so no
-    // cross-org leak). Used as a fallback when the backend read is unavailable.
+  if (readFailed) {
+    // Resilience cache ONLY on a real read failure — a successful-but-empty read
+    // renders an empty Current-ICPs table (spec 48 WS2, empty-vs-error).
     try {
       const customerProfileData = getOrgLocalStorage("customerProfile", orgIdToUse);
       if (customerProfileData) {
@@ -352,6 +357,11 @@ export const SuggestedICPCards = ({
       const rows = await fetchCustomerProfileIcps(uid, orgIdToUse);
       if (rows.length === 0) {
         setExistingICPs([]);
+        try {
+          removeOrgLocalStorage("customerProfile", orgIdToUse);
+        } catch {
+          /* ignore */
+        }
         return [];
       }
       setExistingICPs(
@@ -463,11 +473,14 @@ export const SuggestedICPCards = ({
           const snapRefined = (snap?.refinedICPs as SuggestedICP[]) ?? [];
           // Skip snapshot short-circuit when recommendations are empty so API/mock can repopulate.
           if (snap && (snapNew.length > 0 || snapRefined.length > 0)) {
-            setExistingICPs(snap.existingICPs as ExistingICP[]);
+            setExistingICPs(snap.existingICPs as ExistingICP[]); // provisional (fast paint)
             setRefinedICPs(snapRefined);
             setNewICPs(snapNew);
             setCardStatuses(snap.cardStatuses as Record<string, ICPCardStatus>);
             setLoading(false);
+            // Current ICPs must reflect the authoritative read (deleted-elsewhere
+            // must disappear); recommendations still come from the fast snapshot.
+            void refetchCustomerProfileIcps(); // empty-success ⇒ [], read-failure ⇒ keep (spec 48 WS2)
             return;
           }
         }
