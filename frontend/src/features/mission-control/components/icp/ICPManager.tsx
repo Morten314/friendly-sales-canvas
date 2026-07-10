@@ -23,6 +23,17 @@ import {
 } from "@/shared/profiler";
 import type { UntypedProfilerIcpRecord } from "@/shared/types/escape-hatches";
 
+/** Clear the org-scoped customer-profile resilience caches. Exported for the
+ *  zero-ICP save path (spec 48 WS2) and unit tests. */
+export function clearCustomerProfileCaches(orgIdToUse: string): void {
+  try {
+    removeOrgLocalStorage("customerProfile", orgIdToUse);
+    removeOrgLocalStorage("customerProfile_pending", orgIdToUse);
+  } catch {
+    /* ignore */
+  }
+}
+
 /** Map the local ICP view-model into the shared POST payload builder input. */
 function icpsToApiRows(icps: ICP[]) {
   return icps.map((icp) => ({
@@ -81,6 +92,10 @@ const ICPManager: React.FC = () => {
     }
 
     if (icpsToSave.length === 0) {
+      // Deleting the last ICP must purge the org resilience caches so a later
+      // empty-success read isn't overridden by a stale customerProfile snapshot
+      // (spec 48 WS2 — pairs with SuggestedICPCards' empty-vs-error).
+      clearCustomerProfileCaches(orgIdToUse);
       return true;
     }
 
