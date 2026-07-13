@@ -1305,3 +1305,29 @@ Confirm the dominant driver with data (the `gc`-vs-RSS / `tracemalloc` probe, or
 - OOM restarts persist after the `ConversationBufferMemory` removal deploys; OR real users hit crashes / post-restart 500s; OR memory-driven latency (GC pressure) becomes observable.
 
 **Owner:** TBD.
+
+---
+
+## TD-018 — `GET /connectors/apollo/lists` 500s: `list_collections` mis-parses Apollo's `/labels` response (bare array, `_id` key)
+
+**Date logged:** 2026-07-13
+**Origin:** Surfaced while investigating an "Apollo integration not working" report for sunny@brewra.com (2026-07-13). A live probe of `GET /connectors/apollo/lists?org_id=…` against prod returned a deterministic plain-text `500 Internal Server Error` in ~0.6s.
+
+**Current state:**
+`ApolloConnector.list_collections()` (`backend/app/services/connectors/apollo.py:124`) assumes Apollo's `GET /api/v1/labels` returns an object — `body.get("labels") or body.get("data") or []` (line 130). But `/labels` actually returns a **bare JSON array** of label objects (confirmed against Apollo's REST reference). `_request` returns `resp.json() or {}`, so a non-empty array passes straight through and `body.get(...)` raises `AttributeError: 'list' object has no attribute 'get'`. That is not a `BrewraError`, so no exception handler maps it — it escapes as Starlette's default plain-text 500 (a genuine Apollo 4xx would instead map to a JSON 400/500 via the typed connector exceptions). Reproduced against the real code: dict shapes and an **empty** array `[]` (falsy → `{}`) both work; any account with **≥1 list** 500s. Second, masked bug: even with the shape fixed, the loop reads `lab.get("id")` / `lab["id"]` (lines 132–133) but Apollo labels are keyed `_id`, so every label would be filtered out → empty result.
+
+**What it should be:**
+`list_collections` should treat the `/labels` body as a list (accept a bare array, and defensively still tolerate a `{"labels"|"data": [...]}` wrapper), and read the id from `_id` (falling back to `id`). Add a unit test whose `/labels` fixture is a bare array of `_id`-keyed objects — the current test (`backend/tests/unit/test_connectors_apollo.py`) mocks `{"labels": [{"id": ...}]}`, which is exactly why neither bug was caught.
+
+**Why we deferred:**
+- **Dormant** — the frontend never calls `/connectors/apollo/lists` (nor `/apollo/import`); the wired Apollo surface is discovery (`connect`/`warmup`/`discover`/`status`/`export`). No user path hits this today.
+- MVP, 0 live users.
+
+**What we lose by staying as-is:**
+- The contacts-import list picker is unusable the moment it IS wired to the FE — any real Apollo account (which has lists) 500s, and even a shape-only fix returns an empty list due to the `_id` mismatch.
+- The plain-text 500 gives the FE nothing to branch on (no JSON `detail`/`code`).
+
+**Pull-forward triggers:**
+- Any frontend work that surfaces Apollo contacts-import / the list picker; OR `POST /apollo/import` gains a caller (its background task resolves list names via the same `list_collections`).
+
+**Owner:** TBD.
