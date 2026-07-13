@@ -11,7 +11,7 @@ export const signalsRoutes = [
     key="signals"
     path="/signals"
     element={
-      <ProtectedRoute>
+      <ProtectedRoute requireOrg>
         <FeatureErrorBoundary featureName="Signals">
           <SignalsPage />
         </FeatureErrorBoundary>
@@ -22,7 +22,7 @@ export const signalsRoutes = [
     key="agent-hub"
     path="/agent-hub"
     element={
-      <ProtectedRoute>
+      <ProtectedRoute requireOrg>
         <FeatureErrorBoundary featureName="Signals">
           <SignalsPage />
         </FeatureErrorBoundary>
