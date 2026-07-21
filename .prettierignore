@@ -1,0 +1,18 @@
+dist
+dev-dist
+node_modules
+playwright-report
+test-results
+coverage
+e2e/**/*-snapshots/**
+package-lock.json
+
+# Prettier wraps multi-line expect(...) such that an above-line @ts-expect-error
+# directive no longer targets the type-error-bearing call. Skip until the test
+# is rewritten to be whitespace-insensitive.
+src/features/market-research/lib/__tests__/marketScoreDescriptions.test.ts
+
+# Intentionally malformed JSON fixture for the bundle-comparator's parse-error
+# path. Prettier cannot parse it; skip the file (the sibling valid fixtures
+# are still formatted).
+scripts/__fixtures__/baseline-malformed.json

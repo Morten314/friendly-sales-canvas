@@ -1,0 +1,10 @@
+{
+  "captured_at": "2026-05-26T20:40:40.521Z",
+  "build_command": "npm run build",
+  "total_size_bytes": 2092063,
+  "total_size_gzip_bytes": 525745,
+  "chunks": [
+    { "file": "assets/index-DoZK05uc.js", "size_bytes": 1966968, "gzip_bytes": 500483 },
+    { "file": "assets/index-CqIc-MII.css", "size_bytes": 102485, "gzip_bytes": 16866 }
+  ]
+}
