@@ -330,8 +330,12 @@ def init_registry(root: Path = _PROMPTS_ROOT) -> Registry:
     seen_names: dict[str, str] = {}  # name -> file relpath (for collision messages)
 
     for path in all_files:
-        relpath = str(path.relative_to(root))
-        is_partial = relpath.startswith("_shared/") or relpath.startswith("_shared" + "/")
+        rel = path.relative_to(root)
+        relpath = str(rel)
+        # Detect _shared/ partials via pathlib parts, not a "/"-prefixed string
+        # check: on Windows relpath uses "\", so startswith("_shared/") is always
+        # False there and partials get validated as full prompts → boot fails.
+        is_partial = len(rel.parts) > 0 and rel.parts[0] == "_shared"
 
         try:
             fm, body = _parse_file(path)

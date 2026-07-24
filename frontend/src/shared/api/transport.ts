@@ -1,21 +1,18 @@
-// API utility for handling base URL and proxy configuration
+// API utility for handling base URL and proxy configuration. Both values are
+// env-driven (spec 42) — no literal URLs — so the same build runs against
+// production or staging purely by its Vite build-time env vars.
 
-// Single source of truth for the deployed backend host. Still consumed by the
-// handful of components that make raw direct-backend calls (streaming `/chat/`,
-// `/ask`, `/profile/company`) — those bypasses are tracked separately as debt.
-export const BACKEND_BASE_URL = "https://brewra-gtm-intelligence.onrender.com";
+// Single source of truth for the deployed backend host. Consumed by the handful
+// of components that make raw direct-backend calls (streaming `/chat/`, `/ask`,
+// `/profile/company`).
+export const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL;
 
-// Every environment routes the client stack through `/api`:
-//   - dev / `vite preview` / localhost e2e → the Vite dev proxy (and Playwright's
-//     `**/api/*` route handlers) serve `/api/*`.
-//   - Vercel production → the `vercel.json` rewrite proxies `/api/*` → Render.
-// Production formerly called Render directly to dodge Vercel's ~120s edge gateway
-// timeout, because the Claude signal batch ran ~120s sequentially. The batch now
-// runs its calls concurrently (~40–45s, well under the ceiling), so the
-// direct-to-Render workaround is retired in favor of `/api` — dev/prod parity and
-// no reliance on the CORS wildcard for the main client path. (Cold-start margin
-// note: see docs/TECH_DEBT.md.)
-const API_BASE_URL = "/api";
+// Base for the client API stack:
+//   - local dev: set to `/api` → the Vite dev proxy forwards to the backend.
+//   - deployed (Vercel): set to the full backend URL → the client calls Render
+//     directly (spec 42 D3 dropped the `vercel.json` /api rewrite), relying on
+//     the backend's env-driven CORS allow-list.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Helper function to build API URLs
 export const buildApiUrl = (endpoint: string, opts: { direct?: boolean } = {}): string => {

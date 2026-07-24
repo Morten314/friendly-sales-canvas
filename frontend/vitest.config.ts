@@ -13,6 +13,15 @@ export default defineConfig({
     globals: false,
     setupFiles: ["./src/test/setup.ts"],
     css: false,
+    // Spec 42: the API base is now env-driven (import.meta.env.VITE_*). Tests run
+    // with no .env loaded, so supply the local-dev values here — this restores
+    // the prior `/api` base that the MSW handlers (src/test/msw/handlers.ts)
+    // register against. Vitest exposes these on import.meta.env. Production code
+    // has NO fallback by design (a missing var must fail the build).
+    env: {
+      VITE_API_BASE_URL: "/api",
+      VITE_BACKEND_BASE_URL: "http://localhost:8000",
+    },
     // Bound worker concurrency. Vitest otherwise spawns ~1 worker per core (22+
     // on CI/sandbox hardware); that oversubscribes the box — especially when a
     // second preflight runs in a parallel worktree — and the jsdom `waitFor`

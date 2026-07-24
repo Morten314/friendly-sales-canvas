@@ -26,7 +26,7 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from app.core.config import pinecone_api_key, s3_bucket, together_api_key
+from app.core.config import pinecone_api_key, pinecone_index, s3_bucket, together_api_key
 from app.core.exceptions import BrewraError
 from app.core.logging import logger
 from app.services.data_sources.persistence import _get_file_collection
@@ -145,7 +145,7 @@ async def process_file_to_embeddings(mongo, s3, pinecone, file_key: str, user_id
         )
 
         # Create or get Pinecone index
-        index_name = "brewra-documents"
+        index_name = pinecone_index
         try:
             pinecone.create_index(
                 name=index_name,

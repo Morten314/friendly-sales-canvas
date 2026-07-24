@@ -16,15 +16,15 @@ TEST_USER_ID = "test_user_delete_123"
 TEST_ORG_ID = "brewra"  # Change this to match your org_id
 TEST_FILE = "test_delete_document.txt"
 
-# S3 Configuration
-S3_BUCKET = "brewra-data-sources"
-AWS_REGION = "eu-north-1"
-AWS_ACCESS_KEY = "AKIAWSX4DVX7DHHENUWS"
-AWS_SECRET_KEY = "SKr+ZQ0CeyHLpFgXorlGPK7LioxEzqeziINnyAmJ"
+# S3 Configuration (read from env — never hardcode credentials)
+S3_BUCKET = os.getenv("S3_BUCKET")
+AWS_REGION = os.getenv("AWS_REGION")
+AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY")
+AWS_SECRET_KEY = os.getenv("AWS_SECRET_KEY")
 
-# Pinecone Configuration
-PINECONE_API_KEY = "pcsk_3Hv4td_HrXCeQPwZYJZT1Zf6nwtLjAC64E8WcJA1fQ6w18dGUnxsPLpoUrovVb7JCP862w"
-PINECONE_INDEX = "brewra-documents"
+# Pinecone Configuration (read from env — never hardcode credentials)
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+PINECONE_INDEX = os.getenv("PINECONE_INDEX", "brewra-documents")
 
 # Initialize S3 client
 s3_client = boto3.client(

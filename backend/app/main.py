@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.clients import build_clients
+from app.core.config import origins
 from app.core.exceptions import (
     ApolloConnectorHTTPError,
     AuthenticationError,
@@ -70,12 +71,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# TODO: tighten — `allow_origins=["*"]` with `allow_credentials=True` is
-# the legacy default; the security backlog (spec §2.2) calls for restricting
-# this to known frontend origins.
+# CORS allow-list is env-driven (CORS_ALLOWED_ORIGINS, parsed in config.origins)
+# so each environment permits only its own frontend origin(s). Required by the
+# direct-to-backend frontend (spec 42 D3): the deployed client calls Render
+# directly, so the browser enforces this list.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

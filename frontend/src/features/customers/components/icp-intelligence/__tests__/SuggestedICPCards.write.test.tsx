@@ -39,9 +39,25 @@ describe("SuggestedICPCards writes", () => {
   it("accept routes through the hooks, transitions the card to accepted, and toasts", async () => {
     server.use(
       http.get("/api/profile/company", () => HttpResponse.json({})),
-      // Current ICPs read — empty before AND after accept (keeps the optimistic
-      // path deterministic; the accepted card transition is what we assert).
-      http.get("/api/customer_profile", () => HttpResponse.json({ icps: [] })),
+      // Current ICPs read — empty before accept; populated after accept.
+      http.get("/api/customer_profile", () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            icps: [
+              {
+                id: "persisted-profile-icp-1",
+                primary_region: "US",
+                industry: ["Financial Services"],
+                company_size: ["500-2000 employees"],
+                buyer_role: ["Chief Digital Officer"],
+                fit_confidence: "medium",
+                status: "saved",
+              },
+            ],
+          },
+        }),
+      ),
       http.get("/api/v2/icp", () =>
         HttpResponse.json({
           items: [{ id: "rec-1", title: "FinTech ICP", industry: "Financial Services" }],
@@ -52,7 +68,10 @@ describe("SuggestedICPCards writes", () => {
       ),
       // useAcceptSuggestedIcp.mutateAsync(icpId) — POST from_suggested_icp.
       http.post("/api/customer_profile/from_suggested_icp", () =>
-        HttpResponse.json({ success: true, data: { id: "rec-1" } }),
+        HttpResponse.json({
+          success: true,
+          data: { icp: { id: "persisted-profile-icp-1" } },
+        }),
       ),
       // useSaveCustomerProfile firmographics save (GET full profile + POST) is a
       // best-effort no-op here; the accept toast fires regardless of its result.

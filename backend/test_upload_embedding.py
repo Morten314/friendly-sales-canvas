@@ -14,14 +14,14 @@ BASE_URL = "https://backend-11kr.onrender.com"  # Render backend URL
 TEST_USER_ID = "test_user_123"
 TEST_FILE = "test_document.txt"
 
-# S3 Configuration
-S3_BUCKET = "brewra-data-sources"
-AWS_REGION = "eu-north-1"
-AWS_ACCESS_KEY = "AKIAWSX4DVX7DHHENUWS"
-AWS_SECRET_KEY = "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"
+# S3 Configuration (read from env — never hardcode credentials)
+S3_BUCKET = os.getenv("S3_BUCKET")
+AWS_REGION = os.getenv("AWS_REGION")
+AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY")
+AWS_SECRET_KEY = os.getenv("AWS_SECRET_KEY")
 
-# Pinecone Configuration
-PINECONE_API_KEY = "pcsk_3Hv4td_HrXCeQPwZYJZT1Zf6nwtLjAC64E8WcJA1fQ6w18dGUnxsPLpoUrovVb7JCP862w"
+# Pinecone Configuration (read from env — never hardcode credentials)
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 
 # Initialize S3 client
 s3_client = boto3.client(
@@ -168,7 +168,7 @@ def test_embeddings_in_pinecone(file_key):
         return False
     
     try:
-        index_name = "brewra-documents"
+        index_name = os.getenv("PINECONE_INDEX", "brewra-documents")
         
         # Check if index exists
         print(f"🔍 Checking Pinecone index: {index_name}")

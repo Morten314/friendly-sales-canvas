@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Optional
 
 from langchain_openai import OpenAIEmbeddings
 
-from app.core.config import pinecone_api_key, together_api_key
+from app.core.config import pinecone_api_key, pinecone_index, together_api_key
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ def _fetch_pinecone_supporting_context(
         return []
 
     try:
-        index = pc.Index("brewra-documents")
+        index = pc.Index(pinecone_index)
         embeddings = OpenAIEmbeddings(
             openai_api_key=together_api_key,
             openai_api_base="https://api.together.xyz/v1",

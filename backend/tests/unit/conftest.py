@@ -24,10 +24,22 @@ for _p in (_BACKEND_DIR, _MONOREPO_ROOT):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-# Set dummy env vars and skip DB init before any app.* import.
+# Set dummy values for every env var config.py now _require()s, plus skip DB
+# init, before any app.* import. config.py fails hard on a missing required var.
+os.environ.setdefault("NEO4J_URI", "neo4j+s://test.invalid")
+os.environ.setdefault("NEO4J_USERNAME", "neo4j")
+os.environ.setdefault("NEO4J_PASSWORD", "test-neo4j-pass")
+os.environ.setdefault("MONGO_URI", "mongodb://localhost:27017/test")
 os.environ.setdefault("PINECONE_API_KEY", "test-pinecone-key")
+os.environ.setdefault("PINECONE_INDEX", "test-index")
+os.environ.setdefault("TOGETHER_API_KEY", "test-together-key")
+os.environ.setdefault("TAVILY_API_KEY", "test-tavily-key")
+os.environ.setdefault("RAPIDAPI_KEY", "test-rapidapi-key")
+os.environ.setdefault("S3_BUCKET", "test-bucket")
+os.environ.setdefault("AWS_REGION", "us-east-1")
 os.environ.setdefault("AWS_ACCESS_KEY", "test-aws-key")
 os.environ.setdefault("AWS_SECRET_KEY", "test-aws-secret")
+os.environ.setdefault("CORS_ALLOWED_ORIGINS", "http://localhost:3000,https://test.example")
 os.environ.setdefault("BREWRA_SKIP_DB_INIT", "1")
 
 

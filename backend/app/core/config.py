@@ -1,45 +1,62 @@
 import os
+from pathlib import Path
+
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from backend/.env via an explicit path. Bare
+# load_dotenv() resolves against the current working directory, which varies by
+# launcher; an explicit path is deterministic. config.py lives at
+# backend/app/core/config.py, so parents[2] is the backend/ directory.
+# (.env is gitignored — never committed. The legacy backend/backend.env is retired.)
+_BACKEND_DIR = Path(__file__).resolve().parents[2]
+load_dotenv(_BACKEND_DIR / ".env")
 
-# Load API Keys and DB Credentials from environment variables
-neo4j_uri = os.getenv("NEO4J_URI") or "neo4j+s://29adf28f.databases.neo4j.io"
-neo4j_username = os.getenv("NEO4J_USERNAME") or "neo4j"
-neo4j_password = os.getenv("NEO4J_PASSWORD") or "ShhMJSuKlseOSfN936BK_8gXNelap65MnZVyPrBCGyU"
-together_api_key = os.getenv("TOGETHER_API_KEY") or "125f716e1162e3e22c14cfe83269a2c4ac25c8a90f8f3155fc7ec2da76b031b8"
+
+def _require(name: str) -> str:
+    """Return a required env var, or fail hard at import if it's missing/empty.
+
+    Eliminates the silent-fallback-to-production footgun (spec 42 §1.1): a
+    missing or misspelled var raises instead of quietly defaulting to a prod
+    literal, which would let a staging service read/write production data.
+    """
+    val = os.getenv(name)
+    if not val:
+        raise RuntimeError(f"Missing required environment variable: {name}")
+    return val
+
+
+# --- Neo4j ---
+neo4j_uri = _require("NEO4J_URI")
+neo4j_username = _require("NEO4J_USERNAME")
+neo4j_password = _require("NEO4J_PASSWORD")
+
+# --- MongoDB: full SRV connection string, pasted per environment ---
+mongo_uri = _require("MONGO_URI")
+
+# --- LLM / external APIs ---
+together_api_key = _require("TOGETHER_API_KEY")
+tavily_api_key = _require("TAVILY_API_KEY")
+rapidapi_key = _require("RAPIDAPI_KEY")
+
+# --- Pinecone ---
+pinecone_api_key = _require("PINECONE_API_KEY")
+pinecone_index = _require("PINECONE_INDEX")
+
+# --- AWS S3 ---
+s3_bucket = _require("S3_BUCKET")
+aws_region = _require("AWS_REGION")
+aws_access_key = _require("AWS_ACCESS_KEY")
+aws_secret_key = _require("AWS_SECRET_KEY")
+
+# --- CORS allow-list (comma-separated origins) ---
+origins = [o.strip() for o in _require("CORS_ALLOWED_ORIGINS").split(",") if o.strip()]
+
+# --- Tuning constants (spec 42 D4): identical across environments, carry no
+# secret/targeting risk, so they keep in-code defaults and stay overridable. ---
 claude_sonnet_model = os.getenv("CLAUDE_SONNET_MODEL") or "claude-sonnet-4-6"
 claude_signal_window_seconds = int(os.getenv("CLAUDE_SIGNAL_WINDOW_SECONDS") or "300")
 claude_signal_token_limit_5m = int(os.getenv("CLAUDE_SIGNAL_TOKEN_LIMIT_5M") or "1000000")
 claude_signal_max_output_tokens = int(os.getenv("CLAUDE_SIGNAL_MAX_OUTPUT_TOKENS") or "4000")
-
-mongo_username = os.getenv("MONGO_USERNAME") or "techbrewra"
-mongo_password = os.getenv("MONGO_PASSWORD") or "Brewra@Best09"
-
-# MongoDB connection string
-import urllib.parse
-username = urllib.parse.quote_plus(mongo_username)
-password = urllib.parse.quote_plus(mongo_password)
-mongo_uri = (
-    f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/"
-    "?retryWrites=true&w=majority&appName=brewra-db"
-)
-
-# Tavily API Key
-tavily_api_key = "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"
-
-# RapidAPI Key for LinkedIn
-rapidapi_key = "21e118e355mshbc19a8a36c9651ap150506jsn12f7ce6866aa"
-
-# AWS S3 Configuration
-s3_bucket = os.getenv("S3_BUCKET") or "brewra-data-sources"
-aws_region = os.getenv("AWS_REGION") or "eu-north-1"
-aws_access_key = os.getenv("AWS_ACCESS_KEY") or ""
-aws_secret_key = os.getenv("AWS_SECRET_KEY") or ""
-
-# Pinecone Configuration
-pinecone_api_key = os.getenv("PINECONE_API_KEY") or ""
 
 # Predefined questions for prospect scoring
 PREDEFINED_QUESTIONS = [
@@ -75,9 +92,3 @@ STAGE_MAPPING = {
     "Discovery Call": "Discovery",  # only if this exists in your Neo4j
     "Demo": "Demo call"
 }
-
-# CORS origins
-origins = [
-    "https://brewra-gtm-intelligence.vercel.app",  # Production PWA (Vercel)
-    "http://localhost:3000",  # Allow local dev testing
-]

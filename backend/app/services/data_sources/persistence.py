@@ -10,7 +10,7 @@ Functions (per spec §3.5 persistence.py row):
 import json
 from typing import Any, Dict, List, Tuple
 
-from app.core.config import s3_bucket
+from app.core.config import pinecone_index, s3_bucket
 from app.core.exceptions import DocumentNotFoundError, DocumentValidationError
 from app.core.logging import logger
 
@@ -183,7 +183,7 @@ async def delete_data_source(mongo, s3, pinecone, file_id: str) -> dict:
         # 2. Delete from Pinecone (only for file data sources that were embedded, not URLs)
         if not is_url_data_source and org_id and file_key:
             try:
-                index_name = "brewra-documents"
+                index_name = pinecone_index
                 index = pinecone.Index(index_name)
 
                 # Check if namespace exists first and log what we're searching for

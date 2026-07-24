@@ -1,5 +1,17 @@
 /// <reference types="vite/client" />
 
+interface ImportMetaEnv {
+  // Base for the client API stack: `/api` in local dev (Vite proxy), or the
+  // full backend URL in deployed environments. See src/shared/api/transport.ts.
+  readonly VITE_API_BASE_URL: string;
+  // Deployed backend host for raw direct-backend calls and the dev proxy target.
+  readonly VITE_BACKEND_BASE_URL: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
+
 declare module "virtual:pwa-register" {
   export interface RegisterSWOptions {
     immediate?: boolean;

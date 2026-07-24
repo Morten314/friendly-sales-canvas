@@ -55,6 +55,21 @@ export const confidenceColor = (c: string) => {
   return "bg-muted text-muted-foreground border-border";
 };
 
+/** Build a Current-ICPs row immediately after accept (before GET catches up). */
+export const mapAcceptedSuggestedToExisting = (
+  icp: SuggestedICP,
+  persistedId: string,
+): ExistingICP => ({
+  id: persistedId,
+  name: icp.name,
+  geography: icp.regions?.length ? icp.regions.join(", ") : undefined,
+  industry: icp.industry,
+  companySize: icp.companySize,
+  buyerRole: icp.decisionMakers?.length ? icp.decisionMakers.join(", ") : undefined,
+  fitConfidence: icp.confidenceScore || "Medium",
+  status: "active",
+});
+
 // Map customer profile ICP (Mission Control) to ExistingICP format
 export const mapCustomerProfileICPToExisting = (
   icp: UntypedProfilerIcpRecord,

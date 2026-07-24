@@ -15,7 +15,7 @@ import {
 } from "../services/marketResearch";
 
 import { useToast } from "@/components/ui/use-toast";
-import { buildApiUrl } from "@/shared/api/transport";
+import { BACKEND_BASE_URL, buildApiUrl } from "@/shared/api/transport";
 import { useAuth } from "@/shared/auth";
 import {
   getUserLocalStorage,
@@ -3811,9 +3811,7 @@ export function useMarketResearchData(activeTabRef: React.MutableRefObject<strin
 
       console.error("❌🏆 Competitor API failed - this might be a backend server issue");
 
-      console.error(
-        "❌🏆 Check if the backend server at https://brewra-gtm-intelligence.onrender.com is running",
-      );
+      console.error(`❌🏆 Check if the backend server at ${BACKEND_BASE_URL} is running`);
 
       // Keep existing data if available
 
