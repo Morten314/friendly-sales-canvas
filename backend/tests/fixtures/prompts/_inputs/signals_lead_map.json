@@ -1,5 +1,0 @@
-{
-  "signals_json": "[{\"signal_id\": \"S-1\", \"headline\": \"Acme Corp announces $50M Series C funding round\"}, {\"signal_id\": \"S-2\", \"headline\": \"New EU data-residency regulation takes effect in Q3\"}]",
-  "leads_json": "[{\"lead_id\": \"L-1\", \"company\": \"Acme Corp\", \"industry\": \"SaaS\", \"region\": \"NA\"}, {\"lead_id\": \"L-2\", \"company\": \"Globex GmbH\", \"industry\": \"Fintech\", \"region\": \"DACH\"}]",
-  "context_json": "{\"industry\": \"B2B SaaS\", \"icps\": [{\"name\": \"Mid-market SaaS\", \"region\": \"NA\"}]}"
-}

@@ -1,58 +1,29 @@
-# Node / JS / Vite
-node_modules/
-dist/
-dev-dist/
-.vite/
+# Logs
+logs
 *.log
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-.venv/
-venv/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
+node_modules
+dist
+dist-ssr
+*.local
 
-# Environment / secrets
-.env
-.env.local
-.env.*.local
-*.key
-*.pem
-.aws/
-.gcloud/
+# Tool caches — incremental tsc (typecheck) + eslint --cache. Warm re-runs only
+# re-check changed files; safe to delete, regenerated on next run.
+.tsbuildinfo
+.eslintcache
 
-# Editor / OS
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
 .DS_Store
-Thumbs.db
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Build / coverage / temp
-coverage/
-.coverage
-.turbo/
-.next/
-.cache/
-
-# Playwright runtime artifacts (failed-test screenshots, traces, .last-run.json).
-# Snapshot baselines live alongside spec files (e.g. e2e/journeys/*-snapshots/)
-# and ARE tracked — only test-results/ and report dirs are runtime output.
-test-results/
-playwright-report/
-playwright/.cache/
-
-# OS-specific
-*.tmp
-*.temp
-
-# Claude Code (agent tooling)
-# Per-user permissions, plugin enablement, and local agent state stay local;
-# shared config like .claude/skills/ should be committed.
-.claude/settings.json
-.claude/settings.local.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

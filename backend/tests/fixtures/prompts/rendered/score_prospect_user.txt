@@ -1,5 +1,0 @@
-
-Cypher Query:
-CREATE (p:Prospect {Name: 'Jane Doe', Company: 'Acme', `Is there a budget planned for the next four quarters?`: 'Yes, 500K'})
-
-Only give me the number , nothing else at all , not even punctuation marks:

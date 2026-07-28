@@ -1,9 +1,0 @@
-{
-  "executiveSummary": "Market analysis stub for regulatory_compliance (qwen). REGENERATE with capture_fixtures.py.",
-  "tamValue": "$8.4B",
-  "samValue": "$1.2B",
-  "somValue": "$240M",
-  "keyInsights": ["Stub insight 1", "Stub insight 2"],
-  "_stub": true,
-  "_stub_note": "Replace by running tests/capture_fixtures.py with real API keys."
-}

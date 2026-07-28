@@ -1,1 +1,0 @@
-{"files":[],"issues":[{"file":"e2e/fixtures/seed-data.ts","dependencies":[],"devDependencies":[],"optionalPeerDependencies":[],"unlisted":[],"binaries":[],"unresolved":[],"exports":[{"name":"lead","line":22,"col":14,"pos":350},{"name":"signal","line":49,"col":14,"pos":1143}],"types":[],"enumMembers":{},"duplicates":[],"catalog":[]}]}

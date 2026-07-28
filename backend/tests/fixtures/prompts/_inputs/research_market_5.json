@@ -1,4 +1,0 @@
-{
-  "company_profile_json": "{\n  \"company_name\": \"Sample Company\",\n  \"industry\": \"B2B SaaS\",\n  \"size\": \"11-50\",\n  \"region\": \"EMEA\",\n  \"products\": [\n    \"Product A\",\n    \"Product B\"\n  ]\n}",
-  "supporting_documents": "[\n  {\n    \"query\": \"sample query\",\n    \"id\": \"doc-1\",\n    \"score\": 0.91,\n    \"content\": \"Sample retrieved document chunk.\",\n    \"metadata\": {\n      \"source\": \"sample.pdf\"\n    }\n  }\n]"
-}

@@ -1,6 +1,0 @@
-Unused exports (2)
-lead    e2e/fixtures/seed-data.ts:22:14
-signal  e2e/fixtures/seed-data.ts:49:14
-Configuration hints (2)
-tailwindcss-animate    knip.ui-sweep.json  Remove from ignoreDependencies
-tsx                    knip.ui-sweep.json  Remove from ignoreDependencies

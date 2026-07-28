@@ -1,6 +1,0 @@
-{
-  "component_keys_json": "[\"market size & opportunity\", \"industry trends report\", \"competitor landscape\", \"regulatory & compliance highlights\", \"market entry & growth strategy\"]",
-  "company_profile_json": "{\"name\": \"Acme\", \"industry\": \"SaaS\"}",
-  "lead_json": "{\"lead_id\": \"L-1\", \"company_name\": \"TestCo\"}",
-  "market_reports_json": "{\"market size & opportunity\": {\"score\": 85}}"
-}

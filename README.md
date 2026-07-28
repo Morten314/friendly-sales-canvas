@@ -1,30 +1,20 @@
-# Brewra GTM Intelligence
+# Brewra Frontend (PWA)
 
-B2B GTM/sales-intelligence PWA. Frontend (React/Vite/TypeScript) + backend (FastAPI/Python) in one repo.
+React 18 + Vite + TypeScript + Tailwind + shadcn-ui PWA for the Brewra GTM intelligence product.
 
-## Layout
+See repo root `CLAUDE.md` and `AGENTS.md` for architecture, branch model, and gotchas.
 
-- `/frontend/` — React PWA (subtree imported from PWA-multi-tenancy)
-- `/backend/` — FastAPI service (subtree imported from backend repo)
-- `/specs/` — design specs (output of brainstorming)
-- `/plans/` — implementation plans (output of plan-writing)
-- `/docs/` — analyses and reference docs
-- `/scripts/` — automation (`sync.sh`, `safety_net/`)
-- `/CLAUDE.md`, `/AGENTS.md` — agent context
-- `/BRANCHES.md` — branch model
-
-## Branches
-
-Monorepo cutover is complete. `master` is the trunk; work happens on short-lived `phase-N-*`/feature branches merged back via `--no-ff`. Legacy branches (`develop`/`production`/`refactor`/`pwa-*`) are retained dormant for a few months for rollback/triage, then pruned. See `BRANCHES.md`.
-
-## Common commands
+## Local dev
 
 ```bash
-# frontend
-cd frontend && npm install && npm run dev
-
-# backend
-cd backend && pip install -r requirements.txt && python main.py
+npm install
+npm run dev          # vite dev server on :5175, proxies /api/* to production backend
 ```
 
-See `CLAUDE.md` for full agent guidance.
+## Tests and pre-merge gate
+
+```bash
+npm run preflight    # typecheck → build → test:e2e → test → knip --strict
+```
+
+The wrapper at `scripts/preflight.sh` runs the same chain with section headers and timing.
