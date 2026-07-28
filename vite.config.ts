@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => {
   return {
     server: {
       host: "::",
-      port: 5175, // Changed from 8080 to test if port/origin affects PWA behavior
+      port: 8080, // Lovable preview expects 8080
       warmup: {
         // Pre-transform the entry + the four heavy pages that drive e2e cold-start
         // contention (01 login, 02 csv-upload, 04 market-research, 05 icp-create).
@@ -23,10 +23,10 @@ export default defineConfig(({ mode }) => {
         clientFiles: [
           "./src/main.tsx",
           "./src/App.tsx",
-          "./src/contexts/AuthContext.tsx",
-          "./src/pages/Login.tsx",
-          "./src/pages/MissionControl.tsx",
-          "./src/pages/MarketResearch.tsx",
+          "./src/shared/auth/AuthContext.tsx",
+          "./src/features/auth/pages/LoginPage.tsx",
+          "./src/features/mission-control/pages/MissionControlPage.tsx",
+          "./src/features/market-research/pages/MarketResearchPage.tsx",
         ],
       },
       proxy: {
