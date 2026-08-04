@@ -8,7 +8,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const backendBaseUrl =
-    env.VITE_BACKEND_BASE_URL || "https://backend-11kr.onrender.com";
+    env.VITE_BACKEND_BASE_URL || "https://brewra-gtm-intelligence-1.onrender.com";
   const proxyTargetIsLocal = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i.test(
     backendBaseUrl,
   );

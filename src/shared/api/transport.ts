@@ -1,18 +1,20 @@
 // API utility for handling base URL and proxy configuration. Both values are
-// env-driven (spec 42) — no literal URLs — so the same build runs against
-// production or staging purely by its Vite build-time env vars.
+// env-driven (spec 42) — with safe defaults so Lovable/GitHub sync never yields
+// `undefined/...` URLs when .env is momentarily missing during workspace boot.
+
+/** Deployed Brewra backend — also the vite.config.ts proxy fallback. */
+const DEFAULT_BACKEND_BASE_URL = "https://brewra-gtm-intelligence-1.onrender.com";
 
 // Single source of truth for the deployed backend host. Consumed by the handful
 // of components that make raw direct-backend calls (streaming `/chat/`, `/ask`,
 // `/profile/company`).
-export const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL;
+export const BACKEND_BASE_URL =
+  import.meta.env.VITE_BACKEND_BASE_URL || DEFAULT_BACKEND_BASE_URL;
 
 // Base for the client API stack:
-//   - local dev: set to `/api` → the Vite dev proxy forwards to the backend.
-//   - deployed (Vercel): set to the full backend URL → the client calls Render
-//     directly (spec 42 D3 dropped the `vercel.json` /api rewrite), relying on
-//     the backend's env-driven CORS allow-list.
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+//   - local dev / Lovable preview: `/api` → Vite dev proxy forwards to backend.
+//   - deployed (Vercel): full backend URL → client calls Render directly (CORS).
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
 // Helper function to build API URLs
 export const buildApiUrl = (endpoint: string): string => {
