@@ -12,15 +12,26 @@ function isLocalViteDevHost(): boolean {
   return host === "localhost" || host === "127.0.0.1" || host === "[::1]";
 }
 
+function stripEnvQuotes(value: string): string {
+  const trimmed = value.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
 function resolveBackendBaseUrl(): string {
-  const configured = (import.meta.env.VITE_BACKEND_BASE_URL || "").trim();
+  const configured = stripEnvQuotes(import.meta.env.VITE_BACKEND_BASE_URL || "");
   if (!configured) return DEFAULT_BACKEND_BASE_URL;
   if (configured.startsWith("/") && !isLocalViteDevHost()) return DEFAULT_BACKEND_BASE_URL;
   return configured.replace(/\/$/, "");
 }
 
 function resolveApiBaseUrl(): string {
-  const configured = (import.meta.env.VITE_API_BASE_URL || "").trim();
+  const configured = stripEnvQuotes(import.meta.env.VITE_API_BASE_URL || "");
   if (!configured) return DEFAULT_BACKEND_BASE_URL;
   if (configured.startsWith("/") && !isLocalViteDevHost()) return DEFAULT_BACKEND_BASE_URL;
   return configured.replace(/\/$/, "");
