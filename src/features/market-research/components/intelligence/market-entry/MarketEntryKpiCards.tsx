@@ -28,7 +28,7 @@ export default function MarketEntryKpiCards({
         <div className="text-sm font-semibold text-purple-900">
           {typeof recommendedChannel === "object" && recommendedChannel !== null
             ? (recommendedChannel.channel as string) || JSON.stringify(recommendedChannel)
-            : recommendedChannel || "N/A"}
+            : (recommendedChannel as string) || "N/A"}
         </div>
       </div>
       <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">

@@ -62,7 +62,7 @@ const TenantSelectionPage: React.FC = () => {
             <Card
               key={tenant.id}
               className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
-              onClick={() => handleTenantSelect(tenant)}
+              onClick={() => handleTenantSelect(tenant as Tenant)}
             >
               <CardHeader className="text-center">
                 <div className="text-4xl mb-2">{tenant.logo}</div>
@@ -75,7 +75,7 @@ const TenantSelectionPage: React.FC = () => {
                   disabled={loading}
                   onClick={(e) => {
                     e.stopPropagation();
-                    void handleTenantSelect(tenant);
+                    void handleTenantSelect(tenant as Tenant);
                   }}
                 >
                   {loading ? "Loading..." : "Select Organization"}
