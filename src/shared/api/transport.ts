@@ -12,17 +12,18 @@ export const BACKEND_BASE_URL =
   import.meta.env.VITE_BACKEND_BASE_URL || DEFAULT_BACKEND_BASE_URL;
 
 // Base for the client API stack:
-//   - local dev / Lovable preview: `/api` → Vite dev proxy forwards to backend.
-//   - deployed (Vercel): full backend URL → client calls Render directly (CORS).
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
+//   - Lovable preview / Vercel: full backend URL (no Vite /api proxy).
+//   - local dev: `/api` via .env.local → Vite dev proxy forwards to backend.
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || DEFAULT_BACKEND_BASE_URL;
 
 // Helper function to build API URLs
 export const buildApiUrl = (endpoint: string): string => {
   // Remove leading slash if present to avoid double slashes
   const cleanEndpoint = endpoint.startsWith("/") ? endpoint.slice(1) : endpoint;
+  const base = API_BASE_URL.replace(/\/$/, "");
 
-  // Use proxy for all endpoints in development to avoid CORS issues
-  return `${API_BASE_URL}/${cleanEndpoint}`;
+  return `${base}/${cleanEndpoint}`;
 };
 
 // Extended options type that allows object body (will be JSON stringified)

@@ -15,8 +15,11 @@ export default defineConfig(({ mode }) => {
 
   return {
   server: {
+    // Lovable sandbox requires port 8080, IPv6 bind, and strictPort (see @lovable.dev/lovite).
     host: "::",
     port: 8080,
+    strictPort: true,
+    allowedHosts: true,
     proxy: {
       '/api': {
         target: backendBaseUrl,
@@ -91,7 +94,8 @@ export default defineConfig(({ mode }) => {
         clientsClaim: true
       },
       devOptions: {
-        enabled: true,
+        // Service worker in dev can serve stale bundles inside Lovable's iframe preview.
+        enabled: !env.LOVABLE_SANDBOX,
         type: 'module'
       }
     }),
