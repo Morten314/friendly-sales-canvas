@@ -12,6 +12,7 @@ export default defineConfig(({ mode }) => {
   const proxyTargetIsLocal = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i.test(
     backendBaseUrl,
   );
+  const disablePwa = env.VITE_DISABLE_PWA === "true";
 
   return {
   server: {
@@ -45,8 +46,9 @@ export default defineConfig(({ mode }) => {
     mode === 'development' &&
     componentTagger(),
     VitePWA({
+      disable: disablePwa,
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'logo.png'],
+      includeAssets: ['favicon.ico'],
       manifest: {
         name: 'Brewra',
         short_name: 'Brewra',
@@ -85,7 +87,8 @@ export default defineConfig(({ mode }) => {
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globPatterns: ['**/*.{js,css,html,ico,svg}'],
+        globIgnores: ['**/logo.png', '**/pwa-*.png'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         skipWaiting: true,
         clientsClaim: true
