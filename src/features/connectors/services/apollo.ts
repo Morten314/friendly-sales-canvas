@@ -166,7 +166,7 @@ export async function connectApollo(
         typeof parsed.missing_section === "string" ? parsed.missing_section : undefined,
     });
   }
-  return ConnectOkSchema.parse(await res.json());
+  return ConnectOkSchema.parse(await res.json()) as { connected: boolean; status: string };
 }
 
 /**

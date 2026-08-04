@@ -125,7 +125,7 @@ const SignalsPage = () => {
       {
         signal: SignalCardType;
         originalIndex: number;
-        timer: NodeJS.Timeout;
+        timer: ReturnType<typeof setTimeout>;
       }
     >
   >(new Map());

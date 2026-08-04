@@ -86,7 +86,7 @@ export function CompanyProfile(_props: CompanyProfileProps) {
         ? profile.targetMarkets
         : [""],
     );
-    setSocialMediaUrls(Array.isArray(profile.socialMediaUrls) ? profile.socialMediaUrls : []);
+    setSocialMediaUrls(Array.isArray(profile.socialMediaUrls) ? (profile.socialMediaUrls as SocialMediaUrl[]) : []);
 
     // Cross-component publish (preserved): MarketResearch + MissionControl still
     // read these localStorage keys (not migrated until Phases 5–7), so keep them

@@ -74,8 +74,8 @@ export function ApolloTile() {
 
   const tileState = deriveApolloTileState(
     { connected, credentialError: status?.status === "error" },
-    warmup,
-    run,
+    warmup as { unlocked: boolean } | undefined,
+    run as { status: string } | undefined,
   );
 
   function goDeepLink(hint: string) {

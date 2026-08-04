@@ -120,7 +120,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       typeof displayData.recommendedChannel === "object" && displayData.recommendedChannel !== null
         ? (displayData.recommendedChannel.channel as string) ||
             JSON.stringify(displayData.recommendedChannel)
-        : displayData.recommendedChannel || "",
+        : (displayData.recommendedChannel as string) || "",
     );
     setEditTimeToMarket(displayData.timeToMarket || "");
     setEditTopBarrier(displayData.topBarrier || "");
