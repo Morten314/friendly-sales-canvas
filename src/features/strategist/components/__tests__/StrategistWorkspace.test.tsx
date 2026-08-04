@@ -21,7 +21,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 import StrategistWorkspace from "../StrategistWorkspace";
 
-import { BACKEND_BASE_URL } from "@/shared/api/transport";
+import { getBackendBaseUrl } from "@/shared/api/transport";
 import { server } from "@/test/msw/server";
 
 // The chat panel scrolls the latest message into view on mount via
@@ -47,7 +47,7 @@ describe("StrategistWorkspace — empty leads", () => {
     // Defensive: the chat endpoint returns the empty shape `handleSendChat`
     // expects (`data.response`). Not hit on mount, but keeps the direct-URL
     // contract documented and green under onUnhandledRequest:"error".
-    server.use(http.get(`${BACKEND_BASE_URL}/chat/`, () => HttpResponse.json({ response: "" })));
+    server.use(http.get(`${getBackendBaseUrl()}/chat/`, () => HttpResponse.json({ response: "" })));
 
     renderWorkspace();
 

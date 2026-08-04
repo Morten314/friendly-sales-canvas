@@ -5,25 +5,39 @@
 /** Deployed Brewra backend — also the vite.config.ts proxy fallback. */
 const DEFAULT_BACKEND_BASE_URL = "https://brewra-gtm-intelligence-1.onrender.com";
 
-// Single source of truth for the deployed backend host. Consumed by the handful
-// of components that make raw direct-backend calls (streaming `/chat/`, `/ask`,
-// `/profile/company`).
-export const BACKEND_BASE_URL =
-  import.meta.env.VITE_BACKEND_BASE_URL || DEFAULT_BACKEND_BASE_URL;
+/** `/api` only works behind the local Vite dev proxy; static/Lovable hosts need absolute URLs. */
+function isLocalViteDevHost(): boolean {
+  if (typeof window === "undefined") return false;
+  const host = window.location.hostname;
+  return host === "localhost" || host === "127.0.0.1" || host === "[::1]";
+}
 
-// Base for the client API stack:
-//   - Lovable preview / Vercel: full backend URL (no Vite /api proxy).
-//   - local dev: `/api` via .env.local → Vite dev proxy forwards to backend.
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || DEFAULT_BACKEND_BASE_URL;
+function resolveBackendBaseUrl(): string {
+  const configured = (import.meta.env.VITE_BACKEND_BASE_URL || "").trim();
+  if (!configured) return DEFAULT_BACKEND_BASE_URL;
+  if (configured.startsWith("/") && !isLocalViteDevHost()) return DEFAULT_BACKEND_BASE_URL;
+  return configured.replace(/\/$/, "");
+}
+
+function resolveApiBaseUrl(): string {
+  const configured = (import.meta.env.VITE_API_BASE_URL || "").trim();
+  if (!configured) return DEFAULT_BACKEND_BASE_URL;
+  if (configured.startsWith("/") && !isLocalViteDevHost()) return DEFAULT_BACKEND_BASE_URL;
+  return configured.replace(/\/$/, "");
+}
+
+/** Runtime-resolved backend host for raw direct-backend calls (`/chat/`, `/ask/`, …). */
+export function getBackendBaseUrl(): string {
+  return resolveBackendBaseUrl();
+}
+
+/** @deprecated Prefer `getBackendBaseUrl()` — build-time only; wrong on stale Lovable builds. */
+export const BACKEND_BASE_URL = DEFAULT_BACKEND_BASE_URL;
 
 // Helper function to build API URLs
 export const buildApiUrl = (endpoint: string): string => {
-  // Remove leading slash if present to avoid double slashes
   const cleanEndpoint = endpoint.startsWith("/") ? endpoint.slice(1) : endpoint;
-  const base = API_BASE_URL.replace(/\/$/, "");
-
-  return `${base}/${cleanEndpoint}`;
+  return `${resolveApiBaseUrl()}/${cleanEndpoint}`;
 };
 
 // Extended options type that allows object body (will be JSON stringified)

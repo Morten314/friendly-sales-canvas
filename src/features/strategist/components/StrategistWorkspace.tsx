@@ -26,7 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { BACKEND_BASE_URL } from "@/shared/api/transport";
+import { getBackendBaseUrl } from "@/shared/api/transport";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -853,7 +853,7 @@ Take care,
       const timeoutId = setTimeout(() => controller.abort(), 15000);
 
       const response = await fetch(
-        `${BACKEND_BASE_URL}/chat/?question=${encodeURIComponent(text)}`,
+        `${getBackendBaseUrl()}/chat/?question=${encodeURIComponent(text)}`,
         {
           method: "GET",
           headers: { "Content-Type": "application/json" },

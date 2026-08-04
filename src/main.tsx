@@ -6,9 +6,25 @@ import "@/shared/styles/index.css";
 import "@/shared/styles/scrollbar-hide.css";
 import App from "./App.tsx";
 
-// PWA Service Worker Registration
-// Important: avoid stale cached assets during Lovable preview/dev.
-if (import.meta.env.PROD) {
+function isLovableHostedPreview(): boolean {
+  if (typeof window === "undefined") return false;
+  const host = window.location.hostname;
+  return host.endsWith(".lovable.app") || host.endsWith(".lovableproject.com");
+}
+
+function unregisterServiceWorkers(): void {
+  if (!("serviceWorker" in navigator)) return;
+  void navigator.serviceWorker.getRegistrations().then((regs) => {
+    regs.forEach((r) => {
+      void r.unregister();
+    });
+  });
+}
+
+// PWA service workers break Lovable's iframe preview (workbox cache conflicts + stale bundles).
+const shouldRegisterPwa = import.meta.env.PROD && !isLovableHostedPreview();
+
+if (shouldRegisterPwa) {
   registerSW({
     onNeedRefresh() {
       console.log("New content available, please refresh.");
@@ -18,15 +34,7 @@ if (import.meta.env.PROD) {
     },
   });
 } else {
-  // If a service worker was registered previously, it can keep serving old bundles.
-  // Unregister in dev to ensure the preview always reflects the latest code.
-  if ("serviceWorker" in navigator) {
-    void navigator.serviceWorker.getRegistrations().then((regs) => {
-      regs.forEach((r) => {
-        void r.unregister();
-      });
-    });
-  }
+  unregisterServiceWorkers();
 }
 
 createRoot(document.getElementById("root")!).render(

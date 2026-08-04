@@ -87,6 +87,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           return { orgId: null, orgName: null };
         }
 
+        const contentType = response.headers.get("content-type") ?? "";
+        if (!contentType.includes("application/json")) {
+          console.error(
+            "AuthContext: GET /org returned non-JSON (likely wrong API base URL):",
+            buildApiUrl("org"),
+          );
+          return { orgId: null, orgName: null };
+        }
+
         const data = await response.json();
 
         if (data.status === "success" && data.org_id) {

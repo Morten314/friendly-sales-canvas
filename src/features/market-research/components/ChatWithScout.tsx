@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { BACKEND_BASE_URL } from "@/shared/api/transport";
+import { getBackendBaseUrl } from "@/shared/api/transport";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -89,7 +89,7 @@ export function ChatWithScout({ fullPage = false }: ChatWithScoutProps) {
     try {
       // Make API call to your backend using GET with query parameter
       const response = await fetch(
-        `${BACKEND_BASE_URL}/chat/?question=${encodeURIComponent(currentInput)}`,
+        `${getBackendBaseUrl()}/chat/?question=${encodeURIComponent(currentInput)}`,
         {
           method: "GET",
           headers: {
