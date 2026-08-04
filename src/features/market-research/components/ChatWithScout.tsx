@@ -90,12 +90,7 @@ export function ChatWithScout({ fullPage = false }: ChatWithScoutProps) {
       // Make API call to your backend using GET with query parameter
       const response = await fetch(
         `${getBackendBaseUrl()}/chat/?question=${encodeURIComponent(currentInput)}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        },
+        { method: "GET" },
       );
 
       if (!response.ok) {

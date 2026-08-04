@@ -114,5 +114,14 @@ export const apiFetch = async (endpoint: string, options: ApiFetchOptions = {}) 
 // Helper function for JSON responses
 export const apiFetchJson = async (endpoint: string, options: ApiFetchOptions = {}) => {
   const response = await apiFetch(endpoint, options);
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    const text = await response.text();
+    throw new Error(
+      `Expected JSON but received ${contentType || "non-JSON"}. ` +
+        `The request may have hit the app host instead of the Render backend. ` +
+        `Body starts with: ${text.slice(0, 80)}`,
+    );
+  }
   return response.json();
 };

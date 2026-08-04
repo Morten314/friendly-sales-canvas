@@ -25,7 +25,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { qk } from "@/shared/api/queryKeys";
 import { useAuthToken } from "@/shared/auth";
-import { INDUSTRY_OPTIONS, useCompanyProfile } from "@/shared/company-profile";
+import {
+  INDUSTRY_OPTIONS,
+  useCompanyProfile,
+  useSaveCompanyProfile,
+} from "@/shared/company-profile";
+import { buildApiUrl } from "@/shared/api/transport";
 import {
   ensureMissionProfilerScope,
   isMissionControlCacheValid,
@@ -52,7 +57,7 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
   const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
   const queryClient = useQueryClient();
 
-  const [isSaving, setIsSaving] = useState(false);
+  const saveMutation = useSaveCompanyProfile(orgIdToUse);
 
   // Form state for company profile
   const [companyProfile, setCompanyProfile] = useState({
@@ -217,12 +222,11 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
       return;
     }
 
-    setIsSaving(true);
-
     try {
       // Prepare payload with profile_type as required by the API
       const payload = {
         org_id: orgIdToUse,
+        user_id: currentUser.uid,
         profile_type: "company",
         company_name: trimmedCompanyName,
         headquarters: (companyProfile.headquarters || "").trim(),
@@ -242,22 +246,7 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
         constraints: (companyProfile.constraints || "").trim(),
       };
 
-      const apiUrl = `/api/profile/company?org_id=${orgIdToUse}`;
-
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to save profile: ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
+      const data = await saveMutation.mutateAsync(payload);
 
       // Use the payload company_name since we already validated it before sending
       // The API may not return the saved data in the response, so we trust what we sent
@@ -275,7 +264,6 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
           description: "An unexpected error occurred. Please try again.",
           variant: "destructive",
         });
-        setIsSaving(false);
         return;
       }
 
@@ -327,10 +315,10 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
       setTimeout(() => {
         void (async () => {
           try {
-            const verifyResponse = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
-              method: "GET",
-              headers: { "Content-Type": "application/json" },
-            });
+            const verifyUrl = buildApiUrl(
+              `profile/company?org_id=${encodeURIComponent(orgIdToUse)}&user_id=${encodeURIComponent(currentUser.uid)}`,
+            );
+            const verifyResponse = await fetch(verifyUrl, { method: "GET" });
             if (verifyResponse.ok) {
               const verifyData = await verifyResponse.json();
               const verifiedCompanyName = verifyData?.company_name || verifyData?.companyName || "";
@@ -353,14 +341,15 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
       }, 2000); // Wait 2 seconds for database to commit
     } catch (error) {
       console.error("Error saving company profile:", error);
+      const message = error instanceof Error ? error.message : "Failed to save profile.";
+      const isServerError = /status:\s*500/.test(message);
       toast({
         title: "Save failed",
-        description:
-          error instanceof Error ? error.message : "Failed to save profile. Please try again.",
+        description: isServerError
+          ? "The server could not save your company profile (500). This is a backend issue — check Render logs for /profile/company."
+          : message,
         variant: "destructive",
       });
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -591,8 +580,8 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
           </AccordionItem>
         </Accordion>
 
-        <Button onClick={handleSave} className="w-full md:w-auto" disabled={isSaving}>
-          {isSaving ? "Saving..." : "Save Changes"}
+        <Button onClick={handleSave} className="w-full md:w-auto" disabled={saveMutation.isPending}>
+          {saveMutation.isPending ? "Saving..." : "Save Changes"}
         </Button>
       </CardContent>
     </Card>
