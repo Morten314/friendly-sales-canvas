@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/components/ui/use-toast";
 import { enqueueArtefact, generateAndDownloadPDF } from "@/features/artifacts";
+import { downloadMatchedLeadsCsv } from "@/features/signals/lib/matchedLeadsCsv";
 import { Layout } from "@/features/shell";
 import type { CompanyProfileResponse } from "@/shared/api/contracts";
 import { useAuth } from "@/shared/auth";
@@ -576,10 +577,12 @@ const SignalsPage = () => {
     const leads = resolveLeads(signal.id);
     const item = buildSignalBriefingArtefact(signal, leads);
     generateAndDownloadPDF(item);
+    downloadMatchedLeadsCsv(signal.headline, leads);
     enqueueArtefact(item);
     toast({
       title: "Saved to Artifacts",
-      description: "Your signal briefing was downloaded and added to the Artifacts library.",
+      description:
+        "Your signal briefing (PDF) and matched leads (CSV) were downloaded and added to the Artifacts library.",
       action: (
         <Button variant="outline" size="sm" onClick={() => navigate("/artifacts")}>
           View →
