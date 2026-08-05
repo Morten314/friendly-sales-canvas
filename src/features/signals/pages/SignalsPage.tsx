@@ -573,7 +573,7 @@ const SignalsPage = () => {
   };
 
   const handleSaveAsArtefact = (signal: SignalCardType) => {
-    const leads = leadsForSignal(signal.id);
+    const leads = resolveLeads(signal.id);
     const item = buildSignalBriefingArtefact(signal, leads);
     generateAndDownloadPDF(item);
     enqueueArtefact(item);
@@ -610,7 +610,7 @@ const SignalsPage = () => {
     setRecommendationArtefactError(null); // clear any prior failure on retry
     setRecommendationArtefactGenerating(key);
     try {
-      const leads = leadsForSignal(signal.id);
+      const leads = resolveLeads(signal.id);
       const generated = await generateRecommendationArtefact(currentUser.uid, orgId, {
         signal_headline: signal.headline,
         signal_description: signal.description,
@@ -872,7 +872,7 @@ const SignalsPage = () => {
               signals.map((signal) => {
                 const contentHash = getSignalContentHash(signal);
                 const isAccepted = acceptedSignals.has(contentHash);
-                const leads = leadsForSignal(signal.id);
+                const leads = resolveLeads(signal.id);
                 return (
                   <SignalCard
                     key={signal.id}
