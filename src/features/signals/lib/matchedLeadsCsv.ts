@@ -1,5 +1,5 @@
 interface CsvLead {
-  company: string;
+  company?: string;
   relevance?: string;
   why?: string;
 }
@@ -16,7 +16,7 @@ const slugify = (value: string) =>
 export function downloadMatchedLeadsCsv(headline: string, leads: CsvLead[]) {
   const rows = [
     ["Signal", "Company", "Relevance", "Why it matches"],
-    ...leads.map((lead) => [headline, lead.company, lead.relevance ?? "", lead.why ?? ""]),
+    ...leads.map((lead) => [headline, lead.company ?? "", lead.relevance ?? "", lead.why ?? ""]),
   ];
   const csv = rows.map((row) => row.map(escapeCell).join(",")).join("\r\n");
   const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8;" });
