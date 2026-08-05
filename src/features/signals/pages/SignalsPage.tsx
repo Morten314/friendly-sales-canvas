@@ -12,6 +12,7 @@ import {
 import { SignalChatPanel } from "../components/SignalChatPanel";
 import { SignalsEmptyState, SignalsLoadingState } from "../components/SignalsEmptyState";
 import { useSignalLeadMap } from "../hooks/useSignalLeadMap";
+import { getDemoMatchedLeads } from "../lib/demoMatchedLeads";
 import {
   buildRecommendationPlaybookArtefact,
   buildSignalBriefingArtefact,
@@ -59,6 +60,15 @@ const SignalsPage = () => {
     refresh: refreshLeadMap,
     retry: retryLeadMap,
   } = useSignalLeadMap(orgId);
+  /**
+   * Real mapped leads, falling back to demo placeholders when the backend
+   * returns no mapping (org has no leads synced yet) so the matched-leads UI
+   * still shows something. Remove the fallback once real leads exist.
+   */
+  const resolveLeads = (signalId: string) => {
+    const real = leadsForSignal(signalId);
+    return real.length > 0 ? real : getDemoMatchedLeads(signalId);
+  };
   // The org's real company profile (Settings → Company Profile). Generated
   // signals are personalised against these firmographics instead of the old
   // hardcoded placeholders. A ref mirrors the latest value so the header-driven
@@ -563,7 +573,7 @@ const SignalsPage = () => {
   };
 
   const handleSaveAsArtefact = (signal: SignalCardType) => {
-    const leads = leadsForSignal(signal.id);
+    const leads = resolveLeads(signal.id);
     const item = buildSignalBriefingArtefact(signal, leads);
     generateAndDownloadPDF(item);
     enqueueArtefact(item);
@@ -600,7 +610,7 @@ const SignalsPage = () => {
     setRecommendationArtefactError(null); // clear any prior failure on retry
     setRecommendationArtefactGenerating(key);
     try {
-      const leads = leadsForSignal(signal.id);
+      const leads = resolveLeads(signal.id);
       const generated = await generateRecommendationArtefact(currentUser.uid, orgId, {
         signal_headline: signal.headline,
         signal_description: signal.description,
@@ -862,7 +872,7 @@ const SignalsPage = () => {
               signals.map((signal) => {
                 const contentHash = getSignalContentHash(signal);
                 const isAccepted = acceptedSignals.has(contentHash);
-                const leads = leadsForSignal(signal.id);
+                const leads = resolveLeads(signal.id);
                 return (
                   <SignalCard
                     key={signal.id}
