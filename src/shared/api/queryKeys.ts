@@ -1,7 +1,10 @@
 // Typed query-key factory (spec 20 §3.5). Array-tuple keys (the TanStack
 // convention) so invalidation targets are not stringly-typed.
 export const qk = {
-  companyProfile: (orgId: string) => ["company-profile", orgId] as const,
+  companyProfile: (orgId: string, userId?: string) =>
+    userId
+      ? (["company-profile", orgId, userId] as const)
+      : (["company-profile", orgId] as const),
   userProfile: (userId: string) => ["userProfile", userId] as const,
   agentProfile: (userId: string) => ["agentProfile", userId] as const,
   tenants: (userId: string | null | undefined) => ["tenants", userId ?? "anon"] as const,

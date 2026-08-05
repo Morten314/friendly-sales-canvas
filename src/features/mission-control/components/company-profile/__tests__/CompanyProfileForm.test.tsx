@@ -9,10 +9,16 @@ import CompanyProfileForm from "../CompanyProfileForm";
 import { server } from "@/test/msw/server";
 
 // Mock auth so the form resolves a userId + orgId and the useCompanyProfile
-// query is enabled (auto-fetch on mount). The form imports useAuthToken from
-// @/shared/auth.
+// query is enabled (auto-fetch on mount).
 vi.mock("@/shared/auth", () => ({
-  useAuthToken: () => ({ currentUser: { uid: "u1" }, orgId: "brewra" }),
+  useResolvedOrgId: () => ({
+    currentUser: { uid: "u1" },
+    orgId: "brewra",
+    orgLoading: false,
+    isOrgReady: true,
+    orgIdForApi: "brewra",
+    canCallOrgScopedApi: true,
+  }),
 }));
 
 // The Industry combobox renders a `cmdk` popover; `cmdk` + Radix Popper use

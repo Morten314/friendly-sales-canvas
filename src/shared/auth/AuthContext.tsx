@@ -16,6 +16,7 @@ interface AuthContextType {
   currentUser: User | null;
   orgId: string | null;
   orgName: string | null;
+  orgLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -42,6 +43,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [orgId, setOrgId] = useState<string | null>(null);
   const [orgName, setOrgName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [orgLoading, setOrgLoading] = useState(false);
 
   const signup = async (email: string, password: string) => {
     await createUserWithEmailAndPassword(auth, email, password);
@@ -68,7 +70,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Check localStorage first
         const storedOrgId = localStorage.getItem(`org_id_${userId}`);
         const storedOrgName = localStorage.getItem(`org_name_${userId}`);
-        if (storedOrgId && storedOrgName) {
+        if (storedOrgId) {
           setOrgId(storedOrgId);
           setOrgName(storedOrgName);
           return { orgId: storedOrgId, orgName: storedOrgName };
@@ -123,27 +125,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
+      void (async () => {
+        setCurrentUser(user);
 
-      // Load org_id and org_name from localStorage when user changes
-      if (user?.uid) {
-        const storedOrgId = localStorage.getItem(`org_id_${user.uid}`);
-        const storedOrgName = localStorage.getItem(`org_name_${user.uid}`);
-        if (storedOrgId) {
-          setOrgId(storedOrgId);
-          if (storedOrgName) {
+        if (user?.uid) {
+          const storedOrgId = localStorage.getItem(`org_id_${user.uid}`);
+          const storedOrgName = localStorage.getItem(`org_name_${user.uid}`);
+          if (storedOrgId) {
+            setOrgId(storedOrgId);
             setOrgName(storedOrgName);
+          } else {
+            setOrgLoading(true);
+            try {
+              await fetchOrgId(user.uid);
+            } finally {
+              setOrgLoading(false);
+            }
           }
         } else {
-          // Fetch org data if not in localStorage
-          void fetchOrgId(user.uid);
+          setOrgId(null);
+          setOrgName(null);
+          setOrgLoading(false);
         }
-      } else {
-        setOrgId(null);
-        setOrgName(null);
-      }
 
-      setLoading(false);
+        setLoading(false);
+      })();
     });
 
     return unsubscribe;
@@ -153,6 +159,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     currentUser,
     orgId,
     orgName,
+    orgLoading,
     login,
     signup,
     logout,

@@ -24,7 +24,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { qk } from "@/shared/api/queryKeys";
-import { useAuthToken } from "@/shared/auth";
+import { useResolvedOrgId } from "@/shared/auth";
 import {
   INDUSTRY_OPTIONS,
   useCompanyProfile,
@@ -53,11 +53,10 @@ interface CompanyProfileFormProps {
 
 export default function CompanyProfileForm({ onSavedChange }: CompanyProfileFormProps) {
   const { toast } = useToast();
-  const { currentUser, orgId } = useAuthToken();
-  const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
+  const { orgIdForApi, orgLoading, currentUser, canCallOrgScopedApi } = useResolvedOrgId();
   const queryClient = useQueryClient();
 
-  const saveMutation = useSaveCompanyProfile(orgIdToUse);
+  const saveMutation = useSaveCompanyProfile(orgIdForApi ?? "", currentUser?.uid);
 
   // Form state for company profile
   const [companyProfile, setCompanyProfile] = useState({
@@ -84,7 +83,10 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
   // hook resolves to null on any non-ZodError failure (404/5xx/CORS), which we
   // treat as "no profile yet" and fall back to localStorage — matching the old
   // bare-fetch + retry behavior.
-  const { data: companyData } = useCompanyProfile(orgIdToUse, !!currentUser?.uid);
+  const { data: companyData } = useCompanyProfile(orgIdForApi ?? "", {
+    userId: currentUser?.uid,
+    enabled: canCallOrgScopedApi,
+  });
 
   // Helper: load profile from localStorage — the form's failover. Returns the raw
   // payload when successful. Seeds form fields and reports saved-state. Wrapped in
@@ -169,16 +171,16 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
   // useCallback (re-created only when onSavedChange changes); the page passes the
   // stable setIsCompanyProfileSaved setter, so this effect does not re-fire in a loop.
   useEffect(() => {
-    if (!currentUser?.uid) return;
+    if (!currentUser?.uid || !orgIdForApi) return;
     const userId = currentUser.uid;
-    ensureMissionProfilerScope(userId, orgIdToUse);
-    if (isMissionControlCacheValid(userId, orgIdToUse)) {
-      const cached = getMissionControlCompanyProfileJson(userId, orgIdToUse);
+    ensureMissionProfilerScope(userId, orgIdForApi);
+    if (isMissionControlCacheValid(userId, orgIdForApi)) {
+      const cached = getMissionControlCompanyProfileJson(userId, orgIdForApi);
       if (cached) {
         applyCompanyProfileFieldsToForm(cached, userId);
       }
     }
-  }, [currentUser?.uid, orgIdToUse, applyCompanyProfileFieldsToForm]);
+  }, [currentUser?.uid, orgIdForApi, applyCompanyProfileFieldsToForm]);
 
   // Read effect: when the shared query resolves, hydrate the form fields from the
   // backend payload. The `=== null` branch is deliberate: the hook resolves to null
@@ -196,7 +198,7 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
   }, [
     companyData,
     currentUser?.uid,
-    orgIdToUse,
+    orgIdForApi,
     applyCompanyProfileFieldsToForm,
     loadProfileFromLocalStorage,
   ]);
@@ -206,6 +208,15 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
       toast({
         title: "Authentication required",
         description: "Please log in to save your profile.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (orgLoading || !orgIdForApi) {
+      toast({
+        title: "Organization loading",
+        description: "Please wait a moment for your workspace to load, then try again.",
         variant: "destructive",
       });
       return;
@@ -225,7 +236,7 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
     try {
       // Prepare payload with profile_type as required by the API
       const payload = {
-        org_id: orgIdToUse,
+        org_id: orgIdForApi,
         user_id: currentUser.uid,
         profile_type: "company",
         company_name: trimmedCompanyName,
@@ -299,12 +310,14 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
         title: "Profile saved",
       });
 
-      invalidateProfilerCache(currentUser.uid, orgIdToUse);
+      invalidateProfilerCache(currentUser.uid, orgIdForApi);
 
       // Keep the shared TanStack cache hot so the page's read-driven side effects
       // (data_sources, completeness, commit-cache, localStorage backup) see the
       // freshly-saved profile on the next resolve.
-      void queryClient.invalidateQueries({ queryKey: qk.companyProfile(orgIdToUse) });
+      void queryClient.invalidateQueries({
+        queryKey: qk.companyProfile(orgIdForApi, currentUser.uid),
+      });
 
       // Only mark company profile as saved if we have a valid company name
       if (savedCompanyName) {
@@ -316,7 +329,7 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
         void (async () => {
           try {
             const verifyUrl = buildApiUrl(
-              `profile/company?org_id=${encodeURIComponent(orgIdToUse)}&user_id=${encodeURIComponent(currentUser.uid)}`,
+              `profile/company?org_id=${encodeURIComponent(orgIdForApi)}&user_id=${encodeURIComponent(currentUser.uid)}`,
             );
             const verifyResponse = await fetch(verifyUrl, { method: "GET" });
             if (verifyResponse.ok) {
@@ -580,7 +593,11 @@ export default function CompanyProfileForm({ onSavedChange }: CompanyProfileForm
           </AccordionItem>
         </Accordion>
 
-        <Button onClick={handleSave} className="w-full md:w-auto" disabled={saveMutation.isPending}>
+        <Button
+          onClick={handleSave}
+          className="w-full md:w-auto"
+          disabled={saveMutation.isPending || orgLoading || !orgIdForApi}
+        >
           {saveMutation.isPending ? "Saving..." : "Save Changes"}
         </Button>
       </CardContent>

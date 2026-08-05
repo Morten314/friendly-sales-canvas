@@ -15,7 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Layout } from "@/features/shell";
 import { qk } from "@/shared/api/queryKeys";
-import { useAuthToken } from "@/shared/auth";
+import { useResolvedOrgId } from "@/shared/auth";
 import { useCompanyProfile } from "@/shared/company-profile";
 import {
   ensureMissionProfilerScope,
@@ -51,36 +51,38 @@ const MissionControlPage = () => {
   // READ by calculateOverallCompleteness + the hasDataSources sync effect.
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
 
-  const { currentUser, orgId } = useAuthToken();
-  const orgIdToUse = orgId || "brewra"; // Fallback to 'brewra' for backward compatibility
+  const { orgIdForApi, orgLoading, currentUser, canCallOrgScopedApi } = useResolvedOrgId();
   /** Fresh GET of ICP rows whenever the Customer Profile tab is opened or Profiler mutates ICPs.
    *  Loading UI is the inline three-dot overlay inside ICPManager (same as Data Sources). */
   const refreshCustomerProfileIcps = useCallback(async () => {
-    if (!currentUser?.uid) return;
-    invalidateMissionControlCache(currentUser.uid, orgIdToUse);
-    await queryClient.refetchQueries({ queryKey: qk.icps(orgIdToUse) });
-  }, [currentUser?.uid, orgIdToUse, queryClient]);
+    if (!currentUser?.uid || !orgIdForApi) return;
+    invalidateMissionControlCache(currentUser.uid, orgIdForApi);
+    await queryClient.refetchQueries({ queryKey: qk.icps(orgIdForApi) });
+  }, [currentUser?.uid, orgIdForApi, queryClient]);
 
   /** Fresh GET of uploaded documents + lead-stream status when the Data Sources tab opens. */
   const refreshDataSources = useCallback(async () => {
-    if (!currentUser?.uid) return;
+    if (!currentUser?.uid || !orgIdForApi) return;
     await Promise.all([
-      queryClient.refetchQueries({ queryKey: qk.dataSources(orgIdToUse) }),
+      queryClient.refetchQueries({ queryKey: qk.dataSources(orgIdForApi) }),
       queryClient.refetchQueries({
-        queryKey: qk.leadStreamStatus(currentUser.uid, orgIdToUse),
+        queryKey: qk.leadStreamStatus(currentUser.uid, orgIdForApi),
       }),
     ]);
-  }, [currentUser?.uid, orgIdToUse, queryClient]);
+  }, [currentUser?.uid, orgIdForApi, queryClient]);
 
   // Company-profile READ — the page shares ONE TanStack cache entry with
-  // CompanyProfileForm's own useCompanyProfile(orgIdToUse) call (a single GET
+  // CompanyProfileForm's own useCompanyProfile(orgIdForApi) call (a single GET
   // /api/profile/company). The form owns the editable form state + writes; the
   // page derives its read-driven side effects (data-sources, customer-profile
   // completeness, profiler-cache commit, localStorage backup) from this data,
   // and drives the loading Dialog from isLoadingProfile.
   const { data: companyProfileData, isLoading: isLoadingProfile } = useCompanyProfile(
-    orgIdToUse,
-    !!currentUser?.uid,
+    orgIdForApi ?? "",
+    {
+      userId: currentUser?.uid,
+      enabled: canCallOrgScopedApi,
+    },
   );
 
   // Apply the data_sources branch of a company-profile payload to the page's
@@ -185,15 +187,15 @@ const MissionControlPage = () => {
   useEffect(() => {
     if (!currentUser?.uid) return;
     const userId = currentUser.uid;
-    ensureMissionProfilerScope(userId, orgIdToUse);
-    if (isMissionControlCacheValid(userId, orgIdToUse)) {
-      const cached = getMissionControlCompanyProfileJson(userId, orgIdToUse);
+    ensureMissionProfilerScope(userId, orgIdForApi);
+    if (isMissionControlCacheValid(userId, orgIdForApi)) {
+      const cached = getMissionControlCompanyProfileJson(userId, orgIdForApi);
       if (cached) {
         applyDataSourcesFromPayload(cached);
         applyCustomerProfileCompletenessFromPayload(cached);
       }
     }
-  }, [currentUser?.uid, orgIdToUse]);
+  }, [currentUser?.uid, orgIdForApi]);
 
   // Read-driven page side effects: when the shared useCompanyProfile query
   // resolves with a payload, run the page's concerns off it — data-sources,
@@ -212,7 +214,7 @@ const MissionControlPage = () => {
     applyDataSourcesFromPayload(data as UntypedBackendApiResponse);
     void applyCustomerProfileCompletenessFromBackend(
       userId,
-      orgIdToUse,
+      orgIdForApi,
       data as Record<string, unknown>,
     );
 
@@ -244,8 +246,8 @@ const MissionControlPage = () => {
       })();
     }
 
-    commitMissionControlCompanyProfile(userId, orgIdToUse, data as Record<string, unknown>);
-  }, [companyProfileData, currentUser?.uid, orgIdToUse]);
+    commitMissionControlCompanyProfile(userId, orgIdForApi, data as Record<string, unknown>);
+  }, [companyProfileData, currentUser?.uid, orgIdForApi]);
 
   // Calculate overall completeness based on completed sections
   const calculateOverallCompleteness = () => {
@@ -274,14 +276,14 @@ const MissionControlPage = () => {
       const fromProfiler =
         (e as CustomEvent<{ fromProfiler?: boolean }>).detail?.fromProfiler === true;
       if (fromProfiler) {
-        invalidateMissionControlCache(uid, orgIdToUse);
-        invalidateProfilerCache(uid, orgIdToUse);
-        void queryClient.invalidateQueries({ queryKey: qk.icps(orgIdToUse) });
+        invalidateMissionControlCache(uid, orgIdForApi);
+        invalidateProfilerCache(uid, orgIdForApi);
+        void queryClient.invalidateQueries({ queryKey: qk.icps(orgIdForApi) });
         if (activeTabRef.current === "customer-profile") {
           void refreshCustomerProfileIcps();
         }
       } else {
-        invalidateProfilerCache(uid, orgIdToUse);
+        invalidateProfilerCache(uid, orgIdForApi);
       }
     };
 
@@ -290,7 +292,7 @@ const MissionControlPage = () => {
     return () => {
       window.removeEventListener("customerProfileSaved", handleCustomerProfileSaved);
     };
-  }, [currentUser?.uid, orgIdToUse, queryClient, refreshCustomerProfileIcps]);
+  }, [currentUser?.uid, orgIdForApi, queryClient, refreshCustomerProfileIcps]);
 
   // Listen for data source added events from DataSourcesManager
   useEffect(() => {
@@ -304,7 +306,7 @@ const MissionControlPage = () => {
     return () => {
       window.removeEventListener("dataSourceAdded", handleDataSourceAdded);
     };
-  }, [currentUser?.uid, orgIdToUse]);
+  }, [currentUser?.uid, orgIdForApi]);
 
   // Also update hasDataSources when local dataSources state changes
   useEffect(() => {
@@ -325,7 +327,7 @@ const MissionControlPage = () => {
   return (
     <Layout>
       {/* Loading Modal */}
-      <Dialog open={isLoadingProfile} onOpenChange={() => {}}>
+      <Dialog open={isLoadingProfile || orgLoading} onOpenChange={() => {}}>
         <DialogContent className="sm:max-w-md border-0 bg-transparent shadow-none p-0">
           <DialogTitle className="sr-only">Loading company profile</DialogTitle>
           <DialogDescription className="sr-only">
