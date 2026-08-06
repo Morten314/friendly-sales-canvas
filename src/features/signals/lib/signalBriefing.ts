@@ -26,6 +26,43 @@ export function resolveSignalAgentPresentation(agent: "scout" | "profiler"): Age
 
 const titleCase = (s: string): string => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
+/**
+ * Artefact recorded when a user accepts a signal. Filed into a date-wise folder
+ * ("Accepted Signals — YYYY-MM-DD") and persisted until the user deletes it.
+ */
+export function buildAcceptedSignalArtefact(signal: SignalCard): ArtefactItem {
+  const { agentName, agentIcon, agentColor } = resolveSignalAgentPresentation(signal.agent);
+  const day = new Date().toISOString().slice(0, 10);
+  const recommendations =
+    signal.NBAs && signal.NBAs.length > 0
+      ? signal.NBAs.map((n) => n.nba)
+      : (signal.nextBestMoves ?? []);
+
+  return {
+    id: `accepted-signal-${signal.id}`,
+    agentName,
+    agentIcon,
+    agentColor,
+    taskNumber: "Accepted Signal",
+    timestamp: signal.timestamp,
+    status: "new",
+    type: "insight",
+    folder: `Accepted Signals — ${day}`,
+    actionDelegated: signal.headline,
+    contextRationale: signal.snippet,
+    systemImpact: "Signal accepted and filed for follow-up",
+    actionPerformed: "Accepted signal",
+    outputSummary: signal.snippet,
+    fullReport: {
+      title: signal.headline,
+      executiveSummary: signal.description,
+      keyFindings: (signal.source ?? []).map((s) => s.citation || s.url).filter(Boolean),
+      analysis: signal.description,
+      recommendations,
+    },
+  };
+}
+
 /** One ArtefactItem from a signal + its matched leads (Spec 38 §5 mapping). */
 export function buildSignalBriefingArtefact(
   signal: SignalCard,
