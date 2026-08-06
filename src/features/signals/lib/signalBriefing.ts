@@ -161,3 +161,47 @@ export function buildRecommendationPlaybookArtefact(
     },
   };
 }
+
+/**
+ * Editable lead-sheet artefact built from the matched-leads CSV view. Stored with
+ * a `sheet` payload (not just a CSV blob) so the Artefacts library can render an
+ * editable grid users can enrich in place. Filed date-wise, deterministic id so
+ * re-saving the same signal updates rather than duplicates.
+ */
+export function buildLeadSheetArtefact(
+  signal: SignalCard,
+  leads: SignalLeadMapLead[],
+): ArtefactItem {
+  const { agentName, agentIcon, agentColor } = resolveSignalAgentPresentation(signal.agent);
+  const day = new Date().toISOString().slice(0, 10);
+  const rows = leads.map(toMatchedLeadRow);
+
+  return {
+    id: `lead-sheet-${signal.id}`,
+    agentName,
+    agentIcon,
+    agentColor,
+    taskNumber: "Lead Sheet",
+    timestamp: signal.timestamp,
+    status: "new",
+    type: "enrichment",
+    folder: `Lead Sheets — ${day}`,
+    actionDelegated: `Matched leads for "${signal.headline}"`,
+    contextRationale: signal.snippet,
+    systemImpact: `${leads.length} matched lead(s) available for enrichment`,
+    actionPerformed: "Saved matched-leads sheet for enrichment",
+    outputSummary: `${leads.length} leads across ${MATCHED_LEADS_COLUMNS.length} columns — editable in Artefacts`,
+    sheet: {
+      filename: matchedLeadsCsvFilename(signal.headline),
+      columns: [...MATCHED_LEADS_COLUMNS],
+      rows,
+    },
+    fullReport: {
+      title: `${signal.headline} — Matched leads`,
+      executiveSummary: signal.description,
+      keyFindings: leads.map((l) => `${l.name || "Unknown"} — ${l.company || "Unknown company"}`),
+      analysis: "Editable matched-leads sheet for enrichment and follow-up.",
+      recommendations: [],
+    },
+  };
+}
