@@ -253,20 +253,15 @@ export const SignalCard = ({
               <div className="max-h-[420px] overflow-auto">
                 <table className="w-full table-fixed border-collapse text-[11px]">
                   <colgroup>
-                    <col className="w-[140px]" />
+                    <col className="w-[160px]" />
+                    <col className="w-[190px]" />
                     <col className="w-[170px]" />
                     <col className="w-[100px]" />
-                    <col className="w-[150px]" />
-                    <col className="w-[200px]" />
-                    <col className="w-[100px]" />
-                    <col className="w-[160px]" />
-                    <col className="w-[130px]" />
-                    <col className="w-[90px]" />
-                    <col className="w-[280px]" />
+                    <col className="w-[360px]" />
                   </colgroup>
                   <thead className="sticky top-0 z-10 bg-gray-100 text-gray-700">
                     <tr>
-                      {MATCHED_LEADS_COLUMNS.map((col) => (
+                      {SIGNAL_PREVIEW_COLUMNS.map((col) => (
                         <th
                           key={col}
                           className="whitespace-nowrap border-b border-gray-200 px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide"
@@ -282,12 +277,12 @@ export const SignalCard = ({
                         key={lead.lead_id}
                         className={`border-t border-gray-100 align-top ${rowIndex % 2 === 1 ? "bg-gray-50/60" : ""}`}
                       >
-                        {toMatchedLeadRow(lead).map((cell, i) => (
+                        {toSignalPreviewRow(lead).map((cell, i) => (
                           <td
                             key={i}
                             title={cell}
                             className={`px-3 py-2 text-gray-700 ${
-                              i === MATCHED_LEADS_COLUMNS.length - 1
+                              i === SIGNAL_PREVIEW_COLUMNS.length - 1
                                 ? "whitespace-normal break-words leading-relaxed"
                                 : "truncate"
                             }`}
