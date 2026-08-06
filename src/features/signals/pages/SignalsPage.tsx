@@ -940,6 +940,10 @@ const SignalsPage = () => {
                 const contentHash = getSignalContentHash(signal);
                 const isAccepted = acceptedSignals.has(contentHash);
                 const leads = resolveLeads(signal.id);
+                // Demo placeholders stand in whenever the backend mapping is
+                // empty or failed, so the card must not show the loading/error
+                // states over rows we already have.
+                const usingDemoLeads = leadsForSignal(signal.id).length === 0;
                 return (
                   <SignalCard
                     key={signal.id}
@@ -993,9 +997,9 @@ const SignalsPage = () => {
                     }}
                     affectedLeadCount={leads.length}
                     matchedLeads={leads}
-                    leadsLoading={leadsLoading}
-                    leadsFetching={leadsFetching}
-                    leadsError={leadsError}
+                    leadsLoading={leadsLoading && !usingDemoLeads}
+                    leadsFetching={leadsFetching && !usingDemoLeads}
+                    leadsError={leadsError && !usingDemoLeads}
                     isLeadsExpanded={expandedLeadsSignalId === signal.id}
                     onFindMatchedLeads={() => handleFindMatchedLeads(signal.id)}
                     onSaveAsArtefact={() => handleSaveAsArtefact(signal)}
