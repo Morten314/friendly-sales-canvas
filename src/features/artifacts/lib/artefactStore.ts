@@ -62,6 +62,40 @@ export function deleteStoredArtefact(id: string): void {
   writeRaw(readRaw().filter((a) => a.id !== id));
 }
 
+/**
+ * Persist an edit to an artefact's editable sheet (cell-level edits from the
+ * Artefacts library). No-ops when the artefact is not persisted (e.g. mocks).
+ */
+export function updateStoredArtefactSheet(id: string, rows: string[][]): void {
+  const items = readRaw();
+  const index = items.findIndex((a) => a.id === id);
+  if (index === -1 || !items[index].sheet) return;
+  const next = [...items];
+  next[index] = { ...next[index], sheet: { ...next[index].sheet!, rows } };
+  writeRaw(next);
+}
+
+/** Serialize an editable sheet back to CSV text. */
+export function sheetToCsv(columns: string[], rows: string[][]): string {
+  const escape = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  return [columns, ...rows].map((r) => r.map(escape).join(",")).join("\r\n");
+}
+
+/** Download an artefact's editable sheet as CSV (reflecting current edits). */
+export function downloadArtefactSheet(item: ArtefactItem): void {
+  if (!item.sheet) return;
+  const csv = sheetToCsv(item.sheet.columns, item.sheet.rows);
+  const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = item.sheet.filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 /** Download the CSV attached to an artefact, if any. */
 export function downloadArtefactCsv(item: ArtefactItem): void {
   if (!item.csv) return;
