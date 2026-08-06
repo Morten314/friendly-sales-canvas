@@ -3,6 +3,11 @@ import type { ComponentType } from "react";
 
 import type { RecommendationArtefactResponse, SignalLeadMapLead } from "../contracts";
 import type { NBAItem, SignalCard } from "../types";
+import {
+  MATCHED_LEADS_COLUMNS,
+  matchedLeadsCsvFilename,
+  toMatchedLeadRow,
+} from "./matchedLeadsCsv";
 
 import type { ArtefactItem } from "@/features/artifacts";
 
