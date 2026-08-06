@@ -30,7 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/components/ui/use-toast";
-import { generateAndDownloadPDF, saveArtefact } from "@/features/artifacts";
+import { deleteStoredArtefact, generateAndDownloadPDF, saveArtefact } from "@/features/artifacts";
 import {
   buildMatchedLeadsCsv,
   downloadMatchedLeadsCsv,
