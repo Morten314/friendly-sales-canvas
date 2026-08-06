@@ -651,7 +651,7 @@ const SignalsPage = () => {
         generated,
       );
       generateAndDownloadPDF(artefact);
-      enqueueArtefact(artefact);
+      saveArtefact(artefact);
       toast({
         title: "Saved to Artifacts",
         description: "Your GTM playbook was downloaded and added to the Artifacts library.",
