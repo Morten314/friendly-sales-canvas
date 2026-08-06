@@ -997,9 +997,9 @@ const SignalsPage = () => {
                     }}
                     affectedLeadCount={leads.length}
                     matchedLeads={leads}
-                    leadsLoading={leadsLoading}
-                    leadsFetching={leadsFetching}
-                    leadsError={leadsError}
+                    leadsLoading={leadsLoading && !usingDemoLeads}
+                    leadsFetching={leadsFetching && !usingDemoLeads}
+                    leadsError={leadsError && !usingDemoLeads}
                     isLeadsExpanded={expandedLeadsSignalId === signal.id}
                     onFindMatchedLeads={() => handleFindMatchedLeads(signal.id)}
                     onSaveAsArtefact={() => handleSaveAsArtefact(signal)}
