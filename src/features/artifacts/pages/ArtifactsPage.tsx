@@ -7,6 +7,7 @@ import { LibraryCard } from "../components/LibraryCard";
 import { mockArtefacts } from "../data/mockArtefacts";
 import { generateAndDownloadPDF } from "../lib/artefactPdf";
 import { drainArtefactQueue } from "../lib/artefactQueue";
+import { deleteStoredArtefact, downloadArtefactCsv, loadStoredArtefacts } from "../lib/artefactStore";
 import type { ArtefactItem } from "../types";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,7 +16,10 @@ import { usePageTitle } from "@/shared/hooks/usePageTitle";
 
 const ArtifactsPage = () => {
   usePageTitle("Artefacts - Brewra");
-  const [artefacts, setArtefacts] = useState<ArtefactItem[]>(mockArtefacts);
+  const [artefacts, setArtefacts] = useState<ArtefactItem[]>(() => [
+    ...loadStoredArtefacts(),
+    ...mockArtefacts,
+  ]);
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedArtefact, setExpandedArtefact] = useState<string | null>(null);
   const [editingArtefact, setEditingArtefact] = useState<string | null>(null);
@@ -62,7 +66,12 @@ const ArtifactsPage = () => {
     if (queued.length === 0) return;
     // Reverse so the most-recently-enqueued item ends up first, matching the
     // per-event prepend semantics of the live listener.
-    setArtefacts((prev) => [...queued.slice().reverse(), ...prev]);
+    // Persisted items are already in initial state — dedupe by id.
+    setArtefacts((prev) => {
+      const known = new Set(prev.map((a) => a.id));
+      const fresh = queued.filter((a) => !known.has(a.id));
+      return [...fresh.slice().reverse(), ...prev];
+    });
     const mostRecent = queued[queued.length - 1];
     if (mostRecent.folder) {
       setActiveFolder(mostRecent.folder);
@@ -98,6 +107,7 @@ const ArtifactsPage = () => {
 
   const handleDeleteClick = (id: string, event: React.MouseEvent) => {
     event.stopPropagation();
+    deleteStoredArtefact(id);
     setArtefacts((prev) => prev.filter((artefact) => artefact.id !== id));
   };
 

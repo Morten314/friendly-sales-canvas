@@ -1,7 +1,8 @@
-import { CheckCircle, Clock, Edit, FileText, Lightbulb, Trash2 } from "lucide-react";
+import { CheckCircle, Clock, Download, Edit, FileText, Lightbulb, Trash2 } from "lucide-react";
 import type { MouseEvent } from "react";
 
 import { getStatusIcon, getTypeIcon } from "../lib/artefactPresentation";
+import { downloadArtefactCsv } from "../lib/artefactStore";
 import type { ArtefactItem } from "../types";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -173,6 +174,23 @@ export const LibraryCard = ({
                     </div>
                   </div>
                 </div>
+                {artefact.csv && (
+                  <div className="mt-3 flex items-center justify-between gap-3 rounded-md border bg-muted/40 px-3 py-2">
+                    <span className="text-xs truncate">{artefact.csv.filename}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        downloadArtefactCsv(artefact);
+                      }}
+                    >
+                      <Download className="mr-1 h-3 w-3" />
+                      Download CSV
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
