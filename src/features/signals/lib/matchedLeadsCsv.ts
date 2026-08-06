@@ -1,29 +1,61 @@
-interface CsvLead {
-  company?: string;
-  relevance?: string;
-  why?: string;
-}
+import type { SignalLeadMapLead } from "../contracts";
+
+/** Column order mirrors the exported prospect sheet. */
+export const MATCHED_LEADS_COLUMNS = [
+  "Name",
+  "Title",
+  "Seniority",
+  "Company",
+  "Email",
+  "Email status",
+  "LinkedIn",
+  "Phone",
+  "Relevance",
+  "Why",
+] as const;
 
 const escapeCell = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
 
-const slugify = (value: string) =>
+export const slugifySignal = (value: string) =>
   value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 60) || "signal";
 
-export function downloadMatchedLeadsCsv(headline: string, leads: CsvLead[]) {
-  const rows = [
-    ["Signal", "Company", "Relevance", "Why it matches"],
-    ...leads.map((lead) => [headline, lead.company ?? "", lead.relevance ?? "", lead.why ?? ""]),
+/** One row per lead, in MATCHED_LEADS_COLUMNS order. */
+export function toMatchedLeadRow(lead: SignalLeadMapLead): string[] {
+  return [
+    lead.name ?? "",
+    lead.title ?? "",
+    lead.seniority ?? "",
+    lead.company ?? "",
+    lead.email ?? "",
+    lead.email_status ?? "",
+    lead.linkedin ?? "",
+    lead.phone ?? "",
+    lead.relevance ?? "",
+    lead.why ?? "",
   ];
-  const csv = rows.map((row) => row.map(escapeCell).join(",")).join("\r\n");
-  const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8;" });
+}
+
+export function buildMatchedLeadsCsv(leads: SignalLeadMapLead[]): string {
+  const rows = [[...MATCHED_LEADS_COLUMNS], ...leads.map(toMatchedLeadRow)];
+  return rows.map((row) => row.map(escapeCell).join(",")).join("\r\n");
+}
+
+export function matchedLeadsCsvFilename(headline: string): string {
+  return `${slugifySignal(headline)}-matched-leads.csv`;
+}
+
+export function downloadMatchedLeadsCsv(headline: string, leads: SignalLeadMapLead[]) {
+  const blob = new Blob([`\uFEFF${buildMatchedLeadsCsv(leads)}`], {
+    type: "text/csv;charset=utf-8;",
+  });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `${slugify(headline)}-matched-leads.csv`;
+  link.download = matchedLeadsCsvFilename(headline);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

@@ -17,6 +17,15 @@ export const SignalLeadMapLeadSchema = z.object({
   company: z.string().optional().default(""),
   relevance: z.enum(["high", "medium", "low"]).catch("low"),
   why: z.string().optional().default(""),
+  // Contact-level enrichment used by the matched-leads CSV export. All optional —
+  // the backend may omit them entirely.
+  name: z.string().optional().default(""),
+  title: z.string().optional().default(""),
+  seniority: z.string().optional().default(""),
+  email: z.string().optional().default(""),
+  email_status: z.string().optional().default(""),
+  linkedin: z.string().optional().default(""),
+  phone: z.string().optional().default(""),
 });
 
 export const SignalLeadMapEntrySchema = z.object({
