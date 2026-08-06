@@ -249,23 +249,49 @@ export const SignalCard = ({
             ))}
           </div>
           {csvPreviewOpen && (
-            <div className="mt-3 rounded-md border border-gray-200 bg-white">
-              <div className="overflow-x-auto">
-                <table className="w-full text-[11px]">
-                  <thead className="bg-gray-100 text-gray-700">
+            <div className="mt-3 overflow-hidden rounded-md border border-gray-200 bg-white">
+              <div className="max-h-[420px] overflow-auto">
+                <table className="w-full table-fixed border-collapse text-[11px]">
+                  <colgroup>
+                    <col className="w-[140px]" />
+                    <col className="w-[170px]" />
+                    <col className="w-[100px]" />
+                    <col className="w-[150px]" />
+                    <col className="w-[200px]" />
+                    <col className="w-[100px]" />
+                    <col className="w-[160px]" />
+                    <col className="w-[130px]" />
+                    <col className="w-[90px]" />
+                    <col className="w-[280px]" />
+                  </colgroup>
+                  <thead className="sticky top-0 z-10 bg-gray-100 text-gray-700">
                     <tr>
                       {MATCHED_LEADS_COLUMNS.map((col) => (
-                        <th key={col} className="whitespace-nowrap px-2 py-1.5 text-left font-medium">
+                        <th
+                          key={col}
+                          className="whitespace-nowrap border-b border-gray-200 px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide"
+                        >
                           {col}
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {matchedLeads.map((lead) => (
-                      <tr key={lead.lead_id} className="border-t border-gray-100 align-top">
+                    {matchedLeads.map((lead, rowIndex) => (
+                      <tr
+                        key={lead.lead_id}
+                        className={`border-t border-gray-100 align-top ${rowIndex % 2 === 1 ? "bg-gray-50/60" : ""}`}
+                      >
                         {toMatchedLeadRow(lead).map((cell, i) => (
-                          <td key={i} className="px-2 py-1.5 text-gray-700 max-w-[220px]">
+                          <td
+                            key={i}
+                            title={cell}
+                            className={`px-3 py-2 text-gray-700 ${
+                              i === MATCHED_LEADS_COLUMNS.length - 1
+                                ? "whitespace-normal break-words leading-relaxed"
+                                : "truncate"
+                            }`}
+                          >
                             {cell}
                           </td>
                         ))}
@@ -274,36 +300,31 @@ export const SignalCard = ({
                   </tbody>
                 </table>
               </div>
-              <div className="flex justify-end gap-2 border-t border-gray-100 p-2">
-                <Button size="sm" variant="outline" className="text-xs" onClick={onDownloadCsv}>
-                  Download
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-xs text-blue-700 border-blue-300 hover:bg-blue-50"
-                  onClick={onSaveCsvAsArtefact}
-                >
-                  Save as Artefact
-                </Button>
-              </div>
             </div>
           )}
           <div className="mt-3 flex flex-wrap justify-end gap-2">
             <Button size="sm" variant="outline" onClick={() => setCsvPreviewOpen((v) => !v)}>
               {csvPreviewOpen ? "Hide CSV" : "View as CSV"}
             </Button>
-            <Button size="sm" variant="outline" onClick={onDownloadSummary}>
-              Download the Signal summary
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-blue-700 border-blue-300 hover:bg-blue-50"
-              onClick={onSaveAsArtefact}
-            >
-              Save as Artifact
-            </Button>
+            {csvPreviewOpen ? (
+              <>
+                <Button size="sm" variant="outline" onClick={onDownloadCsv}>
+                  Download
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-blue-700 border-blue-300 hover:bg-blue-50"
+                  onClick={onSaveCsvAsArtefact}
+                >
+                  Save as Artefact
+                </Button>
+              </>
+            ) : (
+              <Button size="sm" variant="outline" onClick={onDownloadSummary}>
+                Download the Signal summary
+              </Button>
+            )}
           </div>
         </>
       )}
