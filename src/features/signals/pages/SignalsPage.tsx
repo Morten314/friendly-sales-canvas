@@ -17,6 +17,7 @@ import { getDemoMatchedLeads } from "../lib/demoMatchedLeads";
 import {
   buildRecommendationPlaybookArtefact,
   buildSignalBriefingArtefact,
+  buildLeadSheetArtefact,
   buildAcceptedSignalArtefact,
 } from "../lib/signalBriefing";
 import {
