@@ -879,6 +879,31 @@ const SignalsPage = () => {
   return (
     <Layout>
       <div className="p-6">
+        <div className="w-full max-w-5xl mx-auto mb-4 flex items-center gap-2">
+          <Button
+            variant={currentTab === "signals" ? "default" : "outline"}
+            size="sm"
+            className="text-xs"
+            onClick={() => setCurrentTab("signals")}
+          >
+            Live feed
+          </Button>
+          <Button
+            variant={currentTab === "accepted" ? "default" : "outline"}
+            size="sm"
+            className="text-xs"
+            onClick={() => setCurrentTab("accepted")}
+          >
+            Accepted signals
+          </Button>
+        </div>
+
+        {currentTab === "accepted" && (
+          <div className="w-full max-w-5xl mx-auto">
+            <AcceptedSignalsPanel refreshKey={acceptedRefreshKey} />
+          </div>
+        )}
+
         {currentTab === "signals" && (
           <div className="w-full max-w-5xl mx-auto space-y-4">
             <div className="flex justify-end">
