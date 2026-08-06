@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import type { SignalLeadMapLead } from "../contracts";
-import { MATCHED_LEADS_COLUMNS, toMatchedLeadRow } from "../lib/matchedLeadsCsv";
+import { SIGNAL_PREVIEW_COLUMNS, toSignalPreviewRow } from "../lib/matchedLeadsCsv";
 import type { Agent, NBAItem, SignalCard as SignalCardType } from "../types";
 
 import { sanitizeSourceUrl } from "./signalCards";
