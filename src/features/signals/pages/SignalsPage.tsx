@@ -2,6 +2,7 @@ import { Bookmark, MessageCircle, Share2, Bot, Loader2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { AcceptedSignalsPanel } from "../components/AcceptedSignalsPanel";
 import { SignalCard } from "../components/SignalCard";
 import {
   applyRejectedFilterAndSort,
@@ -89,7 +90,10 @@ const SignalsPage = () => {
   const navigate = useNavigate();
   const askMutation = useSignalAsk();
   const actionMutation = useSignalAction();
-  const [currentTab] = useState("signals");
+  const [currentTab, setCurrentTab] = useState("signals");
+  // Bumped whenever an accepted-signal artefact is written, so the Accepted tab
+  // re-reads the persisted store.
+  const [acceptedRefreshKey, setAcceptedRefreshKey] = useState(0);
   const [signals, setSignals] = useState<SignalCardType[]>([]);
   const [savedInsights, setSavedInsights] = useState<SignalCardType[]>([]);
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
@@ -540,6 +544,7 @@ const SignalsPage = () => {
       // File the accepted signal into its date-wise folder in Artefacts. It stays
       // there until the user deletes it manually (un-accepting does not remove it).
       saveArtefact(buildAcceptedSignalArtefact(signal));
+      setAcceptedRefreshKey((k) => k + 1);
 
       // Save to localStorage
       const storageKey = `signals_${currentUser.uid}`;
@@ -875,6 +880,31 @@ const SignalsPage = () => {
   return (
     <Layout>
       <div className="p-6">
+        <div className="w-full max-w-5xl mx-auto mb-4 flex items-center gap-2">
+          <Button
+            variant={currentTab === "signals" ? "default" : "outline"}
+            size="sm"
+            className="text-xs"
+            onClick={() => setCurrentTab("signals")}
+          >
+            Live feed
+          </Button>
+          <Button
+            variant={currentTab === "accepted" ? "default" : "outline"}
+            size="sm"
+            className="text-xs"
+            onClick={() => setCurrentTab("accepted")}
+          >
+            Accepted signals
+          </Button>
+        </div>
+
+        {currentTab === "accepted" && (
+          <div className="w-full max-w-5xl mx-auto">
+            <AcceptedSignalsPanel refreshKey={acceptedRefreshKey} />
+          </div>
+        )}
+
         {currentTab === "signals" && (
           <div className="w-full max-w-5xl mx-auto space-y-4">
             <div className="flex justify-end">
