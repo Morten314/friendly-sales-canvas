@@ -70,6 +70,8 @@ interface SignalCardProps {
   onDownloadCsv: () => void;
   /** Download the signal summary PDF. */
   onDownloadSummary: () => void;
+  /** Save the matched-leads sheet to Artefacts as an editable file. */
+  onSaveCsvAsArtefact: () => void;
   /** Offered in the error state; wraps the page's refreshLeadMap (forces a server recompute). */
   onRecomputeLeadMap?: () => void;
   /** Offered in the error state; plain re-fetch of the mapping (the "Try again" escape). */
@@ -110,6 +112,7 @@ export const SignalCard = ({
   onSaveAsArtefact,
   onDownloadCsv,
   onDownloadSummary,
+  onSaveCsvAsArtefact,
   onRecomputeLeadMap,
   onRetryLeadMap,
   onSaveRecommendationAsArtefact,
@@ -271,9 +274,17 @@ export const SignalCard = ({
                   </tbody>
                 </table>
               </div>
-              <div className="flex justify-end border-t border-gray-100 p-2">
-                <Button size="sm" variant="ghost" className="text-xs" onClick={onDownloadCsv}>
-                  Download CSV
+              <div className="flex justify-end gap-2 border-t border-gray-100 p-2">
+                <Button size="sm" variant="outline" className="text-xs" onClick={onDownloadCsv}>
+                  Download
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs text-blue-700 border-blue-300 hover:bg-blue-50"
+                  onClick={onSaveCsvAsArtefact}
+                >
+                  Save as Artefact
                 </Button>
               </div>
             </div>
