@@ -21,6 +21,12 @@ export interface ArtefactItem {
   outputSummary: string;
   /** Optional attached CSV export (e.g. the complete matched-leads sheet). */
   csv?: { filename: string; content: string };
+  /**
+   * Optional editable spreadsheet payload. When present the Artefacts library
+   * renders an editable grid (not just a CSV download) so users can enrich rows
+   * in place. `rows` is row-major and column-aligned with `columns`.
+   */
+  sheet?: { filename: string; columns: string[]; rows: string[][] };
   fullReport: {
     title: string;
     executiveSummary: string;

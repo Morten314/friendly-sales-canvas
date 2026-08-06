@@ -17,6 +17,7 @@ import { getDemoMatchedLeads } from "../lib/demoMatchedLeads";
 import {
   buildRecommendationPlaybookArtefact,
   buildSignalBriefingArtefact,
+  buildLeadSheetArtefact,
   buildAcceptedSignalArtefact,
 } from "../lib/signalBriefing";
 import {
@@ -615,6 +616,20 @@ const SignalsPage = () => {
     generateAndDownloadPDF(buildSignalBriefingArtefact(signal, resolveLeads(signal.id)));
   };
 
+  /** Save the matched-leads sheet to Artefacts as an editable file. */
+  const handleSaveCsvAsArtefact = (signal: SignalCardType) => {
+    saveArtefact(buildLeadSheetArtefact(signal, resolveLeads(signal.id)));
+    toast({
+      title: "Saved to Artefacts",
+      description: "The lead sheet is editable in Artefacts — enrich rows in place.",
+      action: (
+        <Button variant="outline" size="sm" onClick={() => navigate("/artifacts")}>
+          View →
+        </Button>
+      ),
+    });
+  };
+
   const handleSaveRecommendationAsArtefact = async (signal: SignalCardType, index: number) => {
     // Re-entry guard: a second click while a playbook is already generating must not
     // start a parallel run. aria-disabled on the button is non-blocking, so without
@@ -986,6 +1001,7 @@ const SignalsPage = () => {
                     onSaveAsArtefact={() => handleSaveAsArtefact(signal)}
                     onDownloadCsv={() => handleDownloadCsv(signal)}
                     onDownloadSummary={() => handleDownloadSummary(signal)}
+                    onSaveCsvAsArtefact={() => handleSaveCsvAsArtefact(signal)}
                     onRecomputeLeadMap={() => void handleRecomputeLeadMap()}
                     onRetryLeadMap={retryLeadMap}
                     onSaveRecommendationAsArtefact={(index) =>

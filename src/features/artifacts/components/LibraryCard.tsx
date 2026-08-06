@@ -2,7 +2,7 @@ import { CheckCircle, Clock, Download, Edit, FileText, Lightbulb, Trash2 } from 
 import type { MouseEvent } from "react";
 
 import { getStatusIcon, getTypeIcon } from "../lib/artefactPresentation";
-import { downloadArtefactCsv } from "../lib/artefactStore";
+import { downloadArtefactCsv, downloadArtefactSheet } from "../lib/artefactStore";
 import type { ArtefactItem } from "../types";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -22,6 +22,8 @@ interface LibraryCardProps {
   onCancelEdit: () => void;
   onDownloadClick: (artefact: ArtefactItem) => void;
   onEditNameChange: (value: string) => void;
+  /** Persist a cell edit on an editable sheet artefact. */
+  onSheetCellChange?: (id: string, rowIndex: number, colIndex: number, value: string) => void;
 }
 
 // Library Card Component (Compact view)
@@ -37,6 +39,7 @@ export const LibraryCard = ({
   onCancelEdit,
   onDownloadClick,
   onEditNameChange,
+  onSheetCellChange,
 }: LibraryCardProps) => {
   const TypeIcon = getTypeIcon(artefact.type);
   const isExpanded = expandedArtefact === artefact.id;
@@ -127,6 +130,71 @@ export const LibraryCard = ({
         {/* Expanded View */}
         {isExpanded && (
           <div className="mt-4 pt-4 border-t space-y-4">
+            {/* Editable sheet */}
+            {artefact.sheet && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-primary" />
+                    <h4 className="font-semibold text-sm">
+                      {artefact.sheet.filename} · {artefact.sheet.rows.length} rows (editable)
+                    </h4>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      downloadArtefactSheet(artefact);
+                    }}
+                  >
+                    <Download className="mr-1 h-3 w-3" />
+                    Download CSV
+                  </Button>
+                </div>
+                <div className="overflow-x-auto rounded-md border">
+                  <table className="w-full text-[11px]">
+                    <thead className="bg-muted">
+                      <tr>
+                        {artefact.sheet.columns.map((col) => (
+                          <th
+                            key={col}
+                            className="whitespace-nowrap px-2 py-1.5 text-left font-medium"
+                          >
+                            {col}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {artefact.sheet.rows.map((row, rowIndex) => (
+                        <tr key={rowIndex} className="border-t align-top">
+                          {row.map((cell, colIndex) => (
+                            <td key={colIndex} className="p-0">
+                              <input
+                                value={cell}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) =>
+                                  onSheetCellChange?.(
+                                    artefact.id,
+                                    rowIndex,
+                                    colIndex,
+                                    e.target.value,
+                                  )
+                                }
+                                className="w-full min-w-[120px] bg-transparent px-2 py-1.5 text-[11px] outline-none focus:bg-accent focus:ring-1 focus:ring-primary/40"
+                              />
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
             {/* Context & Rationale */}
             <div className="flex items-start gap-2">
               <Lightbulb className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
