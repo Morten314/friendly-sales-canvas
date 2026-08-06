@@ -28,8 +28,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/components/ui/use-toast";
-import { enqueueArtefact, generateAndDownloadPDF } from "@/features/artifacts";
-import { downloadMatchedLeadsCsv } from "@/features/signals/lib/matchedLeadsCsv";
+import { generateAndDownloadPDF, saveArtefact } from "@/features/artifacts";
+import {
+  buildMatchedLeadsCsv,
+  downloadMatchedLeadsCsv,
+  matchedLeadsCsvFilename,
+} from "@/features/signals/lib/matchedLeadsCsv";
 import { Layout } from "@/features/shell";
 import type { CompanyProfileResponse } from "@/shared/api/contracts";
 import { useAuth } from "@/shared/auth";
@@ -576,19 +580,31 @@ const SignalsPage = () => {
   const handleSaveAsArtefact = (signal: SignalCardType) => {
     const leads = resolveLeads(signal.id);
     const item = buildSignalBriefingArtefact(signal, leads);
-    generateAndDownloadPDF(item);
-    downloadMatchedLeadsCsv(signal.headline, leads);
-    enqueueArtefact(item);
+    // The complete matched-leads CSV rides with the artefact into the library.
+    item.csv = {
+      filename: matchedLeadsCsvFilename(signal.headline),
+      content: buildMatchedLeadsCsv(leads),
+    };
+    saveArtefact(item);
     toast({
       title: "Saved to Artifacts",
-      description:
-        "Your signal briefing (PDF) and matched leads (CSV) were downloaded and added to the Artifacts library.",
+      description: "Signal briefing and the complete matched-leads CSV were saved to Artifacts.",
       action: (
         <Button variant="outline" size="sm" onClick={() => navigate("/artifacts")}>
           View →
         </Button>
       ),
     });
+  };
+
+  /** Download only the matched-leads CSV for a signal. */
+  const handleDownloadCsv = (signal: SignalCardType) => {
+    downloadMatchedLeadsCsv(signal.headline, resolveLeads(signal.id));
+  };
+
+  /** Download only the signal summary PDF. */
+  const handleDownloadSummary = (signal: SignalCardType) => {
+    generateAndDownloadPDF(buildSignalBriefingArtefact(signal, resolveLeads(signal.id)));
   };
 
   const handleSaveRecommendationAsArtefact = async (signal: SignalCardType, index: number) => {
@@ -935,6 +951,8 @@ const SignalsPage = () => {
                     isLeadsExpanded={expandedLeadsSignalId === signal.id}
                     onFindMatchedLeads={() => handleFindMatchedLeads(signal.id)}
                     onSaveAsArtefact={() => handleSaveAsArtefact(signal)}
+                    onDownloadCsv={() => handleDownloadCsv(signal)}
+                    onDownloadSummary={() => handleDownloadSummary(signal)}
                     onRecomputeLeadMap={() => void handleRecomputeLeadMap()}
                     onRetryLeadMap={retryLeadMap}
                     onSaveRecommendationAsArtefact={(index) =>
