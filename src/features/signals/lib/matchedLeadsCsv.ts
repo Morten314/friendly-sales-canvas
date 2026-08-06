@@ -14,6 +14,25 @@ export const MATCHED_LEADS_COLUMNS = [
   "Why",
 ] as const;
 
+/** Trimmed triage view shown on Signals. Full enrichment lives in Artefacts. */
+export const SIGNAL_PREVIEW_COLUMNS = [
+  "Name",
+  "Title",
+  "Company",
+  "Relevance",
+  "Why",
+] as const;
+
+export function toSignalPreviewRow(lead: SignalLeadMapLead): string[] {
+  return [
+    lead.name ?? "",
+    lead.title ?? "",
+    lead.company ?? "",
+    lead.relevance ?? "",
+    lead.why ?? "",
+  ];
+}
+
 const escapeCell = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
 
 export const slugifySignal = (value: string) =>
