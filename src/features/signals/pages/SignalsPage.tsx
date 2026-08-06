@@ -16,6 +16,7 @@ import { getDemoMatchedLeads } from "../lib/demoMatchedLeads";
 import {
   buildRecommendationPlaybookArtefact,
   buildSignalBriefingArtefact,
+  buildAcceptedSignalArtefact,
 } from "../lib/signalBriefing";
 import {
   fetchSignals,
@@ -535,6 +536,10 @@ const SignalsPage = () => {
       // Accept the signal
       const newAccepted = new Set([...acceptedSignals, contentHash]);
       setAcceptedSignals(newAccepted);
+
+      // File the accepted signal into its date-wise folder in Artefacts. It stays
+      // there until the user deletes it manually (un-accepting does not remove it).
+      saveArtefact(buildAcceptedSignalArtefact(signal));
 
       // Save to localStorage
       const storageKey = `signals_${currentUser.uid}`;
