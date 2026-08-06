@@ -2,6 +2,7 @@ import { Bookmark, MessageCircle, Share2, Bot, Loader2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { AcceptedSignalsPanel } from "../components/AcceptedSignalsPanel";
 import { SignalCard } from "../components/SignalCard";
 import {
   applyRejectedFilterAndSort,
