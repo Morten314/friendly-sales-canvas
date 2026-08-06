@@ -113,6 +113,7 @@ export function buildSignalBriefingArtefact(
 }
 
 /** One playbook ArtefactItem from a recommendation + its LLM-generated sections (Spec 41 §9). */
+// (lead sheet builder below)
 export function buildRecommendationPlaybookArtefact(
   signal: SignalCard,
   recommendation: NBAItem,
