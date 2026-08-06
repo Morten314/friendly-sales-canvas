@@ -506,7 +506,9 @@ const SignalsPage = () => {
 
     const contentHash = getSignalContentHash(signal);
 
-    // Toggle accept state - if already accepted, unaccept it
+    // Gmail-star / Slack-save semantics: accepting never removes the signal from
+    // the live feed — it only adds it to the Accepted collection. Un-accepting
+    // removes it from that collection again and is NOT a rejection.
     if (acceptedSignals.has(contentHash)) {
       // Unaccept the signal
       const newAccepted = new Set(acceptedSignals);
@@ -524,17 +526,13 @@ const SignalsPage = () => {
         console.error("Error saving accepted signals to localStorage:", error);
       }
 
-      // Call API to unaccept (action: reject)
-      try {
-        await actionMutation.mutateAsync({ orgId, signalId, action: "reject" });
-      } catch (error) {
-        console.error("Error calling signal action API:", error);
-        // Still update UI even if API fails
-      }
+      // Un-star: drop it out of the Accepted collection. The card stays in the feed.
+      deleteStoredArtefact(`accepted-signal-${signal.id}`);
+      setAcceptedRefreshKey((k) => k + 1);
 
       toast({
-        title: "Signal unaccepted",
-        description: "This signal has been unaccepted.",
+        title: "Removed from Accepted signals",
+        description: "The signal stays in your live feed.",
       });
     } else {
       // Accept the signal
@@ -558,8 +556,8 @@ const SignalsPage = () => {
       try {
         await actionMutation.mutateAsync({ orgId, signalId, action: "accept" });
         toast({
-          title: "Signal accepted",
-          description: "This signal has been marked as accepted.",
+          title: "Saved to Accepted signals",
+          description: "The signal stays in your live feed for continued work.",
         });
       } catch (error) {
         console.error("Error calling signal action API:", error);
