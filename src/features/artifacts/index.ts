@@ -3,5 +3,11 @@ export { artifactsRoutes } from "./routes";
 
 // Delivery + export surface consumed by the signals feature (Spec/Plan 38).
 export { enqueueArtefact, resetArtefactQueue } from "./lib/artefactQueue";
+export {
+  saveArtefact,
+  loadStoredArtefacts,
+  deleteStoredArtefact,
+  downloadArtefactCsv,
+} from "./lib/artefactStore";
 export { generateAndDownloadPDF } from "./lib/artefactPdf";
 export type { ArtefactItem } from "./types";
