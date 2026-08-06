@@ -39,7 +39,8 @@ export function buildSignalBriefingArtefact(
 
   const keyFindings = leads.map((lead) => {
     const company = lead.company || "Unknown company";
-    const head = `${company} (Relevance: ${titleCase(lead.relevance)})`;
+    const who = [lead.name, lead.title].filter(Boolean).join(" - ");
+    const head = `${who ? `${who} (${company})` : company} (Relevance: ${titleCase(lead.relevance)})`;
     // The per-lead `why` rides into the PDF here — it is intentionally never on screen.
     return lead.why ? `${head}: ${lead.why}` : head;
   });

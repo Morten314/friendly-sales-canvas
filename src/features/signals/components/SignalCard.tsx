@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import type { SignalLeadMapLead } from "../contracts";
+import { MATCHED_LEADS_COLUMNS, toMatchedLeadRow } from "../lib/matchedLeadsCsv";
 import type { Agent, NBAItem, SignalCard as SignalCardType } from "../types";
 
 import { sanitizeSourceUrl } from "./signalCards";
@@ -65,6 +66,10 @@ interface SignalCardProps {
   onFindMatchedLeads: () => void;
   /** Build + download + deliver the briefing. */
   onSaveAsArtefact: () => void;
+  /** Download the matched-leads CSV for this signal. */
+  onDownloadCsv: () => void;
+  /** Download the signal summary PDF. */
+  onDownloadSummary: () => void;
   /** Offered in the error state; wraps the page's refreshLeadMap (forces a server recompute). */
   onRecomputeLeadMap?: () => void;
   /** Offered in the error state; plain re-fetch of the mapping (the "Try again" escape). */
@@ -103,6 +108,8 @@ export const SignalCard = ({
   isLeadsExpanded,
   onFindMatchedLeads,
   onSaveAsArtefact,
+  onDownloadCsv,
+  onDownloadSummary,
   onRecomputeLeadMap,
   onRetryLeadMap,
   onSaveRecommendationAsArtefact,
@@ -111,6 +118,7 @@ export const SignalCard = ({
 }: SignalCardProps) => {
   const [showLockMessage, setShowLockMessage] = useState(false);
   const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [csvPreviewOpen, setCsvPreviewOpen] = useState(false);
 
   const clearLockTimer = () => {
     if (lockTimerRef.current) {
@@ -224,7 +232,10 @@ export const SignalCard = ({
                 key={lead.lead_id}
                 className="flex items-center justify-between gap-3 rounded-md bg-white px-3 py-2 border border-gray-100"
               >
-                <span className="text-sm text-gray-800">{lead.company || "Unknown company"}</span>
+                <span className="text-sm text-gray-800">
+                  {lead.name ? `${lead.name} — ` : ""}
+                  {lead.company || "Unknown company"}
+                </span>
                 <Badge
                   variant="secondary"
                   className={`text-xs ${relevanceBadgeClass(lead.relevance)}`}
@@ -234,7 +245,46 @@ export const SignalCard = ({
               </div>
             ))}
           </div>
-          <div className="mt-3 flex justify-end">
+          {csvPreviewOpen && (
+            <div className="mt-3 rounded-md border border-gray-200 bg-white">
+              <div className="overflow-x-auto">
+                <table className="w-full text-[11px]">
+                  <thead className="bg-gray-100 text-gray-700">
+                    <tr>
+                      {MATCHED_LEADS_COLUMNS.map((col) => (
+                        <th key={col} className="whitespace-nowrap px-2 py-1.5 text-left font-medium">
+                          {col}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {matchedLeads.map((lead) => (
+                      <tr key={lead.lead_id} className="border-t border-gray-100 align-top">
+                        {toMatchedLeadRow(lead).map((cell, i) => (
+                          <td key={i} className="px-2 py-1.5 text-gray-700 max-w-[220px]">
+                            {cell}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-end border-t border-gray-100 p-2">
+                <Button size="sm" variant="ghost" className="text-xs" onClick={onDownloadCsv}>
+                  Download CSV
+                </Button>
+              </div>
+            </div>
+          )}
+          <div className="mt-3 flex flex-wrap justify-end gap-2">
+            <Button size="sm" variant="outline" onClick={() => setCsvPreviewOpen((v) => !v)}>
+              {csvPreviewOpen ? "Hide CSV" : "View as CSV"}
+            </Button>
+            <Button size="sm" variant="outline" onClick={onDownloadSummary}>
+              Download the Signal summary
+            </Button>
             <Button
               size="sm"
               variant="outline"
