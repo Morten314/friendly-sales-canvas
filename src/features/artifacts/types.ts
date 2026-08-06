@@ -19,6 +19,8 @@ export interface ArtefactItem {
   systemImpact: string;
   actionPerformed: string;
   outputSummary: string;
+  /** Optional attached CSV export (e.g. the complete matched-leads sheet). */
+  csv?: { filename: string; content: string };
   fullReport: {
     title: string;
     executiveSummary: string;
