@@ -89,7 +89,10 @@ const SignalsPage = () => {
   const navigate = useNavigate();
   const askMutation = useSignalAsk();
   const actionMutation = useSignalAction();
-  const [currentTab] = useState("signals");
+  const [currentTab, setCurrentTab] = useState("signals");
+  // Bumped whenever an accepted-signal artefact is written, so the Accepted tab
+  // re-reads the persisted store.
+  const [acceptedRefreshKey, setAcceptedRefreshKey] = useState(0);
   const [signals, setSignals] = useState<SignalCardType[]>([]);
   const [savedInsights, setSavedInsights] = useState<SignalCardType[]>([]);
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
@@ -540,6 +543,7 @@ const SignalsPage = () => {
       // File the accepted signal into its date-wise folder in Artefacts. It stays
       // there until the user deletes it manually (un-accepting does not remove it).
       saveArtefact(buildAcceptedSignalArtefact(signal));
+      setAcceptedRefreshKey((k) => k + 1);
 
       // Save to localStorage
       const storageKey = `signals_${currentUser.uid}`;
