@@ -940,6 +940,10 @@ const SignalsPage = () => {
                 const contentHash = getSignalContentHash(signal);
                 const isAccepted = acceptedSignals.has(contentHash);
                 const leads = resolveLeads(signal.id);
+                // Demo placeholders stand in whenever the backend mapping is
+                // empty or failed, so the card must not show the loading/error
+                // states over rows we already have.
+                const usingDemoLeads = leadsForSignal(signal.id).length === 0;
                 return (
                   <SignalCard
                     key={signal.id}
