@@ -7,7 +7,11 @@ import { LibraryCard } from "../components/LibraryCard";
 import { mockArtefacts } from "../data/mockArtefacts";
 import { generateAndDownloadPDF } from "../lib/artefactPdf";
 import { drainArtefactQueue } from "../lib/artefactQueue";
-import { deleteStoredArtefact, downloadArtefactCsv, loadStoredArtefacts } from "../lib/artefactStore";
+import {
+  deleteStoredArtefact,
+  loadStoredArtefacts,
+  updateStoredArtefactSheet,
+} from "../lib/artefactStore";
 import type { ArtefactItem } from "../types";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -128,6 +132,25 @@ const ArtifactsPage = () => {
     setEditName("");
   };
 
+  /** Edit one cell of an editable sheet artefact and persist the change. */
+  const handleSheetCellChange = (
+    id: string,
+    rowIndex: number,
+    colIndex: number,
+    value: string,
+  ) => {
+    setArtefacts((prev) =>
+      prev.map((artefact) => {
+        if (artefact.id !== id || !artefact.sheet) return artefact;
+        const rows = artefact.sheet.rows.map((row, r) =>
+          r === rowIndex ? row.map((cell, c) => (c === colIndex ? value : cell)) : row,
+        );
+        updateStoredArtefactSheet(id, rows);
+        return { ...artefact, sheet: { ...artefact.sheet, rows } };
+      }),
+    );
+  };
+
   const handleDownloadClick = (artefact: ArtefactItem) => {
     // Mark as viewed if it was new
     if (artefact.status === "new") {
@@ -189,6 +212,7 @@ const ArtifactsPage = () => {
                 onCancelEdit={handleCancelEdit}
                 onDownloadClick={handleDownloadClick}
                 onEditNameChange={setEditName}
+                onSheetCellChange={handleSheetCellChange}
               />
             ))
           )}
