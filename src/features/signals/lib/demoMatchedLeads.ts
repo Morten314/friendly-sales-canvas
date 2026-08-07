@@ -66,11 +66,71 @@ const DEMO_POOL: Omit<SignalLeadMapLead, "lead_id">[] = [
     relevance: "low",
     why: "Peripheral fit — monitor for a stronger trigger before outreach.",
   },
+  {
+    name: "Aisha Rahman",
+    title: "Director of Revenue Operations",
+    seniority: "Director",
+    email: "aisha@meridianpay.com",
+    email_status: "verified",
+    linkedin: "https://www.linkedin.com/in/aisha-rahman",
+    phone: "",
+    company: "Meridian Pay",
+    relevance: "high",
+    why: "RevOps owner at a fintech consolidating its GTM stack this quarter.",
+  },
+  {
+    name: "Daniel Okafor",
+    title: "Head of Growth",
+    seniority: "Head",
+    email: "daniel@arborworks.io",
+    email_status: "verified",
+    linkedin: "https://www.linkedin.com/in/daniel-okafor",
+    phone: "",
+    company: "Arborworks",
+    relevance: "high",
+    why: "Doubled headcount post-Series A — buying committee is forming now.",
+  },
+  {
+    name: "Elena Vasquez",
+    title: "VP Marketing",
+    seniority: "VP",
+    email: "elena@solstice-crm.com",
+    email_status: "guessed",
+    linkedin: "https://www.linkedin.com/in/elena-vasquez",
+    phone: "",
+    company: "Solstice CRM",
+    relevance: "medium",
+    why: "Owns demand-gen budget; competing priorities may delay evaluation.",
+  },
+  {
+    name: "Marcus Feld",
+    title: "Chief Revenue Officer",
+    seniority: "C-Level",
+    email: "marcus@hallmarkindustrial.com",
+    email_status: "verified",
+    linkedin: "https://www.linkedin.com/in/marcus-feld",
+    phone: "",
+    company: "Hallmark Industrial",
+    relevance: "medium",
+    why: "Enterprise account with a long cycle but strong strategic fit.",
+  },
+  {
+    name: "Priya Iyer",
+    title: "Sales Operations Manager",
+    seniority: "Manager",
+    email: "priya@northgate-labs.com",
+    email_status: "unverified",
+    linkedin: "https://www.linkedin.com/in/priya-iyer",
+    phone: "",
+    company: "Northgate Labs",
+    relevance: "low",
+    why: "Influencer rather than decision maker — useful for internal referral.",
+  },
 ];
 
 export function getDemoMatchedLeads(signalId: string): SignalLeadMapLead[] {
   const seed = Array.from(signalId).reduce((n, c) => n + c.charCodeAt(0), 0);
-  const count = 3 + (seed % 3); // 3–5 leads
+  const count = 5 + (seed % 4); // 5–8 leads
   return Array.from({ length: count }, (_, i) => {
     const base = DEMO_POOL[(seed + i) % DEMO_POOL.length];
     return { ...base, lead_id: `demo-${signalId}-${i}` };
