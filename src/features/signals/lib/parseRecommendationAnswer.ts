@@ -82,7 +82,7 @@ export function parseRecommendationAnswer(raw: string): ParsedAnswer {
 
   const lines = text.split("\n");
   const sections: AnswerSection[] = [];
-  let verdictLines: string[] = [];
+  const verdictLines: string[] = [];
   let current: AnswerSection | null = null;
 
   let paragraph: string[] = [];
