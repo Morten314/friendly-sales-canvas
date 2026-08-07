@@ -39,6 +39,50 @@ const FIELD_RE = /^\s*(?:[-*•]\s*)?\*\*(.+?)\*\*\s*[:—-]\s*(.+)$/;
 
 const strip = (s: string) => sanitizeAnswerText(s).trim();
 
+/**
+ * Backends often return the whole answer as one run-on blob (headings inline,
+ * no newlines). Re-introduce line breaks before recognisable section labels so
+ * the line-based parser below can see the structure.
+ */
+const INLINE_HEADINGS = [
+  "Strategic Framework",
+  "Recommended Outreach Sequence",
+  "Outreach Sequence",
+  "Core Message Framework",
+  "Message Framework",
+  "Message Angle",
+  "Key Insight to Lead With",
+  "Key Insight",
+  "Why High Priority",
+  "Why high priority",
+  "Hiring Posture",
+  "Budget Signal",
+  "Reason to Deprioritise Now",
+  "Reason to Deprioritize Now",
+  "Deprioritise",
+  "Execution Checklist",
+  "Next Steps",
+  "Timing",
+  "Summary",
+  "Recommendation",
+];
+
+export function normalizeInlineHeadings(text: string): string {
+  const alts = [...INLINE_HEADINGS].sort((a, b) => b.length - a.length).join("|");
+  let out = text;
+  // One pass: break the line before any known heading (or "Tier N") label.
+  out = out.replace(new RegExp(`(?<!\\n)[ \\t]+((?:Tier\\s*[123]|${alts})\\b)`, "g"), "\n$1");
+  // Split "Heading: content" onto two lines so the heading stands alone.
+  out = out.replace(
+    new RegExp(`^((?:Tier\\s*[123][^:\\n]{0,40}|${alts})\\s*:)[ \\t]*(\\S.*)$`, "gm"),
+    "$1\n$2",
+  );
+  // Generic "Some Label:" appearing mid-sentence after a full stop (never across
+  // an existing line break, which would undo the splits above).
+  out = out.replace(/([.!?])[ \t]+([A-Z][A-Za-z ]{2,40}:)[ \t]+/g, "$1\n$2\n");
+  return out;
+}
+
 function isTableLine(line: string) {
   return line.trim().startsWith("|") && line.includes("|", 1);
 }
@@ -64,6 +108,14 @@ function detectTier(title: string): 1 | 2 | 3 | undefined {
 function headingOf(rawLine: string): string | null {
   const line = rawLine.trim();
   if (!line) return null;
+  // "Tier 1 — Contact immediately" style lines are headings with or without a colon.
+  if (/^tier\s*[123]\b/i.test(line) && line.length <= 90) return strip(line.replace(/:$/, ""));
+  if (
+    line.length <= 90 &&
+    INLINE_HEADINGS.some((h) => new RegExp(`^${h}\\s*[:—-]?\\s*$`, "i").test(strip(line)))
+  ) {
+    return strip(line.replace(/[:—-]\s*$/, ""));
+  }
   const h = HEADING_RE.exec(line);
   if (h) return strip(h[1]);
   const b = BOLD_HEADING_RE.exec(line);
@@ -77,7 +129,7 @@ function headingOf(rawLine: string): string | null {
 
 /** Parse a raw (un-sanitized) recommendation answer into sections and blocks. */
 export function parseRecommendationAnswer(raw: string): ParsedAnswer {
-  const text = (raw ?? "").replace(/\r\n/g, "\n");
+  const text = normalizeInlineHeadings((raw ?? "").replace(/\r\n/g, "\n"));
   if (!text.trim()) return { verdict: "", sections: [], isPlain: true };
 
   const lines = text.split("\n");
