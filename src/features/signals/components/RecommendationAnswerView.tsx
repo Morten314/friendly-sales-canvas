@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import type { AnswerBlock, AnswerSection } from "../lib/parseRecommendationAnswer";
 import { parseRecommendationAnswer } from "../lib/parseRecommendationAnswer";
 
-import { Button } from "@/components/ui/button";
 import { sanitizeAnswerText } from "@/shared/lib/sanitizeAnswerText";
 
 /* -------------------------------------------------------------------------- */
@@ -325,30 +324,6 @@ export default function RecommendationAnswerView({ answer }: Props) {
           <p className="text-sm text-slate-800 whitespace-pre-wrap">{parsed.verdict}</p>
         </div>
       )}
-
-      <div className="flex flex-wrap items-center gap-1.5">
-        {groups.map((g) => (
-          <span
-            key={g.id}
-            className={`rounded-full px-2 py-0.5 text-[10px] ${
-              g.tier ? TIER_STYLE[g.tier].chip : "bg-slate-100 text-slate-600"
-            }`}
-          >
-            {g.title}
-          </span>
-        ))}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 px-2 text-[11px] text-slate-600 hover:bg-slate-100 ml-auto"
-          onClick={(e) => {
-            e.stopPropagation();
-            setCollapsedAll((v) => !v);
-          }}
-        >
-          {collapsedAll ? "Expand all" : "Collapse all"}
-        </Button>
-      </div>
 
       <div className="space-y-2">
         {groups.map((group) => (
