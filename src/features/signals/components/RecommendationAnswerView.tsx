@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, ListChecks, Target, Layers } from "lucide-react";
+import { ChevronDown, ChevronUp, ListChecks } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { AnswerBlock, AnswerSection } from "../lib/parseRecommendationAnswer";
