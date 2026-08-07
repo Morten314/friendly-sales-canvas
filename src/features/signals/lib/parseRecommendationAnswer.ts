@@ -39,6 +39,47 @@ const FIELD_RE = /^\s*(?:[-*•]\s*)?\*\*(.+?)\*\*\s*[:—-]\s*(.+)$/;
 
 const strip = (s: string) => sanitizeAnswerText(s).trim();
 
+/**
+ * Backends often return the whole answer as one run-on blob (headings inline,
+ * no newlines). Re-introduce line breaks before recognisable section labels so
+ * the line-based parser below can see the structure.
+ */
+const INLINE_HEADINGS = [
+  "Strategic Framework",
+  "Recommended Outreach Sequence",
+  "Outreach Sequence",
+  "Core Message Framework",
+  "Message Framework",
+  "Message Angle",
+  "Key Insight to Lead With",
+  "Key Insight",
+  "Why High Priority",
+  "Why high priority",
+  "Hiring Posture",
+  "Budget Signal",
+  "Reason to Deprioritise Now",
+  "Reason to Deprioritize Now",
+  "Deprioritise",
+  "Execution Checklist",
+  "Next Steps",
+  "Timing",
+  "Summary",
+  "Recommendation",
+];
+
+function normalizeInlineHeadings(text: string): string {
+  let out = text;
+  // Tier headings: "Tier 1 - ..." / "Tier 1:" anywhere in the text.
+  out = out.replace(/(?<!\n)\s(Tier\s*[123]\b)/g, "\n$1");
+  for (const h of INLINE_HEADINGS) {
+    const re = new RegExp(`(?<!\\n)\\s(${h}\\s*[:—-])`, "g");
+    out = out.replace(re, "\n$1");
+  }
+  // Generic "Some Label:" appearing mid-sentence after a full stop.
+  out = out.replace(/([.!?])\s+([A-Z][A-Za-z ]{2,40}:)\s/g, "$1\n$2 ");
+  return out;
+}
+
 function isTableLine(line: string) {
   return line.trim().startsWith("|") && line.includes("|", 1);
 }
@@ -77,7 +118,7 @@ function headingOf(rawLine: string): string | null {
 
 /** Parse a raw (un-sanitized) recommendation answer into sections and blocks. */
 export function parseRecommendationAnswer(raw: string): ParsedAnswer {
-  const text = (raw ?? "").replace(/\r\n/g, "\n");
+  const text = normalizeInlineHeadings((raw ?? "").replace(/\r\n/g, "\n"));
   if (!text.trim()) return { verdict: "", sections: [], isPlain: true };
 
   const lines = text.split("\n");
