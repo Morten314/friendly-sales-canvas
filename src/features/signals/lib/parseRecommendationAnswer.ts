@@ -77,8 +77,9 @@ export function normalizeInlineHeadings(text: string): string {
     new RegExp(`^((?:Tier\\s*[123][^:\\n]{0,40}|${alts})\\s*:)[ \\t]*(\\S.*)$`, "gm"),
     "$1\n$2",
   );
-  // Generic "Some Label:" appearing mid-sentence after a full stop.
-  out = out.replace(/([.!?])\s+([A-Z][A-Za-z ]{2,40}:)\s/g, "$1\n$2 ");
+  // Generic "Some Label:" appearing mid-sentence after a full stop (never across
+  // an existing line break, which would undo the splits above).
+  out = out.replace(/([.!?])[ \t]+([A-Z][A-Za-z ]{2,40}:)[ \t]+/g, "$1\n$2\n");
   return out;
 }
 
