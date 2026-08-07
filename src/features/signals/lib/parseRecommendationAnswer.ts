@@ -237,7 +237,9 @@ export function parseRecommendationAnswer(raw: string): ParsedAnswer {
   flushAll();
 
   const verdict = verdictLines.join("\n\n").trim();
-  const nonEmpty = sections.filter((s) => s.blocks.length > 0 || s.title);
+  // Sections without any blocks carry no information — dropping them avoids
+  // rendering dead rows that expand to nothing.
+  const nonEmpty = sections.filter((s) => s.blocks.length > 0);
   return {
     verdict,
     sections: nonEmpty,
