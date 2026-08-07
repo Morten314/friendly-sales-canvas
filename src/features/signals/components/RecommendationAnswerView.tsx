@@ -165,15 +165,98 @@ interface Props {
   answer: string;
 }
 
+/** The four fixed parts every recommendation answer is grouped into. */
+const PARTS = [
+  { n: 1, title: "Who to act on now", hint: "Priority tiers and strategic framing" },
+  { n: 2, title: "Who to hold", hint: "Deprioritise, timing and watch list" },
+  { n: 3, title: "Outreach sequence", hint: "Steps, channels and cadence" },
+  { n: 4, title: "Message framework", hint: "Angles, insights and checklists" },
+] as const;
+
+function partOf(title: string): 1 | 2 | 3 | 4 | null {
+  const t = title.toLowerCase();
+  if (/tier|strategic framework|high priority|hiring posture|budget signal|persona/.test(t))
+    return 1;
+  if (/deprioriti|wait|hold|timing|later/.test(t)) return 2;
+  if (/sequence|next steps|cadence|touchpoint|outreach/.test(t)) return 3;
+  if (/message|insight|angle|checklist|summary|recommendation/.test(t)) return 4;
+  return null;
+}
+
+function PartBlock({
+  part,
+  sections,
+  defaultOpen,
+  forceOpen,
+}: {
+  part: (typeof PARTS)[number];
+  sections: AnswerSection[];
+  defaultOpen: boolean;
+  forceOpen: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const isOpen = forceOpen || open;
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen(() => !isOpen);
+        }}
+        className="w-full flex items-start gap-2 px-3 py-2 text-left rounded-lg hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-300"
+        aria-expanded={isOpen}
+      >
+        <span className="mt-0.5 shrink-0 rounded bg-slate-900 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white">
+          Part {part.n}
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-slate-800">{part.title}</p>
+          <p className="text-[11px] text-slate-500 truncate">
+            {isOpen ? part.hint : `${sections.length} ${sections.length === 1 ? "block" : "blocks"} · ${part.hint}`}
+          </p>
+        </div>
+        {isOpen ? (
+          <ChevronUp className="h-3.5 w-3.5 text-slate-400 mt-1 shrink-0" />
+        ) : (
+          <ChevronDown className="h-3.5 w-3.5 text-slate-400 mt-1 shrink-0" />
+        )}
+      </button>
+      {isOpen && (
+        <div className="px-3 pb-3 space-y-1.5">
+          {sections.map((section, i) => (
+            <SectionCard
+              key={`${section.id}-${forceOpen}`}
+              section={section}
+              defaultOpen={forceOpen || i === 0}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * Structured renderer for a recommendation answer. Replaces the truncated prose
- * blob with: a verdict callout, scan chips, and collapsible sections (tier
- * blocks accented by priority). Falls back to plain prose when the answer has
- * no detectable structure.
+ * blob with a verdict callout and four fixed parts, each holding its own
+ * sections. Part 1 is open by default. Falls back to plain prose when the
+ * answer has no detectable structure.
  */
 export default function RecommendationAnswerView({ answer }: Props) {
   const parsed = useMemo(() => parseRecommendationAnswer(answer), [answer]);
   const [allOpen, setAllOpen] = useState(false);
+
+  const grouped = useMemo(() => {
+    const map = new Map<number, AnswerSection[]>();
+    let last: 1 | 2 | 3 | 4 = 1;
+    for (const s of parsed.sections) {
+      const p = partOf(s.title) ?? last;
+      last = p;
+      map.set(p, [...(map.get(p) ?? []), s]);
+    }
+    return map;
+  }, [parsed.sections]);
 
   if (parsed.isPlain) {
     return (
@@ -181,8 +264,7 @@ export default function RecommendationAnswerView({ answer }: Props) {
     );
   }
 
-  const tierSections = parsed.sections.filter((s) => s.tier);
-  const expandable = parsed.sections.filter((s) => s.blocks.length > 0).length;
+  const activeParts = PARTS.filter((p) => (grouped.get(p.n) ?? []).length > 0);
 
   return (
     <div className="space-y-2.5">
@@ -195,19 +277,9 @@ export default function RecommendationAnswerView({ answer }: Props) {
         </div>
       )}
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
-          <Layers className="h-3 w-3" />
-          {expandable} expandable {expandable === 1 ? "section" : "sections"}
+        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
+          {activeParts.length} {activeParts.length === 1 ? "part" : "parts"}
         </span>
-        {tierSections.map((s) => (
-          <span
-            key={s.id}
-            className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600"
-          >
-            <Target className="h-3 w-3" />
-            {s.title}
-          </span>
-        ))}
         <Button
           variant="ghost"
           size="sm"
@@ -222,12 +294,14 @@ export default function RecommendationAnswerView({ answer }: Props) {
         </Button>
       </div>
 
-      <div className="space-y-1.5">
-        {parsed.sections.map((section, i) => (
-          <SectionCard
-            key={`${section.id}-${allOpen}`}
-            section={section}
-            defaultOpen={allOpen || i === 0 || section.tier === 1}
+      <div className="space-y-2">
+        {activeParts.map((p) => (
+          <PartBlock
+            key={`${p.n}-${allOpen}`}
+            part={p}
+            sections={grouped.get(p.n) ?? []}
+            defaultOpen={allOpen || p.n === 1}
+            forceOpen={allOpen}
           />
         ))}
       </div>
