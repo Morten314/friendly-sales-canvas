@@ -105,6 +105,14 @@ function detectTier(title: string): 1 | 2 | 3 | undefined {
 function headingOf(rawLine: string): string | null {
   const line = rawLine.trim();
   if (!line) return null;
+  // "Tier 1 — Contact immediately" style lines are headings with or without a colon.
+  if (/^tier\s*[123]\b/i.test(line) && line.length <= 90) return strip(line.replace(/:$/, ""));
+  if (
+    line.length <= 90 &&
+    INLINE_HEADINGS.some((h) => new RegExp(`^${h}\\s*[:—-]?\\s*$`, "i").test(strip(line)))
+  ) {
+    return strip(line.replace(/[:—-]\s*$/, ""));
+  }
   const h = HEADING_RE.exec(line);
   if (h) return strip(h[1]);
   const b = BOLD_HEADING_RE.exec(line);
