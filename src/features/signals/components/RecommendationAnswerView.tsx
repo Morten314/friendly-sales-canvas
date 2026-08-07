@@ -139,7 +139,6 @@ export default function RecommendationAnswerView({ answer }: Props) {
   }
 
   const tierSections = parsed.sections.filter((s) => s.tier);
-  const verdict = parsed.verdict || parsed.sections[0]?.blocks.find((b) => b.kind === "paragraph");
 
   return (
     <div className="space-y-2.5">
@@ -151,8 +150,6 @@ export default function RecommendationAnswerView({ answer }: Props) {
           <p className="text-sm text-slate-800 whitespace-pre-wrap">{parsed.verdict}</p>
         </div>
       )}
-      {!verdict && null}
-
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
           <Layers className="h-3 w-3" />
