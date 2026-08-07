@@ -539,21 +539,23 @@ export const SignalCard = ({
                                               ) : (
                                                 <>
                                                   <div className="relative">
-                                                    <p
-                                                      className={`text-sm text-slate-800 whitespace-pre-wrap pr-1 ${
+                                                    <div
+                                                      className={`pr-1 ${
                                                         answerExpandedKeys.has(
                                                           `${signal.id}-${index}`,
                                                         )
                                                           ? ""
-                                                          : "max-h-24 overflow-hidden"
+                                                          : "max-h-72 overflow-hidden"
                                                       }`}
                                                     >
-                                                      {sanitizeAnswerText(
-                                                        recommendationAnswers[
-                                                          `${signal.id}-${index}`
-                                                        ] ?? item.prompt,
-                                                      )}
-                                                    </p>
+                                                      <RecommendationAnswerView
+                                                        answer={
+                                                          recommendationAnswers[
+                                                            `${signal.id}-${index}`
+                                                          ] ?? item.prompt
+                                                        }
+                                                      />
+                                                    </div>
                                                     {!answerExpandedKeys.has(
                                                       `${signal.id}-${index}`,
                                                     ) && (
