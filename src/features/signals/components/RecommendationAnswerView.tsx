@@ -71,8 +71,27 @@ function BlockView({ block }: { block: AnswerBlock }) {
   );
 }
 
+/** Human-readable summary of what a collapsed section contains. */
+function contentSummary(section: AnswerSection): string {
+  const counts: string[] = [];
+  const bullets = section.blocks
+    .filter((b) => b.kind === "bullets")
+    .reduce((n, b) => n + (b.kind === "bullets" ? b.items.length : 0), 0);
+  const fields = section.blocks
+    .filter((b) => b.kind === "fields")
+    .reduce((n, b) => n + (b.kind === "fields" ? b.fields.length : 0), 0);
+  const tables = section.blocks.filter((b) => b.kind === "table").length;
+  const paras = section.blocks.filter((b) => b.kind === "paragraph").length;
+  if (paras) counts.push(`${paras} note${paras > 1 ? "s" : ""}`);
+  if (bullets) counts.push(`${bullets} point${bullets > 1 ? "s" : ""}`);
+  if (fields) counts.push(`${fields} field${fields > 1 ? "s" : ""}`);
+  if (tables) counts.push(`${tables} table${tables > 1 ? "s" : ""}`);
+  return counts.join(" · ");
+}
+
 function SectionCard({ section, defaultOpen }: { section: AnswerSection; defaultOpen: boolean }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const hasContent = section.blocks.length > 0;
+  const [open, setOpen] = useState(defaultOpen && hasContent);
   const accent = section.tier ? TIER_ACCENT[section.tier] : "border-l-blue-300 bg-white";
   const preview = useMemo(() => {
     const first = section.blocks.find((b) => b.kind !== "table");
@@ -82,28 +101,52 @@ function SectionCard({ section, defaultOpen }: { section: AnswerSection; default
     if (first.kind === "fields") return first.fields.map((f) => f.label).join(" • ");
     return "";
   }, [section.blocks]);
+  const summary = useMemo(() => contentSummary(section), [section]);
+
+  // Sections with nothing to reveal render as static labels — no chevron, no
+  // hover/pointer affordance — so only expandable rows look clickable.
+  if (!hasContent) {
+    return (
+      <div
+        className={`rounded-md border border-dashed border-slate-200 border-l-2 ${accent} px-2.5 py-1.5`}
+      >
+        <p className="text-xs font-medium text-slate-500">{section.title}</p>
+      </div>
+    );
+  }
 
   return (
-    <div className={`rounded-md border border-slate-200 border-l-2 ${accent}`}>
+    <div
+      className={`rounded-md border border-slate-200 border-l-2 ${accent} transition-colors ${
+        open ? "" : "hover:border-slate-300"
+      }`}
+    >
       <button
         type="button"
         onClick={(e) => {
           e.stopPropagation();
           setOpen((v) => !v);
         }}
-        className="w-full flex items-start gap-2 px-2.5 py-2 text-left"
+        className="w-full flex items-start gap-2 px-2.5 py-2 text-left cursor-pointer rounded-md hover:bg-slate-50/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-300"
         aria-expanded={open}
       >
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-slate-800">{section.title}</p>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <p className="text-xs font-semibold text-slate-800 truncate">{section.title}</p>
+            {summary && (
+              <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-slate-500">
+                {summary}
+              </span>
+            )}
+          </div>
           {!open && preview && (
             <p className="text-[11px] text-slate-500 truncate mt-0.5">{preview}</p>
           )}
         </div>
         {open ? (
-          <ChevronUp className="h-3.5 w-3.5 text-slate-400 mt-0.5" />
+          <ChevronUp className="h-3.5 w-3.5 text-slate-400 mt-0.5 shrink-0" />
         ) : (
-          <ChevronDown className="h-3.5 w-3.5 text-slate-400 mt-0.5" />
+          <ChevronDown className="h-3.5 w-3.5 text-slate-400 mt-0.5 shrink-0" />
         )}
       </button>
       {open && (
@@ -139,6 +182,7 @@ export default function RecommendationAnswerView({ answer }: Props) {
   }
 
   const tierSections = parsed.sections.filter((s) => s.tier);
+  const expandable = parsed.sections.filter((s) => s.blocks.length > 0).length;
 
   return (
     <div className="space-y-2.5">
@@ -153,7 +197,7 @@ export default function RecommendationAnswerView({ answer }: Props) {
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
           <Layers className="h-3 w-3" />
-          {parsed.sections.length} sections
+          {expandable} expandable {expandable === 1 ? "section" : "sections"}
         </span>
         {tierSections.map((s) => (
           <span
