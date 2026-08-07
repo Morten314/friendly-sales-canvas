@@ -75,6 +75,9 @@ function normalizeInlineHeadings(text: string): string {
     const re = new RegExp(`(?<!\\n)\\s(${h}\\s*[:—-])`, "g");
     out = out.replace(re, "\n$1");
   }
+  // Split "Heading: content" onto two lines so the heading stands alone.
+  const headingLine = new RegExp(`^((?:Tier\\s*[123][^:\\n]{0,40}|${INLINE_HEADINGS.join("|")})\\s*:)\\s*(\\S.*)$`, "gim");
+  out = out.replace(headingLine, "$1\n$2");
   // Generic "Some Label:" appearing mid-sentence after a full stop.
   out = out.replace(/([.!?])\s+([A-Z][A-Za-z ]{2,40}:)\s/g, "$1\n$2 ");
   return out;
