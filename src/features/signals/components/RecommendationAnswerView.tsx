@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import type { AnswerBlock, AnswerSection } from "../lib/parseRecommendationAnswer";
 import { parseRecommendationAnswer } from "../lib/parseRecommendationAnswer";
 
-import { Button } from "@/components/ui/button";
 import { sanitizeAnswerText } from "@/shared/lib/sanitizeAnswerText";
 
 /* -------------------------------------------------------------------------- */
