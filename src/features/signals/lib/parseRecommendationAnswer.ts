@@ -67,7 +67,7 @@ const INLINE_HEADINGS = [
   "Recommendation",
 ];
 
-function normalizeInlineHeadings(text: string): string {
+export function normalizeInlineHeadings(text: string): string {
   const alts = [...INLINE_HEADINGS].sort((a, b) => b.length - a.length).join("|");
   let out = text;
   // One pass: break the line before any known heading (or "Tier N") label.
