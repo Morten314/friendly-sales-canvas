@@ -16,6 +16,7 @@ import { SIGNAL_PREVIEW_COLUMNS, toSignalPreviewRow } from "../lib/matchedLeadsC
 import type { Agent, NBAItem, SignalCard as SignalCardType } from "../types";
 
 import { sanitizeSourceUrl } from "./signalCards";
+import RecommendationAnswerView from "./RecommendationAnswerView";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
