@@ -326,30 +326,6 @@ export default function RecommendationAnswerView({ answer }: Props) {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-1.5">
-        {groups.map((g) => (
-          <span
-            key={g.id}
-            className={`rounded-full px-2 py-0.5 text-[10px] ${
-              g.tier ? TIER_STYLE[g.tier].chip : "bg-slate-100 text-slate-600"
-            }`}
-          >
-            {g.title}
-          </span>
-        ))}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 px-2 text-[11px] text-slate-600 hover:bg-slate-100 ml-auto"
-          onClick={(e) => {
-            e.stopPropagation();
-            setCollapsedAll((v) => !v);
-          }}
-        >
-          {collapsedAll ? "Expand all" : "Collapse all"}
-        </Button>
-      </div>
-
       <div className="space-y-2">
         {groups.map((group) => (
           <GroupCard key={`${group.id}-${collapsedAll}`} group={group} collapsedAll={collapsedAll} />
