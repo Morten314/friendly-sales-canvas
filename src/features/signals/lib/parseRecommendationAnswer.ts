@@ -68,16 +68,15 @@ const INLINE_HEADINGS = [
 ];
 
 function normalizeInlineHeadings(text: string): string {
+  const alts = [...INLINE_HEADINGS].sort((a, b) => b.length - a.length).join("|");
   let out = text;
-  // Tier headings: "Tier 1 - ..." / "Tier 1:" anywhere in the text.
-  out = out.replace(/(?<!\n)\s(Tier\s*[123]\b)/g, "\n$1");
-  for (const h of INLINE_HEADINGS) {
-    const re = new RegExp(`(?<!\\n)\\s(${h}\\s*[:—-])`, "g");
-    out = out.replace(re, "\n$1");
-  }
+  // One pass: break the line before any known heading (or "Tier N") label.
+  out = out.replace(new RegExp(`(?<!\\n)[ \\t]+((?:Tier\\s*[123]|${alts})\\b)`, "g"), "\n$1");
   // Split "Heading: content" onto two lines so the heading stands alone.
-  const headingLine = new RegExp(`^((?:Tier\\s*[123][^:\\n]{0,40}|${INLINE_HEADINGS.join("|")})\\s*:)\\s*(\\S.*)$`, "gim");
-  out = out.replace(headingLine, "$1\n$2");
+  out = out.replace(
+    new RegExp(`^((?:Tier\\s*[123][^:\\n]{0,40}|${alts})\\s*[:—-])[ \\t]*(\\S.*)$`, "gm"),
+    "$1\n$2",
+  );
   // Generic "Some Label:" appearing mid-sentence after a full stop.
   out = out.replace(/([.!?])\s+([A-Z][A-Za-z ]{2,40}:)\s/g, "$1\n$2 ");
   return out;
