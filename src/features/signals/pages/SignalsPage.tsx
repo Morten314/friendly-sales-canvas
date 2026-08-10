@@ -611,11 +611,6 @@ const SignalsPage = () => {
     downloadMatchedLeadsCsv(signal.headline, resolveLeads(signal.id));
   };
 
-  /** Download only the signal summary PDF. */
-  const handleDownloadSummary = (signal: SignalCardType) => {
-    generateAndDownloadPDF(buildSignalBriefingArtefact(signal, resolveLeads(signal.id)));
-  };
-
   /** Save the matched-leads sheet to Artefacts as an editable file. */
   const handleSaveCsvAsArtefact = (signal: SignalCardType) => {
     saveArtefact(buildLeadSheetArtefact(signal, resolveLeads(signal.id)));
@@ -1004,7 +999,6 @@ const SignalsPage = () => {
                     onFindMatchedLeads={() => handleFindMatchedLeads(signal.id)}
                     onSaveAsArtefact={() => handleSaveAsArtefact(signal)}
                     onDownloadCsv={() => handleDownloadCsv(signal)}
-                    onDownloadSummary={() => handleDownloadSummary(signal)}
                     onSaveCsvAsArtefact={() => handleSaveCsvAsArtefact(signal)}
                     onRecomputeLeadMap={() => void handleRecomputeLeadMap()}
                     onRetryLeadMap={retryLeadMap}
