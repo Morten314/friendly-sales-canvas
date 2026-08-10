@@ -41,12 +41,18 @@ function writeRaw(items: StoredArtefact[]): void {
   }
 }
 
-/** Newest-first list of persisted artefacts, with icons rehydrated. */
+/**
+ * Newest-first list of persisted artefacts, with icons rehydrated.
+ * Accepted signals are excluded: they are a Signals triage collection, not
+ * stored work products, and live in the signals feature's own store.
+ */
 export function loadStoredArtefacts(): ArtefactItem[] {
-  return readRaw().map((item) => ({
-    ...item,
-    agentIcon: ICONS[item.agentName] ?? Bot,
-  }));
+  return readRaw()
+    .filter((item) => item.taskNumber !== "Accepted Signal")
+    .map((item) => ({
+      ...item,
+      agentIcon: ICONS[item.agentName] ?? Bot,
+    }));
 }
 
 /** Persist an artefact (newest first) and hand it to a mounted Artifacts page. */

@@ -3,15 +3,13 @@ import { useMemo } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { loadAcceptedSignals } from "../lib/acceptedSignalsStore";
+
 import {
   type ArtefactItem,
   downloadArtefactCsv,
   generateAndDownloadPDF,
-  loadStoredArtefacts,
 } from "@/features/artifacts";
-
-/** Folder naming produced by buildAcceptedSignalArtefact: "Accepted Signals — YYYY-MM-DD". */
-const ACCEPTED_TASK = "Accepted Signal";
 
 const dayFromFolder = (folder?: string) => folder?.split("—").pop()?.trim() ?? "Undated";
 
@@ -28,12 +26,12 @@ const formatDay = (day: string) => {
 
 /**
  * Read-only view of accepted signals, grouped by the day they were accepted.
- * Sources the same persisted artefacts written on accept — no duplicate store.
+ * Backed by the Signals-owned accepted-signals store (never Artefacts).
  */
 export const AcceptedSignalsPanel = ({ refreshKey }: { refreshKey: number }) => {
   const groups = useMemo(() => {
     void refreshKey;
-    const items = loadStoredArtefacts().filter((a) => a.taskNumber === ACCEPTED_TASK);
+    const items = loadAcceptedSignals();
     const byDay = new Map<string, ArtefactItem[]>();
     for (const item of items) {
       const day = dayFromFolder(item.folder);
