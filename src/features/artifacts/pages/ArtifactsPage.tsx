@@ -10,6 +10,7 @@ import { drainArtefactQueue } from "../lib/artefactQueue";
 import {
   deleteStoredArtefact,
   loadStoredArtefacts,
+  pruneSheet,
   updateStoredArtefactSheet,
 } from "../lib/artefactStore";
 import type { ArtefactItem } from "../types";
@@ -39,7 +40,7 @@ const ArtifactsPage = () => {
 
   useEffect(() => {
     const handleAddArtefact = (event: CustomEvent) => {
-      const incoming = event.detail as ArtefactItem;
+      const incoming = pruneSheet(event.detail as ArtefactItem);
       setArtefacts((prev) => [incoming, ...prev.filter((a) => a.id !== incoming.id)]);
       setActiveFolder(incoming.folder ?? null);
     };
@@ -54,7 +55,7 @@ const ArtifactsPage = () => {
     if (queued.length === 0) return;
     setArtefacts((prev) => {
       const known = new Set(prev.map((a) => a.id));
-      const fresh = queued.filter((a) => !known.has(a.id));
+      const fresh = queued.filter((a) => !known.has(a.id)).map(pruneSheet);
       return [...fresh.slice().reverse(), ...prev];
     });
     const mostRecent = queued[queued.length - 1];
