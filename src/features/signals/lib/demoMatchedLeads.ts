@@ -256,3 +256,19 @@ export function getDemoMatchedLeads(signalId: string): SignalLeadMapLead[] {
     return { ...base, lead_id: `demo-${signalId}-${i}` };
   });
 }
+
+/**
+ * Real mapped leads plus deterministic demo rows so "Find Matched Leads" always
+ * shows a populated table while the org's lead data is still thin.
+ */
+export function withDemoMatchedLeads(
+  signalId: string,
+  real: SignalLeadMapLead[],
+  minimum = 6,
+): SignalLeadMapLead[] {
+  if (real.length >= minimum) return real;
+  const filler = getDemoMatchedLeads(signalId).filter(
+    (demo) => !real.some((r) => r.name === demo.name && r.company === demo.company),
+  );
+  return [...real, ...filler].slice(0, Math.max(minimum, real.length));
+}
