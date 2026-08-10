@@ -50,6 +50,26 @@ function isAcceptedSignal(item: StoredArtefact): boolean {
   );
 }
 
+/** Columns retired from the lead sheet — stripped from previously stored sheets. */
+const DROPPED_SHEET_COLUMNS = ["Email status", "Phone"];
+
+function pruneSheet(item: StoredArtefact): StoredArtefact {
+  if (!item.sheet) return item;
+  const drop = item.sheet.columns
+    .map((c, i) => (DROPPED_SHEET_COLUMNS.includes(c) ? i : -1))
+    .filter((i) => i !== -1);
+  if (drop.length === 0) return item;
+  const keep = (row: string[]) => row.filter((_, i) => !drop.includes(i));
+  return {
+    ...item,
+    sheet: {
+      ...item.sheet,
+      columns: keep(item.sheet.columns),
+      rows: item.sheet.rows.map(keep),
+    },
+  };
+}
+
 /**
  * Newest-first list of persisted artefacts, with icons rehydrated.
  * Accepted signals are excluded: they are a Signals triage collection, not
@@ -57,9 +77,9 @@ function isAcceptedSignal(item: StoredArtefact): boolean {
  */
 export function loadStoredArtefacts(): ArtefactItem[] {
   const all = readRaw();
-  const kept = all.filter((item) => !isAcceptedSignal(item));
+  const kept = all.filter((item) => !isAcceptedSignal(item)).map(pruneSheet);
   // Purge legacy accepted signals so they cannot reappear on later loads.
-  if (kept.length !== all.length) writeRaw(kept);
+  writeRaw(kept);
   return kept.map((item) => ({
     ...item,
     agentIcon: ICONS[item.agentName] ?? Bot,
