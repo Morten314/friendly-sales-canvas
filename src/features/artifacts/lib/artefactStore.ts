@@ -41,23 +41,35 @@ function writeRaw(items: StoredArtefact[]): void {
   }
 }
 
+/** Legacy accepted-signal items that must never appear in the Artefacts library. */
+function isAcceptedSignal(item: StoredArtefact): boolean {
+  return (
+    item.taskNumber === "Accepted Signal" ||
+    item.id.startsWith("accepted-signal-") ||
+    (item.folder ?? "").startsWith("Accepted Signals")
+  );
+}
+
 /**
  * Newest-first list of persisted artefacts, with icons rehydrated.
  * Accepted signals are excluded: they are a Signals triage collection, not
  * stored work products, and live in the signals feature's own store.
  */
 export function loadStoredArtefacts(): ArtefactItem[] {
-  return readRaw()
-    .filter((item) => item.taskNumber !== "Accepted Signal")
-    .map((item) => ({
-      ...item,
-      agentIcon: ICONS[item.agentName] ?? Bot,
-    }));
+  const all = readRaw();
+  const kept = all.filter((item) => !isAcceptedSignal(item));
+  // Purge legacy accepted signals so they cannot reappear on later loads.
+  if (kept.length !== all.length) writeRaw(kept);
+  return kept.map((item) => ({
+    ...item,
+    agentIcon: ICONS[item.agentName] ?? Bot,
+  }));
 }
 
 /** Persist an artefact (newest first) and hand it to a mounted Artifacts page. */
 export function saveArtefact(item: ArtefactItem): void {
   const { agentIcon: _icon, ...rest } = item;
+  if (isAcceptedSignal(rest)) return;
   const existing = readRaw().filter((a) => a.id !== item.id);
   writeRaw([rest, ...existing]);
   enqueueArtefact(item);
