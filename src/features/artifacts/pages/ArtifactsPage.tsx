@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { ArtefactStats } from "../components/ArtefactStats";
 import { FolderGrid } from "../components/FolderGrid";
 import { LibraryCard } from "../components/LibraryCard";
-import { mockArtefacts } from "../data/mockArtefacts";
 import { generateAndDownloadPDF } from "../lib/artefactPdf";
 import { drainArtefactQueue } from "../lib/artefactQueue";
 import {
@@ -20,10 +19,7 @@ import { usePageTitle } from "@/shared/hooks/usePageTitle";
 
 const ArtifactsPage = () => {
   usePageTitle("Artefacts - Brewra");
-  const [artefacts, setArtefacts] = useState<ArtefactItem[]>(() => [
-    ...loadStoredArtefacts(),
-    ...mockArtefacts,
-  ]);
+  const [artefacts, setArtefacts] = useState<ArtefactItem[]>(() => loadStoredArtefacts());
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedArtefact, setExpandedArtefact] = useState<string | null>(null);
   const [editingArtefact, setEditingArtefact] = useState<string | null>(null);
