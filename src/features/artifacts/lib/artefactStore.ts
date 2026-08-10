@@ -51,9 +51,13 @@ function isAcceptedSignal(item: StoredArtefact): boolean {
 }
 
 /** Columns retired from the lead sheet — stripped from previously stored sheets. */
-const DROPPED_SHEET_COLUMNS = ["Email status", "Phone"];
+const DROPPED_SHEET_COLUMNS = ["Email status", "Email Status", "Phone", "Phone number"];
 
-function pruneSheet(item: StoredArtefact): StoredArtefact {
+/**
+ * Drop retired columns from any artefact sheet. Applied on read AND on delivery
+ * (queue/event) so older payloads can never surface the removed columns.
+ */
+export function pruneSheet<T extends { sheet?: ArtefactItem["sheet"] }>(item: T): T {
   if (!item.sheet) return item;
   const drop = item.sheet.columns
     .map((c, i) => (DROPPED_SHEET_COLUMNS.includes(c) ? i : -1))
