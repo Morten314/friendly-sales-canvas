@@ -54,24 +54,59 @@ function isAcceptedSignal(item: StoredArtefact): boolean {
 const DROPPED_SHEET_COLUMNS = ["Email status", "Email Status", "Phone", "Phone number"];
 
 /**
- * Drop retired columns from any artefact sheet. Applied on read AND on delivery
- * (queue/event) so older payloads can never surface the removed columns.
+ * Rebuild the briefing's per-lead findings from the sheet when they are missing
+ * (artefacts stored before the briefing carried lead rationale). Mirrors the
+ * "Name - Title (Company) (Relevance: X): why" shape used by the PDF.
  */
-export function pruneSheet<T extends { sheet?: ArtefactItem["sheet"] }>(item: T): T {
-  if (!item.sheet) return item;
+function backfillFindings<T extends { sheet?: ArtefactItem["sheet"]; fullReport?: ArtefactItem["fullReport"] }>(
+  item: T,
+): T {
+  const sheet = item.sheet;
+  const report = item.fullReport;
+  if (!sheet || !report || (report.keyFindings?.length ?? 0) > 0) return item;
+  const col = (name: string) => sheet.columns.findIndex((c) => c.toLowerCase() === name);
+  const iName = col("name");
+  const iTitle = col("title");
+  const iCompany = col("company");
+  const iRelevance = col("relevance");
+  const iWhy = col("why");
+  const at = (row: string[], i: number) => (i >= 0 ? (row[i] ?? "").trim() : "");
+  const keyFindings = sheet.rows
+    .map((row) => {
+      const company = at(row, iCompany) || "Unknown company";
+      const who = [at(row, iName), at(row, iTitle)].filter(Boolean).join(" - ");
+      const relevance = at(row, iRelevance);
+      const head = `${who ? `${who} (${company})` : company}${relevance ? ` (Relevance: ${relevance})` : ""}`;
+      const why = at(row, iWhy);
+      return why ? `${head}: ${why}` : head;
+    })
+    .filter(Boolean);
+  if (keyFindings.length === 0) return item;
+  return { ...item, fullReport: { ...report, keyFindings } };
+}
+
+/**
+ * Drop retired columns from any artefact sheet and restore missing briefing
+ * findings. Applied on read AND on delivery (queue/event) so older payloads can
+ * never surface removed columns or an empty briefing.
+ */
+export function pruneSheet<T extends { sheet?: ArtefactItem["sheet"]; fullReport?: ArtefactItem["fullReport"] }>(
+  item: T,
+): T {
+  if (!item.sheet) return backfillFindings(item);
   const drop = item.sheet.columns
     .map((c, i) => (DROPPED_SHEET_COLUMNS.includes(c) ? i : -1))
     .filter((i) => i !== -1);
-  if (drop.length === 0) return item;
+  if (drop.length === 0) return backfillFindings(item);
   const keep = (row: string[]) => row.filter((_, i) => !drop.includes(i));
-  return {
+  return backfillFindings({
     ...item,
     sheet: {
       ...item.sheet,
       columns: keep(item.sheet.columns),
       rows: item.sheet.rows.map(keep),
     },
-  };
+  });
 }
 
 /**

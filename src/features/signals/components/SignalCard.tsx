@@ -70,7 +70,6 @@ interface SignalCardProps {
   /** Download the matched-leads CSV for this signal. */
   onDownloadCsv: () => void;
   /** Download the signal summary PDF. */
-  onDownloadSummary: () => void;
   /** Save the matched-leads sheet to Artefacts as an editable file. */
   onSaveCsvAsArtefact: () => void;
   /** Offered in the error state; wraps the page's refreshLeadMap (forces a server recompute). */
@@ -112,7 +111,6 @@ export const SignalCard = ({
   onFindMatchedLeads,
   onSaveAsArtefact,
   onDownloadCsv,
-  onDownloadSummary,
   onSaveCsvAsArtefact,
   onRecomputeLeadMap,
   onRetryLeadMap,
@@ -302,7 +300,7 @@ export const SignalCard = ({
             <Button size="sm" variant="outline" onClick={() => setCsvPreviewOpen((v) => !v)}>
               {csvPreviewOpen ? "Hide CSV" : "View as CSV"}
             </Button>
-            {csvPreviewOpen ? (
+            {csvPreviewOpen && (
               <>
                 <Button size="sm" variant="outline" onClick={onDownloadCsv}>
                   Download
@@ -316,10 +314,6 @@ export const SignalCard = ({
                   Save as Artefact
                 </Button>
               </>
-            ) : (
-              <Button size="sm" variant="outline" onClick={onDownloadSummary}>
-                Download the Signal summary
-              </Button>
             )}
           </div>
         </>
