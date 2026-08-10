@@ -1,15 +1,13 @@
 import type { SignalLeadMapLead } from "../contracts";
 
-/** Column order mirrors the exported prospect sheet. */
+/** Column order mirrors the exported prospect sheet (no email-status/phone). */
 export const MATCHED_LEADS_COLUMNS = [
   "Name",
   "Title",
   "Seniority",
   "Company",
   "Email",
-  "Email status",
   "LinkedIn",
-  "Phone",
   "Relevance",
   "Why",
 ] as const;
@@ -50,9 +48,7 @@ export function toMatchedLeadRow(lead: SignalLeadMapLead): string[] {
     lead.seniority ?? "",
     lead.company ?? "",
     lead.email ?? "",
-    lead.email_status ?? "",
     lead.linkedin ?? "",
-    lead.phone ?? "",
     lead.relevance ?? "",
     lead.why ?? "",
   ];
