@@ -8,12 +8,12 @@ The Artefacts library surface (route `/artifacts`). Presentational / local-state
 
 ## Key files
 
-- `pages/ArtifactsPage.tsx` — orchestrator (state, the two `window` CustomEvent listeners, handlers, derived `filteredArtefacts`/`folders`, layout).
+- `pages/ArtifactsPage.tsx` — orchestrator (state, the two `window` CustomEvent listeners, handlers, derived `folders`/`visibleFiles`, breadcrumb + search). Browsing model: root shows folders + unfiled files; a folder shows its files; opening a file replaces the list with the full-width detail view. Searching flattens the tree.
 - `types.ts` — `ArtefactItem`.
 - `data/mockArtefacts.ts` — mock seed data (`folders` is derived in the page, not seeded).
 - `lib/artefactPdf.ts` — `buildArtefactPdfDoc` / `buildArtefactPdfBlob` / `generateAndDownloadPDF` (jsPDF).
 - `lib/artefactPresentation.tsx` — `getTypeIcon` / `getStatusIcon`.
-- `components/LibraryCard.tsx`, `ArtefactStats.tsx`, `FolderGrid.tsx` — view pieces. `FolderGrid` also takes the `artefacts` array (beyond Spec 29 §4's prop list) to compute each folder's count, preserving the original behavior.
+- `components/FolderList.tsx`, `ArtefactRow.tsx`, `ArtefactDetail.tsx` — file-explorer view pieces: folder rows at the root, one compact row per stored file, and a full-width detail view hosting the editable sheet.
 
 ## Dependency notes
 
