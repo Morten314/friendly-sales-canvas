@@ -31,6 +31,23 @@ export function resolveSignalAgentPresentation(agent: "scout" | "profiler"): Age
 
 const titleCase = (s: string): string => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
+/** "Name - Title (Company) (Relevance: X): why" — shared by briefing + lead-sheet PDFs. */
+function leadFindings(leads: SignalLeadMapLead[]): string[] {
+  return leads.map((lead) => {
+    const company = lead.company || "Unknown company";
+    const who = [lead.name, lead.title].filter(Boolean).join(" - ");
+    const head = `${who ? `${who} (${company})` : company} (Relevance: ${titleCase(lead.relevance)})`;
+    return lead.why ? `${head}: ${lead.why}` : head;
+  });
+}
+
+/** Recommendations carried into PDFs: NBAs first, else the signal's next best moves. */
+function signalRecommendations(signal: SignalCard): string[] {
+  return signal.NBAs && signal.NBAs.length > 0
+    ? signal.NBAs.map((n) => n.nba)
+    : (signal.nextBestMoves ?? []);
+}
+
 /**
  * Artefact recorded when a user accepts a signal. Filed into a date-wise folder
  * ("Accepted Signals — YYYY-MM-DD") and persisted until the user deletes it.
@@ -79,13 +96,8 @@ export function buildSignalBriefingArtefact(
       ? signal.NBAs.map((n) => n.nba)
       : (signal.nextBestMoves ?? []);
 
-  const keyFindings = leads.map((lead) => {
-    const company = lead.company || "Unknown company";
-    const who = [lead.name, lead.title].filter(Boolean).join(" - ");
-    const head = `${who ? `${who} (${company})` : company} (Relevance: ${titleCase(lead.relevance)})`;
-    // The per-lead `why` rides into the PDF here — it is intentionally never on screen.
-    return lead.why ? `${head}: ${lead.why}` : head;
-  });
+  // The per-lead `why` rides into the PDF here — it is intentionally never on screen.
+  const keyFindings = leadFindings(leads);
 
   return {
     id: `signal-briefing-${signal.id}-${Date.now()}`,
