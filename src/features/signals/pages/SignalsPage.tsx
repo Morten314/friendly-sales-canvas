@@ -13,6 +13,7 @@ import {
 import { SignalChatPanel } from "../components/SignalChatPanel";
 import { SignalsEmptyState, SignalsLoadingState } from "../components/SignalsEmptyState";
 import { useSignalLeadMap } from "../hooks/useSignalLeadMap";
+import { deleteAcceptedSignal, saveAcceptedSignal } from "../lib/acceptedSignalsStore";
 import { withDemoMatchedLeads } from "../lib/demoMatchedLeads";
 import {
   buildRecommendationPlaybookArtefact,
