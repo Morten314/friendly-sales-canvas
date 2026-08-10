@@ -31,7 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/components/ui/use-toast";
-import { deleteStoredArtefact, generateAndDownloadPDF, saveArtefact } from "@/features/artifacts";
+import { generateAndDownloadPDF, saveArtefact } from "@/features/artifacts";
 import {
   buildMatchedLeadsCsv,
   downloadMatchedLeadsCsv,
@@ -526,7 +526,7 @@ const SignalsPage = () => {
       }
 
       // Un-star: drop it out of the Accepted collection. The card stays in the feed.
-      deleteStoredArtefact(`accepted-signal-${signal.id}`);
+      deleteAcceptedSignal(`accepted-signal-${signal.id}`);
       setAcceptedRefreshKey((k) => k + 1);
 
       toast({
@@ -538,9 +538,10 @@ const SignalsPage = () => {
       const newAccepted = new Set([...acceptedSignals, contentHash]);
       setAcceptedSignals(newAccepted);
 
-      // File the accepted signal into its date-wise folder in Artefacts. It stays
-      // there until the user deletes it manually (un-accepting does not remove it).
-      saveArtefact(buildAcceptedSignalArtefact(signal));
+      // File the accepted signal into the Signals-owned Accepted collection.
+      // Accepted signals deliberately never land in Artefacts — that space is
+      // reserved for saved work products such as matched-lead sheets.
+      saveAcceptedSignal(buildAcceptedSignalArtefact(signal));
       setAcceptedRefreshKey((k) => k + 1);
 
       // Save to localStorage
