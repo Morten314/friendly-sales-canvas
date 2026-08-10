@@ -74,11 +74,16 @@ export const ArtefactDetail = ({
 
     {artefact.sheet ? (
       <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-[11px]">
+        <table className="w-full table-fixed text-[11px]">
           <thead className="bg-muted">
             <tr>
               {artefact.sheet.columns.map((col) => (
-                <th key={col} className="whitespace-nowrap px-2 py-2 text-left font-medium">
+                <th
+                  key={col}
+                  className={`whitespace-nowrap px-2 py-2 text-left font-medium ${
+                    col === "Why" ? "w-[34%]" : ""
+                  }`}
+                >
                   {col}
                 </th>
               ))}
@@ -87,17 +92,23 @@ export const ArtefactDetail = ({
           <tbody>
             {artefact.sheet.rows.map((row, rowIndex) => (
               <tr key={rowIndex} className="border-t align-top">
-                {row.map((cell, colIndex) => (
-                  <td key={colIndex} className="p-0">
-                    <input
-                      value={cell}
-                      onChange={(e) =>
-                        onSheetCellChange?.(artefact.id, rowIndex, colIndex, e.target.value)
-                      }
-                      className="w-full min-w-[120px] bg-transparent px-2 py-1.5 text-[11px] outline-none focus:bg-accent focus:ring-1 focus:ring-primary/40"
-                    />
-                  </td>
-                ))}
+                {row.map((cell, colIndex) => {
+                  const isWhy = artefact.sheet?.columns[colIndex] === "Why";
+                  return (
+                    <td key={colIndex} className="p-0">
+                      <textarea
+                        value={cell}
+                        rows={isWhy ? 3 : 1}
+                        onChange={(e) =>
+                          onSheetCellChange?.(artefact.id, rowIndex, colIndex, e.target.value)
+                        }
+                        className={`w-full resize-y bg-transparent px-2 py-1.5 text-[11px] leading-snug outline-none focus:bg-accent focus:ring-1 focus:ring-primary/40 ${
+                          isWhy ? "whitespace-pre-wrap" : ""
+                        }`}
+                      />
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>
