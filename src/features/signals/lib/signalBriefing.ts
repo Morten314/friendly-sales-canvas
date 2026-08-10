@@ -211,9 +211,9 @@ export function buildLeadSheetArtefact(
     fullReport: {
       title: `${signal.headline} — Matched leads`,
       executiveSummary: signal.description,
-      keyFindings: leads.map((l) => `${l.name || "Unknown"} — ${l.company || "Unknown company"}`),
-      analysis: "Editable matched-leads sheet for enrichment and follow-up.",
-      recommendations: [],
+      keyFindings: leadFindings(leads),
+      analysis: `These ${leads.length} leads were matched to the signal based on ICP fit and the signal's context.`,
+      recommendations: signalRecommendations(signal),
     },
   };
 }
