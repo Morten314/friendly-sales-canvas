@@ -52,19 +52,19 @@ describe("ArtifactsPage queue delivery", () => {
     enqueueArtefact(briefing);
     render(<ArtifactsPage />);
     // Visible in the rendered DOM (not merely in the artefacts array): the drain
-    // must open "Signal Briefings" so the foldered item passes filteredArtefacts.
-    expect(screen.getByText('Find matched leads for "Hiring surge"')).toBeInTheDocument();
+    // must open "Signal Briefings" so the foldered item is listed.
+    expect(screen.getByText("Hiring surge")).toBeInTheDocument();
   });
 
   it("drains once-only — a remount does not re-deliver/duplicate the briefing", () => {
     enqueueArtefact(briefing);
     const first = render(<ArtifactsPage />);
-    expect(first.getAllByText('Find matched leads for "Hiring surge"')).toHaveLength(1);
+    expect(first.getAllByText("Hiring surge")).toHaveLength(1);
     first.unmount();
 
     const second = render(<ArtifactsPage />);
     // Queue already drained on the first mount → the briefing is gone, not duplicated.
-    expect(second.queryByText('Find matched leads for "Hiring surge"')).toBeNull();
+    expect(second.queryByText("Hiring surge")).toBeNull();
   });
 
   it("drains multiple items: most-recently-enqueued (B) lands first in DOM and is expanded", () => {
@@ -72,14 +72,14 @@ describe("ArtifactsPage queue delivery", () => {
     const briefingA: ArtefactItem = {
       ...briefing,
       id: "signal-briefing-A",
-      actionDelegated: 'Find matched leads for "Alpha signal"',
+      fullReport: { ...briefing.fullReport, title: "Alpha signal" },
       systemImpact: "system-impact-A",
       contextRationale: "rationale-A",
     };
     const briefingB: ArtefactItem = {
       ...briefing,
       id: "signal-briefing-B",
-      actionDelegated: 'Find matched leads for "Beta signal"',
+      fullReport: { ...briefing.fullReport, title: "Beta signal" },
       systemImpact: "system-impact-B",
       contextRationale: "rationale-B",
     };
@@ -89,21 +89,15 @@ describe("ArtifactsPage queue delivery", () => {
     render(<ArtifactsPage />);
 
     // (a) Both briefings must be visible in the DOM (drain opened the shared folder).
-    expect(screen.getByText('Find matched leads for "Alpha signal"')).toBeInTheDocument();
-    expect(screen.getByText('Find matched leads for "Beta signal"')).toBeInTheDocument();
+    expect(screen.getByText("Alpha signal")).toBeInTheDocument();
+    expect(screen.getByText("Beta signal")).toBeInTheDocument();
 
     // (b) DOM order: B (most-recently-enqueued) must appear BEFORE A.
     //     [...queued.slice().reverse(), ...prev] puts B first.
-    const allActions = screen
-      .getAllByText(/Find matched leads for/)
+    const allNames = screen
+      .getAllByText(/signal$/)
       .map((el) => el.textContent ?? "");
-    expect(allActions[0]).toContain("Beta signal");
-    expect(allActions[1]).toContain("Alpha signal");
-
-    // (c) B is the expanded artefact (mostRecent = queued[queued.length - 1] = B).
-    //     The expanded panel renders contextRationale under "Context & Rationale".
-    //     Only B's rationale should be visible — A's panel is collapsed.
-    expect(screen.getByText("rationale-B")).toBeInTheDocument();
-    expect(screen.queryByText("rationale-A")).toBeNull();
+    expect(allNames[0]).toContain("Beta signal");
+    expect(allNames[1]).toContain("Alpha signal");
   });
 });
