@@ -2,8 +2,9 @@ import { ChevronLeft, FolderOpen } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { ArtefactDetail } from "../components/ArtefactDetail";
-import { ArtefactRow, artefactName } from "../components/ArtefactRow";
+import { ArtefactRow } from "../components/ArtefactRow";
 import { FolderList } from "../components/FolderList";
+import { artefactName } from "../lib/artefactName";
 import { generateAndDownloadPDF } from "../lib/artefactPdf";
 import { drainArtefactQueue } from "../lib/artefactQueue";
 import {

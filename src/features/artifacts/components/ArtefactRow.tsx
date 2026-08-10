@@ -1,5 +1,6 @@
 import { FileSpreadsheet, FileText, MoreHorizontal } from "lucide-react";
 
+import { artefactName } from "../lib/artefactName";
 import { downloadArtefactCsv, downloadArtefactSheet } from "../lib/artefactStore";
 import type { ArtefactItem } from "../types";
 
@@ -11,9 +12,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-export const artefactName = (artefact: ArtefactItem) =>
-  artefact.fullReport.title || artefact.actionDelegated;
 
 interface ArtefactRowProps {
   artefact: ArtefactItem;

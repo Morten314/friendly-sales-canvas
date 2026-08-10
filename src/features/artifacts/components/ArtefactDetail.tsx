@@ -1,9 +1,8 @@
 import { ChevronLeft, Download, FileDown, Trash2 } from "lucide-react";
 
+import { artefactName } from "../lib/artefactName";
 import { downloadArtefactSheet } from "../lib/artefactStore";
 import type { ArtefactItem } from "../types";
-
-import { artefactName } from "./ArtefactRow";
 
 import { Button } from "@/components/ui/button";
 
