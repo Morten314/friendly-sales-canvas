@@ -1,90 +1,69 @@
-## Strategy Execution Package (SEP) — Build Plan
+# Two-mode Signals card: Lean default + expand-for-depth
 
-We keep the existing Strategist board (cohort table, sync breadcrumbs, what's-new, immediate directives) and add the SEP layer on top of it. SEPs are the bridge between AI recommendations and downstream executors.  
-  
-Note: Do not keep existing Strategist and start with blank canvas. This specification document is your context to build Strategist.
+## Context
+Signals currently force every user through the in-depth experience: the collapsed card
+shows only headline + snippet + "Read more", and *everything* actionable (matched leads,
+recommendations, the parsed answer) is buried behind that expand. We're introducing a
+**lean default** that serves the immediate-action user, while the existing in-depth view
+becomes the "expand" depth. Same card, same data, two presentation densities.
 
----
+## Two use cases
+1. **Immediate action** — see signal, gauge importance, find matched leads, get a short
+   "what to do" nudge. Minimal reading, minimal scrolling.
+2. **In-depth** — full parsed recommendation answer, verdict, tiers, outreach sequences
+   (the current experience, unchanged).
 
-### 1. Data layer
+Decisions (from clarifying questions):
+- Mode-1 "what to do" = a **short prescriptive CTA** (1–2 line generated nudge, no deep prose).
+- Default = **lean**, expand per-card for depth. No global toggle.
 
-**New file: `src/components/strategist/sepData.ts**`
+## What the lean default shows
+1. **Headline + agent/timestamp** (existing) — unchanged.
+2. **Importance indicator** (new) — a compact chip derived from the matched-leads
+   relevance distribution, e.g. `5 leads · 3 high`. This doubles as the importance signal
+   *and* the one-click entry to matched leads (so "know it's important" and "find the
+   matched leads" collapse into one element). Derived client-side from
+   `resolveLeads(signal.id)`; falls back to `—` when leads aren't loaded yet.
+3. **Snippet** (existing) — unchanged.
+4. **Short prescriptive CTA** (new) — a single line: the first NBA's `nba` text (or
+   `nextBestMoves[0]` when no NBAs), prefixed "Suggested action:". Not the full parsed
+   answer — that lives in the expand. If neither exists, the line is hidden.
+5. **Accept / reject** (existing, Gmail-star semantics) — unchanged.
+6. **View details** (existing "Read more", relabeled) — expands into the in-depth view.
 
-- Types: `SEP`, `SEPCohort`, `SEPManifest`, `SEPImmediateAction`, `ChannelId` (`meta | tiktok | linkedin | email | crm | figma | personalized`), `Treatment` (`DIRECT | CHANNEL | NURTURE | EXCLUDE`), `Priority` (`HIGH | MEDIUM | LOW`).
-- `channelFileMap`: which file names each channel produces (e.g. meta → `meta-campaign-brief.json`, `meta-ad-copy.md`).
-- `generateSEP(cohorts, opts)` — pure function that builds a SEP object from existing `strategyCohorts`, returning manifest + per-cohort folders + files (with mock template contents). Status `draft` or `approved`. Auto-increments version.
-- `sortImmediateActions()` — applies priority → treatment urgency → review-state ordering from spec.
+The accept gate on the matched-leads *list* is preserved, but the importance chip is
+visible in lean mode regardless (it's a summary, not the lead list), so an unaccepted
+user still sees *that* there are 5 leads / 3 high without seeing who they are.
 
-**Storage:** In-memory + `localStorage` key `strategistSEPs` (immutable append-only array). No backend yet.
+## What the in-depth (expand) view shows
+The current expanded card, unchanged:
+- Full `description` + citations
+- "Find Matched Leads" → leads section + CSV preview + Save as Artefact
+- Recommendations list → parsed `RecommendationAnswerView` (verdict, tiers, outreach)
+- "Show less" to collapse back to lean
 
----
+No changes to the recommendation/outreach machinery (on hold for manager approval).
 
-### 2. Board additions (`StrategistCohortTable.tsx`)
+## Implementation (frontend / presentation only)
+File: `src/features/signals/components/SignalCard.tsx`
 
-- New header buttons next to title: **Generate Package** (opens channel-selector modal, board-wide) and **Approve Board** (triggers auto-generation of `vN` with status `approved`).
-- **Next Actions panel** (new component `NextActionsPanel.tsx`) above cohorts — replaces `ImmediateActionDirectives` to render top 3–5 from latest approved SEP. Each row links to the package detail anchored at that cohort.
-- **Packages panel** (`PackagesPanel.tsx`) below cohort table — table with columns: Version · Status · Generated · Approver · Actions (View / Download ZIP).
+1. **Lean block** (rendered when `!isDescriptionExpanded`), replacing the bare
+   "Read more" button:
+   - Importance chip: compute from `matchedLeads` (count + high/medium split). Clickable →
+     opens leads section (calls `onFindMatchedLeads`, which already handles the accept
+     gate + lock message). Reuse `handleFindClick` so the gate behaviour is identical.
+   - Prescriptive CTA line: `Suggested action: {firstNBA.nba ?? nextBestMoves[0]}`.
+   - "View details" button → `onExpandDescription()`.
 
----
+2. **In-depth block** (`isDescriptionExpanded`) — leave as-is.
 
-### 3. Channel selector modal
+3. No new props needed: `matchedLeads`, `onFindMatchedLeads`, `signal.NBAs`,
+   `signal.nextBestMoves`, `onExpandDescription` are all already passed in.
 
-**New component: `ChannelSelectorModal.tsx**`
+No backend changes. No new types. No changes to `SignalsPage.tsx` state wiring —
+`expandedDescriptions` already drives the lean/in-depth split per card.
 
-- Used by both board-level and cohort-level generation.
-- Checkbox list of 7 channels with descriptions.
-- "Per cohort" mode shows one tab per cohort; "single cohort" mode shows just one.
-- Submit calls `generateSEP()` and routes to `/your-ai-team/strategist/package/:id`.
-
----
-
-### 4. Package detail page
-
-**New route: `/your-ai-team/strategist/package/:id` (in `App.tsx` + `Deals.tsx` flow)**
-
-**New component: `PackageDetail.tsx**`
-
-- Header: version, status badge, approver, generated timestamp, Download ZIP button (uses `jszip`).
-- **Action Queue** section: full sorted list from `manifest.immediateActions`, each linking to the cohort anchor below.
-- **Cohort cards**: collapsible per-cohort cards showing treatment + priority badges, account count, file list. Each file row has an inline preview (JSON pretty-printed or markdown rendered) and a download button. "Hand off cohort" button on each card downloads that folder as ZIP or copies manifest+files JSON to clipboard.
-
----
-
-### 5. Cohort-level generate
-
-In `CohortExpandedRow.tsx`, add **Generate Package** button next to the existing primary action. Opens `ChannelSelectorModal` in single-cohort mode → creates a single-cohort SEP → navigates to its package page.
-
----
-
-### Technical notes
-
-- **ZIP**: use `jszip` (already in dep tree if not, install). Files are written into nested folders matching the spec structure.
-- **File previews**: render `.json` with `<pre>` and syntax-light styling; render `.md` with a tiny markdown-to-html helper (headings, lists, bold) — no new lib.
-- **Versioning**: `nextVersion = max(existing) + 1`. Status flips to `approved` only on the board-approve path; on-demand from a non-approved board produces `draft`.
-- **Mock content generation**: templates parameterised by cohort name, treatment, channel, and the existing `cohortData` leads. No AI calls.
-
----
-
-### Files to be created
-
-- `src/components/strategist/sepData.ts`
-- `src/components/strategist/sep/PackagesPanel.tsx`
-- `src/components/strategist/sep/NextActionsPanel.tsx`
-- `src/components/strategist/sep/ChannelSelectorModal.tsx`
-- `src/components/strategist/sep/PackageDetail.tsx`
-- `src/components/strategist/sep/FilePreview.tsx`
-- `src/components/strategist/sep/templates.ts` (mock generators for brief.md, accounts.json, channel files)
-
-### Files to be modified
-
-- `src/components/strategist/StrategistCohortTable.tsx` (header buttons, swap directives for NextActionsPanel, add PackagesPanel)
-- `src/components/strategist/CohortExpandedRow.tsx` (Generate Package button)
-- `src/App.tsx` (new route)
-- `src/pages/Deals.tsx` (handle package detail view)
-
-### Out of scope (per spec)
-
-- Real AI generation of file content
-- External delivery / webhooks
-- Auth on artifact files
-- Per-channel adapters
+## Out of scope
+- Recommendation / outreach-plan restructuring (on hold).
+- New signal priority field from the backend (we derive importance from existing leads).
+- Global quick/detailed toggle (chose per-card expand).
