@@ -739,18 +739,17 @@ export const SignalCard = ({
                       </div>
                     </>
                   ) : (
-                    <div className="flex justify-center">
-                      <Button
-                        variant="outline"
-                        size="default"
-                        className="text-blue-600 border-blue-600 hover:text-blue-700 hover:bg-blue-50 text-sm"
-                        onClick={() => {
-                          onExpandDescription();
-                        }}
-                      >
-                        Read more
-                      </Button>
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 -ml-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                      onClick={() => {
+                        onExpandDescription();
+                      }}
+                    >
+                      Why this matters
+                      <ChevronDown className="h-3.5 w-3.5 ml-1" />
+                    </Button>
                   )}
                 </div>
               )}
