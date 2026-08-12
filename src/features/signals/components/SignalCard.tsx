@@ -139,11 +139,10 @@ export const SignalCard = ({
     }
   };
 
-  // Clear the lock timer on card collapse and on unmount (Spec §2).
+  // Collapsing "Why this matters" only tears down the artefact hint. The lock
+  // message now belongs to the resting card (leads live outside this branch).
   useEffect(() => {
     if (!isDescriptionExpanded) {
-      clearLockTimer();
-      setShowLockMessage(false);
       clearArtefactHintTimer();
       setArtefactHint(null);
     }
