@@ -421,6 +421,38 @@ export const SignalCard = ({
                          </div> */}
               </div>
               <p className="text-gray-600 text-sm leading-relaxed mb-2">{signal.snippet}</p>
+              {/* Layer 1: importance cue + the primary action, available on the
+                  resting card so acting never requires opening the explanation. */}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  aria-disabled={!isAccepted}
+                  className={
+                    isAccepted
+                      ? "text-sm border-green-600 text-green-700 hover:bg-green-50"
+                      : "text-sm border-gray-300 text-gray-400 cursor-not-allowed"
+                  }
+                  onClick={handleFindClick}
+                >
+                  {isLeadsExpanded ? "Hide matched leads" : "Find matched leads"}
+                </Button>
+                {matchedLeads.length > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="bg-gray-100 text-gray-700 border-gray-200 text-xs font-normal"
+                  >
+                    {matchedLeads.length} {matchedLeads.length === 1 ? "lead" : "leads"}
+                    {highRelevanceCount > 0 ? ` · ${highRelevanceCount} high` : ""}
+                  </Badge>
+                )}
+              </div>
+              {showLockMessage && (
+                <p role="status" className="mt-2 text-xs text-amber-700">
+                  Accept this signal to unlock matched leads
+                </p>
+              )}
+              {leadsSection}
               {/* Description field - detailed ICP/customer context with Read more/Show less */}
               {signal.description && (
                 <div className="mt-2">
