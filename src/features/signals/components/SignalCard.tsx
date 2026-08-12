@@ -237,6 +237,12 @@ export const SignalCard = ({
         <p className="py-1 text-sm text-gray-500">No matched leads found for this signal yet.</p>
       ) : (
         <>
+          {suggestedAction && (
+            <p className="mb-3 rounded-md border border-blue-100 bg-blue-50/60 px-3 py-2 text-sm text-blue-900">
+              <span className="font-medium">Suggested action: </span>
+              {suggestedAction}
+            </p>
+          )}
           <div className="space-y-2">
             {matchedLeads.map((lead) => (
               <div
