@@ -462,28 +462,6 @@ export const SignalCard = ({
                           })}
                         </div>
                       )}
-                      {/* Spec 38 CTA: Find Matched Leads → leads section */}
-                      <div className="mt-4">
-                        <Button
-                          variant="outline"
-                          size="default"
-                          aria-disabled={!isAccepted}
-                          className={
-                            isAccepted
-                              ? "text-sm border-green-600 text-green-700 hover:bg-green-50"
-                              : "text-sm border-gray-300 text-gray-400 cursor-not-allowed"
-                          }
-                          onClick={handleFindClick}
-                        >
-                          Find Matched Leads
-                        </Button>
-                        {showLockMessage && (
-                          <p role="status" className="mt-2 text-xs text-amber-700">
-                            Accept this signal to unlock matched leads
-                          </p>
-                        )}
-                        {leadsSection}
-                      </div>
                       {/* Recommendations - click to show corresponding prompt */}
                       {(() => {
                         const recommendationsList: NBAItem[] =
