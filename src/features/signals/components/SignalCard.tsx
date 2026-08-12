@@ -725,18 +725,17 @@ export const SignalCard = ({
                           </div>
                         );
                       })()}
-                      <div className="flex justify-center mt-3">
-                        <Button
-                          variant="outline"
-                          size="default"
-                          className="text-blue-600 border-blue-600 hover:text-blue-700 hover:bg-blue-50 text-sm"
-                          onClick={() => {
-                            onCollapseDescription();
-                          }}
-                        >
-                          Show less
-                        </Button>
-                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="mt-3 h-8 px-2 -ml-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                        onClick={() => {
+                          onCollapseDescription();
+                        }}
+                      >
+                        Show less
+                        <ChevronUp className="h-3.5 w-3.5 ml-1" />
+                      </Button>
                     </>
                   ) : (
                     <Button
