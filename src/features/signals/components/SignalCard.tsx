@@ -204,6 +204,16 @@ export const SignalCard = ({
   };
   const titleCase = (s: string): string => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
+  // Importance cue for the resting card: how many leads, how many are high relevance.
+  const highRelevanceCount = matchedLeads.filter((l) => l.relevance === "high").length;
+
+  // One-line "what to do with these leads". The reasoned version lives behind
+  // "Why this matters" — it is deliberately not duplicated here.
+  const suggestedAction =
+    signal.NBAs && signal.NBAs.length > 0
+      ? signal.NBAs[0].nba
+      : (signal.nextBestMoves?.[0] ?? "");
+
   const leadsSection: ReactNode = isLeadsExpanded ? (
     <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
       {leadsLoading || leadsFetching ? (
