@@ -1,69 +1,81 @@
-# Two-mode Signals card: Lean default + expand-for-depth
+# Signals: natural progressive disclosure (no modes)
 
-## Context
-Signals currently force every user through the in-depth experience: the collapsed card
-shows only headline + snippet + "Read more", and *everything* actionable (matched leads,
-recommendations, the parsed answer) is buried behind that expand. We're introducing a
-**lean default** that serves the immediate-action user, while the existing in-depth view
-becomes the "expand" depth. Same card, same data, two presentation densities.
+## The real problem
+Today the Signals card has one door — `Read more` — and *everything* is behind it:
+the full description, the citations, the recommendations, the parsed answer, **and**
+"Find Matched Leads". So a user who just wants to act on a signal has to walk through
+the same heavy door as a user who wants to study it.
 
-## Two use cases
-1. **Immediate action** — see signal, gauge importance, find matched leads, get a short
-   "what to do" nudge. Minimal reading, minimal scrolling.
-2. **In-depth** — full parsed recommendation answer, verdict, tiers, outreach sequences
-   (the current experience, unchanged).
+That is not a missing "quick mode". It is a badly placed door. Nobody arrives at a
+signal and decides "today I am a quick user" — they just follow whatever the signal
+makes them curious about. So there is no mode, no toggle, no persisted preference.
+There is one card that reveals depth as a consequence of what the user actually does.
 
-Decisions (from clarifying questions):
-- Mode-1 "what to do" = a **short prescriptive CTA** (1–2 line generated nudge, no deep prose).
-- Default = **lean**, expand per-card for depth. No global toggle.
+## The natural flow
+Three layers, each opened only by an action that implies wanting it:
 
-## What the lean default shows
-1. **Headline + agent/timestamp** (existing) — unchanged.
-2. **Importance indicator** (new) — a compact chip derived from the matched-leads
-   relevance distribution, e.g. `5 leads · 3 high`. This doubles as the importance signal
-   *and* the one-click entry to matched leads (so "know it's important" and "find the
-   matched leads" collapse into one element). Derived client-side from
-   `resolveLeads(signal.id)`; falls back to `—` when leads aren't loaded yet.
-3. **Snippet** (existing) — unchanged.
-4. **Short prescriptive CTA** (new) — a single line: the first NBA's `nba` text (or
-   `nextBestMoves[0]` when no NBAs), prefixed "Suggested action:". Not the full parsed
-   answer — that lives in the expand. If neither exists, the line is hidden.
-5. **Accept / reject** (existing, Gmail-star semantics) — unchanged.
-6. **View details** (existing "Read more", relabeled) — expands into the in-depth view.
+```text
+Layer 1  card at rest
+         headline · agent · when · snippet
+         [ 5 leads · 3 high ]         <- importance, always visible
+         Find matched leads           <- primary action
+         Why this matters             <- quiet, secondary
 
-The accept gate on the matched-leads *list* is preserved, but the importance chip is
-visible in lean mode regardless (it's a summary, not the lead list), so an unaccepted
-user still sees *that* there are 5 leads / 3 high without seeing who they are.
+Layer 2  clicked "Find matched leads"
+         lead rows + relevance
+         Suggested action: <one line>
+         View as CSV / Save as Artefact
 
-## What the in-depth (expand) view shows
-The current expanded card, unchanged:
-- Full `description` + citations
-- "Find Matched Leads" → leads section + CSV preview + Save as Artefact
-- Recommendations list → parsed `RecommendationAnswerView` (verdict, tiers, outreach)
-- "Show less" to collapse back to lean
+Layer 3  clicked "Why this matters"
+         full description + citations
+         recommendations -> parsed answer (verdict, tiers, outreach)
+```
 
-No changes to the recommendation/outreach machinery (on hold for manager approval).
+Nothing is chosen. Layer 2 opens because you asked for leads. Layer 3 opens because
+you asked why. A user who wants to act never sees layer 3; a user who wants depth
+gets there in one click. Both layers can be open at once — they are not alternatives.
 
-## Implementation (frontend / presentation only)
-File: `src/features/signals/components/SignalCard.tsx`
+## What changes
+The single structural change: **lift "Find matched leads" out from behind `Read more`**
+so it sits on the card at rest, next to an importance cue. Then `Read more` becomes
+what it should always have been — "Why this matters" — carrying only the explanatory
+material, not the actionable material.
 
-1. **Lean block** (rendered when `!isDescriptionExpanded`), replacing the bare
-   "Read more" button:
-   - Importance chip: compute from `matchedLeads` (count + high/medium split). Clickable →
-     opens leads section (calls `onFindMatchedLeads`, which already handles the accept
-     gate + lock message). Reuse `handleFindClick` so the gate behaviour is identical.
-   - Prescriptive CTA line: `Suggested action: {firstNBA.nba ?? nextBestMoves[0]}`.
-   - "View details" button → `onExpandDescription()`.
+1. **Importance cue on the resting card.** A compact chip built from the matched-leads
+   relevance spread, e.g. `5 leads · 3 high`. Derived client-side from the leads already
+   resolved for the signal; renders nothing when there are none yet. This is how the user
+   "knows it's important" without reading a paragraph.
 
-2. **In-depth block** (`isDescriptionExpanded`) — leave as-is.
+2. **"Find matched leads" on the resting card.** Same handler and the same accept gate as
+   today (`handleFindClick`, lock message unchanged) — only its position moves. Opens the
+   existing leads section in place.
 
-3. No new props needed: `matchedLeads`, `onFindMatchedLeads`, `signal.NBAs`,
-   `signal.nextBestMoves`, `onExpandDescription` are all already passed in.
+3. **A one-line suggested action inside the leads section.** Once leads are on screen, a
+   single line telling the user what to do with them: the first `NBAs[].nba`, falling back
+   to `nextBestMoves[0]`, hidden when neither exists. This is deliberately one line — the
+   reasoned version already lives in layer 3 and is not duplicated here.
 
-No backend changes. No new types. No changes to `SignalsPage.tsx` state wiring —
-`expandedDescriptions` already drives the lean/in-depth split per card.
+4. **`Read more` becomes `Why this matters`** and keeps only the description, citations and
+   recommendations. `Show less` closes it. The matched-leads section is no longer nested
+   inside it, so closing the explanation does not throw away the leads the user opened.
+
+## Implementation
+Frontend only, and almost entirely one file:
+`src/features/signals/components/SignalCard.tsx`
+
+- Move the `Find Matched Leads` button + `showLockMessage` + `{leadsSection}` out of the
+  `isDescriptionExpanded` branch and into the resting card body, directly under the snippet.
+- Add the importance chip beside it, computed from the `matchedLeads` prop.
+- Add the suggested-action line at the top of `leadsSection`.
+- Relabel `Read more` -> `Why this matters`; the expanded branch keeps description,
+  citations and the recommendations block only.
+
+No new props: `matchedLeads`, `onFindMatchedLeads`, `isLeadsExpanded`, `signal.NBAs` and
+`signal.nextBestMoves` are already passed in. No page-state changes — `expandedDescriptions`
+and the leads-expanded state are already independent of each other in `SignalsPage.tsx`,
+which is what makes the two layers able to coexist.
 
 ## Out of scope
-- Recommendation / outreach-plan restructuring (on hold).
-- New signal priority field from the backend (we derive importance from existing leads).
-- Global quick/detailed toggle (chose per-card expand).
+- The recommendation / outreach-plan restructuring (on hold pending approval).
+- The accept gate on matched leads — behaviour preserved exactly as-is.
+- Any backend, contract or type change.
