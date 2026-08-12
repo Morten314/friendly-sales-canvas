@@ -139,11 +139,10 @@ export const SignalCard = ({
     }
   };
 
-  // Clear the lock timer on card collapse and on unmount (Spec §2).
+  // Collapsing "Why this matters" only tears down the artefact hint. The lock
+  // message now belongs to the resting card (leads live outside this branch).
   useEffect(() => {
     if (!isDescriptionExpanded) {
-      clearLockTimer();
-      setShowLockMessage(false);
       clearArtefactHintTimer();
       setArtefactHint(null);
     }
@@ -205,6 +204,16 @@ export const SignalCard = ({
   };
   const titleCase = (s: string): string => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
+  // Importance cue for the resting card: how many leads, how many are high relevance.
+  const highRelevanceCount = matchedLeads.filter((l) => l.relevance === "high").length;
+
+  // One-line "what to do with these leads". The reasoned version lives behind
+  // "Why this matters" — it is deliberately not duplicated here.
+  const suggestedAction =
+    signal.NBAs && signal.NBAs.length > 0
+      ? signal.NBAs[0].nba
+      : (signal.nextBestMoves?.[0] ?? "");
+
   const leadsSection: ReactNode = isLeadsExpanded ? (
     <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
       {leadsLoading || leadsFetching ? (
@@ -228,6 +237,12 @@ export const SignalCard = ({
         <p className="py-1 text-sm text-gray-500">No matched leads found for this signal yet.</p>
       ) : (
         <>
+          {suggestedAction && (
+            <p className="mb-3 rounded-md border border-blue-100 bg-blue-50/60 px-3 py-2 text-sm text-blue-900">
+              <span className="font-medium">Suggested action: </span>
+              {suggestedAction}
+            </p>
+          )}
           <div className="space-y-2">
             {matchedLeads.map((lead) => (
               <div
@@ -406,6 +421,38 @@ export const SignalCard = ({
                          </div> */}
               </div>
               <p className="text-gray-600 text-sm leading-relaxed mb-2">{signal.snippet}</p>
+              {/* Layer 1: importance cue + the primary action, available on the
+                  resting card so acting never requires opening the explanation. */}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  aria-disabled={!isAccepted}
+                  className={
+                    isAccepted
+                      ? "text-sm border-green-600 text-green-700 hover:bg-green-50"
+                      : "text-sm border-gray-300 text-gray-400 cursor-not-allowed"
+                  }
+                  onClick={handleFindClick}
+                >
+                  {isLeadsExpanded ? "Hide matched leads" : "Find matched leads"}
+                </Button>
+                {matchedLeads.length > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="bg-gray-100 text-gray-700 border-gray-200 text-xs font-normal"
+                  >
+                    {matchedLeads.length} {matchedLeads.length === 1 ? "lead" : "leads"}
+                    {highRelevanceCount > 0 ? ` · ${highRelevanceCount} high` : ""}
+                  </Badge>
+                )}
+              </div>
+              {showLockMessage && (
+                <p role="status" className="mt-2 text-xs text-amber-700">
+                  Accept this signal to unlock matched leads
+                </p>
+              )}
+              {leadsSection}
               {/* Description field - detailed ICP/customer context with Read more/Show less */}
               {signal.description && (
                 <div className="mt-2">
@@ -447,28 +494,6 @@ export const SignalCard = ({
                           })}
                         </div>
                       )}
-                      {/* Spec 38 CTA: Find Matched Leads → leads section */}
-                      <div className="mt-4">
-                        <Button
-                          variant="outline"
-                          size="default"
-                          aria-disabled={!isAccepted}
-                          className={
-                            isAccepted
-                              ? "text-sm border-green-600 text-green-700 hover:bg-green-50"
-                              : "text-sm border-gray-300 text-gray-400 cursor-not-allowed"
-                          }
-                          onClick={handleFindClick}
-                        >
-                          Find Matched Leads
-                        </Button>
-                        {showLockMessage && (
-                          <p role="status" className="mt-2 text-xs text-amber-700">
-                            Accept this signal to unlock matched leads
-                          </p>
-                        )}
-                        {leadsSection}
-                      </div>
                       {/* Recommendations - click to show corresponding prompt */}
                       {(() => {
                         const recommendationsList: NBAItem[] =
@@ -700,32 +725,30 @@ export const SignalCard = ({
                           </div>
                         );
                       })()}
-                      <div className="flex justify-center mt-3">
-                        <Button
-                          variant="outline"
-                          size="default"
-                          className="text-blue-600 border-blue-600 hover:text-blue-700 hover:bg-blue-50 text-sm"
-                          onClick={() => {
-                            onCollapseDescription();
-                          }}
-                        >
-                          Show less
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex justify-center">
                       <Button
-                        variant="outline"
-                        size="default"
-                        className="text-blue-600 border-blue-600 hover:text-blue-700 hover:bg-blue-50 text-sm"
+                        variant="ghost"
+                        size="sm"
+                        className="mt-3 h-8 px-2 -ml-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                         onClick={() => {
-                          onExpandDescription();
+                          onCollapseDescription();
                         }}
                       >
-                        Read more
+                        Show less
+                        <ChevronUp className="h-3.5 w-3.5 ml-1" />
                       </Button>
-                    </div>
+                    </>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 -ml-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                      onClick={() => {
+                        onExpandDescription();
+                      }}
+                    >
+                      Why this matters
+                      <ChevronDown className="h-3.5 w-3.5 ml-1" />
+                    </Button>
                   )}
                 </div>
               )}
