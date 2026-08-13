@@ -664,10 +664,16 @@ export const SignalCard = ({
               {/* Recommendations deep-dive (on hold). The description + citations now
                   live inside the matched-leads block; this toggle carries the
                   recommendation list + answer view only. */}
-              {hasRecommendations && (
-                <div className="mt-2">
-                  {isDescriptionExpanded && (
+              {hasRecommendations && isDescriptionExpanded && (
+                <div className="mt-3 overflow-hidden rounded-lg border border-gray-200 bg-white p-3">
+                  {
                     <>
+                      <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                        The reasoning
+                      </h4>
+                      <p className="mb-3 text-xs text-gray-500">
+                        Each recommendation below is tied to the matched leads it applies to.
+                      </p>
                       {/* Recommendations - click to show corresponding prompt */}
                       {(() => {
                         const recommendationsList: NBAItem[] =
@@ -679,8 +685,7 @@ export const SignalCard = ({
                               }));
                         if (recommendationsList.length === 0) return null;
                         return (
-                          <div className="mt-4 space-y-2">
-                            <h4 className="text-sm font-medium text-gray-900">Recommendations</h4>
+                          <div className="space-y-2">
                             <div className="space-y-2">
                               {recommendationsList.map((item, index) => {
                                 const isExpanded = expandedRecommendationIndex === index;
@@ -693,6 +698,7 @@ export const SignalCard = ({
                                 const showArtefactError =
                                   recommendationArtefactErrorKey === artefactKey;
                                 const canSaveArtefact = isAccepted && answerCached;
+                                const link = leadsForRecommendation(item.nba, matchedLeads, index);
                                 return (
                                   <div
                                     key={index}
@@ -709,10 +715,54 @@ export const SignalCard = ({
                                           : "bg-gray-50 hover:border-blue-200 hover:bg-blue-50/30"
                                       }`}
                                     >
-                                      <p className="text-sm text-gray-700 flex-1">{item.nba}</p>
+                                      <div className="min-w-0 flex-1">
+                                        <p className="text-sm text-gray-700">{item.nba}</p>
+                                        {link.leads.length > 0 && (
+                                          <span className="mt-1.5 inline-flex items-center gap-1 rounded bg-white px-1.5 py-0.5 text-[10px] text-gray-600 border border-gray-200">
+                                            Applies to {link.leads.length}{" "}
+                                            {link.leads.length === 1 ? "lead" : "leads"}
+                                            {link.basis === "tier" && link.tierLabel
+                                              ? ` · ${link.tierLabel}`
+                                              : ""}
+                                          </span>
+                                        )}
+                                      </div>
                                     </button>
                                     {isExpanded && (
                                       <div className="px-3 pb-3 pt-1 border-t border-gray-100">
+                                        {link.leads.length > 0 && (
+                                          <div className="mb-2 rounded-md border border-gray-200 bg-white p-2">
+                                            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                                              Leads this applies to
+                                            </p>
+                                            <div className="flex flex-wrap gap-1">
+                                              {link.leads.map((lead) => (
+                                                <span
+                                                  key={lead.lead_id}
+                                                  title={lead.why}
+                                                  className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-700"
+                                                >
+                                                  {lead.name || lead.company || lead.lead_id}
+                                                  {lead.company && lead.name
+                                                    ? ` · ${lead.company}`
+                                                    : ""}
+                                                </span>
+                                              ))}
+                                            </div>
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              className="mt-2 h-7 px-2 text-[11px]"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                onSendToStrategist(link.leads, item.nba);
+                                              }}
+                                            >
+                                              <Send className="mr-1 h-3 w-3" />
+                                              Send these to Strategist
+                                            </Button>
+                                          </div>
+                                        )}
                                         <div className="p-3 rounded-lg bg-gradient-to-br from-slate-50 to-blue-50/50 border border-slate-200 space-y-3">
                                           <p className="text-sm text-slate-700 leading-relaxed font-semibold">
                                             {hasPrompt
