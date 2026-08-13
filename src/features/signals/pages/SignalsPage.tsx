@@ -19,7 +19,6 @@ import { withDemoMatchedLeads } from "../lib/demoMatchedLeads";
 import {
   buildRecommendationPlaybookArtefact,
   buildSignalBriefingArtefact,
-  buildLeadSheetArtefact,
   buildAcceptedSignalArtefact,
 } from "../lib/signalBriefing";
 import { downloadSignalBundle, shareSignalByEmail, type MailProvider } from "../lib/signalShare";
@@ -37,7 +36,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { generateAndDownloadPDF, saveArtefact } from "@/features/artifacts";
 import {
   buildMatchedLeadsCsv,
-  downloadMatchedLeadsCsv,
   matchedLeadsCsvFilename,
 } from "@/features/signals/lib/matchedLeadsCsv";
 import { Layout } from "@/features/shell";
