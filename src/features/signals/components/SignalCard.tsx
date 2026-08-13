@@ -197,13 +197,6 @@ export const SignalCard = ({
     onSaveRecommendationAsArtefact(index);
   };
 
-  const relevanceBadgeClass = (relevance: SignalLeadMapLead["relevance"]): string => {
-    if (relevance === "high") return "bg-green-100 text-green-800 border-green-200";
-    if (relevance === "medium") return "bg-amber-100 text-amber-800 border-amber-200";
-    return "bg-gray-100 text-gray-700 border-gray-200";
-  };
-  const titleCase = (s: string): string => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
-
   // Importance cue for the resting card: how many leads, how many are high relevance.
   const highRelevanceCount = matchedLeads.filter((l) => l.relevance === "high").length;
 
