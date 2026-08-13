@@ -88,6 +88,8 @@ interface SignalCardProps {
   /** Download the signal summary PDF. */
   /** Save the matched-leads sheet to Artefacts as an editable file. */
   onSaveCsvAsArtefact: () => void;
+  /** Hand a lead cohort (or all leads) to Strategist for sequence execution. */
+  onSendToStrategist: (leads: SignalLeadMapLead[], cohortLabel?: string) => void;
   /** Offered in the error state; wraps the page's refreshLeadMap (forces a server recompute). */
   onRecomputeLeadMap?: () => void;
   /** Offered in the error state; plain re-fetch of the mapping (the "Try again" escape). */
