@@ -492,7 +492,8 @@ export const SignalCard = ({
                     variant="secondary"
                     className="bg-gray-100 text-gray-700 border-gray-200 text-xs font-normal"
                   >
-                    Affects {affectedLeadCount || matchedLeads.length}{" "}
+                    Affects{" "}
+                    <span className="font-semibold">{affectedLeadCount || matchedLeads.length}</span>{" "}
                     {(affectedLeadCount || matchedLeads.length) === 1 ? "lead" : "leads"}
                   </Badge>
                 )}
