@@ -23,8 +23,8 @@ const signal: SignalCardType = {
 };
 
 const leads: SignalLeadMapLead[] = [
-  { lead_id: "l1", company: "Acme", relevance: "high", why: "secret rationale" },
-  { lead_id: "l2", company: "", relevance: "low", why: "" },
+  { lead_id: "l1", name: "Jane Doe", title: "VP Eng", company: "Acme", relevance: "high", why: "secret rationale" },
+  { lead_id: "l2", name: "John Smith", title: "CTO", company: "Globex", relevance: "low", why: "" },
 ];
 
 function renderCard(overrides: Partial<React.ComponentProps<typeof SignalCard>> = {}) {
@@ -186,16 +186,17 @@ describe("SignalCard — leads section states", () => {
     expect(screen.queryByRole("button", { name: /Save as Artifact/i })).toBeNull();
   });
 
-  it("renders rows with title-cased relevance + company fallback, hides why, shows Save", () => {
-    const props = renderCard({ isAccepted: true, isLeadsExpanded: true, matchedLeads: leads });
+  it("renders lead rows with raw relevance and short why inline, no Save CTA in the leads block", () => {
+    renderCard({ isAccepted: true, isLeadsExpanded: true, matchedLeads: leads });
     expect(screen.getByText("Acme")).toBeInTheDocument();
-    expect(screen.getByText("Unknown company")).toBeInTheDocument();
-    expect(screen.getByText("High")).toBeInTheDocument();
-    expect(screen.getByText("Low")).toBeInTheDocument();
-    // The per-lead `why` is reserved for the export — never on screen.
-    expect(screen.queryByText(/secret rationale/i)).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: /Save as Artifact/i }));
-    expect(props.onSaveAsArtefact).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Globex")).toBeInTheDocument();
+    // Relevance renders as the raw enum value.
+    expect(screen.getByText("high")).toBeInTheDocument();
+    expect(screen.getByText("low")).toBeInTheDocument();
+    // The short "why" is shown inline; the full rationale lives in the popover.
+    expect(screen.getByText(/secret rationale/i)).toBeInTheDocument();
+    // CTAs were removed from the leads block pending discussion.
+    expect(screen.queryByRole("button", { name: /Save as Artifact/i })).toBeNull();
   });
 });
 
