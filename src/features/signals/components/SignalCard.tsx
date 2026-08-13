@@ -21,7 +21,20 @@ import RecommendationAnswerView from "./RecommendationAnswerView";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
+/**
+ * Inline "Why" text: the first complete sentence, so the cell stays short but is
+ * never cut mid-word. The full rationale opens from the adjacent "i".
+ */
+const shortWhy = (text: string): string => {
+  const trimmed = text.trim();
+  if (trimmed.length <= 120) return trimmed;
+  const match = trimmed.match(/^[\s\S]*?[.!?](\s|$)/);
+  const first = match?.[0]?.trim();
+  if (first && first.length <= 160) return first;
+  return `${trimmed.slice(0, 117).trimEnd()}…`;
+};
 import { sanitizeAnswerText } from "@/shared/lib/sanitizeAnswerText";
 
 interface SignalCardProps {
@@ -276,29 +289,44 @@ export const SignalCard = ({
                             </td>
                           );
                         }
-                        // "Why" stays short inline; the full rationale opens on hover.
+                        // "Why" shows a short but complete sentence inline; clicking
+                        // the "i" opens the fuller rationale for that lead.
                         return (
                           <td key={i} className="px-3 py-2 text-gray-700">
                             <div className="flex items-start gap-1.5">
-                              <span className="min-w-0 flex-1 truncate">{cell}</span>
+                              <span className="min-w-0 flex-1 whitespace-normal break-words leading-snug">
+                                {shortWhy(cell)}
+                              </span>
                               {cell ? (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
+                                <Popover>
+                                  <PopoverTrigger asChild>
                                     <button
                                       type="button"
-                                      aria-label="Why this lead matches"
+                                      aria-label="Detailed reason this lead matches"
                                       className="mt-[1px] shrink-0 text-gray-400 hover:text-gray-700"
                                     >
                                       <Info className="h-3.5 w-3.5" />
                                     </button>
-                                  </TooltipTrigger>
-                                  <TooltipContent
+                                  </PopoverTrigger>
+                                  <PopoverContent
                                     side="left"
-                                    className="max-w-xs whitespace-normal break-words text-xs leading-relaxed"
+                                    align="start"
+                                    className="w-80 text-xs leading-relaxed"
                                   >
-                                    {cell}
-                                  </TooltipContent>
-                                </Tooltip>
+                                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                                      Why this lead matches
+                                    </p>
+                                    <p className="mb-2 text-[11px] font-medium text-gray-900">
+                                      {lead.name}
+                                      {lead.title ? ` · ${lead.title}` : ""}
+                                      {lead.company ? ` (${lead.company})` : ""}
+                                      {lead.relevance ? ` — ${lead.relevance} relevance` : ""}
+                                    </p>
+                                    <p className="whitespace-pre-wrap break-words text-gray-700">
+                                      {cell}
+                                    </p>
+                                  </PopoverContent>
+                                </Popover>
                               ) : null}
                             </div>
                           </td>
@@ -310,28 +338,6 @@ export const SignalCard = ({
               </table>
             </div>
           </div>
-          {outreachPlan && (
-            <div className="mt-3 rounded-md border border-blue-100 bg-white p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Aggregated outreach plan
-              </p>
-              <p className="mt-1 text-sm text-gray-800">{outreachPlan.summary}</p>
-              <ul className="mt-2 space-y-1.5">
-                {outreachPlan.steps.map((step) => (
-                  <li key={step.label} className="flex flex-wrap items-baseline gap-x-2 text-xs">
-                    <span className="font-medium text-gray-900">{step.label}</span>
-                    <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
-                      {step.timing}
-                    </span>
-                    <span className="text-gray-600">{step.move}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-2 text-[11px] text-gray-500">
-                Strategist executes these steps.
-              </p>
-            </div>
-          )}
           <div className="mt-3 flex flex-wrap justify-end gap-2">
             <Button size="sm" variant="outline" onClick={onDownloadCsv}>
               Download
@@ -349,6 +355,30 @@ export const SignalCard = ({
       )}
     </div>
   ) : null;
+
+  // "What now" comes after "who" (the table) and "why" (the explanation), so the
+  // aggregated plan renders below the description block rather than inside the table.
+  const outreachPlanSection: ReactNode =
+    isLeadsExpanded && outreachPlan && matchedLeads.length > 0 ? (
+      <div className="mt-3 rounded-md border border-blue-100 bg-white p-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          Aggregated outreach plan
+        </p>
+        <p className="mt-1 text-sm text-gray-800">{outreachPlan.summary}</p>
+        <ul className="mt-2 space-y-1.5">
+          {outreachPlan.steps.map((step) => (
+            <li key={step.label} className="flex flex-wrap items-baseline gap-x-2 text-xs">
+              <span className="font-medium text-gray-900">{step.label}</span>
+              <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
+                {step.timing}
+              </span>
+              <span className="text-gray-600">{step.move}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-2 text-[11px] text-gray-500">Strategist executes these steps.</p>
+      </div>
+    ) : null;
 
   return (
     <div className="space-y-0">
@@ -774,17 +804,10 @@ export const SignalCard = ({
                       <ChevronDown className="h-3.5 w-3.5 ml-1" />
                     </Button>
                   )}
-                </div>
-              )}
-            </div>
-            <Tooltip>
-              <TooltipTrigger>
-                <Info className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="text-xs">Source: {signal.sourceLabel}</p>
-              </TooltipContent>
-            </Tooltip>
+                 </div>
+               )}
+               {outreachPlanSection}
+             </div>
           </div>
         </div>
 
