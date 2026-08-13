@@ -250,7 +250,7 @@ const DEMO_POOL: Omit<SignalLeadMapLead, "lead_id">[] = [
 
 export function getDemoMatchedLeads(signalId: string): SignalLeadMapLead[] {
   const seed = Array.from(signalId).reduce((n, c) => n + c.charCodeAt(0), 0);
-  const count = 5 + (seed % 4); // 5–8 leads
+  const count = 10 + (seed % 5); // 10–14 leads
   return Array.from({ length: count }, (_, i) => {
     const base = DEMO_POOL[(seed + i) % DEMO_POOL.length];
     return { ...base, lead_id: `demo-${signalId}-${i}` };
@@ -264,7 +264,7 @@ export function getDemoMatchedLeads(signalId: string): SignalLeadMapLead[] {
 export function withDemoMatchedLeads(
   signalId: string,
   real: SignalLeadMapLead[],
-  minimum = 6,
+  minimum = 10,
 ): SignalLeadMapLead[] {
   if (real.length >= minimum) return real;
   const filler = getDemoMatchedLeads(signalId).filter(
