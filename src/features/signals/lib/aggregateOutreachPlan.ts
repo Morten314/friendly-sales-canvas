@@ -1,12 +1,18 @@
 import type { SignalLeadMapLead } from "../contracts";
 
+export type RelevanceTier = "high" | "medium" | "low";
+
 export interface OutreachPlanStep {
-  /** Cohort label, e.g. "High relevance (4)". */
+  /** Cohort label, e.g. "High relevance · 4 leads". */
   label: string;
   /** When to move on this cohort. */
   timing: string;
   /** How to approach them. */
   move: string;
+  /** Relevance tier this cohort represents. */
+  relevance: RelevanceTier;
+  /** The leads that belong to this cohort (for per-cohort dispatch). */
+  leads: SignalLeadMapLead[];
 }
 
 export interface AggregateOutreachPlan {
@@ -39,6 +45,8 @@ export function buildAggregateOutreachPlan(
       label: `High relevance · ${plural(high.length, "lead")}`,
       timing: "Within 48 hours",
       move: "Personalised 1:1 outreach citing this signal directly, then a call ask.",
+      relevance: "high",
+      leads: high,
     });
   }
   if (medium.length) {
@@ -46,6 +54,8 @@ export function buildAggregateOutreachPlan(
       label: `Medium relevance · ${plural(medium.length, "lead")}`,
       timing: "This week",
       move: "Lightly tailored sequence framing the signal as market context, not a pitch.",
+      relevance: "medium",
+      leads: medium,
     });
   }
   if (low.length) {
@@ -53,6 +63,8 @@ export function buildAggregateOutreachPlan(
       label: `Low relevance · ${plural(low.length, "lead")}`,
       timing: "Nurture",
       move: "Add to the newsletter or a quarterly check-in; no direct ask yet.",
+      relevance: "low",
+      leads: low,
     });
   }
 

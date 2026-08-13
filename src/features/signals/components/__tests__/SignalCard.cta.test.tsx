@@ -52,6 +52,9 @@ function renderCard(overrides: Partial<React.ComponentProps<typeof SignalCard>> 
     isLeadsExpanded: false,
     onFindMatchedLeads: vi.fn(),
     onSaveAsArtefact: vi.fn(),
+    onDownloadCsv: vi.fn(),
+    onSaveCsvAsArtefact: vi.fn(),
+    onSendToStrategist: vi.fn(),
     onRecomputeLeadMap: vi.fn(),
     onSaveRecommendationAsArtefact: vi.fn(),
     recommendationArtefactGeneratingKey: null,
@@ -126,6 +129,9 @@ describe("SignalCard — Find Matched Leads CTA", () => {
       isLeadsExpanded: false,
       onFindMatchedLeads: vi.fn(),
       onSaveAsArtefact: vi.fn(),
+      onDownloadCsv: vi.fn(),
+      onSaveCsvAsArtefact: vi.fn(),
+      onSendToStrategist: vi.fn(),
       onRecomputeLeadMap: vi.fn(),
       onSaveRecommendationAsArtefact: vi.fn(),
       recommendationArtefactGeneratingKey: null,
@@ -186,7 +192,7 @@ describe("SignalCard — leads section states", () => {
     expect(screen.queryByRole("button", { name: /Save as Artifact/i })).toBeNull();
   });
 
-  it("renders lead rows with raw relevance and short why inline, no Save CTA in the leads block", () => {
+  it("renders lead rows with raw relevance and short why inline, plus the block CTA bar", () => {
     renderCard({ isAccepted: true, isLeadsExpanded: true, matchedLeads: leads });
     expect(screen.getByText("Acme")).toBeInTheDocument();
     expect(screen.getByText("Globex")).toBeInTheDocument();
@@ -195,8 +201,10 @@ describe("SignalCard — leads section states", () => {
     expect(screen.getByText("low")).toBeInTheDocument();
     // The short "why" is shown inline; the full rationale lives in the popover.
     expect(screen.getByText(/secret rationale/i)).toBeInTheDocument();
-    // CTAs were removed from the leads block pending discussion.
-    expect(screen.queryByRole("button", { name: /Save as Artifact/i })).toBeNull();
+    // Block CTA bar carries collective dispatch + persist + download.
+    expect(screen.getByRole("button", { name: /Send all to Strategist/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Save as Artefact/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Download/i })).toBeInTheDocument();
   });
 });
 
