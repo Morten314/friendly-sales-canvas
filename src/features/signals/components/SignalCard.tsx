@@ -789,20 +789,8 @@ export const SignalCard = ({
                         Show less
                         <ChevronUp className="h-3.5 w-3.5 ml-1" />
                       </Button>
-                    </>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 px-2 -ml-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                      onClick={() => {
-                        onExpandDescription();
-                      }}
-                    >
-                      What this means
-                      <ChevronDown className="h-3.5 w-3.5 ml-1" />
-                    </Button>
-                  )}
+                  </>
+                )}
                  </div>
                )}
               </div>
