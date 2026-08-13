@@ -220,6 +220,14 @@ export const SignalCard = ({
       ? signal.NBAs[0].nba
       : (signal.nextBestMoves?.[0] ?? "");
 
+  // Recommendations list (deep-dive, on hold). The description now lives inside
+  // the matched-leads block; this toggle carries recommendations only.
+  const recommendationsList: NBAItem[] =
+    signal.NBAs && signal.NBAs.length > 0
+      ? signal.NBAs
+      : (signal.nextBestMoves || []).map((m) => ({ nba: m, prompt: "" }));
+  const hasRecommendations = recommendationsList.length > 0;
+
   // Aggregated plan shown under the table (replaces a per-row "what" column).
   const outreachPlan = buildAggregateOutreachPlan(matchedLeads, suggestedAction);
 
@@ -532,47 +540,13 @@ export const SignalCard = ({
                 </p>
               )}
               {leadsSection}
-              {/* Description field - detailed ICP/customer context with Read more/Show less */}
-              {signal.description && (
+              {/* Recommendations deep-dive (on hold). The description + citations now
+                  live inside the matched-leads block; this toggle carries the
+                  recommendation list + answer view only. */}
+              {hasRecommendations && (
                 <div className="mt-2">
                   {isDescriptionExpanded ? (
                     <>
-                      <p className="text-gray-700 text-sm leading-relaxed mb-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                        {signal.description}
-                      </p>
-                      {/* Citations from API - bottom left of expanded description; click opens url */}
-                      {Array.isArray(signal.source) && signal.source.length > 0 && (
-                        <div className="mt-2 flex flex-col gap-1.5 justify-start">
-                          {signal.source.map((src, idx) => {
-                            const label = src.citation || src.url || "Source";
-                            const safeUrl = sanitizeSourceUrl(src.url);
-                            return safeUrl ? (
-                              <a
-                                key={idx}
-                                href={safeUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block w-fit"
-                              >
-                                <Badge
-                                  variant="secondary"
-                                  className="text-xs font-normal hover:bg-gray-300 cursor-pointer max-w-full text-left"
-                                >
-                                  {label}
-                                </Badge>
-                              </a>
-                            ) : (
-                              <Badge
-                                key={idx}
-                                variant="secondary"
-                                className="text-xs font-normal w-fit"
-                              >
-                                {label}
-                              </Badge>
-                            );
-                          })}
-                        </div>
-                      )}
                       {/* Recommendations - click to show corresponding prompt */}
                       {(() => {
                         const recommendationsList: NBAItem[] =
@@ -831,8 +805,7 @@ export const SignalCard = ({
                   )}
                  </div>
                )}
-               {outreachPlanSection}
-             </div>
+              </div>
           </div>
         </div>
 
