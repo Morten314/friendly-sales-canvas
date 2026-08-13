@@ -11,4 +11,6 @@ export interface StrategistContext {
   opportunity?: string;
   icp?: string;
   triggerPrompt: string;
+  /** When true, Strategist opens the detailed editable sequence immediately. */
+  autoSequence?: boolean;
 }
