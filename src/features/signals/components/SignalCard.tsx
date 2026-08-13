@@ -632,6 +632,28 @@ export const SignalCard = ({
                     {highRelevanceCount > 0 ? ` · ${highRelevanceCount} high` : ""}
                   </Badge>
                 )}
+                {hasRecommendations && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                    onClick={() =>
+                      isDescriptionExpanded ? onCollapseDescription() : onExpandDescription()
+                    }
+                  >
+                    {isDescriptionExpanded ? (
+                      <>
+                        Hide the reasoning
+                        <ChevronUp className="ml-1 h-3.5 w-3.5" />
+                      </>
+                    ) : (
+                      <>
+                        Go deeper
+                        <ChevronDown className="ml-1 h-3.5 w-3.5" />
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
               {showLockMessage && (
                 <p role="status" className="mt-2 text-xs text-amber-700">
