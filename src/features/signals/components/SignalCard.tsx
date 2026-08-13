@@ -9,6 +9,7 @@ import {
   ThumbsDown,
   Send,
   Download,
+  Share2,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
@@ -24,6 +25,12 @@ import RecommendationAnswerView from "./RecommendationAnswerView";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 /**
  * Inline "Why" text: the first complete sentence, so the cell stays short but is
@@ -83,11 +90,10 @@ interface SignalCardProps {
   onFindMatchedLeads: () => void;
   /** Build + download + deliver the briefing. */
   onSaveAsArtefact: () => void;
-  /** Download the matched-leads CSV for this signal. */
+  /** Download the matched-leads CSV + summary PDF for this signal. */
   onDownloadCsv: () => void;
-  /** Download the signal summary PDF. */
-  /** Save the matched-leads sheet to Artefacts as an editable file. */
-  onSaveCsvAsArtefact: () => void;
+  /** Share the CSV + PDF via the chosen mail service. */
+  onShare: (provider: "gmail" | "outlook") => void;
   /** Hand a lead cohort (or all leads) to Strategist for sequence execution. */
   onSendToStrategist: (leads: SignalLeadMapLead[], cohortLabel?: string) => void;
   /** Offered in the error state; wraps the page's refreshLeadMap (forces a server recompute). */
@@ -129,7 +135,7 @@ export const SignalCard = ({
   onFindMatchedLeads,
   onSaveAsArtefact,
   onDownloadCsv,
-  onSaveCsvAsArtefact,
+  onShare,
   onSendToStrategist,
   onRecomputeLeadMap,
   onRetryLeadMap,
@@ -484,9 +490,18 @@ export const SignalCard = ({
             <Send className="h-3.5 w-3.5 mr-1.5" />
             Send all to Strategist
           </Button>
-          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={onSaveCsvAsArtefact}>
-            Save as Artefact
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 text-xs">
+                <Share2 className="h-3.5 w-3.5 mr-1.5" />
+                Share
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-44">
+              <DropdownMenuItem onClick={() => onShare("outlook")}>Outlook</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onShare("gmail")}>Gmail</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="outline" size="sm" className="h-8 text-xs" onClick={onDownloadCsv}>
             <Download className="h-3.5 w-3.5 mr-1.5" />
             Download
