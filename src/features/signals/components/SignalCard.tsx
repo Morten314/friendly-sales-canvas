@@ -21,6 +21,7 @@ import type { Agent, NBAItem, SignalCard as SignalCardType } from "../types";
 
 import { sanitizeSourceUrl } from "./signalCards";
 import RecommendationAnswerView from "./RecommendationAnswerView";
+import { leadsForRecommendation } from "../lib/recommendationLeads";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
