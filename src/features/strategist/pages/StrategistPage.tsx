@@ -59,6 +59,7 @@ const StrategistPage = () => {
                 opportunity={context?.opportunity}
                 icp={context?.icp}
                 triggerPrompt={context?.triggerPrompt || ""}
+                autoSequence={context?.autoSequence}
                 onBack={() => navigate("/your-ai-team/scout/chatwithscout")}
               />
             ) : (
