@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import type { SignalLeadMapLead } from "../contracts";
+import { buildAggregateOutreachPlan } from "../lib/aggregateOutreachPlan";
 import { SIGNAL_PREVIEW_COLUMNS, toSignalPreviewRow } from "../lib/matchedLeadsCsv";
 import type { Agent, NBAItem, SignalCard as SignalCardType } from "../types";
 
@@ -214,6 +215,9 @@ export const SignalCard = ({
       ? signal.NBAs[0].nba
       : (signal.nextBestMoves?.[0] ?? "");
 
+  // Aggregated plan shown under the table (replaces a per-row "what" column).
+  const outreachPlan = buildAggregateOutreachPlan(matchedLeads, suggestedAction);
+
   const leadsSection: ReactNode = isLeadsExpanded ? (
     <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
       {leadsLoading || leadsFetching ? (
@@ -291,24 +295,70 @@ export const SignalCard = ({
                         key={lead.lead_id}
                         className={`border-t border-gray-100 align-top ${rowIndex % 2 === 1 ? "bg-gray-50/60" : ""}`}
                       >
-                        {toSignalPreviewRow(lead).map((cell, i) => (
-                          <td
-                            key={i}
-                            title={cell}
-                            className={`px-3 py-2 text-gray-700 ${
-                              i === SIGNAL_PREVIEW_COLUMNS.length - 1
-                                ? "whitespace-normal break-words leading-relaxed"
-                                : "truncate"
-                            }`}
-                          >
-                            {cell}
-                          </td>
-                        ))}
+                        {toSignalPreviewRow(lead).map((cell, i) => {
+                          const isWhy = i === SIGNAL_PREVIEW_COLUMNS.length - 1;
+                          if (!isWhy) {
+                            return (
+                              <td key={i} title={cell} className="truncate px-3 py-2 text-gray-700">
+                                {cell}
+                              </td>
+                            );
+                          }
+                          // "Why" stays short inline; the full rationale opens on hover.
+                          return (
+                            <td key={i} className="px-3 py-2 text-gray-700">
+                              <div className="flex items-start gap-1.5">
+                                <span className="min-w-0 flex-1 truncate">{cell}</span>
+                                {cell ? (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        type="button"
+                                        aria-label="Why this lead matches"
+                                        className="mt-[1px] shrink-0 text-gray-400 hover:text-gray-700"
+                                      >
+                                        <Info className="h-3.5 w-3.5" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      side="left"
+                                      className="max-w-xs whitespace-normal break-words text-xs leading-relaxed"
+                                    >
+                                      {cell}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                ) : null}
+                              </div>
+                            </td>
+                          );
+                        })}
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
+          {outreachPlan && (
+            <div className="mt-3 rounded-md border border-blue-100 bg-white p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Aggregated outreach plan
+              </p>
+              <p className="mt-1 text-sm text-gray-800">{outreachPlan.summary}</p>
+              <ul className="mt-2 space-y-1.5">
+                {outreachPlan.steps.map((step) => (
+                  <li key={step.label} className="flex flex-wrap items-baseline gap-x-2 text-xs">
+                    <span className="font-medium text-gray-900">{step.label}</span>
+                    <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
+                      {step.timing}
+                    </span>
+                    <span className="text-gray-600">{step.move}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-[11px] text-gray-500">
+                Strategist executes these steps.
+              </p>
             </div>
           )}
           <div className="mt-3 flex flex-wrap justify-end gap-2">
