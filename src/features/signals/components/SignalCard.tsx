@@ -395,7 +395,6 @@ export const SignalCard = ({
           <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
             Next steps
           </h4>
-          <p className="text-sm text-gray-800">{outreachPlan.summary}</p>
           <ul className="mt-2 space-y-1.5">
             {outreachPlan.steps.map((step) => (
               <li key={step.label} className="flex flex-wrap items-baseline gap-x-2 text-xs">
