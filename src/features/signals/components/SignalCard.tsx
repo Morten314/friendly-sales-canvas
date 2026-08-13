@@ -310,28 +310,6 @@ export const SignalCard = ({
               </table>
             </div>
           </div>
-          {outreachPlan && (
-            <div className="mt-3 rounded-md border border-blue-100 bg-white p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Aggregated outreach plan
-              </p>
-              <p className="mt-1 text-sm text-gray-800">{outreachPlan.summary}</p>
-              <ul className="mt-2 space-y-1.5">
-                {outreachPlan.steps.map((step) => (
-                  <li key={step.label} className="flex flex-wrap items-baseline gap-x-2 text-xs">
-                    <span className="font-medium text-gray-900">{step.label}</span>
-                    <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
-                      {step.timing}
-                    </span>
-                    <span className="text-gray-600">{step.move}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-2 text-[11px] text-gray-500">
-                Strategist executes these steps.
-              </p>
-            </div>
-          )}
           <div className="mt-3 flex flex-wrap justify-end gap-2">
             <Button size="sm" variant="outline" onClick={onDownloadCsv}>
               Download
@@ -349,6 +327,30 @@ export const SignalCard = ({
       )}
     </div>
   ) : null;
+
+  // "What now" comes after "who" (the table) and "why" (the explanation), so the
+  // aggregated plan renders below the description block rather than inside the table.
+  const outreachPlanSection: ReactNode =
+    isLeadsExpanded && outreachPlan && matchedLeads.length > 0 ? (
+      <div className="mt-3 rounded-md border border-blue-100 bg-white p-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          Aggregated outreach plan
+        </p>
+        <p className="mt-1 text-sm text-gray-800">{outreachPlan.summary}</p>
+        <ul className="mt-2 space-y-1.5">
+          {outreachPlan.steps.map((step) => (
+            <li key={step.label} className="flex flex-wrap items-baseline gap-x-2 text-xs">
+              <span className="font-medium text-gray-900">{step.label}</span>
+              <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
+                {step.timing}
+              </span>
+              <span className="text-gray-600">{step.move}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-2 text-[11px] text-gray-500">Strategist executes these steps.</p>
+      </div>
+    ) : null;
 
   return (
     <div className="space-y-0">
