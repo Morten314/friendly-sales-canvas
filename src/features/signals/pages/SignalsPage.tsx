@@ -22,6 +22,7 @@ import {
   buildLeadSheetArtefact,
   buildAcceptedSignalArtefact,
 } from "../lib/signalBriefing";
+import { downloadSignalBundle, shareSignalByEmail, type MailProvider } from "../lib/signalShare";
 import {
   fetchSignals,
   generateRecommendationArtefact,
@@ -618,20 +619,6 @@ const SignalsPage = () => {
       title: "Files downloaded",
       description:
         "The CSV and PDF were downloaded — attach them to the email draft that just opened.",
-    });
-  };
-
-  /** Save the matched-leads sheet to Artefacts as an editable file. */
-  const handleSaveCsvAsArtefact = (signal: SignalCardType) => {
-    saveArtefact(buildLeadSheetArtefact(signal, resolveLeads(signal.id)));
-    toast({
-      title: "Saved to Artefacts",
-      description: "The lead sheet is editable in Artefacts — enrich rows in place.",
-      action: (
-        <Button variant="outline" size="sm" onClick={() => navigate("/artifacts")}>
-          View →
-        </Button>
-      ),
     });
   };
 
