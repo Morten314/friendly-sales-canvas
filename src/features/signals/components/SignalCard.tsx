@@ -487,7 +487,16 @@ export const SignalCard = ({
                 >
                   {isLeadsExpanded ? "Hide matched leads" : "Find matched leads"}
                 </Button>
-                {matchedLeads.length > 0 && (
+                {!isAccepted && (affectedLeadCount || matchedLeads.length) > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="bg-gray-100 text-gray-700 border-gray-200 text-xs font-normal"
+                  >
+                    Affects {affectedLeadCount || matchedLeads.length}{" "}
+                    {(affectedLeadCount || matchedLeads.length) === 1 ? "lead" : "leads"}
+                  </Badge>
+                )}
+                {isAccepted && matchedLeads.length > 0 && (
                   <Badge
                     variant="secondary"
                     className="bg-gray-100 text-gray-700 border-gray-200 text-xs font-normal"
@@ -813,13 +822,6 @@ export const SignalCard = ({
             </Tooltip>
           </div>
         </div>
-
-        {affectedLeadCount ? (
-          <div className="mt-3 text-xs text-muted-foreground">
-            Affects <span className="font-semibold text-foreground">{affectedLeadCount}</span>{" "}
-            {affectedLeadCount === 1 ? "lead" : "leads"}
-          </div>
-        ) : null}
 
         {/* Card Actions */}
         {/* <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
