@@ -396,22 +396,60 @@ export const SignalCard = ({
 
       {/* === What now — Next steps === */}
       {outreachPlan && matchedLeads.length > 0 && (
-        <div className="mt-3 border-t border-gray-100 px-3 pt-3 pb-3">
+        <div className="mt-3 border-t border-gray-100 px-3 pt-3">
           <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
             Next steps
           </h4>
-          <ul className="mt-2 space-y-1.5">
+          <div className="space-y-2">
             {outreachPlan.steps.map((step) => (
-              <li key={step.label} className="flex flex-wrap items-baseline gap-x-2 text-xs">
-                <span className="font-medium text-gray-900">{step.label}</span>
-                <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
-                  {step.timing}
-                </span>
-                <span className="text-gray-600">{step.move}</span>
-              </li>
+              <div
+                key={step.label}
+                className="rounded-md border border-gray-200 bg-gray-50/50 p-2.5"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-baseline gap-x-2">
+                      <span className="text-xs font-medium text-gray-900">{step.label}</span>
+                      <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
+                        {step.timing}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-[11px] leading-snug text-gray-600">{step.move}</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 h-7 px-2 text-[11px] border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400"
+                    onClick={() => onSendToStrategist(step.leads, step.label)}
+                  >
+                    <Send className="h-3 w-3 mr-1" />
+                    Send
+                  </Button>
+                </div>
+              </div>
             ))}
-          </ul>
-          <p className="mt-2 text-[11px] text-gray-500">Strategist executes these steps.</p>
+          </div>
+        </div>
+      )}
+
+      {/* === Block actions — collective dispatch + persist + download === */}
+      {matchedLeads.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-100 px-3 py-2.5">
+          <Button
+            size="sm"
+            className="h-8 text-xs"
+            onClick={() => onSendToStrategist(matchedLeads, undefined)}
+          >
+            <Send className="h-3.5 w-3.5 mr-1.5" />
+            Send all to Strategist
+          </Button>
+          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={onSaveCsvAsArtefact}>
+            Save as Artefact
+          </Button>
+          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={onDownloadCsv}>
+            <Download className="h-3.5 w-3.5 mr-1.5" />
+            Download
+          </Button>
         </div>
       )}
     </div>
