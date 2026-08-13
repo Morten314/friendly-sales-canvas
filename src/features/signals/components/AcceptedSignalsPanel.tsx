@@ -1,12 +1,13 @@
-import { CalendarDays, FileDown, Inbox, Table2 } from "lucide-react";
-import { useMemo } from "react";
+import { CalendarDays, ChevronDown, ChevronRight, FileDown, Inbox, Table2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { loadAcceptedSignals } from "../lib/acceptedSignalsStore";
+import { loadAcceptedSignals, type AcceptedSignalEntry } from "../lib/acceptedSignalsStore";
+import type { SignalCard as SignalCardType } from "../types";
 
 import {
-  type ArtefactItem,
   downloadArtefactCsv,
   generateAndDownloadPDF,
 } from "@/features/artifacts";
@@ -28,11 +29,27 @@ const formatDay = (day: string) => {
  * Read-only view of accepted signals, grouped by the day they were accepted.
  * Backed by the Signals-owned accepted-signals store (never Artefacts).
  */
-export const AcceptedSignalsPanel = ({ refreshKey }: { refreshKey: number }) => {
+export const AcceptedSignalsPanel = ({
+  refreshKey,
+  renderSignalCard,
+}: {
+  refreshKey: number;
+  /** Renders the live Signals card for an accepted signal (expanded state). */
+  renderSignalCard?: (signal: SignalCardType) => ReactNode;
+}) => {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggle = (id: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
   const groups = useMemo(() => {
     void refreshKey;
     const items = loadAcceptedSignals();
-    const byDay = new Map<string, ArtefactItem[]>();
+    const byDay = new Map<string, AcceptedSignalEntry[]>();
     for (const item of items) {
       const day = dayFromFolder(item.folder);
       byDay.set(day, [...(byDay.get(day) ?? []), item]);
@@ -64,12 +81,28 @@ export const AcceptedSignalsPanel = ({ refreshKey }: { refreshKey: number }) => 
             </Badge>
           </div>
           <div className="space-y-2">
-            {items.map((item) => (
-              <div
-                key={item.id}
-                className="rounded-xl border bg-card p-4 hover:shadow-sm transition-all"
-              >
-                <div className="flex items-start justify-between gap-4">
+            {items.map((item) => {
+              const isOpen = expanded.has(item.id);
+              const canExpand = Boolean(item.signal && renderSignalCard);
+              return (
+                <div key={item.id} className="rounded-xl border bg-card hover:shadow-sm transition-all">
+                  {canExpand && isOpen ? (
+                    <div className="p-2">
+                      <div className="flex justify-end">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs gap-1.5"
+                          onClick={() => toggle(item.id)}
+                        >
+                          <ChevronDown className="h-3.5 w-3.5" />
+                          Collapse
+                        </Button>
+                      </div>
+                      {renderSignalCard?.(item.signal as SignalCardType)}
+                    </div>
+                  ) : (
+                    <div className="flex items-start justify-between gap-4 p-4">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <Badge variant="outline" className="text-[10px]">
@@ -83,6 +116,17 @@ export const AcceptedSignalsPanel = ({ refreshKey }: { refreshKey: number }) => 
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
+                    {canExpand && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs gap-1.5"
+                        onClick={() => toggle(item.id)}
+                      >
+                        <ChevronRight className="h-3.5 w-3.5" />
+                        Open signal
+                      </Button>
+                    )}
                     {item.csv && (
                       <Button
                         variant="outline"
@@ -104,9 +148,11 @@ export const AcceptedSignalsPanel = ({ refreshKey }: { refreshKey: number }) => 
                       Summary
                     </Button>
                   </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       ))}
