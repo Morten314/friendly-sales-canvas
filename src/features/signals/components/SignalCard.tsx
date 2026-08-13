@@ -7,6 +7,8 @@ import {
   ChevronUp,
   ThumbsUp,
   ThumbsDown,
+  Send,
+  Download,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
