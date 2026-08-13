@@ -12,5 +12,5 @@ export {
   updateStoredArtefactSheet,
   sheetToCsv,
 } from "./lib/artefactStore";
-export { generateAndDownloadPDF } from "./lib/artefactPdf";
+export { generateAndDownloadPDF, buildArtefactPdfBlob } from "./lib/artefactPdf";
 export type { ArtefactItem } from "./types";
