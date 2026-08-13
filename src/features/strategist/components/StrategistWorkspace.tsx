@@ -45,6 +45,8 @@ interface StrategistWorkspaceProps {
   opportunity?: string;
   icp?: string;
   triggerPrompt: string;
+  /** Open the detailed editable sequence right away (Signals handoff). */
+  autoSequence?: boolean;
   onBack: () => void;
 }
 
@@ -594,6 +596,7 @@ const StrategistWorkspace: React.FC<StrategistWorkspaceProps> = ({
   opportunity,
   icp: _icp,
   triggerPrompt: _triggerPrompt,
+  autoSequence = false,
   onBack,
 }) => {
   const navigate = useNavigate();
@@ -628,6 +631,14 @@ const StrategistWorkspace: React.FC<StrategistWorkspaceProps> = ({
     setSequenceSteps(steps);
     setShowSequence(true);
   };
+
+  // Handoff from Signals: land directly on the editable, executable sequence.
+  useEffect(() => {
+    if (!autoSequence) return;
+    setSequenceSteps(generateSequence(strategy));
+    setShowSequence(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSequence]);
 
   const handleEmailClick = (step: SequenceStep) => {
     if (step.emailGenerated || step.savedToArtefacts) return;
