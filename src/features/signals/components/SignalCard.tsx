@@ -799,7 +799,7 @@ export const SignalCard = ({
                         onExpandDescription();
                       }}
                     >
-                      Why this matters
+                      What this means
                       <ChevronDown className="h-3.5 w-3.5 ml-1" />
                     </Button>
                   )}
