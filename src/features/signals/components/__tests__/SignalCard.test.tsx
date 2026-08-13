@@ -92,9 +92,9 @@ describe("SignalCard", () => {
     expect(props.onBotIconClick).toHaveBeenCalledWith(signal);
   });
 
-  it("shows the collapsed Why this matters affordance and fires onExpandDescription", () => {
+  it("shows the collapsed What this means affordance and fires onExpandDescription", () => {
     const props = renderCard();
-    fireEvent.click(screen.getByRole("button", { name: /Why this matters/i }));
+    fireEvent.click(screen.getByRole("button", { name: /What this means/i }));
     expect(props.onExpandDescription).toHaveBeenCalledTimes(1);
   });
 

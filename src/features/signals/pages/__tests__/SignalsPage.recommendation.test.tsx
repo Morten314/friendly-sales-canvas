@@ -100,7 +100,7 @@ describe("SignalsPage — Save recommendation as Artifact", () => {
     await waitFor(() => expect(screen.getByText("Hiring surge")).toBeInTheDocument());
     const card = screen.getByText("Hiring surge").closest(".bg-white") as HTMLElement;
 
-    fireEvent.click(within(card).getByText("Why this matters")); // expand recommendations
+    fireEvent.click(within(card).getByText("What this means")); // expand recommendations
     fireEvent.click(within(card).getByText("Reach out")); // expand recommendation → fetches answer
     await waitFor(() =>
       expect(
@@ -125,7 +125,7 @@ describe("SignalsPage — Save recommendation as Artifact", () => {
     renderPage();
     await waitFor(() => expect(screen.getByText("Hiring surge")).toBeInTheDocument());
     const card = screen.getByText("Hiring surge").closest(".bg-white") as HTMLElement;
-    fireEvent.click(within(card).getByText("Why this matters"));
+    fireEvent.click(within(card).getByText("What this means"));
     fireEvent.click(within(card).getByText("Reach out"));
     await waitFor(() =>
       expect(
@@ -164,7 +164,7 @@ describe("SignalsPage — Save recommendation as Artifact", () => {
     await waitFor(() => expect(screen.getByText("Hiring surge")).toBeInTheDocument());
     const card = screen.getByText("Hiring surge").closest(".bg-white") as HTMLElement;
 
-    fireEvent.click(within(card).getByText("Why this matters"));
+    fireEvent.click(within(card).getByText("What this means"));
     fireEvent.click(within(card).getByText("Reach out"));
     await waitFor(() =>
       expect(
