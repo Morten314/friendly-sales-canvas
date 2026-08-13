@@ -31,6 +31,7 @@ export function buildStrategistContextFromSignal(
     })),
     opportunity: signal.headline,
     triggerPrompt: trigger,
+    autoSequence: true,
   };
 }
 
