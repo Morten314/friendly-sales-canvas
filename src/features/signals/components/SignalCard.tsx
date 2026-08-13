@@ -776,17 +776,10 @@ export const SignalCard = ({
                       <ChevronDown className="h-3.5 w-3.5 ml-1" />
                     </Button>
                   )}
-                </div>
-              )}
-            </div>
-            <Tooltip>
-              <TooltipTrigger>
-                <Info className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="text-xs">Source: {signal.sourceLabel}</p>
-              </TooltipContent>
-            </Tooltip>
+                 </div>
+               )}
+               {outreachPlanSection}
+             </div>
           </div>
         </div>
 
