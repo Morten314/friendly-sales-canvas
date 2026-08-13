@@ -223,36 +223,38 @@ export const SignalCard = ({
   // Aggregated plan shown under the table (replaces a per-row "what" column).
   const outreachPlan = buildAggregateOutreachPlan(matchedLeads, suggestedAction);
 
+  // One block, three labelled layers — Who (the table) → Why (the explanation)
+  // → What now (the outreach plan). Opens together when matched leads are shown.
   const leadsSection: ReactNode = isLeadsExpanded ? (
-    <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
-      {leadsLoading || leadsFetching ? (
-        <div className="flex items-center gap-2 py-1 text-sm text-gray-600">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Finding matched leads…</span>
-        </div>
-      ) : leadsError ? (
-        <div className="flex items-center justify-between gap-3 py-1">
-          <span className="text-sm text-red-600">Could not load matched leads.</span>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => onRetryLeadMap?.()}>
-              Try again
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => onRecomputeLeadMap?.()}>
-              Recompute lead mapping
-            </Button>
+    <div className="mt-3 overflow-hidden rounded-lg border border-gray-200 bg-white">
+      {/* === Who — Matched leads === */}
+      <div className="px-3 pt-3">
+        <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+          Matched leads
+        </h4>
+        {leadsLoading || leadsFetching ? (
+          <div className="flex items-center gap-2 py-3 text-sm text-gray-600">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Finding matched leads…</span>
           </div>
-        </div>
-      ) : matchedLeads.length === 0 ? (
-        <p className="py-1 text-sm text-gray-500">No matched leads found for this signal yet.</p>
-      ) : (
-        <>
-          {suggestedAction && (
-            <p className="mb-3 rounded-md border border-blue-100 bg-blue-50/60 px-3 py-2 text-sm text-blue-900">
-              <span className="font-medium">Suggested action: </span>
-              {suggestedAction}
-            </p>
-          )}
-          <div className="overflow-hidden rounded-md border border-gray-200 bg-white">
+        ) : leadsError ? (
+          <div className="flex items-center justify-between gap-3 py-2">
+            <span className="text-sm text-red-600">Could not load matched leads.</span>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => onRetryLeadMap?.()}>
+                Try again
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => onRecomputeLeadMap?.()}>
+                Recompute lead mapping
+              </Button>
+            </div>
+          </div>
+        ) : matchedLeads.length === 0 ? (
+          <p className="py-2 text-sm text-gray-500">
+            No matched leads found for this signal yet.
+          </p>
+        ) : (
+          <div className="overflow-hidden rounded-md border border-gray-200">
             <div className="max-h-[420px] overflow-auto">
               <table className="w-full table-fixed border-collapse text-[11px]">
                 <colgroup>
@@ -338,47 +340,70 @@ export const SignalCard = ({
               </table>
             </div>
           </div>
-          <div className="mt-3 flex flex-wrap justify-end gap-2">
-            <Button size="sm" variant="outline" onClick={onDownloadCsv}>
-              Download
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-blue-700 border-blue-300 hover:bg-blue-50"
-              onClick={onSaveCsvAsArtefact}
-            >
-              Save as Artefact
-            </Button>
-          </div>
-        </>
+        )}
+      </div>
+
+      {/* === Why — Why this matters === */}
+      {signal.description && (
+        <div className="mt-3 border-t border-gray-100 px-3 pt-3">
+          <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+            Why this matters
+          </h4>
+          <p className="text-sm leading-relaxed text-gray-700">{signal.description}</p>
+          {Array.isArray(signal.source) && signal.source.length > 0 && (
+            <div className="mt-2 flex flex-col gap-1.5">
+              {signal.source.map((src, idx) => {
+                const label = src.citation || src.url || "Source";
+                const safeUrl = sanitizeSourceUrl(src.url);
+                return safeUrl ? (
+                  <a
+                    key={idx}
+                    href={safeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-fit"
+                  >
+                    <Badge
+                      variant="secondary"
+                      className="text-xs font-normal hover:bg-gray-300 cursor-pointer max-w-full text-left"
+                    >
+                      {label}
+                    </Badge>
+                  </a>
+                ) : (
+                  <Badge key={idx} variant="secondary" className="text-xs font-normal w-fit">
+                    {label}
+                  </Badge>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* === What now — Aggregated outreach plan === */}
+      {outreachPlan && matchedLeads.length > 0 && (
+        <div className="mt-3 border-t border-gray-100 px-3 pt-3 pb-3">
+          <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+            Aggregated outreach plan
+          </h4>
+          <p className="text-sm text-gray-800">{outreachPlan.summary}</p>
+          <ul className="mt-2 space-y-1.5">
+            {outreachPlan.steps.map((step) => (
+              <li key={step.label} className="flex flex-wrap items-baseline gap-x-2 text-xs">
+                <span className="font-medium text-gray-900">{step.label}</span>
+                <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
+                  {step.timing}
+                </span>
+                <span className="text-gray-600">{step.move}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[11px] text-gray-500">Strategist executes these steps.</p>
+        </div>
       )}
     </div>
   ) : null;
-
-  // "What now" comes after "who" (the table) and "why" (the explanation), so the
-  // aggregated plan renders below the description block rather than inside the table.
-  const outreachPlanSection: ReactNode =
-    isLeadsExpanded && outreachPlan && matchedLeads.length > 0 ? (
-      <div className="mt-3 rounded-md border border-blue-100 bg-white p-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-          Aggregated outreach plan
-        </p>
-        <p className="mt-1 text-sm text-gray-800">{outreachPlan.summary}</p>
-        <ul className="mt-2 space-y-1.5">
-          {outreachPlan.steps.map((step) => (
-            <li key={step.label} className="flex flex-wrap items-baseline gap-x-2 text-xs">
-              <span className="font-medium text-gray-900">{step.label}</span>
-              <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
-                {step.timing}
-              </span>
-              <span className="text-gray-600">{step.move}</span>
-            </li>
-          ))}
-        </ul>
-        <p className="mt-2 text-[11px] text-gray-500">Strategist executes these steps.</p>
-      </div>
-    ) : null;
 
   return (
     <div className="space-y-0">
