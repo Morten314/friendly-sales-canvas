@@ -152,7 +152,7 @@ export const SignalCard = ({
     }
   };
 
-  // Collapsing "Why this matters" only tears down the artefact hint. The lock
+  // Collapsing "What this means" only tears down the artefact hint. The lock
   // message now belongs to the resting card (leads live outside this branch).
   useEffect(() => {
     if (!isDescriptionExpanded) {
@@ -214,7 +214,7 @@ export const SignalCard = ({
   const highRelevanceCount = matchedLeads.filter((l) => l.relevance === "high").length;
 
   // One-line "what to do with these leads". The reasoned version lives behind
-  // "Why this matters" — it is deliberately not duplicated here.
+  // "What this means" — it is deliberately not duplicated here.
   const suggestedAction =
     signal.NBAs && signal.NBAs.length > 0
       ? signal.NBAs[0].nba
@@ -351,7 +351,7 @@ export const SignalCard = ({
         )}
       </div>
 
-      {/* === Why — Why this matters === */}
+      {/* === Why — What this means === */}
       {signal.description && (
         <div className="mt-3 border-t border-gray-100 px-3 pt-3">
           <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
@@ -389,7 +389,7 @@ export const SignalCard = ({
         </div>
       )}
 
-      {/* === What now — Aggregated outreach plan === */}
+      {/* === What now — Next steps === */}
       {outreachPlan && matchedLeads.length > 0 && (
         <div className="mt-3 border-t border-gray-100 px-3 pt-3 pb-3">
           <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
