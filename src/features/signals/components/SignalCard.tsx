@@ -276,29 +276,44 @@ export const SignalCard = ({
                             </td>
                           );
                         }
-                        // "Why" stays short inline; the full rationale opens on hover.
+                        // "Why" shows a short but complete sentence inline; clicking
+                        // the "i" opens the fuller rationale for that lead.
                         return (
                           <td key={i} className="px-3 py-2 text-gray-700">
                             <div className="flex items-start gap-1.5">
-                              <span className="min-w-0 flex-1 truncate">{cell}</span>
+                              <span className="min-w-0 flex-1 whitespace-normal break-words leading-snug">
+                                {shortWhy(cell)}
+                              </span>
                               {cell ? (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
+                                <Popover>
+                                  <PopoverTrigger asChild>
                                     <button
                                       type="button"
-                                      aria-label="Why this lead matches"
+                                      aria-label="Detailed reason this lead matches"
                                       className="mt-[1px] shrink-0 text-gray-400 hover:text-gray-700"
                                     >
                                       <Info className="h-3.5 w-3.5" />
                                     </button>
-                                  </TooltipTrigger>
-                                  <TooltipContent
+                                  </PopoverTrigger>
+                                  <PopoverContent
                                     side="left"
-                                    className="max-w-xs whitespace-normal break-words text-xs leading-relaxed"
+                                    align="start"
+                                    className="w-80 text-xs leading-relaxed"
                                   >
-                                    {cell}
-                                  </TooltipContent>
-                                </Tooltip>
+                                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                                      Why this lead matches
+                                    </p>
+                                    <p className="mb-2 text-[11px] font-medium text-gray-900">
+                                      {lead.name}
+                                      {lead.title ? ` · ${lead.title}` : ""}
+                                      {lead.company ? ` (${lead.company})` : ""}
+                                      {lead.relevance ? ` — ${lead.relevance} relevance` : ""}
+                                    </p>
+                                    <p className="whitespace-pre-wrap break-words text-gray-700">
+                                      {cell}
+                                    </p>
+                                  </PopoverContent>
+                                </Popover>
                               ) : null}
                             </div>
                           </td>
