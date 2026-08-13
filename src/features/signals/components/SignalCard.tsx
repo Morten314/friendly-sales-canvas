@@ -22,6 +22,20 @@ import RecommendationAnswerView from "./RecommendationAnswerView";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
+/**
+ * Inline "Why" text: the first complete sentence, so the cell stays short but is
+ * never cut mid-word. The full rationale opens from the adjacent "i".
+ */
+const shortWhy = (text: string): string => {
+  const trimmed = text.trim();
+  if (trimmed.length <= 120) return trimmed;
+  const match = trimmed.match(/^[\s\S]*?[.!?](\s|$)/);
+  const first = match?.[0]?.trim();
+  if (first && first.length <= 160) return first;
+  return `${trimmed.slice(0, 117).trimEnd()}…`;
+};
 import { sanitizeAnswerText } from "@/shared/lib/sanitizeAnswerText";
 
 interface SignalCardProps {
