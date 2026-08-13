@@ -355,7 +355,7 @@ export const SignalCard = ({
       {signal.description && (
         <div className="mt-3 border-t border-gray-100 px-3 pt-3">
           <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-            Why this matters
+            What this means
           </h4>
           <p className="text-sm leading-relaxed text-gray-700">{signal.description}</p>
           {Array.isArray(signal.source) && signal.source.length > 0 && (
