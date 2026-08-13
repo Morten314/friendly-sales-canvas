@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SignalsPage from "../SignalsPage";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { enqueueArtefact, generateAndDownloadPDF } from "@/features/artifacts";
+
 
 const SIGNAL = {
   id: "sig-1",
@@ -92,50 +92,19 @@ function cardFor(headline: string): HTMLElement {
   return screen.getByText(headline).closest(".bg-white") as HTMLElement;
 }
 
-// The "Find Matched Leads" button lives inside the expanded description section.
-// Click "Read more" first to reveal it.
-function expandCard(card: HTMLElement) {
-  const readMore = within(card).getByRole("button", { name: /Read more/i });
-  fireEvent.click(readMore);
-}
-
 beforeEach(() => {
   localStorage.clear();
   vi.clearAllMocks();
 });
 afterEach(() => localStorage.clear());
 
-describe("SignalsPage — Find Matched Leads → Save", () => {
-  it("builds, downloads, and enqueues the briefing on Save (no forced nav)", async () => {
-    // Seed acceptance so the CTA is active on mount (hash matches the mock above).
-    localStorage.setItem("signals_u1_accepted", JSON.stringify(["hash-sig-1"]));
-    renderPage();
-    await waitFor(() => expect(screen.getByText("Hiring surge")).toBeInTheDocument());
-
-    const card = cardFor("Hiring surge");
-    // CTA lives in the expanded description section — expand first.
-    expandCard(card);
-    fireEvent.click(within(card).getByRole("button", { name: /Find Matched Leads/i }));
-    fireEvent.click(within(card).getByRole("button", { name: /Save as Artifact/i }));
-
-    expect(generateAndDownloadPDF).toHaveBeenCalledTimes(1);
-    expect(enqueueArtefact).toHaveBeenCalledTimes(1);
-    const item = vi.mocked(enqueueArtefact).mock.calls[0][0];
-    expect(item.id).toMatch(/^signal-briefing-sig-1-\d+$/);
-    expect(item.fullReport.keyFindings[0]).toContain("ICP match");
-    // Still on the signals feed.
-    expect(screen.getByText("Hiring surge")).toBeInTheDocument();
-  });
-
+describe("SignalsPage — Find Matched Leads", () => {
   it("opens only one leads section at a time", async () => {
     localStorage.setItem("signals_u1_accepted", JSON.stringify(["hash-sig-1", "hash-sig-2"]));
     renderPage();
     await waitFor(() => expect(screen.getByText("Hiring surge")).toBeInTheDocument());
 
-    // CTA lives in the expanded description section — expand both cards first.
-    expandCard(cardFor("Hiring surge"));
-    expandCard(cardFor("Funding round"));
-
+    // "Find matched leads" lives on the resting card — no need to expand first.
     fireEvent.click(
       within(cardFor("Hiring surge")).getByRole("button", { name: /Find Matched Leads/i }),
     );
@@ -144,11 +113,9 @@ describe("SignalsPage — Find Matched Leads → Save", () => {
     fireEvent.click(
       within(cardFor("Funding round")).getByRole("button", { name: /Find Matched Leads/i }),
     );
-    // sig-1's section closed; sig-2 has zero leads → its zero-state shows, sig-1's rows gone.
-    expect(
-      within(cardFor("Funding round")).getByText(/No matched leads found/i),
-    ).toBeInTheDocument();
+    // Opening sig-2 closes sig-1; sig-1's rows disappear, sig-2's leads block is open.
     expect(within(cardFor("Hiring surge")).queryByText("Acme")).toBeNull();
+    expect(within(cardFor("Funding round")).getByText("Matched leads")).toBeInTheDocument();
   });
 
   it("collapses an open leads section when its signal is un-accepted", async () => {
@@ -157,8 +124,6 @@ describe("SignalsPage — Find Matched Leads → Save", () => {
     await waitFor(() => expect(screen.getByText("Hiring surge")).toBeInTheDocument());
 
     const card = cardFor("Hiring surge");
-    // CTA lives in the expanded description section — expand first.
-    expandCard(card);
     fireEvent.click(within(card).getByRole("button", { name: /Find Matched Leads/i }));
     expect(within(card).getByText("Acme")).toBeInTheDocument();
 

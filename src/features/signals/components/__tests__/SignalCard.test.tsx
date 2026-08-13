@@ -17,7 +17,7 @@ const signal: SignalCardType = {
   sourceLabel: "Press release link",
   source: [],
   nextBestMoves: [],
-  NBAs: [],
+  NBAs: [{ nba: "Reach out to affected accounts", prompt: "p1" }],
   contextualSuggestions: [],
 };
 
@@ -92,9 +92,9 @@ describe("SignalCard", () => {
     expect(props.onBotIconClick).toHaveBeenCalledWith(signal);
   });
 
-  it("shows the collapsed Read more affordance and fires onExpandDescription", () => {
+  it("shows the collapsed Why this matters affordance and fires onExpandDescription", () => {
     const props = renderCard();
-    fireEvent.click(screen.getByRole("button", { name: /Read more/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Why this matters/i }));
     expect(props.onExpandDescription).toHaveBeenCalledTimes(1);
   });
 
