@@ -891,6 +891,81 @@ const SignalsPage = () => {
           return true;
         });
 
+  /** Renders the full live Signals card for a signal (reused by the Accepted tab). */
+  const renderSignalCard = (signal: SignalCardType) => {
+    const contentHash = getSignalContentHash(signal);
+    const isAccepted = acceptedSignals.has(contentHash);
+    const leads = resolveLeads(signal.id);
+    const usingDemoLeads = leadsForSignal(signal.id).length === 0;
+    return (
+      <SignalCard
+        key={signal.id}
+        signal={signal}
+        isAccepted={isAccepted}
+        getAgentBadge={getAgentBadge}
+        isDescriptionExpanded={expandedDescriptions.has(signal.id)}
+        expandedRecommendationIndex={
+          expandedRecommendation?.signalId === signal.id ? expandedRecommendation.index : null
+        }
+        recommendationAnswers={recommendationAnswers}
+        recommendationAnswerLoading={recommendationAnswerLoading}
+        answerExpandedKeys={answerExpandedKeys}
+        onAccept={(signalId) => {
+          void handleAcceptSignal(signalId);
+        }}
+        onReject={handleRejectSignal}
+        onBotIconClick={handleBotIconClick}
+        onNavigateToAgentChat={handleNavigateToAgentChat}
+        onExpandDescription={() => {
+          setExpandedDescriptions((prev) => new Set([...prev, signal.id]));
+        }}
+        onCollapseDescription={() => {
+          setExpandedDescriptions((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(signal.id);
+            return newSet;
+          });
+        }}
+        onToggleRecommendation={(index) => {
+          const isExpanded =
+            expandedRecommendation?.signalId === signal.id &&
+            expandedRecommendation?.index === index;
+          setExpandedRecommendation(isExpanded ? null : { signalId: signal.id, index });
+        }}
+        onExpandAnswer={(key) => {
+          setAnswerExpandedKeys((prev) => new Set([...prev, key]));
+        }}
+        onCollapseAnswer={(key) => {
+          setAnswerExpandedKeys((prev) => {
+            const next = new Set(prev);
+            next.delete(key);
+            return next;
+          });
+        }}
+        affectedLeadCount={leads.length}
+        matchedLeads={leads}
+        leadsLoading={leadsLoading && !usingDemoLeads}
+        leadsFetching={leadsFetching && !usingDemoLeads}
+        leadsError={leadsError && !usingDemoLeads}
+        isLeadsExpanded={expandedLeadsSignalId === signal.id}
+        onFindMatchedLeads={() => handleFindMatchedLeads(signal.id)}
+        onSaveAsArtefact={() => handleSaveAsArtefact(signal)}
+        onDownloadCsv={() => handleDownloadCsv(signal)}
+        onShare={(provider) => handleShareSignal(signal, provider)}
+        onSendToStrategist={(cohortLeads, cohortLabel) =>
+          handleSendToStrategist(signal, cohortLeads, cohortLabel)
+        }
+        onRecomputeLeadMap={() => void handleRecomputeLeadMap()}
+        onRetryLeadMap={retryLeadMap}
+        onSaveRecommendationAsArtefact={(index) =>
+          void handleSaveRecommendationAsArtefact(signal, index)
+        }
+        recommendationArtefactGeneratingKey={recommendationArtefactGenerating}
+        recommendationArtefactErrorKey={recommendationArtefactError}
+      />
+    );
+  };
+
   return (
     <Layout>
       <div className="p-6">
