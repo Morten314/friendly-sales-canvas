@@ -1,12 +1,18 @@
 import type { SignalLeadMapLead } from "../contracts";
 
+export type RelevanceTier = "high" | "medium" | "low";
+
 export interface OutreachPlanStep {
-  /** Cohort label, e.g. "High relevance (4)". */
+  /** Cohort label, e.g. "High relevance · 4 leads". */
   label: string;
   /** When to move on this cohort. */
   timing: string;
   /** How to approach them. */
   move: string;
+  /** Relevance tier this cohort represents. */
+  relevance: RelevanceTier;
+  /** The leads that belong to this cohort (for per-cohort dispatch). */
+  leads: SignalLeadMapLead[];
 }
 
 export interface AggregateOutreachPlan {
