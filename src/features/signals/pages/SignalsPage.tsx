@@ -542,7 +542,7 @@ const SignalsPage = () => {
       // File the accepted signal into the Signals-owned Accepted collection.
       // Accepted signals deliberately never land in Artefacts — that space is
       // reserved for saved work products such as matched-lead sheets.
-      saveAcceptedSignal(buildAcceptedSignalArtefact(signal));
+      saveAcceptedSignal(buildAcceptedSignalArtefact(signal), signal);
       setAcceptedRefreshKey((k) => k + 1);
 
       // Save to localStorage
