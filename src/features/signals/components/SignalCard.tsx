@@ -130,6 +130,7 @@ export const SignalCard = ({
   onSaveAsArtefact,
   onDownloadCsv,
   onSaveCsvAsArtefact,
+  onSendToStrategist,
   onRecomputeLeadMap,
   onRetryLeadMap,
   onSaveRecommendationAsArtefact,
