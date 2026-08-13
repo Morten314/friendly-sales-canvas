@@ -393,7 +393,7 @@ export const SignalCard = ({
       {outreachPlan && matchedLeads.length > 0 && (
         <div className="mt-3 border-t border-gray-100 px-3 pt-3 pb-3">
           <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-            Aggregated outreach plan
+            Next steps
           </h4>
           <p className="text-sm text-gray-800">{outreachPlan.summary}</p>
           <ul className="mt-2 space-y-1.5">
