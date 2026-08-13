@@ -247,98 +247,77 @@ export const SignalCard = ({
               {suggestedAction}
             </p>
           )}
-          <div className="space-y-2">
-            {matchedLeads.map((lead) => (
-              <div
-                key={lead.lead_id}
-                className="flex items-center justify-between gap-3 rounded-md bg-white px-3 py-2 border border-gray-100"
-              >
-                <span className="text-sm text-gray-800">
-                  {lead.name ? `${lead.name} — ` : ""}
-                  {lead.company || "Unknown company"}
-                </span>
-                <Badge
-                  variant="secondary"
-                  className={`text-xs ${relevanceBadgeClass(lead.relevance)}`}
-                >
-                  {titleCase(lead.relevance)}
-                </Badge>
-              </div>
-            ))}
-          </div>
-          {csvPreviewOpen && (
-            <div className="mt-3 overflow-hidden rounded-md border border-gray-200 bg-white">
-              <div className="max-h-[420px] overflow-auto">
-                <table className="w-full table-fixed border-collapse text-[11px]">
-                  <colgroup>
-                    <col className="w-[160px]" />
-                    <col className="w-[190px]" />
-                    <col className="w-[170px]" />
-                    <col className="w-[100px]" />
-                    <col className="w-[360px]" />
-                  </colgroup>
-                  <thead className="sticky top-0 z-10 bg-gray-100 text-gray-700">
-                    <tr>
-                      {SIGNAL_PREVIEW_COLUMNS.map((col) => (
-                        <th
-                          key={col}
-                          className="whitespace-nowrap border-b border-gray-200 px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide"
-                        >
-                          {col}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {matchedLeads.map((lead, rowIndex) => (
-                      <tr
-                        key={lead.lead_id}
-                        className={`border-t border-gray-100 align-top ${rowIndex % 2 === 1 ? "bg-gray-50/60" : ""}`}
+          <div className="overflow-hidden rounded-md border border-gray-200 bg-white">
+            <div className="max-h-[420px] overflow-auto">
+              <table className="w-full table-fixed border-collapse text-[11px]">
+                <colgroup>
+                  <col className="w-[160px]" />
+                  <col className="w-[190px]" />
+                  <col className="w-[170px]" />
+                  <col className="w-[100px]" />
+                  <col className="w-[360px]" />
+                </colgroup>
+                <thead className="sticky top-0 z-10 bg-gray-100 text-gray-700">
+                  <tr>
+                    {SIGNAL_PREVIEW_COLUMNS.map((col) => (
+                      <th
+                        key={col}
+                        className="whitespace-nowrap border-b border-gray-200 px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide"
                       >
-                        {toSignalPreviewRow(lead).map((cell, i) => {
-                          const isWhy = i === SIGNAL_PREVIEW_COLUMNS.length - 1;
-                          if (!isWhy) {
-                            return (
-                              <td key={i} title={cell} className="truncate px-3 py-2 text-gray-700">
-                                {cell}
-                              </td>
-                            );
-                          }
-                          // "Why" stays short inline; the full rationale opens on hover.
+                        {col}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {matchedLeads.map((lead, rowIndex) => (
+                    <tr
+                      key={lead.lead_id}
+                      className={`border-t border-gray-100 align-top ${rowIndex % 2 === 1 ? "bg-gray-50/60" : ""}`}
+                    >
+                      {toSignalPreviewRow(lead).map((cell, i) => {
+                        const isWhy = i === SIGNAL_PREVIEW_COLUMNS.length - 1;
+                        if (!isWhy) {
                           return (
-                            <td key={i} className="px-3 py-2 text-gray-700">
-                              <div className="flex items-start gap-1.5">
-                                <span className="min-w-0 flex-1 truncate">{cell}</span>
-                                {cell ? (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <button
-                                        type="button"
-                                        aria-label="Why this lead matches"
-                                        className="mt-[1px] shrink-0 text-gray-400 hover:text-gray-700"
-                                      >
-                                        <Info className="h-3.5 w-3.5" />
-                                      </button>
-                                    </TooltipTrigger>
-                                    <TooltipContent
-                                      side="left"
-                                      className="max-w-xs whitespace-normal break-words text-xs leading-relaxed"
-                                    >
-                                      {cell}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                ) : null}
-                              </div>
+                            <td key={i} title={cell} className="truncate px-3 py-2 text-gray-700">
+                              {cell}
                             </td>
                           );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        }
+                        // "Why" stays short inline; the full rationale opens on hover.
+                        return (
+                          <td key={i} className="px-3 py-2 text-gray-700">
+                            <div className="flex items-start gap-1.5">
+                              <span className="min-w-0 flex-1 truncate">{cell}</span>
+                              {cell ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      type="button"
+                                      aria-label="Why this lead matches"
+                                      className="mt-[1px] shrink-0 text-gray-400 hover:text-gray-700"
+                                    >
+                                      <Info className="h-3.5 w-3.5" />
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent
+                                    side="left"
+                                    className="max-w-xs whitespace-normal break-words text-xs leading-relaxed"
+                                  >
+                                    {cell}
+                                  </TooltipContent>
+                                </Tooltip>
+                              ) : null}
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
+          </div>
           {outreachPlan && (
             <div className="mt-3 rounded-md border border-blue-100 bg-white p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -362,24 +341,17 @@ export const SignalCard = ({
             </div>
           )}
           <div className="mt-3 flex flex-wrap justify-end gap-2">
-            <Button size="sm" variant="outline" onClick={() => setCsvPreviewOpen((v) => !v)}>
-              {csvPreviewOpen ? "Hide CSV" : "View as CSV"}
+            <Button size="sm" variant="outline" onClick={onDownloadCsv}>
+              Download
             </Button>
-            {csvPreviewOpen && (
-              <>
-                <Button size="sm" variant="outline" onClick={onDownloadCsv}>
-                  Download
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-blue-700 border-blue-300 hover:bg-blue-50"
-                  onClick={onSaveCsvAsArtefact}
-                >
-                  Save as Artefact
-                </Button>
-              </>
-            )}
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-blue-700 border-blue-300 hover:bg-blue-50"
+              onClick={onSaveCsvAsArtefact}
+            >
+              Save as Artefact
+            </Button>
           </div>
         </>
       )}
