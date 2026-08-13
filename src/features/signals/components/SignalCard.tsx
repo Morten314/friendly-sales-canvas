@@ -545,7 +545,7 @@ export const SignalCard = ({
                   recommendation list + answer view only. */}
               {hasRecommendations && (
                 <div className="mt-2">
-                  {isDescriptionExpanded ? (
+                  {isDescriptionExpanded && (
                     <>
                       {/* Recommendations - click to show corresponding prompt */}
                       {(() => {
