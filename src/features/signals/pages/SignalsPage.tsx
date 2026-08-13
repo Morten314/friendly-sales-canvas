@@ -990,7 +990,10 @@ const SignalsPage = () => {
 
         {currentTab === "accepted" && (
           <div className="w-full max-w-5xl mx-auto">
-            <AcceptedSignalsPanel refreshKey={acceptedRefreshKey} />
+            <AcceptedSignalsPanel
+              refreshKey={acceptedRefreshKey}
+              renderSignalCard={renderSignalCard}
+            />
           </div>
         )}
 
