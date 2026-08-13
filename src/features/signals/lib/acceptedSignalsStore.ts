@@ -2,6 +2,7 @@ import { Bot, Compass, Satellite, Target } from "lucide-react";
 import type { ComponentType } from "react";
 
 import type { ArtefactItem } from "@/features/artifacts";
+import type { SignalCard } from "../types";
 
 /**
  * Accepted signals live in their own Signals-owned localStorage collection.
@@ -23,7 +24,13 @@ const ICONS: Record<string, ComponentType<{ className?: string }>> = {
   Strategist: Compass,
 };
 
-type StoredAcceptedSignal = Omit<ArtefactItem, "agentIcon">;
+type StoredAcceptedSignal = Omit<ArtefactItem, "agentIcon"> & {
+  /** Raw signal payload, so the Accepted tab can re-render the full Signals card. */
+  signal?: SignalCard;
+};
+
+/** An accepted signal: the artefact metadata plus the original signal payload. */
+export type AcceptedSignalEntry = ArtefactItem & { signal?: SignalCard };
 
 function readRaw(key: string): StoredAcceptedSignal[] {
   try {
@@ -61,7 +68,7 @@ function migrateLegacy(): StoredAcceptedSignal[] {
 }
 
 /** Newest-first list of accepted signals, with icons rehydrated. */
-export function loadAcceptedSignals(): ArtefactItem[] {
+export function loadAcceptedSignals(): AcceptedSignalEntry[] {
   return migrateLegacy().map((item) => ({
     ...item,
     agentIcon: ICONS[item.agentName] ?? Bot,
@@ -69,9 +76,12 @@ export function loadAcceptedSignals(): ArtefactItem[] {
 }
 
 /** Star a signal: add it to the Accepted collection (newest first). */
-export function saveAcceptedSignal(item: ArtefactItem): void {
+export function saveAcceptedSignal(item: ArtefactItem, signal?: SignalCard): void {
   const { agentIcon: _icon, ...rest } = item;
-  writeRaw(STORAGE_KEY, [rest, ...readRaw(STORAGE_KEY).filter((a) => a.id !== item.id)]);
+  writeRaw(STORAGE_KEY, [
+    { ...rest, signal },
+    ...readRaw(STORAGE_KEY).filter((a) => a.id !== item.id),
+  ]);
 }
 
 /** Un-star a signal: remove it from the Accepted collection. */
