@@ -542,7 +542,7 @@ const SignalsPage = () => {
       // File the accepted signal into the Signals-owned Accepted collection.
       // Accepted signals deliberately never land in Artefacts — that space is
       // reserved for saved work products such as matched-lead sheets.
-      saveAcceptedSignal(buildAcceptedSignalArtefact(signal));
+      saveAcceptedSignal(buildAcceptedSignalArtefact(signal), signal);
       setAcceptedRefreshKey((k) => k + 1);
 
       // Save to localStorage
@@ -891,6 +891,81 @@ const SignalsPage = () => {
           return true;
         });
 
+  /** Renders the full live Signals card for a signal (reused by the Accepted tab). */
+  const renderSignalCard = (signal: SignalCardType) => {
+    const contentHash = getSignalContentHash(signal);
+    const isAccepted = acceptedSignals.has(contentHash);
+    const leads = resolveLeads(signal.id);
+    const usingDemoLeads = leadsForSignal(signal.id).length === 0;
+    return (
+      <SignalCard
+        key={signal.id}
+        signal={signal}
+        isAccepted={isAccepted}
+        getAgentBadge={getAgentBadge}
+        isDescriptionExpanded={expandedDescriptions.has(signal.id)}
+        expandedRecommendationIndex={
+          expandedRecommendation?.signalId === signal.id ? expandedRecommendation.index : null
+        }
+        recommendationAnswers={recommendationAnswers}
+        recommendationAnswerLoading={recommendationAnswerLoading}
+        answerExpandedKeys={answerExpandedKeys}
+        onAccept={(signalId) => {
+          void handleAcceptSignal(signalId);
+        }}
+        onReject={handleRejectSignal}
+        onBotIconClick={handleBotIconClick}
+        onNavigateToAgentChat={handleNavigateToAgentChat}
+        onExpandDescription={() => {
+          setExpandedDescriptions((prev) => new Set([...prev, signal.id]));
+        }}
+        onCollapseDescription={() => {
+          setExpandedDescriptions((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(signal.id);
+            return newSet;
+          });
+        }}
+        onToggleRecommendation={(index) => {
+          const isExpanded =
+            expandedRecommendation?.signalId === signal.id &&
+            expandedRecommendation?.index === index;
+          setExpandedRecommendation(isExpanded ? null : { signalId: signal.id, index });
+        }}
+        onExpandAnswer={(key) => {
+          setAnswerExpandedKeys((prev) => new Set([...prev, key]));
+        }}
+        onCollapseAnswer={(key) => {
+          setAnswerExpandedKeys((prev) => {
+            const next = new Set(prev);
+            next.delete(key);
+            return next;
+          });
+        }}
+        affectedLeadCount={leads.length}
+        matchedLeads={leads}
+        leadsLoading={leadsLoading && !usingDemoLeads}
+        leadsFetching={leadsFetching && !usingDemoLeads}
+        leadsError={leadsError && !usingDemoLeads}
+        isLeadsExpanded={expandedLeadsSignalId === signal.id}
+        onFindMatchedLeads={() => handleFindMatchedLeads(signal.id)}
+        onSaveAsArtefact={() => handleSaveAsArtefact(signal)}
+        onDownloadCsv={() => handleDownloadCsv(signal)}
+        onShare={(provider) => handleShareSignal(signal, provider)}
+        onSendToStrategist={(cohortLeads, cohortLabel) =>
+          handleSendToStrategist(signal, cohortLeads, cohortLabel)
+        }
+        onRecomputeLeadMap={() => void handleRecomputeLeadMap()}
+        onRetryLeadMap={retryLeadMap}
+        onSaveRecommendationAsArtefact={(index) =>
+          void handleSaveRecommendationAsArtefact(signal, index)
+        }
+        recommendationArtefactGeneratingKey={recommendationArtefactGenerating}
+        recommendationArtefactErrorKey={recommendationArtefactError}
+      />
+    );
+  };
+
   return (
     <Layout>
       <div className="p-6">
@@ -915,7 +990,10 @@ const SignalsPage = () => {
 
         {currentTab === "accepted" && (
           <div className="w-full max-w-5xl mx-auto">
-            <AcceptedSignalsPanel refreshKey={acceptedRefreshKey} />
+            <AcceptedSignalsPanel
+              refreshKey={acceptedRefreshKey}
+              renderSignalCard={renderSignalCard}
+            />
           </div>
         )}
 
@@ -937,88 +1015,7 @@ const SignalsPage = () => {
             ) : signals.length === 0 ? (
               <SignalsEmptyState />
             ) : (
-              signals.map((signal) => {
-                const contentHash = getSignalContentHash(signal);
-                const isAccepted = acceptedSignals.has(contentHash);
-                const leads = resolveLeads(signal.id);
-                // Demo placeholders stand in whenever the backend mapping is
-                // empty or failed, so the card must not show the loading/error
-                // states over rows we already have.
-                const usingDemoLeads = leadsForSignal(signal.id).length === 0;
-                return (
-                  <SignalCard
-                    key={signal.id}
-                    signal={signal}
-                    isAccepted={isAccepted}
-                    getAgentBadge={getAgentBadge}
-                    isDescriptionExpanded={expandedDescriptions.has(signal.id)}
-                    expandedRecommendationIndex={
-                      expandedRecommendation?.signalId === signal.id
-                        ? expandedRecommendation.index
-                        : null
-                    }
-                    recommendationAnswers={recommendationAnswers}
-                    recommendationAnswerLoading={recommendationAnswerLoading}
-                    answerExpandedKeys={answerExpandedKeys}
-                    onAccept={(signalId) => {
-                      void handleAcceptSignal(signalId);
-                    }}
-                    onReject={handleRejectSignal}
-                    onBotIconClick={handleBotIconClick}
-                    onNavigateToAgentChat={handleNavigateToAgentChat}
-                    onExpandDescription={() => {
-                      setExpandedDescriptions((prev) => new Set([...prev, signal.id]));
-                    }}
-                    onCollapseDescription={() => {
-                      setExpandedDescriptions((prev) => {
-                        const newSet = new Set(prev);
-                        newSet.delete(signal.id);
-                        return newSet;
-                      });
-                    }}
-                    onToggleRecommendation={(index) => {
-                      const isExpanded =
-                        expandedRecommendation?.signalId === signal.id &&
-                        expandedRecommendation?.index === index;
-                      setExpandedRecommendation(isExpanded ? null : { signalId: signal.id, index });
-                    }}
-                    onExpandAnswer={(key) => {
-                      setAnswerExpandedKeys((prev) => {
-                        const next = new Set(prev);
-                        next.add(key);
-                        return next;
-                      });
-                    }}
-                    onCollapseAnswer={(key) => {
-                      setAnswerExpandedKeys((prev) => {
-                        const next = new Set(prev);
-                        next.delete(key);
-                        return next;
-                      });
-                    }}
-                    affectedLeadCount={leads.length}
-                    matchedLeads={leads}
-                    leadsLoading={leadsLoading && !usingDemoLeads}
-                    leadsFetching={leadsFetching && !usingDemoLeads}
-                    leadsError={leadsError && !usingDemoLeads}
-                    isLeadsExpanded={expandedLeadsSignalId === signal.id}
-                    onFindMatchedLeads={() => handleFindMatchedLeads(signal.id)}
-                    onSaveAsArtefact={() => handleSaveAsArtefact(signal)}
-                    onDownloadCsv={() => handleDownloadCsv(signal)}
-                    onShare={(provider) => handleShareSignal(signal, provider)}
-                    onSendToStrategist={(leads, cohortLabel) =>
-                      handleSendToStrategist(signal, leads, cohortLabel)
-                    }
-                    onRecomputeLeadMap={() => void handleRecomputeLeadMap()}
-                    onRetryLeadMap={retryLeadMap}
-                    onSaveRecommendationAsArtefact={(index) =>
-                      void handleSaveRecommendationAsArtefact(signal, index)
-                    }
-                    recommendationArtefactGeneratingKey={recommendationArtefactGenerating}
-                    recommendationArtefactErrorKey={recommendationArtefactError}
-                  />
-                );
-              })
+              signals.map((signal) => renderSignalCard(signal))
             )}
           </div>
         )}
