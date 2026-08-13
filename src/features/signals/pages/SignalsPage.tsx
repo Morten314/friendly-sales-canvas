@@ -19,9 +19,9 @@ import { withDemoMatchedLeads } from "../lib/demoMatchedLeads";
 import {
   buildRecommendationPlaybookArtefact,
   buildSignalBriefingArtefact,
-  buildLeadSheetArtefact,
   buildAcceptedSignalArtefact,
 } from "../lib/signalBriefing";
+import { downloadSignalBundle, shareSignalByEmail, type MailProvider } from "../lib/signalShare";
 import {
   fetchSignals,
   generateRecommendationArtefact,
@@ -36,7 +36,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { generateAndDownloadPDF, saveArtefact } from "@/features/artifacts";
 import {
   buildMatchedLeadsCsv,
-  downloadMatchedLeadsCsv,
   matchedLeadsCsvFilename,
 } from "@/features/signals/lib/matchedLeadsCsv";
 import { Layout } from "@/features/shell";
@@ -607,22 +606,17 @@ const SignalsPage = () => {
     });
   };
 
-  /** Download only the matched-leads CSV for a signal. */
   const handleDownloadCsv = (signal: SignalCardType) => {
-    downloadMatchedLeadsCsv(signal.headline, resolveLeads(signal.id));
+    downloadSignalBundle(signal, resolveLeads(signal.id));
   };
 
-  /** Save the matched-leads sheet to Artefacts as an editable file. */
-  const handleSaveCsvAsArtefact = (signal: SignalCardType) => {
-    saveArtefact(buildLeadSheetArtefact(signal, resolveLeads(signal.id)));
+  /** Share the CSV + PDF through the chosen mail service. */
+  const handleShareSignal = (signal: SignalCardType, provider: MailProvider) => {
+    shareSignalByEmail(provider, signal, resolveLeads(signal.id));
     toast({
-      title: "Saved to Artefacts",
-      description: "The lead sheet is editable in Artefacts — enrich rows in place.",
-      action: (
-        <Button variant="outline" size="sm" onClick={() => navigate("/artifacts")}>
-          View →
-        </Button>
-      ),
+      title: "Files downloaded",
+      description:
+        "The CSV and PDF were downloaded — attach them to the email draft that just opened.",
     });
   };
 
@@ -1011,7 +1005,7 @@ const SignalsPage = () => {
                     onFindMatchedLeads={() => handleFindMatchedLeads(signal.id)}
                     onSaveAsArtefact={() => handleSaveAsArtefact(signal)}
                     onDownloadCsv={() => handleDownloadCsv(signal)}
-                    onSaveCsvAsArtefact={() => handleSaveCsvAsArtefact(signal)}
+                    onShare={(provider) => handleShareSignal(signal, provider)}
                     onSendToStrategist={(leads, cohortLabel) =>
                       handleSendToStrategist(signal, leads, cohortLabel)
                     }
