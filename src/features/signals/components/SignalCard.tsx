@@ -949,21 +949,10 @@ export const SignalCard = ({
                           </div>
                         );
                       })()}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="mt-3 h-8 px-2 -ml-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                        onClick={() => {
-                          onCollapseDescription();
-                        }}
-                      >
-                        Show less
-                        <ChevronUp className="h-3.5 w-3.5 ml-1" />
-                      </Button>
                   </>
-                )}
-                 </div>
-               )}
+                  }
+                </div>
+              )}
               </div>
           </div>
         </div>
