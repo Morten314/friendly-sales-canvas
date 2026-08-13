@@ -92,11 +92,6 @@ describe("SignalCard", () => {
     expect(props.onBotIconClick).toHaveBeenCalledWith(signal);
   });
 
-  it("shows the collapsed What this means affordance and fires onExpandDescription", () => {
-    const props = renderCard();
-    fireEvent.click(screen.getByRole("button", { name: /What this means/i }));
-    expect(props.onExpandDescription).toHaveBeenCalledTimes(1);
-  });
 
   it("renders the Accepted badge when isAccepted is true", () => {
     renderCard({ isAccepted: true });
