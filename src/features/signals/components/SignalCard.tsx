@@ -148,6 +148,8 @@ export const SignalCard = ({
   };
 
   const [artefactHint, setArtefactHint] = useState<string | null>(null);
+  /** Cohort label whose outreach-plan preview is expanded, or null. */
+  const [expandedCohort, setExpandedCohort] = useState<string | null>(null);
   const artefactHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearArtefactHintTimer = () => {
