@@ -121,7 +121,6 @@ export const SignalCard = ({
 }: SignalCardProps) => {
   const [showLockMessage, setShowLockMessage] = useState(false);
   const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [csvPreviewOpen, setCsvPreviewOpen] = useState(false);
 
   const clearLockTimer = () => {
     if (lockTimerRef.current) {
