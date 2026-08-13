@@ -1012,6 +1012,9 @@ const SignalsPage = () => {
                     onSaveAsArtefact={() => handleSaveAsArtefact(signal)}
                     onDownloadCsv={() => handleDownloadCsv(signal)}
                     onSaveCsvAsArtefact={() => handleSaveCsvAsArtefact(signal)}
+                    onSendToStrategist={(leads, cohortLabel) =>
+                      handleSendToStrategist(signal, leads, cohortLabel)
+                    }
                     onRecomputeLeadMap={() => void handleRecomputeLeadMap()}
                     onRetryLeadMap={retryLeadMap}
                     onSaveRecommendationAsArtefact={(index) =>
