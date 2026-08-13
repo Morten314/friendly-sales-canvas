@@ -607,9 +607,18 @@ const SignalsPage = () => {
     });
   };
 
-  /** Download only the matched-leads CSV for a signal. */
   const handleDownloadCsv = (signal: SignalCardType) => {
-    downloadMatchedLeadsCsv(signal.headline, resolveLeads(signal.id));
+    downloadSignalBundle(signal, resolveLeads(signal.id));
+  };
+
+  /** Share the CSV + PDF through the chosen mail service. */
+  const handleShareSignal = (signal: SignalCardType, provider: MailProvider) => {
+    shareSignalByEmail(provider, signal, resolveLeads(signal.id));
+    toast({
+      title: "Files downloaded",
+      description:
+        "The CSV and PDF were downloaded — attach them to the email draft that just opened.",
+    });
   };
 
   /** Save the matched-leads sheet to Artefacts as an editable file. */
@@ -1011,7 +1020,7 @@ const SignalsPage = () => {
                     onFindMatchedLeads={() => handleFindMatchedLeads(signal.id)}
                     onSaveAsArtefact={() => handleSaveAsArtefact(signal)}
                     onDownloadCsv={() => handleDownloadCsv(signal)}
-                    onSaveCsvAsArtefact={() => handleSaveCsvAsArtefact(signal)}
+                    onShare={(provider) => handleShareSignal(signal, provider)}
                     onSendToStrategist={(leads, cohortLabel) =>
                       handleSendToStrategist(signal, leads, cohortLabel)
                     }
