@@ -83,8 +83,6 @@ interface SignalCardProps {
   onDownloadCsv: () => void;
   /** Share the CSV + PDF via the chosen mail service. */
   onShare: (provider: "gmail" | "outlook") => void;
-  /** Hand a lead cohort (or all leads) to Strategist for sequence execution. */
-  onSendToStrategist: (leads: SignalLeadMapLead[], cohortLabel?: string) => void;
   /** Offered in the error state; wraps the page's refreshLeadMap (forces a server recompute). */
   onRecomputeLeadMap?: () => void;
   /** Offered in the error state; plain re-fetch of the mapping (the "Try again" escape). */
@@ -134,7 +132,6 @@ export const SignalCard = ({
   onSaveAsArtefact,
   onDownloadCsv,
   onShare,
-  onSendToStrategist,
   onRecomputeLeadMap,
   onRetryLeadMap,
   onSaveRecommendationAsArtefact,
@@ -387,7 +384,6 @@ export const SignalCard = ({
                     headline={signal.headline}
                     snippet={signal.snippet}
                     step={step}
-                    onSendToStrategist={onSendToStrategist}
                   />
                 )}
               </div>
@@ -399,14 +395,6 @@ export const SignalCard = ({
       {/* === Block actions — collective dispatch + persist + download === */}
       {matchedLeads.length > 0 && (
         <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-100 px-3 py-2.5">
-          <Button
-            size="sm"
-            className="h-8 text-xs"
-            onClick={() => onSendToStrategist(matchedLeads, undefined)}
-          >
-            <Send className="h-3.5 w-3.5 mr-1.5" />
-            Send all to Strategist
-          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-8 text-xs">
@@ -668,18 +656,6 @@ export const SignalCard = ({
                                                 </span>
                                               ))}
                                             </div>
-                                            <Button
-                                              size="sm"
-                                              variant="outline"
-                                              className="mt-2 h-7 px-2 text-[11px]"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                onSendToStrategist(link.leads, item.nba);
-                                              }}
-                                            >
-                                              <Send className="mr-1 h-3 w-3" />
-                                              Send these to Strategist
-                                            </Button>
                                           </div>
                                         )}
                                         <div className="p-3 rounded-lg bg-gradient-to-br from-slate-50 to-blue-50/50 border border-slate-200 space-y-3">
