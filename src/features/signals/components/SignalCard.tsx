@@ -655,9 +655,7 @@ export const SignalCard = ({
                     variant="ghost"
                     size="sm"
                     className="text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                    onClick={() =>
-                      isDescriptionExpanded ? onCollapseDescription() : onExpandDescription()
-                    }
+                    onClick={handleGoDeeperClick}
                   >
                     {isDescriptionExpanded ? (
                       <>
@@ -683,7 +681,8 @@ export const SignalCard = ({
                   live inside the matched-leads block; this toggle carries the
                   recommendation list + answer view only. */}
               {hasRecommendations && isDescriptionExpanded && (
-                <div className="mt-3 overflow-hidden rounded-lg border border-gray-200 bg-white p-3">
+                <div className="mt-3 overflow-hidden rounded-lg border border-gray-200 bg-gray-50/60 p-3">
+                  {whatThisMeansBlock}
                   {
                     <>
                       <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
