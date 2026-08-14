@@ -38,6 +38,15 @@ import {
   buildMatchedLeadsCsv,
   matchedLeadsCsvFilename,
 } from "@/features/signals/lib/matchedLeadsCsv";
+import {
+  applyLeadEdits,
+  dismissLead,
+  getLeadEditsVersion,
+  restoreAllLeads,
+  restoreLead,
+  setLeadEdit,
+  subscribeLeadEdits,
+} from "@/features/signals/lib/leadEdits";
 import { Layout } from "@/features/shell";
 import type { CompanyProfileResponse } from "@/shared/api/contracts";
 import { useAuth } from "@/shared/auth";
