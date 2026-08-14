@@ -315,7 +315,7 @@ const CohortOutreachPreview = ({ signalId, headline, snippet, step }: Props) => 
                       onClick={() => setChatIdx(idx)}
                     >
                       <Bot className="mr-1 h-3 w-3" />
-                      Edit with agent
+                      Edit
                     </Button>
                     {!selectedLead && (
                       <span className="text-[10px] text-gray-400">
