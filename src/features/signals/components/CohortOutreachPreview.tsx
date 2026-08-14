@@ -1,4 +1,4 @@
-import { Check, Copy, Loader2, Mail, Send, Sparkles, RotateCcw } from "lucide-react";
+import { Bot, Check, Copy, Loader2, RotateCcw, Share2, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import type { SignalLeadMapLead } from "../contracts";
@@ -12,6 +12,8 @@ import {
   saveCohortCopy,
   type TouchCopy,
 } from "../lib/outreachCopy";
+
+import OutreachCopyChat from "./OutreachCopyChat";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -27,7 +29,6 @@ interface Props {
   headline: string;
   snippet: string;
   step: OutreachPlanStep;
-  onSendToStrategist: (leads: SignalLeadMapLead[], cohortLabel?: string) => void;
 }
 
 /**
@@ -36,7 +37,7 @@ interface Props {
  * touches and caches the result per signal+cohort. Copy is cohort-level by
  * default — the lead picker only resolves merge tokens for preview/sending.
  */
-const CohortOutreachPreview = ({ signalId, headline, snippet, step, onSendToStrategist }: Props) => {
+const CohortOutreachPreview = ({ signalId, headline, snippet, step }: Props) => {
   const templates = useMemo(
     () => buildCohortCopy(step, { headline, snippet }),
     [step, headline, snippet],
@@ -48,6 +49,7 @@ const CohortOutreachPreview = ({ signalId, headline, snippet, step, onSendToStra
   const [leadId, setLeadId] = useState<string>("");
   const [openTouch, setOpenTouch] = useState<number | null>(0);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [chatIdx, setChatIdx] = useState<number | null>(null);
 
   useEffect(() => {
     const stored = loadCohortCopy(signalId, step.label);
@@ -60,7 +62,8 @@ const CohortOutreachPreview = ({ signalId, headline, snippet, step, onSendToStra
     }
   }, [signalId, step.label, templates]);
 
-  const selectedLead = step.leads.find((l) => l.lead_id === leadId) ?? null;
+  const selectedLead: SignalLeadMapLead | null =
+    step.leads.find((l) => l.lead_id === leadId) ?? null;
 
   const persist = (next: TouchCopy[]) => {
     setCopy(next);
