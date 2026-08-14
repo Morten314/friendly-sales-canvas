@@ -109,6 +109,15 @@ interface SignalCardProps {
   recommendationArtefactGeneratingKey: string | null;
   /** Page-held `${signalId}-${index}` whose last generation failed (drives the inline error). */
   recommendationArtefactErrorKey: string | null;
+  /** Leads the user marked "not a fit" for this signal (restorable chips). */
+  dismissedLeads?: SignalLeadMapLead[];
+  /** Per-lead overrides for this signal (drives the "edited" mark + dismiss reasons). */
+  leadEdits?: SignalLeadEdits;
+  /** Persist a field correction (name/title/company/relevance/why) for one lead. */
+  onEditLead?: (leadId: string, patch: LeadEdit) => void;
+  onDismissLead?: (leadId: string, reason: string) => void;
+  onRestoreLead?: (leadId: string) => void;
+  onRestoreAllLeads?: () => void;
 }
 
 export const SignalCard = ({
