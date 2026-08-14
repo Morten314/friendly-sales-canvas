@@ -154,6 +154,12 @@ export const SignalCard = ({
   onSaveRecommendationAsArtefact,
   recommendationArtefactGeneratingKey,
   recommendationArtefactErrorKey,
+  dismissedLeads,
+  leadEdits,
+  onEditLead,
+  onDismissLead,
+  onRestoreLead,
+  onRestoreAllLeads,
 }: SignalCardProps) => {
   const [showLockMessage, setShowLockMessage] = useState(false);
   const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
