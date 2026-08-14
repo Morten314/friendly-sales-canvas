@@ -16,10 +16,12 @@ import type { ReactNode } from "react";
 
 import type { SignalLeadMapLead } from "../contracts";
 import { buildAggregateOutreachPlan } from "../lib/aggregateOutreachPlan";
+import type { LeadEdit, SignalLeadEdits } from "../lib/leadEdits";
 import { SIGNAL_PREVIEW_COLUMNS, toSignalPreviewRow } from "../lib/matchedLeadsCsv";
 import type { Agent, NBAItem, SignalCard as SignalCardType } from "../types";
 
 import { sanitizeSourceUrl } from "./signalCards";
+import MatchedLeadsTable from "./MatchedLeadsTable";
 import RecommendationAnswerView from "./RecommendationAnswerView";
 import { leadsForRecommendation } from "../lib/recommendationLeads";
 
