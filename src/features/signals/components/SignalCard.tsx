@@ -19,6 +19,7 @@ import type { LeadEdit, SignalLeadEdits } from "../lib/leadEdits";
 import type { Agent, NBAItem, SignalCard as SignalCardType } from "../types";
 
 import { sanitizeSourceUrl } from "./signalCards";
+import CohortOutreachPreview from "./CohortOutreachPreview";
 import MatchedLeadsTable from "./MatchedLeadsTable";
 import RecommendationAnswerView from "./RecommendationAnswerView";
 import { leadsForRecommendation } from "../lib/recommendationLeads";
@@ -381,37 +382,13 @@ export const SignalCard = ({
                   </Button>
                 </div>
                 {expandedCohort === step.label && (
-                  <div className="mt-2 border-t border-gray-200 pt-2">
-                    <ol className="space-y-1">
-                      {step.touches.map((t) => (
-                        <li
-                          key={`${t.day}-${t.action}`}
-                          className="flex items-baseline gap-2 text-[11px] text-gray-700"
-                        >
-                          <span className="shrink-0 rounded bg-white px-1.5 py-0.5 text-[10px] font-medium text-gray-600 border border-gray-200">
-                            Day {t.day}
-                          </span>
-                          <span className="shrink-0 text-[10px] uppercase tracking-wide text-gray-400">
-                            {t.channel}
-                          </span>
-                          <span className="min-w-0">{t.action}</span>
-                        </li>
-                      ))}
-                    </ol>
-                    <div className="mt-2 flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        className="h-7 px-2 text-[11px]"
-                        onClick={() => onSendToStrategist(step.leads, step.label)}
-                      >
-                        <Send className="h-3 w-3 mr-1" />
-                        Send to Strategist
-                      </Button>
-                      <span className="text-[10px] text-gray-500">
-                        Opens the full plan in Strategist, editable and ready to execute.
-                      </span>
-                    </div>
-                  </div>
+                  <CohortOutreachPreview
+                    signalId={signal.id}
+                    headline={signal.headline}
+                    snippet={signal.snippet}
+                    step={step}
+                    onSendToStrategist={onSendToStrategist}
+                  />
                 )}
               </div>
             ))}
