@@ -1,7 +1,6 @@
 import {
   Bot,
   MessageCircle,
-  Info,
   Loader2,
   ChevronDown,
   ChevronUp,
@@ -16,16 +15,16 @@ import type { ReactNode } from "react";
 
 import type { SignalLeadMapLead } from "../contracts";
 import { buildAggregateOutreachPlan } from "../lib/aggregateOutreachPlan";
-import { SIGNAL_PREVIEW_COLUMNS, toSignalPreviewRow } from "../lib/matchedLeadsCsv";
+import type { LeadEdit, SignalLeadEdits } from "../lib/leadEdits";
 import type { Agent, NBAItem, SignalCard as SignalCardType } from "../types";
 
 import { sanitizeSourceUrl } from "./signalCards";
+import MatchedLeadsTable from "./MatchedLeadsTable";
 import RecommendationAnswerView from "./RecommendationAnswerView";
 import { leadsForRecommendation } from "../lib/recommendationLeads";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,18 +32,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-/**
- * Inline "Why" text: the first complete sentence, so the cell stays short but is
- * never cut mid-word. The full rationale opens from the adjacent "i".
- */
-const shortWhy = (text: string): string => {
-  const trimmed = text.trim();
-  if (trimmed.length <= 120) return trimmed;
-  const match = trimmed.match(/^[\s\S]*?[.!?](\s|$)/);
-  const first = match?.[0]?.trim();
-  if (first && first.length <= 160) return first;
-  return `${trimmed.slice(0, 117).trimEnd()}…`;
-};
 import { sanitizeAnswerText } from "@/shared/lib/sanitizeAnswerText";
 
 interface SignalCardProps {
@@ -107,6 +94,15 @@ interface SignalCardProps {
   recommendationArtefactGeneratingKey: string | null;
   /** Page-held `${signalId}-${index}` whose last generation failed (drives the inline error). */
   recommendationArtefactErrorKey: string | null;
+  /** Leads the user marked "not a fit" for this signal (restorable chips). */
+  dismissedLeads?: SignalLeadMapLead[];
+  /** Per-lead overrides for this signal (drives the "edited" mark + dismiss reasons). */
+  leadEdits?: SignalLeadEdits;
+  /** Persist a field correction (name/title/company/relevance/why) for one lead. */
+  onEditLead?: (leadId: string, patch: LeadEdit) => void;
+  onDismissLead?: (leadId: string, reason: string) => void;
+  onRestoreLead?: (leadId: string) => void;
+  onRestoreAllLeads?: () => void;
 }
 
 export const SignalCard = ({
@@ -143,6 +139,12 @@ export const SignalCard = ({
   onSaveRecommendationAsArtefact,
   recommendationArtefactGeneratingKey,
   recommendationArtefactErrorKey,
+  dismissedLeads,
+  leadEdits,
+  onEditLead,
+  onDismissLead,
+  onRestoreLead,
+  onRestoreAllLeads,
 }: SignalCardProps) => {
   const [showLockMessage, setShowLockMessage] = useState(false);
   const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -328,92 +330,15 @@ export const SignalCard = ({
             No matched leads found for this signal yet.
           </p>
         ) : (
-          <div className="overflow-hidden rounded-md border border-gray-200">
-            <div className="max-h-[420px] overflow-auto">
-              <table className="w-full table-fixed border-collapse text-[11px]">
-                <colgroup>
-                  <col className="w-[160px]" />
-                  <col className="w-[190px]" />
-                  <col className="w-[170px]" />
-                  <col className="w-[100px]" />
-                  <col className="w-[360px]" />
-                </colgroup>
-                <thead className="sticky top-0 z-10 bg-gray-100 text-gray-700">
-                  <tr>
-                    {SIGNAL_PREVIEW_COLUMNS.map((col) => (
-                      <th
-                        key={col}
-                        className="whitespace-nowrap border-b border-gray-200 px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide"
-                      >
-                        {col}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {matchedLeads.map((lead, rowIndex) => (
-                    <tr
-                      key={lead.lead_id}
-                      className={`border-t border-gray-100 align-top ${rowIndex % 2 === 1 ? "bg-gray-50/60" : ""}`}
-                    >
-                      {toSignalPreviewRow(lead).map((cell, i) => {
-                        const isWhy = i === SIGNAL_PREVIEW_COLUMNS.length - 1;
-                        if (!isWhy) {
-                          return (
-                            <td key={i} title={cell} className="truncate px-3 py-2 text-gray-700">
-                              {cell}
-                            </td>
-                          );
-                        }
-                        // "Why" shows a short but complete sentence inline; clicking
-                        // the "i" opens the fuller rationale for that lead.
-                        return (
-                          <td key={i} className="px-3 py-2 text-gray-700">
-                            <div className="flex items-start gap-1.5">
-                              <span className="min-w-0 flex-1 whitespace-normal break-words leading-snug">
-                                {shortWhy(cell)}
-                              </span>
-                              {cell ? (
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <button
-                                      type="button"
-                                      aria-label="Detailed reason this lead matches"
-                                      className="mt-[1px] shrink-0 text-gray-400 hover:text-gray-700"
-                                    >
-                                      <Info className="h-3.5 w-3.5" />
-                                    </button>
-                                  </PopoverTrigger>
-                                  <PopoverContent
-                                    side="left"
-                                    align="start"
-                                    className="w-80 text-xs leading-relaxed"
-                                  >
-                                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-                                      Why this lead matches
-                                    </p>
-                                    <p className="mb-2 text-[11px] font-medium text-gray-900">
-                                      {lead.name}
-                                      {lead.title ? ` · ${lead.title}` : ""}
-                                      {lead.company ? ` (${lead.company})` : ""}
-                                      {lead.relevance ? ` — ${lead.relevance} relevance` : ""}
-                                    </p>
-                                    <p className="whitespace-pre-wrap break-words text-gray-700">
-                                      {cell}
-                                    </p>
-                                  </PopoverContent>
-                                </Popover>
-                              ) : null}
-                            </div>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <MatchedLeadsTable
+            leads={matchedLeads}
+            dismissedLeads={dismissedLeads}
+            edits={leadEdits}
+            onEditLead={onEditLead}
+            onDismissLead={onDismissLead}
+            onRestoreLead={onRestoreLead}
+            onRestoreAll={onRestoreAllLeads}
+          />
         )}
       </div>
 

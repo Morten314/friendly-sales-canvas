@@ -1,5 +1,5 @@
 import { Bookmark, MessageCircle, Share2, Bot, Loader2 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { AcceptedSignalsPanel } from "../components/AcceptedSignalsPanel";
@@ -38,6 +38,15 @@ import {
   buildMatchedLeadsCsv,
   matchedLeadsCsvFilename,
 } from "@/features/signals/lib/matchedLeadsCsv";
+import {
+  applyLeadEdits,
+  dismissLead,
+  getLeadEditsVersion,
+  restoreAllLeads,
+  restoreLead,
+  setLeadEdit,
+  subscribeLeadEdits,
+} from "@/features/signals/lib/leadEdits";
 import { Layout } from "@/features/shell";
 import type { CompanyProfileResponse } from "@/shared/api/contracts";
 import { useAuth } from "@/shared/auth";
@@ -74,8 +83,13 @@ const SignalsPage = () => {
    * returns no mapping (org has no leads synced yet) so the matched-leads UI
    * still shows something. Remove the fallback once real leads exist.
    */
-  const resolveLeads = (signalId: string) =>
-    withDemoMatchedLeads(signalId, leadsForSignal(signalId));
+  /** Raw mapped/demo leads with the user's per-signal corrections applied. */
+  // Re-render whenever a lead correction is persisted, so the table, the cohort
+  // plan and the exports all pick the edit up immediately.
+  useSyncExternalStore(subscribeLeadEdits, getLeadEditsVersion, getLeadEditsVersion);
+  const resolveApplied = (signalId: string) =>
+    applyLeadEdits(signalId, withDemoMatchedLeads(signalId, leadsForSignal(signalId)));
+  const resolveLeads = (signalId: string) => resolveApplied(signalId).leads;
   // The org's real company profile (Settings → Company Profile). Generated
   // signals are personalised against these firmographics instead of the old
   // hardcoded placeholders. A ref mirrors the latest value so the header-driven
@@ -895,7 +909,8 @@ const SignalsPage = () => {
   const renderSignalCard = (signal: SignalCardType) => {
     const contentHash = getSignalContentHash(signal);
     const isAccepted = acceptedSignals.has(contentHash);
-    const leads = resolveLeads(signal.id);
+    const applied = resolveApplied(signal.id);
+    const leads = applied.leads;
     const usingDemoLeads = leadsForSignal(signal.id).length === 0;
     return (
       <SignalCard
@@ -962,6 +977,12 @@ const SignalsPage = () => {
         }
         recommendationArtefactGeneratingKey={recommendationArtefactGenerating}
         recommendationArtefactErrorKey={recommendationArtefactError}
+        dismissedLeads={applied.dismissed}
+        leadEdits={applied.edits}
+        onEditLead={(leadId, patch) => setLeadEdit(signal.id, leadId, patch)}
+        onDismissLead={(leadId, reason) => dismissLead(signal.id, leadId, reason)}
+        onRestoreLead={(leadId) => restoreLead(signal.id, leadId)}
+        onRestoreAllLeads={() => restoreAllLeads(signal.id)}
       />
     );
   };
