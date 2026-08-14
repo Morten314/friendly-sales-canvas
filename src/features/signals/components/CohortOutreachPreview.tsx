@@ -231,8 +231,8 @@ const CohortOutreachPreview = ({ signalId, headline, snippet, step }: Props) => 
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="outline" size="sm" className="h-7 px-2 text-[11px]">
-                            <Mail className="mr-1 h-3 w-3" />
-                            Open in…
+                            <Share2 className="mr-1 h-3 w-3" />
+                            Share
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="w-40">
@@ -261,6 +261,62 @@ const CohortOutreachPreview = ({ signalId, headline, snippet, step }: Props) => 
                         </DropdownMenuContent>
                       </DropdownMenu>
                     )}
+                    {t.channel !== "email" && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-7 px-2 text-[11px]">
+                            <Share2 className="mr-1 h-3 w-3" />
+                            Share
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-44">
+                          {t.channel === "linkedin" && (
+                            <DropdownMenuItem
+                              onClick={() =>
+                                window.open(
+                                  "https://www.linkedin.com/feed/",
+                                  "_blank",
+                                  "noopener,noreferrer",
+                                )
+                              }
+                            >
+                              Open LinkedIn
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem
+                            onClick={() =>
+                              window.open(
+                                composeUrl("gmail", "", `${step.label} · Day ${t.day}`, body),
+                                "_blank",
+                                "noopener,noreferrer",
+                              )
+                            }
+                          >
+                            Gmail
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              window.open(
+                                composeUrl("outlook", "", `${step.label} · Day ${t.day}`, body),
+                                "_blank",
+                                "noopener,noreferrer",
+                              )
+                            }
+                          >
+                            Outlook
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-[11px] border-blue-300 text-blue-700 hover:bg-blue-50"
+                      onClick={() => setChatIdx(idx)}
+                    >
+                      <Bot className="mr-1 h-3 w-3" />
+                      Edit with agent
+                    </Button>
                     {!selectedLead && (
                       <span className="text-[10px] text-gray-400">
                         Pick a lead above to fill the merge tokens.
@@ -274,19 +330,17 @@ const CohortOutreachPreview = ({ signalId, headline, snippet, step }: Props) => 
         })}
       </ol>
 
-      <div className="mt-2 flex items-center gap-2">
-        <Button
-          size="sm"
-          className="h-7 px-2 text-[11px]"
-          onClick={() => onSendToStrategist(step.leads, step.label)}
-        >
-          <Send className="mr-1 h-3 w-3" />
-          Send to Strategist
-        </Button>
-        <span className="text-[10px] text-gray-500">
-          Your edits here travel with the cohort when Strategist takes over.
-        </span>
-      </div>
+      {chatIdx !== null && copy[chatIdx] && (
+        <OutreachCopyChat
+          open
+          onOpenChange={(o) => !o && setChatIdx(null)}
+          headline={headline}
+          snippet={snippet}
+          step={step}
+          touch={copy[chatIdx]}
+          onCommit={(patch) => handleEdit(chatIdx, patch)}
+        />
+      )}
     </div>
   );
 };
