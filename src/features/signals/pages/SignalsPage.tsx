@@ -83,8 +83,10 @@ const SignalsPage = () => {
    * returns no mapping (org has no leads synced yet) so the matched-leads UI
    * still shows something. Remove the fallback once real leads exist.
    */
-  const resolveLeads = (signalId: string) =>
+  /** Raw mapped/demo leads with the user's per-signal corrections applied. */
+  const resolveApplied = (signalId: string) =>
     applyLeadEdits(signalId, withDemoMatchedLeads(signalId, leadsForSignal(signalId)));
+  const resolveLeads = (signalId: string) => resolveApplied(signalId).leads;
   // The org's real company profile (Settings → Company Profile). Generated
   // signals are personalised against these firmographics instead of the old
   // hardcoded placeholders. A ref mirrors the latest value so the header-driven
