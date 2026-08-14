@@ -20,9 +20,12 @@ const firstName = (full: string) => (full || "").trim().split(/\s+/)[0] || "";
 export function resolveTokens(text: string, lead?: SignalLeadMapLead | null): string {
   if (!lead) return text;
   return text
-    .replaceAll(TOKENS.firstName, firstName(lead.name) || "there")
-    .replaceAll(TOKENS.company, lead.company || "your team")
-    .replaceAll(TOKENS.title, lead.title || "your role");
+    .split(TOKENS.firstName)
+    .join(firstName(lead.name) || "there")
+    .split(TOKENS.company)
+    .join(lead.company || "your team")
+    .split(TOKENS.title)
+    .join(lead.title || "your role");
 }
 
 interface TemplateInput {
