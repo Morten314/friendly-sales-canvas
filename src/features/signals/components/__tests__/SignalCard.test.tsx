@@ -51,7 +51,6 @@ function renderCard(overrides: Partial<React.ComponentProps<typeof SignalCard>> 
     onSaveAsArtefact: vi.fn(),
     onDownloadCsv: vi.fn(),
     onShare: vi.fn(),
-    onSendToStrategist: vi.fn(),
     onRecomputeLeadMap: vi.fn(),
     onSaveRecommendationAsArtefact: vi.fn(),
     recommendationArtefactGeneratingKey: null,

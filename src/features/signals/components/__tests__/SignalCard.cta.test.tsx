@@ -54,7 +54,6 @@ function renderCard(overrides: Partial<React.ComponentProps<typeof SignalCard>> 
     onSaveAsArtefact: vi.fn(),
     onDownloadCsv: vi.fn(),
     onShare: vi.fn(),
-    onSendToStrategist: vi.fn(),
     onRecomputeLeadMap: vi.fn(),
     onSaveRecommendationAsArtefact: vi.fn(),
     recommendationArtefactGeneratingKey: null,
@@ -131,8 +130,7 @@ describe("SignalCard — Find Matched Leads CTA", () => {
       onSaveAsArtefact: vi.fn(),
       onDownloadCsv: vi.fn(),
       onShare: vi.fn(),
-      onSendToStrategist: vi.fn(),
-      onRecomputeLeadMap: vi.fn(),
+        onRecomputeLeadMap: vi.fn(),
       onSaveRecommendationAsArtefact: vi.fn(),
       recommendationArtefactGeneratingKey: null,
       recommendationArtefactErrorKey: null,
@@ -202,7 +200,6 @@ describe("SignalCard — leads section states", () => {
     // The short "why" is shown inline; the full rationale lives in the popover.
     expect(screen.getByText(/secret rationale/i)).toBeInTheDocument();
     // Block CTA bar carries collective dispatch + persist + download.
-    expect(screen.getByRole("button", { name: /Send all to Strategist/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Share/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Download/i })).toBeInTheDocument();
   });

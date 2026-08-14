@@ -6,7 +6,6 @@ import {
   ChevronUp,
   ThumbsUp,
   ThumbsDown,
-  Send,
   Download,
   Share2,
 } from "lucide-react";
