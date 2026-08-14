@@ -968,6 +968,8 @@ export const SignalCard = ({
                       })()}
                   </>
                   }
+                  {/* Deep users get the same leads + next steps in-place. */}
+                  {isLeadsExpanded && leadsBody}
                 </div>
               )}
               </div>
