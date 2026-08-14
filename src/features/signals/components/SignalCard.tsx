@@ -1,7 +1,6 @@
 import {
   Bot,
   MessageCircle,
-  Info,
   Loader2,
   ChevronDown,
   ChevronUp,
@@ -17,7 +16,6 @@ import type { ReactNode } from "react";
 import type { SignalLeadMapLead } from "../contracts";
 import { buildAggregateOutreachPlan } from "../lib/aggregateOutreachPlan";
 import type { LeadEdit, SignalLeadEdits } from "../lib/leadEdits";
-import { SIGNAL_PREVIEW_COLUMNS, toSignalPreviewRow } from "../lib/matchedLeadsCsv";
 import type { Agent, NBAItem, SignalCard as SignalCardType } from "../types";
 
 import { sanitizeSourceUrl } from "./signalCards";
@@ -27,7 +25,6 @@ import { leadsForRecommendation } from "../lib/recommendationLeads";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,18 +32,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-/**
- * Inline "Why" text: the first complete sentence, so the cell stays short but is
- * never cut mid-word. The full rationale opens from the adjacent "i".
- */
-const shortWhy = (text: string): string => {
-  const trimmed = text.trim();
-  if (trimmed.length <= 120) return trimmed;
-  const match = trimmed.match(/^[\s\S]*?[.!?](\s|$)/);
-  const first = match?.[0]?.trim();
-  if (first && first.length <= 160) return first;
-  return `${trimmed.slice(0, 117).trimEnd()}…`;
-};
 import { sanitizeAnswerText } from "@/shared/lib/sanitizeAnswerText";
 
 interface SignalCardProps {
