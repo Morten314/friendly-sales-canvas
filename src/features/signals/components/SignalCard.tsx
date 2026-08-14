@@ -295,7 +295,11 @@ export const SignalCard = ({
         </div>
       )}
     </div>
-  ) : null;
+  );
+
+  // Fast path shows the leads block on its own; when "Go deeper" is open it is
+  // rendered inside that superset block instead (no duplication).
+  const leadsSection: ReactNode = isLeadsExpanded && !isDescriptionExpanded ? leadsBody : null;
 
   // Who (the table) → What now (the outreach plan). Shared by the fast path
   // and by "Go deeper".
