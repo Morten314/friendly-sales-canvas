@@ -354,6 +354,7 @@ export const SignalCard = ({
             onRestoreLead={onRestoreLead}
             onRestoreAll={onRestoreAllLeads}
           />
+        )}
       </div>
 
       {/* === What now — Next steps === */}
