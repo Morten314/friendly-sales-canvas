@@ -14,7 +14,6 @@ import { SignalChatPanel } from "../components/SignalChatPanel";
 import { SignalsEmptyState, SignalsLoadingState } from "../components/SignalsEmptyState";
 import { useSignalLeadMap } from "../hooks/useSignalLeadMap";
 import { deleteAcceptedSignal, saveAcceptedSignal } from "../lib/acceptedSignalsStore";
-import { buildStrategistContextFromSignal, writeStrategistContext } from "../lib/strategistHandoff";
 import { withDemoMatchedLeads } from "../lib/demoMatchedLeads";
 import {
   buildRecommendationPlaybookArtefact,
@@ -634,17 +633,6 @@ const SignalsPage = () => {
     });
   };
 
-  /** Hand a cohort (or all matched leads) to Strategist for sequence execution. */
-  const handleSendToStrategist = (
-    signal: SignalCardType,
-    leads: ReturnType<typeof resolveLeads>,
-    cohortLabel?: string,
-  ) => {
-    if (!leads.length) return;
-    writeStrategistContext(buildStrategistContextFromSignal(signal, leads, cohortLabel));
-    navigate("/your-ai-team/strategist/workspace");
-  };
-
   const handleSaveRecommendationAsArtefact = async (signal: SignalCardType, index: number) => {
     // Re-entry guard: a second click while a playbook is already generating must not
     // start a parallel run. aria-disabled on the button is non-blocking, so without
@@ -967,9 +955,6 @@ const SignalsPage = () => {
         onSaveAsArtefact={() => handleSaveAsArtefact(signal)}
         onDownloadCsv={() => handleDownloadCsv(signal)}
         onShare={(provider) => handleShareSignal(signal, provider)}
-        onSendToStrategist={(cohortLeads, cohortLabel) =>
-          handleSendToStrategist(signal, cohortLeads, cohortLabel)
-        }
         onRecomputeLeadMap={() => void handleRecomputeLeadMap()}
         onRetryLeadMap={retryLeadMap}
         onSaveRecommendationAsArtefact={(index) =>
