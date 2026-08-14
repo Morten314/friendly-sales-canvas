@@ -84,6 +84,9 @@ const SignalsPage = () => {
    * still shows something. Remove the fallback once real leads exist.
    */
   /** Raw mapped/demo leads with the user's per-signal corrections applied. */
+  // Re-render whenever a lead correction is persisted, so the table, the cohort
+  // plan and the exports all pick the edit up immediately.
+  useSyncExternalStore(subscribeLeadEdits, getLeadEditsVersion, getLeadEditsVersion);
   const resolveApplied = (signalId: string) =>
     applyLeadEdits(signalId, withDemoMatchedLeads(signalId, leadsForSignal(signalId)));
   const resolveLeads = (signalId: string) => resolveApplied(signalId).leads;
