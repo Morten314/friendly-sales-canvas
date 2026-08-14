@@ -909,7 +909,8 @@ const SignalsPage = () => {
   const renderSignalCard = (signal: SignalCardType) => {
     const contentHash = getSignalContentHash(signal);
     const isAccepted = acceptedSignals.has(contentHash);
-    const leads = resolveLeads(signal.id);
+    const applied = resolveApplied(signal.id);
+    const leads = applied.leads;
     const usingDemoLeads = leadsForSignal(signal.id).length === 0;
     return (
       <SignalCard
@@ -976,6 +977,12 @@ const SignalsPage = () => {
         }
         recommendationArtefactGeneratingKey={recommendationArtefactGenerating}
         recommendationArtefactErrorKey={recommendationArtefactError}
+        dismissedLeads={applied.dismissed}
+        leadEdits={applied.edits}
+        onEditLead={(leadId, patch) => setLeadEdit(signal.id, leadId, patch)}
+        onDismissLead={(leadId, reason) => dismissLead(signal.id, leadId, reason)}
+        onRestoreLead={(leadId) => restoreLead(signal.id, leadId)}
+        onRestoreAllLeads={() => restoreAllLeads(signal.id)}
       />
     );
   };
