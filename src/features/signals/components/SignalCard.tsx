@@ -202,6 +202,20 @@ export const SignalCard = ({
     onFindMatchedLeads();
   };
 
+  // "Go deeper" is the superset view: it carries the signal blurb, the
+  // reasoning, and the same matched-leads + next-steps block, so a deep user
+  // never has to open the fast path separately.
+  const handleGoDeeperClick = () => {
+    if (isDescriptionExpanded) {
+      onCollapseDescription();
+      return;
+    }
+    onExpandDescription();
+    if (isAccepted && !isLeadsExpanded) {
+      onFindMatchedLeads();
+    }
+  };
+
   const showArtefactHint = (msg: string) => {
     clearArtefactHintTimer();
     setArtefactHint(msg);
@@ -245,9 +259,47 @@ export const SignalCard = ({
   // Aggregated plan shown under the table (replaces a per-row "what" column).
   const outreachPlan = buildAggregateOutreachPlan(matchedLeads, suggestedAction);
 
-  // One block, three labelled layers — Who (the table) → Why (the explanation)
-  // → What now (the outreach plan). Opens together when matched leads are shown.
-  const leadsSection: ReactNode = isLeadsExpanded ? (
+  // The signal blurb + its citations. Lives in "Go deeper" only.
+  const whatThisMeansBlock: ReactNode = signal.description ? (
+    <div className="mb-3 rounded-lg border border-gray-200 bg-white p-3">
+      <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+        What this means
+      </h4>
+      <p className="text-sm leading-relaxed text-gray-700">{signal.description}</p>
+      {Array.isArray(signal.source) && signal.source.length > 0 && (
+        <div className="mt-2 flex flex-col gap-1.5">
+          {signal.source.map((src, idx) => {
+            const label = src.citation || src.url || "Source";
+            const safeUrl = sanitizeSourceUrl(src.url);
+            return safeUrl ? (
+              <a
+                key={idx}
+                href={safeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-fit"
+              >
+                <Badge
+                  variant="secondary"
+                  className="text-xs font-normal hover:bg-gray-300 cursor-pointer max-w-full text-left"
+                >
+                  {label}
+                </Badge>
+              </a>
+            ) : (
+              <Badge key={idx} variant="secondary" className="text-xs font-normal w-fit">
+                {label}
+              </Badge>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  ) : null;
+
+  // Who (the table) → What now (the outreach plan). Shared by the fast path
+  // and by "Go deeper".
+  const leadsBody: ReactNode = (
     <div className="mt-3 overflow-hidden rounded-lg border border-gray-200 bg-white">
       {/* === Who — Matched leads === */}
       <div className="px-3 pt-3">
@@ -365,44 +417,6 @@ export const SignalCard = ({
         )}
       </div>
 
-      {/* === Why — What this means === */}
-      {signal.description && (
-        <div className="mt-3 border-t border-gray-100 px-3 pt-3">
-          <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-            What this means
-          </h4>
-          <p className="text-sm leading-relaxed text-gray-700">{signal.description}</p>
-          {Array.isArray(signal.source) && signal.source.length > 0 && (
-            <div className="mt-2 flex flex-col gap-1.5">
-              {signal.source.map((src, idx) => {
-                const label = src.citation || src.url || "Source";
-                const safeUrl = sanitizeSourceUrl(src.url);
-                return safeUrl ? (
-                  <a
-                    key={idx}
-                    href={safeUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block w-fit"
-                  >
-                    <Badge
-                      variant="secondary"
-                      className="text-xs font-normal hover:bg-gray-300 cursor-pointer max-w-full text-left"
-                    >
-                      {label}
-                    </Badge>
-                  </a>
-                ) : (
-                  <Badge key={idx} variant="secondary" className="text-xs font-normal w-fit">
-                    {label}
-                  </Badge>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* === What now — Next steps === */}
       {outreachPlan && matchedLeads.length > 0 && (
         <div className="mt-3 border-t border-gray-100 px-3 pt-3">
@@ -510,7 +524,11 @@ export const SignalCard = ({
         </div>
       )}
     </div>
-  ) : null;
+  );
+
+  // Fast path shows the leads block on its own; when "Go deeper" is open it is
+  // rendered inside that superset block instead (no duplication).
+  const leadsSection: ReactNode = isLeadsExpanded && !isDescriptionExpanded ? leadsBody : null;
 
   return (
     <div className="space-y-0">
@@ -637,9 +655,7 @@ export const SignalCard = ({
                     variant="ghost"
                     size="sm"
                     className="text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                    onClick={() =>
-                      isDescriptionExpanded ? onCollapseDescription() : onExpandDescription()
-                    }
+                    onClick={handleGoDeeperClick}
                   >
                     {isDescriptionExpanded ? (
                       <>
@@ -665,7 +681,8 @@ export const SignalCard = ({
                   live inside the matched-leads block; this toggle carries the
                   recommendation list + answer view only. */}
               {hasRecommendations && isDescriptionExpanded && (
-                <div className="mt-3 overflow-hidden rounded-lg border border-gray-200 bg-white p-3">
+                <div className="mt-3 overflow-hidden rounded-lg border border-gray-200 bg-gray-50/60 p-3">
+                  {whatThisMeansBlock}
                   {
                     <>
                       <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
@@ -951,6 +968,8 @@ export const SignalCard = ({
                       })()}
                   </>
                   }
+                  {/* Deep users get the same leads + next steps in-place. */}
+                  {isLeadsExpanded && leadsBody}
                 </div>
               )}
               </div>
