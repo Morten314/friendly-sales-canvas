@@ -308,6 +308,17 @@ export const SignalCard = ({
           <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
             Matched leads
           </h4>
+          <div className="flex items-center gap-1">
+          {matchedLeads.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-[11px]"
+              onClick={onSaveAsArtefact}
+            >
+              Save as Artefact
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -321,6 +332,7 @@ export const SignalCard = ({
             )}
             {tableHidden ? "Show table" : "Hide table"}
           </Button>
+          </div>
         </div>
         {!tableHidden &&
           (leadsLoading || leadsFetching ? (
