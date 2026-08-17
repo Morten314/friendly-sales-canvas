@@ -974,8 +974,8 @@ const SignalsPage = () => {
 
   return (
     <Layout>
-      <div className="p-6">
-        <div className="w-full max-w-5xl mx-auto mb-4 flex items-center gap-2">
+      <div className="w-full min-w-0 overflow-x-hidden p-4 md:p-6">
+        <div className="w-full min-w-0 max-w-5xl mx-auto mb-4 flex items-center gap-2">
           <Button
             variant={currentTab === "signals" ? "default" : "outline"}
             size="sm"
@@ -995,7 +995,7 @@ const SignalsPage = () => {
         </div>
 
         {currentTab === "accepted" && (
-          <div className="w-full max-w-5xl mx-auto">
+          <div className="w-full min-w-0 max-w-5xl mx-auto">
             <AcceptedSignalsPanel
               refreshKey={acceptedRefreshKey}
               renderSignalCard={renderSignalCard}
@@ -1004,7 +1004,7 @@ const SignalsPage = () => {
         )}
 
         {currentTab === "signals" && (
-          <div className="w-full max-w-5xl mx-auto space-y-4">
+          <div className="w-full min-w-0 max-w-5xl mx-auto space-y-4">
             <div className="flex justify-end">
               <Button
                 variant="outline"
