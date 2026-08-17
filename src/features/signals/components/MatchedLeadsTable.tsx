@@ -139,16 +139,16 @@ export const MatchedLeadsTable = ({
         </div>
       )}
 
-      <div className="overflow-hidden rounded-md border border-gray-200">
-        <div className="max-h-[420px] overflow-auto">
-          <table className="w-full table-fixed border-collapse text-[11px]">
+      <div className="w-full min-w-0 overflow-hidden rounded-md border border-gray-200">
+        <div className="max-h-[420px] w-full overflow-x-auto overflow-y-auto">
+          <table className="w-full min-w-[640px] table-fixed border-collapse text-[11px]">
             <colgroup>
-              <col className="w-[160px]" />
-              <col className="w-[180px]" />
-              <col className="w-[160px]" />
-              <col className="w-[120px]" />
-              <col className="w-[340px]" />
-              {editable && <col className="w-[34px]" />}
+              <col className="w-[16%]" />
+              <col className="w-[18%]" />
+              <col className="w-[16%]" />
+              <col className="w-[11%]" />
+              <col className="w-[35%]" />
+              {editable && <col className="w-[4%]" />}
             </colgroup>
             <thead className="sticky top-0 z-10 bg-gray-100 text-gray-700">
               <tr>
