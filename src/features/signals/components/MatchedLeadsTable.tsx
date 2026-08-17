@@ -7,7 +7,7 @@
 // edited leads, so a correction here changes everything downstream.
 
 import { ChevronDown, RotateCcw, X } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { Fragment, useMemo, useRef, useState } from "react";
 
 import type { SignalLeadMapLead } from "../contracts";
 import { DISMISS_REASONS, isLeadEdited } from "../lib/leadEdits";
@@ -15,7 +15,6 @@ import type { LeadEdit, SignalLeadEdits } from "../lib/leadEdits";
 import { SIGNAL_PREVIEW_COLUMNS } from "../lib/matchedLeadsCsv";
 
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -171,9 +170,8 @@ export const MatchedLeadsTable = ({
                 const wasEdited = isLeadEdited(edits[lead.lead_id]);
                 const why = lead.why ?? "";
                 return (
-                  <>
+                  <Fragment key={lead.lead_id}>
                   <tr
-                    key={lead.lead_id}
                     onClick={() => toggleExpanded(lead.lead_id)}
                     className={`cursor-pointer border-t border-gray-100 align-top ${
                       isSelected ? "bg-blue-50/70" : rowIndex % 2 === 1 ? "bg-gray-50/60" : ""
@@ -348,7 +346,7 @@ export const MatchedLeadsTable = ({
                     )}
                   </tr>
                   {isExpanded && (
-                    <tr key={`${lead.lead_id}-detail`} className="border-t border-gray-100 bg-blue-50/40">
+                    <tr className="border-t border-gray-100 bg-blue-50/40">
                       <td colSpan={editable ? 6 : 5} className="px-3 py-2.5">
                         <div className="rounded-md border border-blue-100 bg-white p-2.5">
                           <p className="text-[11px] font-semibold text-gray-900">
@@ -375,7 +373,7 @@ export const MatchedLeadsTable = ({
                       </td>
                     </tr>
                   )}
-                  </>
+                  </Fragment>
                 );
               })}
             </tbody>
