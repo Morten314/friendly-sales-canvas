@@ -6,8 +6,8 @@
 // persisted by `lib/leadEdits.ts`; the cohort plan and exports read the same
 // edited leads, so a correction here changes everything downstream.
 
-import { Info, RotateCcw, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { ChevronDown, RotateCcw, X } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
 
 import type { SignalLeadMapLead } from "../contracts";
 import { DISMISS_REASONS, isLeadEdited } from "../lib/leadEdits";
@@ -23,9 +23,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-
 const RELEVANCE_OPTIONS = ["high", "medium", "low"] as const;
+
+const RELEVANCE_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
 
 /**
  * Inline "Why" text: the first complete sentence, so the cell stays short but is
@@ -69,16 +69,36 @@ export const MatchedLeadsTable = ({
   onRestoreLead,
   onRestoreAll,
 }: MatchedLeadsTableProps) => {
-  /** Rows in edit mode (checkbox ticked). */
+  /** Rows in edit mode (name clicked). */
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  /** Rows with the deep-dive box open (row clicked). */
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   /** Lead whose hover summary is showing. */
   const [hoveredLeadId, setHoveredLeadId] = useState<string | null>(null);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const editable = Boolean(onEditLead);
 
+  // Default order: high → medium → low, stable within each tier.
+  const orderedLeads = useMemo(
+    () =>
+      [...leads].sort(
+        (a, b) => (RELEVANCE_ORDER[a.relevance] ?? 3) - (RELEVANCE_ORDER[b.relevance] ?? 3),
+      ),
+    [leads],
+  );
+
   const toggleSelected = (leadId: string) => {
     setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(leadId)) next.delete(leadId);
+      else next.add(leadId);
+      return next;
+    });
+  };
+
+  const toggleExpanded = (leadId: string) => {
+    setExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(leadId)) next.delete(leadId);
       else next.add(leadId);
@@ -98,8 +118,6 @@ export const MatchedLeadsTable = ({
     setHoveredLeadId(null);
   };
 
-  const allSelected = leads.length > 0 && selected.size === leads.length;
-
   return (
     <div className="space-y-2">
       {editable && (
@@ -107,7 +125,7 @@ export const MatchedLeadsTable = ({
           <span>
             {selected.size > 0
               ? `${selected.size} row${selected.size === 1 ? "" : "s"} open for editing — change any field or the relevance.`
-              : "Tick a row to correct its details or relevance."}
+              : "Click a lead name to correct its details or relevance; click a row for the deep dive."}
           </span>
           {dismissedLeads.length > 0 && (
             <button
@@ -126,7 +144,6 @@ export const MatchedLeadsTable = ({
         <div className="max-h-[420px] overflow-auto">
           <table className="w-full table-fixed border-collapse text-[11px]">
             <colgroup>
-              {editable && <col className="w-[34px]" />}
               <col className="w-[160px]" />
               <col className="w-[180px]" />
               <col className="w-[160px]" />
@@ -136,17 +153,6 @@ export const MatchedLeadsTable = ({
             </colgroup>
             <thead className="sticky top-0 z-10 bg-gray-100 text-gray-700">
               <tr>
-                {editable && (
-                  <th className="border-b border-gray-200 px-2 py-2 text-left">
-                    <Checkbox
-                      checked={allSelected}
-                      aria-label="Select all leads for editing"
-                      onCheckedChange={(checked) =>
-                        setSelected(checked ? new Set(leads.map((l) => l.lead_id)) : new Set())
-                      }
-                    />
-                  </th>
-                )}
                 {SIGNAL_PREVIEW_COLUMNS.map((col) => (
                   <th
                     key={col}
@@ -159,34 +165,29 @@ export const MatchedLeadsTable = ({
               </tr>
             </thead>
             <tbody>
-              {leads.map((lead, rowIndex) => {
+              {orderedLeads.map((lead, rowIndex) => {
                 const isSelected = selected.has(lead.lead_id);
+                const isExpanded = expanded.has(lead.lead_id);
                 const wasEdited = isLeadEdited(edits[lead.lead_id]);
                 const why = lead.why ?? "";
                 return (
+                  <>
                   <tr
                     key={lead.lead_id}
-                    className={`border-t border-gray-100 align-top ${
+                    onClick={() => toggleExpanded(lead.lead_id)}
+                    className={`cursor-pointer border-t border-gray-100 align-top ${
                       isSelected ? "bg-blue-50/70" : rowIndex % 2 === 1 ? "bg-gray-50/60" : ""
                     }`}
                   >
-                    {editable && (
-                      <td className="px-2 py-2">
-                        <Checkbox
-                          checked={isSelected}
-                          aria-label={`Edit ${lead.name || "lead"}`}
-                          onCheckedChange={() => toggleSelected(lead.lead_id)}
-                        />
-                      </td>
-                    )}
-
-                    {/* Name — hover reveals a short lead summary that fades out. */}
-                    <td className="px-3 py-2 text-gray-700">
+                    {/* Name — click opens edit mode; hover reveals a short summary. */}
+                    <td className="px-3 py-2 text-gray-700" onClick={(e) => e.stopPropagation()}>
                       {isSelected ? (
                         <input
                           className={cellInputClass}
                           aria-label="Lead name"
+                          autoFocus
                           value={lead.name ?? ""}
+                          onBlur={() => toggleSelected(lead.lead_id)}
                           onChange={(e) => onEditLead?.(lead.lead_id, { name: e.target.value })}
                         />
                       ) : (
@@ -195,9 +196,16 @@ export const MatchedLeadsTable = ({
                           onMouseEnter={() => handleHoverEnter(lead.lead_id)}
                           onMouseLeave={handleHoverLeave}
                         >
-                          <span className="block truncate font-medium text-gray-900">
+                          <button
+                            type="button"
+                            aria-label={`Edit ${lead.name || "lead"}`}
+                            onClick={() => editable && toggleSelected(lead.lead_id)}
+                            className={`block w-full truncate text-left font-medium text-gray-900 ${
+                              editable ? "cursor-pointer hover:text-blue-600 hover:underline" : ""
+                            }`}
+                          >
                             {lead.name}
-                          </span>
+                          </button>
                           {wasEdited && (
                             <span className="mt-0.5 inline-block rounded bg-blue-100 px-1 text-[9px] font-medium text-blue-700">
                               edited
@@ -224,7 +232,7 @@ export const MatchedLeadsTable = ({
                     </td>
 
                     {/* Title */}
-                    <td className="px-3 py-2 text-gray-700">
+                    <td className="px-3 py-2 text-gray-700" onClick={(e) => isSelected && e.stopPropagation()}>
                       {isSelected ? (
                         <input
                           className={cellInputClass}
@@ -240,7 +248,7 @@ export const MatchedLeadsTable = ({
                     </td>
 
                     {/* Company */}
-                    <td className="px-3 py-2 text-gray-700">
+                    <td className="px-3 py-2 text-gray-700" onClick={(e) => isSelected && e.stopPropagation()}>
                       {isSelected ? (
                         <input
                           className={cellInputClass}
@@ -256,7 +264,7 @@ export const MatchedLeadsTable = ({
                     </td>
 
                     {/* Relevance — the correction that re-buckets the cohorts. */}
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2" onClick={(e) => isSelected && e.stopPropagation()}>
                       {isSelected ? (
                         <select
                           className={cellInputClass}
@@ -286,7 +294,7 @@ export const MatchedLeadsTable = ({
                     </td>
 
                     {/* Why */}
-                    <td className="px-3 py-2 text-gray-700">
+                    <td className="px-3 py-2 text-gray-700" onClick={(e) => isSelected && e.stopPropagation()}>
                       {isSelected ? (
                         <textarea
                           className={`${cellInputClass} min-h-[54px] resize-y leading-snug`}
@@ -299,44 +307,18 @@ export const MatchedLeadsTable = ({
                           <span className="min-w-0 flex-1 whitespace-normal break-words leading-snug">
                             {shortWhy(why)}
                           </span>
-                          {why ? (
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <button
-                                  type="button"
-                                  aria-label="Detailed reason this lead matches"
-                                  className="mt-[1px] shrink-0 text-gray-400 hover:text-gray-700"
-                                >
-                                  <Info className="h-3.5 w-3.5" />
-                                </button>
-                              </PopoverTrigger>
-                              <PopoverContent
-                                side="left"
-                                align="start"
-                                className="w-80 text-xs leading-relaxed"
-                              >
-                                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-                                  Why this lead matches
-                                </p>
-                                <p className="mb-2 text-[11px] font-medium text-gray-900">
-                                  {lead.name}
-                                  {lead.title ? ` · ${lead.title}` : ""}
-                                  {lead.company ? ` (${lead.company})` : ""}
-                                  {lead.relevance ? ` — ${lead.relevance} relevance` : ""}
-                                </p>
-                                <p className="whitespace-pre-wrap break-words text-gray-700">
-                                  {why}
-                                </p>
-                              </PopoverContent>
-                            </Popover>
-                          ) : null}
+                          <ChevronDown
+                            className={`mt-[1px] h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform ${
+                              isExpanded ? "rotate-180" : ""
+                            }`}
+                          />
                         </div>
                       )}
                     </td>
 
                     {/* Dismiss — "not a fit", with the reason kept for future matching. */}
                     {editable && (
-                      <td className="px-1 py-2 text-right">
+                      <td className="px-1 py-2 text-right" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <button
@@ -365,6 +347,35 @@ export const MatchedLeadsTable = ({
                       </td>
                     )}
                   </tr>
+                  {isExpanded && (
+                    <tr key={`${lead.lead_id}-detail`} className="border-t border-gray-100 bg-blue-50/40">
+                      <td colSpan={editable ? 6 : 5} className="px-3 py-2.5">
+                        <div className="rounded-md border border-blue-100 bg-white p-2.5">
+                          <p className="text-[11px] font-semibold text-gray-900">
+                            {lead.name}
+                            {lead.title ? ` · ${lead.title}` : ""}
+                            {lead.company ? ` (${lead.company})` : ""}
+                          </p>
+                          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-[10px] text-gray-500">
+                            {lead.seniority && <span>Seniority: {lead.seniority}</span>}
+                            {lead.email && <span>{lead.email}</span>}
+                            <span className="capitalize">Relevance: {lead.relevance}</span>
+                          </div>
+                          {why && (
+                            <>
+                              <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                                Why this lead matches
+                              </p>
+                              <p className="whitespace-pre-wrap break-words text-[11px] leading-relaxed text-gray-700">
+                                {why}
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </>
                 );
               })}
             </tbody>
