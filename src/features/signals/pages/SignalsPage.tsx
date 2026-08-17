@@ -19,6 +19,7 @@ import {
   buildRecommendationPlaybookArtefact,
   buildSignalBriefingArtefact,
   buildAcceptedSignalArtefact,
+  buildLeadSheetArtefact,
 } from "../lib/signalBriefing";
 import { downloadSignalBundle, shareSignalByEmail, type MailProvider } from "../lib/signalShare";
 import {
@@ -601,7 +602,10 @@ const SignalsPage = () => {
 
   const handleSaveAsArtefact = (signal: SignalCardType) => {
     const leads = resolveLeads(signal.id);
-    const item = buildSignalBriefingArtefact(signal, leads);
+    // Store the leads table itself (editable sheet) alongside the signal headline
+    // and description, so the Artefacts library shows signal + summary + table.
+    const item = buildLeadSheetArtefact(signal, leads);
+    item.id = `lead-sheet-${signal.id}-${Date.now()}`;
     // The complete matched-leads CSV rides with the artefact into the library.
     item.csv = {
       filename: matchedLeadsCsvFilename(signal.headline),
@@ -610,7 +614,7 @@ const SignalsPage = () => {
     saveArtefact(item);
     toast({
       title: "Saved to Artifacts",
-      description: "Signal briefing and the complete matched-leads CSV were saved to Artifacts.",
+      description: "The signal summary and its matched-leads table were saved to Artifacts.",
       action: (
         <Button variant="outline" size="sm" onClick={() => navigate("/artifacts")}>
           View →
