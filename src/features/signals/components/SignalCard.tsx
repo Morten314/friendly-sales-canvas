@@ -302,9 +302,20 @@ export const SignalCard = ({
     <div className="mt-3 overflow-hidden rounded-lg border border-gray-200 bg-white">
       {/* === Who — Matched leads === */}
       <div className="px-3 pt-3">
-        <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-          Matched leads
-        </h4>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+            Matched leads
+          </h4>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-[11px] text-gray-600 hover:text-gray-900"
+            onClick={onFindMatchedLeads}
+          >
+            <ChevronUp className="mr-1 h-3 w-3" />
+            Hide table
+          </Button>
+        </div>
         {leadsLoading || leadsFetching ? (
           <div className="flex items-center gap-2 py-3 text-sm text-gray-600">
             <Loader2 className="h-4 w-4 animate-spin" />
