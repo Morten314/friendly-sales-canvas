@@ -312,44 +312,49 @@ export const SignalCard = ({
             variant="ghost"
             size="sm"
             className="h-7 px-2 text-[11px] text-gray-600 hover:text-gray-900"
-            onClick={onFindMatchedLeads}
+            onClick={() => setTableHidden((v) => !v)}
           >
-            <ChevronUp className="mr-1 h-3 w-3" />
-            Hide table
+            {tableHidden ? (
+              <ChevronDown className="mr-1 h-3 w-3" />
+            ) : (
+              <ChevronUp className="mr-1 h-3 w-3" />
+            )}
+            {tableHidden ? "Show table" : "Hide table"}
           </Button>
         </div>
-        {leadsLoading || leadsFetching ? (
-          <div className="flex items-center gap-2 py-3 text-sm text-gray-600">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Finding matched leads…</span>
-          </div>
-        ) : leadsError ? (
-          <div className="flex items-center justify-between gap-3 py-2">
-            <span className="text-sm text-red-600">Could not load matched leads.</span>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => onRetryLeadMap?.()}>
-                Try again
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => onRecomputeLeadMap?.()}>
-                Recompute lead mapping
-              </Button>
+        {!tableHidden &&
+          (leadsLoading || leadsFetching ? (
+            <div className="flex items-center gap-2 py-3 text-sm text-gray-600">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Finding matched leads…</span>
             </div>
-          </div>
-        ) : matchedLeads.length === 0 ? (
-          <p className="py-2 text-sm text-gray-500">
-            No matched leads found for this signal yet.
-          </p>
-        ) : (
-          <MatchedLeadsTable
-            leads={matchedLeads}
-            dismissedLeads={dismissedLeads}
-            edits={leadEdits}
-            onEditLead={onEditLead}
-            onDismissLead={onDismissLead}
-            onRestoreLead={onRestoreLead}
-            onRestoreAll={onRestoreAllLeads}
-          />
-        )}
+          ) : leadsError ? (
+            <div className="flex items-center justify-between gap-3 py-2">
+              <span className="text-sm text-red-600">Could not load matched leads.</span>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => onRetryLeadMap?.()}>
+                  Try again
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => onRecomputeLeadMap?.()}>
+                  Recompute lead mapping
+                </Button>
+              </div>
+            </div>
+          ) : matchedLeads.length === 0 ? (
+            <p className="py-2 text-sm text-gray-500">
+              No matched leads found for this signal yet.
+            </p>
+          ) : (
+            <MatchedLeadsTable
+              leads={matchedLeads}
+              dismissedLeads={dismissedLeads}
+              edits={leadEdits}
+              onEditLead={onEditLead}
+              onDismissLead={onDismissLead}
+              onRestoreLead={onRestoreLead}
+              onRestoreAll={onRestoreAllLeads}
+            />
+          ))}
       </div>
 
       {/* === What now — Next steps === */}
