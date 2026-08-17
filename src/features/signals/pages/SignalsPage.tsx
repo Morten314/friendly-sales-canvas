@@ -17,7 +17,6 @@ import { deleteAcceptedSignal, saveAcceptedSignal } from "../lib/acceptedSignals
 import { withDemoMatchedLeads } from "../lib/demoMatchedLeads";
 import {
   buildRecommendationPlaybookArtefact,
-  buildSignalBriefingArtefact,
   buildAcceptedSignalArtefact,
   buildLeadSheetArtefact,
 } from "../lib/signalBriefing";
