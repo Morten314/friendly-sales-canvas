@@ -251,10 +251,21 @@ export function buildCohortOutreachArtefact(
     systemImpact: `${recipients.length} recipient(s) in ${cohortLabel}`,
     actionPerformed: "Saved the cohort's outreach sequence from the signal's next steps",
     outputSummary: `${touches.length} touch(es) for ${cohortLabel}`,
+    // Chronological record: signal + blurb (above), this cohort's leads (sheet),
+    // then this cohort's sequence (editable). Other cohorts are never included.
+    sheet: {
+      filename: matchedLeadsCsvFilename(`${signal.headline}-${cohortLabel}`),
+      columns: [...MATCHED_LEADS_COLUMNS],
+      rows: recipients.map(toMatchedLeadRow),
+    },
+    sequence: touches.map((t) => ({ ...t })),
     fullReport: {
       title: `${signal.headline} — ${cohortLabel} outreach sequence`,
       executiveSummary: signal.snippet,
-      keyFindings: to.length ? [`To: ${to.join("; ")}`] : [],
+      keyFindings: [
+        ...(to.length ? [`To: ${to.join("; ")}`] : []),
+        ...leadFindings(recipients),
+      ],
       analysis: touches
         .map((t) =>
           [
