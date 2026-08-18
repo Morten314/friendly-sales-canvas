@@ -223,6 +223,54 @@ export function buildLeadSheetArtefact(
  * the drafted copy survives outside the Signals card. Deterministic id per
  * signal + cohort + touch so re-saving updates rather than duplicates.
  */
+export function buildCohortOutreachArtefact(
+  signal: Pick<SignalCard, "id" | "agent" | "headline" | "snippet" | "timestamp">,
+  cohortLabel: string,
+  touches: { day: number; channel: string; action: string; subject?: string; body: string }[],
+  recipients: SignalLeadMapLead[] = [],
+): ArtefactItem {
+  const { agentName, agentIcon, agentColor } = resolveSignalAgentPresentation(signal.agent);
+  const day = new Date().toISOString().slice(0, 10);
+  const slug = cohortLabel.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+  const to = recipients
+    .map((l) => (l.email ? `${l.name || "Unknown"} <${l.email}>` : l.name || "Unknown"))
+    .filter(Boolean);
+
+  return {
+    id: `outreach-cohort-${signal.id}-${slug}`,
+    agentName,
+    agentIcon,
+    agentColor,
+    taskNumber: "Outreach Copy",
+    timestamp: signal.timestamp,
+    status: "new",
+    type: "playbook",
+    folder: `Outreach Copy — ${day}`,
+    actionDelegated: `${cohortLabel} · full sequence`,
+    contextRationale: signal.snippet,
+    systemImpact: `${recipients.length} recipient(s) in ${cohortLabel}`,
+    actionPerformed: "Saved the cohort's outreach sequence from the signal's next steps",
+    outputSummary: `${touches.length} touch(es) for ${cohortLabel}`,
+    fullReport: {
+      title: `${signal.headline} — ${cohortLabel} outreach sequence`,
+      executiveSummary: signal.snippet,
+      keyFindings: to.length ? [`To: ${to.join("; ")}`] : [],
+      analysis: touches
+        .map((t) =>
+          [
+            `Day ${t.day} · ${t.channel} — ${t.action}`,
+            t.subject ? `Subject: ${t.subject}` : "",
+            t.body,
+          ]
+            .filter(Boolean)
+            .join("\n"),
+        )
+        .join("\n\n———\n\n"),
+      recommendations: [],
+    },
+  };
+}
+
 export function buildOutreachCopyArtefact(
   signal: Pick<SignalCard, "id" | "agent" | "headline" | "snippet" | "timestamp">,
   cohortLabel: string,
