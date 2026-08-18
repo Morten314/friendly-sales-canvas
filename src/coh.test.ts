@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+const store: Record<string,string> = {}; (globalThis as any).localStorage = { getItem: (k:string)=>store[k]??null, setItem:(k:string,v:string)=>{store[k]=v;}, removeItem:(k:string)=>{delete store[k];} };
 import { describe, it, expect } from "vitest";
 import { buildCohortOutreachArtefact } from "@/features/signals/lib/signalBriefing";
 import { saveArtefact, loadStoredArtefacts } from "@/features/artifacts";
