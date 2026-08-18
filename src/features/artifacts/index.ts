@@ -7,6 +7,7 @@ export {
   saveArtefact,
   loadStoredArtefacts,
   deleteStoredArtefact,
+  getStoredArtefact,
   downloadArtefactCsv,
   downloadArtefactSheet,
   updateStoredArtefactSheet,
