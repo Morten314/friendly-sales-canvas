@@ -3,7 +3,7 @@ import type { ComponentType } from "react";
 
 import type { ArtefactItem } from "../types";
 
-import { enqueueArtefact } from "./artefactQueue";
+import { enqueueArtefact, resetArtefactQueue } from "./artefactQueue";
 
 /**
  * Persistent artefact library (localStorage). Artefacts saved from Signals must
@@ -13,7 +13,26 @@ import { enqueueArtefact } from "./artefactQueue";
  * `agentIcon` is a React component and is not serializable — it is dropped on
  * write and rehydrated from `agentName` on read.
  */
-const STORAGE_KEY = "brewra_artefacts_v1";
+const LEGACY_STORAGE_KEY = "brewra_artefacts_v1";
+const STORAGE_KEY = "brewra_artefacts_v2";
+const CLEAN_SLATE_KEY = "brewra_artefacts_clean_slate_v2";
+
+/**
+ * One-time library reset requested for the v2 Artefacts experience. This drops
+ * every previously saved item and any in-memory hand-off, while allowing new
+ * artefacts saved after the reset to persist normally.
+ */
+function ensureCleanSlate(): void {
+  try {
+    if (localStorage.getItem(CLEAN_SLATE_KEY)) return;
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.setItem(CLEAN_SLATE_KEY, "1");
+    resetArtefactQueue();
+  } catch (error) {
+    console.error("Error clearing stored artefacts:", error);
+  }
+}
 
 const ICONS: Record<string, ComponentType<{ className?: string }>> = {
   Scout: Satellite,
@@ -25,6 +44,7 @@ type StoredArtefact = Omit<ArtefactItem, "agentIcon">;
 
 function readRaw(): StoredArtefact[] {
   try {
+    ensureCleanSlate();
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? (JSON.parse(raw) as StoredArtefact[]) : [];
   } catch (error) {
