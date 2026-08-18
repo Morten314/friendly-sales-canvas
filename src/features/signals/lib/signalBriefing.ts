@@ -119,7 +119,7 @@ export function buildSignalBriefingArtefact(
     timestamp: signal.timestamp,
     status: "new",
     type: "report",
-    folder: "Signal Briefings",
+    folder: signalFolderName(signal.headline),
     actionDelegated: `Find matched leads for "${signal.headline}"`,
     contextRationale: signal.snippet,
     systemImpact: `${leads.length} matched lead(s) identified`,
@@ -196,7 +196,6 @@ export function buildLeadSheetArtefact(
   leads: SignalLeadMapLead[],
 ): ArtefactItem {
   const { agentName, agentIcon, agentColor } = resolveSignalAgentPresentation(signal.agent);
-  const day = new Date().toISOString().slice(0, 10);
   const rows = leads.map(toMatchedLeadRow);
 
   return {
@@ -208,7 +207,7 @@ export function buildLeadSheetArtefact(
     timestamp: signal.timestamp,
     status: "new",
     type: "enrichment",
-    folder: `Lead Sheets — ${day}`,
+    folder: signalFolderName(signal.headline),
     actionDelegated: `Matched leads for "${signal.headline}"`,
     contextRationale: signal.snippet,
     systemImpact: `${leads.length} matched lead(s) available for enrichment`,
