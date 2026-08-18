@@ -31,6 +31,17 @@ export function resolveSignalAgentPresentation(agent: "scout" | "profiler"): Age
 
 const titleCase = (s: string): string => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
+/**
+ * Folder name for everything derived from one signal. The folder is the
+ * signal's case file: it is created at save time (accepting a signal is triage,
+ * saving is intent), and lead sheets, cohort sequences and briefings for the
+ * same signal all land in it.
+ */
+export function signalFolderName(headline: string): string {
+  const clean = headline.replace(/\s+/g, " ").trim();
+  return clean.length > 64 ? `${clean.slice(0, 61).trimEnd()}…` : clean || "Untitled signal";
+}
+
 /** "Name - Title (Company) (Relevance: X): why" — shared by briefing + lead-sheet PDFs. */
 function leadFindings(leads: SignalLeadMapLead[]): string[] {
   return leads.map((lead) => {
@@ -108,7 +119,7 @@ export function buildSignalBriefingArtefact(
     timestamp: signal.timestamp,
     status: "new",
     type: "report",
-    folder: "Signal Briefings",
+    folder: signalFolderName(signal.headline),
     actionDelegated: `Find matched leads for "${signal.headline}"`,
     contextRationale: signal.snippet,
     systemImpact: `${leads.length} matched lead(s) identified`,
@@ -185,7 +196,6 @@ export function buildLeadSheetArtefact(
   leads: SignalLeadMapLead[],
 ): ArtefactItem {
   const { agentName, agentIcon, agentColor } = resolveSignalAgentPresentation(signal.agent);
-  const day = new Date().toISOString().slice(0, 10);
   const rows = leads.map(toMatchedLeadRow);
 
   return {
@@ -197,7 +207,7 @@ export function buildLeadSheetArtefact(
     timestamp: signal.timestamp,
     status: "new",
     type: "enrichment",
-    folder: `Lead Sheets — ${day}`,
+    folder: signalFolderName(signal.headline),
     actionDelegated: `Matched leads for "${signal.headline}"`,
     contextRationale: signal.snippet,
     systemImpact: `${leads.length} matched lead(s) available for enrichment`,
@@ -230,7 +240,6 @@ export function buildCohortOutreachArtefact(
   recipients: SignalLeadMapLead[] = [],
 ): ArtefactItem {
   const { agentName, agentIcon, agentColor } = resolveSignalAgentPresentation(signal.agent);
-  const day = new Date().toISOString().slice(0, 10);
   const slug = cohortLabel.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
   const to = recipients
     .map((l) => (l.email ? `${l.name || "Unknown"} <${l.email}>` : l.name || "Unknown"))
@@ -245,7 +254,7 @@ export function buildCohortOutreachArtefact(
     timestamp: signal.timestamp,
     status: "new",
     type: "playbook",
-    folder: `Outreach Copy — ${day}`,
+    folder: signalFolderName(signal.headline),
     actionDelegated: `${cohortLabel} · full sequence`,
     contextRationale: signal.snippet,
     systemImpact: `${recipients.length} recipient(s) in ${cohortLabel}`,
@@ -289,7 +298,6 @@ export function buildOutreachCopyArtefact(
   recipients: SignalLeadMapLead[] = [],
 ): ArtefactItem {
   const { agentName, agentIcon, agentColor } = resolveSignalAgentPresentation(signal.agent);
-  const day = new Date().toISOString().slice(0, 10);
   const slug = `${cohortLabel}-${touch.day}-${touch.channel}`.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
   const to = recipients
     .map((l) => (l.email ? `${l.name || "Unknown"} <${l.email}>` : l.name || "Unknown"))
@@ -304,7 +312,7 @@ export function buildOutreachCopyArtefact(
     timestamp: signal.timestamp,
     status: "new",
     type: "playbook",
-    folder: `Outreach Copy — ${day}`,
+    folder: signalFolderName(signal.headline),
     actionDelegated: `${cohortLabel} · Day ${touch.day} ${touch.channel}`,
     contextRationale: signal.snippet,
     systemImpact: `${recipients.length} recipient(s) in ${cohortLabel}`,

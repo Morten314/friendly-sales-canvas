@@ -12,6 +12,7 @@ import {
   loadStoredArtefacts,
   pruneSheet,
   updateStoredArtefactSheet,
+  updateStoredArtefactSheetData,
   updateStoredArtefactSequence,
 } from "../lib/artefactStore";
 import type { ArtefactItem } from "../types";
@@ -138,6 +139,7 @@ const ArtifactsPage = () => {
   };
 
   const handleDownloadPdf = (artefact: ArtefactItem) => {
+    // (enrichment edits persist through handleSheetChange below)
     if (artefact.status === "new") {
       setArtefacts((prev) =>
         prev.map((a) => (a.id === artefact.id ? { ...a, status: "viewed" as const } : a)),
@@ -154,6 +156,12 @@ const ArtifactsPage = () => {
     setArtefacts((prev) => prev.map((a) => (a.id === id ? { ...a, sequence } : a)));
   };
 
+  /** Whole-sheet replacement — used when enrichment adds/removes a column. */
+  const handleSheetChange = (id: string, sheet: NonNullable<ArtefactItem["sheet"]>) => {
+    updateStoredArtefactSheetData(id, sheet);
+    setArtefacts((prev) => prev.map((a) => (a.id === id ? { ...a, sheet } : a)));
+  };
+
   if (openArtefact) {
     return (
       <Layout>
@@ -163,6 +171,7 @@ const ArtifactsPage = () => {
           onDelete={handleDelete}
           onDownloadPdf={handleDownloadPdf}
           onSheetCellChange={handleSheetCellChange}
+          onSheetChange={handleSheetChange}
           onSequenceChange={handleSequenceChange}
         />
       </Layout>

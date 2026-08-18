@@ -45,7 +45,7 @@ describe("buildSignalBriefingArtefact", () => {
     expect(item.id).toMatch(/^signal-briefing-s1-\d+$/);
     expect(item.agentName).toBe("Scout");
     expect(item.taskNumber).toBe("Signal Briefing");
-    expect(item.folder).toBe("Signal Briefings");
+    expect(item.folder).toBe("Hiring surge");
     expect(item.status).toBe("new");
     expect(item.type).toBe("report");
     expect(item.timestamp).toBe("1h ago");
