@@ -217,3 +217,46 @@ export function buildLeadSheetArtefact(
     },
   };
 }
+
+/**
+ * One outreach touch (email / LinkedIn / call copy) saved as its own artefact so
+ * the drafted copy survives outside the Signals card. Deterministic id per
+ * signal + cohort + touch so re-saving updates rather than duplicates.
+ */
+export function buildOutreachCopyArtefact(
+  signal: Pick<SignalCard, "id" | "agent" | "headline" | "snippet" | "timestamp">,
+  cohortLabel: string,
+  touch: { day: number; channel: string; action: string; subject?: string; body: string },
+  recipients: SignalLeadMapLead[] = [],
+): ArtefactItem {
+  const { agentName, agentIcon, agentColor } = resolveSignalAgentPresentation(signal.agent);
+  const day = new Date().toISOString().slice(0, 10);
+  const slug = `${cohortLabel}-${touch.day}-${touch.channel}`.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+  const to = recipients
+    .map((l) => (l.email ? `${l.name || "Unknown"} <${l.email}>` : l.name || "Unknown"))
+    .filter(Boolean);
+
+  return {
+    id: `outreach-copy-${signal.id}-${slug}`,
+    agentName,
+    agentIcon,
+    agentColor,
+    taskNumber: "Outreach Copy",
+    timestamp: signal.timestamp,
+    status: "new",
+    type: "playbook",
+    folder: `Outreach Copy — ${day}`,
+    actionDelegated: `${cohortLabel} · Day ${touch.day} ${touch.channel}`,
+    contextRationale: signal.snippet,
+    systemImpact: `${recipients.length} recipient(s) in ${cohortLabel}`,
+    actionPerformed: "Saved outreach copy from the signal's next steps",
+    outputSummary: touch.subject || touch.action,
+    fullReport: {
+      title: `${signal.headline} — ${cohortLabel} · Day ${touch.day} ${touch.channel}`,
+      executiveSummary: touch.subject ? `Subject: ${touch.subject}` : touch.action,
+      keyFindings: to.length ? [`To: ${to.join("; ")}`] : [],
+      analysis: touch.body,
+      recommendations: [],
+    },
+  };
+}
