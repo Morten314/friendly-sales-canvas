@@ -425,6 +425,8 @@ export const SignalCard = ({
                     headline={signal.headline}
                     snippet={signal.snippet}
                     step={step}
+                    agent={signal.agent}
+                    timestamp={signal.timestamp}
                   />
                 )}
               </div>
