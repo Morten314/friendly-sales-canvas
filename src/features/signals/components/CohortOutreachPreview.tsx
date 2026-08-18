@@ -303,6 +303,17 @@ const CohortOutreachPreview = ({
         })}
       </ol>
 
+      <div className="mt-2 flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 px-2 text-[11px]"
+          onClick={handleSaveCohortAsArtefact}
+        >
+          Save as Artefact
+        </Button>
+      </div>
+
       {chatIdx !== null && copy[chatIdx] && (
         <OutreachCopyChat
           open
