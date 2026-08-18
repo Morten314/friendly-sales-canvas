@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
 import { buildCohortOutreachArtefact } from "@/features/signals/lib/signalBriefing";
 import { saveArtefact, loadStoredArtefacts } from "@/features/artifacts";
