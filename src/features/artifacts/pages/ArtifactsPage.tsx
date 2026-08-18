@@ -12,6 +12,7 @@ import {
   loadStoredArtefacts,
   pruneSheet,
   updateStoredArtefactSheet,
+  updateStoredArtefactSheetData,
   updateStoredArtefactSequence,
 } from "../lib/artefactStore";
 import type { ArtefactItem } from "../types";
