@@ -89,9 +89,11 @@ const ArtifactsPage = () => {
   }, [matching]);
 
   // Searching flattens the tree so results are never hidden inside a folder.
+  // At the root every artefact is listed too (newest first), so items saved
+  // into a folder — e.g. a cohort outreach sequence — are never "lost".
   const visibleFiles = useMemo(() => {
     if (query) return matching;
-    return matching.filter((a) => (activeFolder ? a.folder === activeFolder : !a.folder));
+    return activeFolder ? matching.filter((a) => a.folder === activeFolder) : matching;
   }, [matching, activeFolder, query]);
 
   const openArtefact = openId ? artefacts.find((a) => a.id === openId) : undefined;
