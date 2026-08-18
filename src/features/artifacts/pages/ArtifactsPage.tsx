@@ -12,6 +12,7 @@ import {
   loadStoredArtefacts,
   pruneSheet,
   updateStoredArtefactSheet,
+  updateStoredArtefactSequence,
 } from "../lib/artefactStore";
 import type { ArtefactItem } from "../types";
 
@@ -143,6 +144,14 @@ const ArtifactsPage = () => {
     generateAndDownloadPDF(artefact);
   };
 
+  const handleSequenceChange = (
+    id: string,
+    sequence: NonNullable<ArtefactItem["sequence"]>,
+  ) => {
+    updateStoredArtefactSequence(id, sequence);
+    setArtefacts((prev) => prev.map((a) => (a.id === id ? { ...a, sequence } : a)));
+  };
+
   if (openArtefact) {
     return (
       <Layout>
@@ -152,6 +161,7 @@ const ArtifactsPage = () => {
           onDelete={handleDelete}
           onDownloadPdf={handleDownloadPdf}
           onSheetCellChange={handleSheetCellChange}
+          onSequenceChange={handleSequenceChange}
         />
       </Layout>
     );
