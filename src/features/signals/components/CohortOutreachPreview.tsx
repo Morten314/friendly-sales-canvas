@@ -1,4 +1,4 @@
-import { Bot, Check, Copy, Loader2, RotateCcw, Share2, Sparkles } from "lucide-react";
+import { Bot, Loader2, RotateCcw, Save, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import type { SignalLeadMapLead } from "../contracts";
@@ -6,22 +6,19 @@ import type { OutreachPlanStep } from "../lib/aggregateOutreachPlan";
 import {
   buildCohortCopy,
   clearCohortCopy,
-  composeUrl,
   loadCohortCopy,
   resolveTokens,
   saveCohortCopy,
   type TouchCopy,
 } from "../lib/outreachCopy";
+import { buildOutreachCopyArtefact } from "../lib/signalBriefing";
+import type { SignalCard } from "../types";
 
 import OutreachCopyChat from "./OutreachCopyChat";
 
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { useToast } from "@/components/ui/use-toast";
+import { saveArtefact } from "@/features/artifacts";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
@@ -29,7 +26,44 @@ interface Props {
   headline: string;
   snippet: string;
   step: OutreachPlanStep;
+  agent?: SignalCard["agent"];
+  timestamp?: string;
 }
+
+/** "Name <email>" recipient list; collapses past three entries. */
+const RecipientsField = ({ leads }: { leads: SignalLeadMapLead[] }) => {
+  const [expanded, setExpanded] = useState(false);
+  if (!leads.length) return null;
+  const shown = expanded ? leads : leads.slice(0, 3);
+  const hidden = leads.length - shown.length;
+
+  return (
+    <div className="flex items-start gap-2 rounded border border-gray-200 bg-gray-50 px-2 py-1.5">
+      <span className="mt-0.5 shrink-0 text-[10px] uppercase tracking-wide text-gray-400">To</span>
+      <div className="min-w-0 flex-1 flex flex-wrap items-center gap-1">
+        {shown.map((l) => (
+          <span
+            key={l.lead_id}
+            className="max-w-full truncate rounded border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] text-gray-700"
+            title={l.email || undefined}
+          >
+            {l.name || "Unknown"}
+            {l.email ? ` <${l.email}>` : ""}
+          </span>
+        ))}
+        {leads.length > 3 && (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="rounded px-1.5 py-0.5 text-[10px] font-medium text-blue-600 hover:bg-blue-50"
+          >
+            {expanded ? "Show less" : `+${hidden} more`}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
 
 /**
  * The cohort's outreach plan with real, sendable copy. Templates render
@@ -37,7 +71,15 @@ interface Props {
  * touches and caches the result per signal+cohort. Copy is cohort-level by
  * default — the lead picker only resolves merge tokens for preview/sending.
  */
-const CohortOutreachPreview = ({ signalId, headline, snippet, step }: Props) => {
+const CohortOutreachPreview = ({
+  signalId,
+  headline,
+  snippet,
+  step,
+  agent = "scout",
+  timestamp,
+}: Props) => {
+  const { toast } = useToast();
   const templates = useMemo(
     () => buildCohortCopy(step, { headline, snippet }),
     [step, headline, snippet],
@@ -48,7 +90,6 @@ const CohortOutreachPreview = ({ signalId, headline, snippet, step }: Props) => 
   const [error, setError] = useState<string | null>(null);
   const [leadId, setLeadId] = useState<string>("");
   const [openTouch, setOpenTouch] = useState<number | null>(0);
-  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [chatIdx, setChatIdx] = useState<number | null>(null);
 
   useEffect(() => {
@@ -116,14 +157,25 @@ const CohortOutreachPreview = ({ signalId, headline, snippet, step }: Props) => 
     setPersonalised(false);
   };
 
-  const handleCopyToClipboard = async (idx: number, text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedIdx(idx);
-      setTimeout(() => setCopiedIdx((c) => (c === idx ? null : c)), 1800);
-    } catch {
-      // clipboard blocked — the textarea is selectable as a fallback
-    }
+  const handleSaveAsArtefact = (t: TouchCopy, subject: string, body: string) => {
+    saveArtefact(
+      buildOutreachCopyArtefact(
+        {
+          id: signalId,
+          agent,
+          headline,
+          snippet,
+          timestamp: timestamp ?? new Date().toISOString(),
+        },
+        step.label,
+        { day: t.day, channel: t.channel, action: t.action, subject, body },
+        selectedLead ? [selectedLead] : step.leads,
+      ),
+    );
+    toast({
+      title: "Saved as Artefact",
+      description: `Day ${t.day} ${t.channel} copy is now in Artefacts.`,
+    });
   };
 
   return (
