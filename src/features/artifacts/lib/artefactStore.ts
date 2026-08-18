@@ -173,6 +173,19 @@ export function updateStoredArtefactSheet(id: string, rows: string[][]): void {
 }
 
 /** Persist an edit to an artefact's editable outreach sequence. */
+export function updateStoredArtefactSheetData(
+  id: string,
+  sheet: NonNullable<ArtefactItem["sheet"]>,
+): void {
+  const items = readRaw();
+  const index = items.findIndex((a) => a.id === id);
+  if (index === -1) return;
+  const next = [...items];
+  next[index] = { ...next[index], sheet };
+  writeRaw(next);
+}
+
+/** Persist an edit to an artefact's editable outreach sequence. */
 export function updateStoredArtefactSequence(
   id: string,
   sequence: NonNullable<ArtefactItem["sequence"]>,

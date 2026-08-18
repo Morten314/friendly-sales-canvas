@@ -10,6 +10,7 @@ export {
   downloadArtefactCsv,
   downloadArtefactSheet,
   updateStoredArtefactSheet,
+  updateStoredArtefactSheetData,
   updateStoredArtefactSequence,
   sheetToCsv,
 } from "./lib/artefactStore";
