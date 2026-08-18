@@ -1,4 +1,4 @@
-import { Bot, Loader2, RotateCcw, Sparkles } from "lucide-react";
+import { Bot, Loader2, RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import type { SignalLeadMapLead } from "../contracts";
@@ -18,7 +18,7 @@ import OutreachCopyChat from "./OutreachCopyChat";
 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { saveArtefact } from "@/features/artifacts";
+import { getStoredArtefact, saveArtefact } from "@/features/artifacts";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
@@ -158,6 +158,33 @@ const CohortOutreachPreview = ({
   };
 
   const handleSaveCohortAsArtefact = () => {
+    const touches = copy.map((t) => ({
+      day: t.day,
+      channel: t.channel,
+      action: t.action,
+      subject: resolveTokens(t.subject ?? "", selectedLead),
+      body: resolveTokens(t.body, selectedLead),
+    }));
+
+    // (b) When the signal's lead table is already saved, the cohort's sequence
+    // is appended to that same artefact — in line with the leads table.
+    const leadSheet = getStoredArtefact(`lead-sheet-${signalId}`);
+    if (leadSheet) {
+      const prefix = `${step.label} · `;
+      const kept = (leadSheet.sequence ?? []).filter((t) => !t.action.startsWith(prefix));
+      const merged = {
+        ...leadSheet,
+        sequence: [...kept, ...touches.map((t) => ({ ...t, action: `${prefix}${t.action}` }))],
+      };
+      saveArtefact(merged);
+      toast({
+        title: "Saved as Artefact",
+        description: `${step.label} sequence added to the leads table in Artefacts › ${leadSheet.folder}.`,
+      });
+      return;
+    }
+
+    // (c) No leads table saved yet — file the sequence with the signal + blurb only.
     const artefact = buildCohortOutreachArtefact(
         {
           id: signalId,
@@ -167,14 +194,9 @@ const CohortOutreachPreview = ({
           timestamp: timestamp ?? new Date().toISOString(),
         },
         step.label,
-        copy.map((t) => ({
-          day: t.day,
-          channel: t.channel,
-          action: t.action,
-          subject: resolveTokens(t.subject ?? "", selectedLead),
-          body: resolveTokens(t.body, selectedLead),
-        })),
-        selectedLead ? [selectedLead] : step.leads,
+        touches,
+        [],
+        { includeLeadSheet: false },
     );
     saveArtefact(artefact);
     toast({
@@ -207,11 +229,7 @@ const CohortOutreachPreview = ({
           onClick={handlePersonalise}
           disabled={generating}
         >
-          {generating ? (
-            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-          ) : (
-            <Sparkles className="mr-1 h-3 w-3" />
-          )}
+          {generating && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
           {personalised ? "Regenerate" : "Personalise"}
         </Button>
         {personalised && (
