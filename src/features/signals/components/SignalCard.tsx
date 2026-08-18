@@ -397,9 +397,6 @@ export const SignalCard = ({
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline gap-x-2">
                       <span className="text-xs font-medium text-gray-900">{step.label}</span>
-                      <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
-                        {step.timing}
-                      </span>
                     </div>
                     <p className="mt-0.5 text-[11px] leading-snug text-gray-600">{step.move}</p>
                   </div>

@@ -194,7 +194,7 @@ const CohortOutreachPreview = ({
           onChange={(e) => setLeadId(e.target.value)}
           className="h-7 rounded border border-gray-200 bg-white px-1.5 text-[11px] text-gray-700"
         >
-          <option value="">Whole cohort (merge tokens)</option>
+          <option value="">Whole cohort</option>
           {step.leads.map((l) => (
             <option key={l.lead_id} value={l.lead_id}>
               {l.name || "Unknown"} · {l.company || "—"}
@@ -213,7 +213,7 @@ const CohortOutreachPreview = ({
           ) : (
             <Sparkles className="mr-1 h-3 w-3" />
           )}
-          {personalised ? "Regenerate with AI" : "Personalise with AI"}
+          {personalised ? "Regenerate" : "Personalise"}
         </Button>
         {personalised && (
           <Button
@@ -223,7 +223,7 @@ const CohortOutreachPreview = ({
             onClick={handleReset}
           >
             <RotateCcw className="mr-1 h-3 w-3" />
-            Reset to template
+            Reset
           </Button>
         )}
         <Button
@@ -290,11 +290,6 @@ const CohortOutreachPreview = ({
                       <Bot className="mr-1 h-3 w-3" />
                       Edit
                     </Button>
-                    {!selectedLead && (
-                      <span className="text-[10px] text-gray-400">
-                        Pick a lead above to fill the merge tokens.
-                      </span>
-                    )}
                   </div>
                 </div>
               )}
