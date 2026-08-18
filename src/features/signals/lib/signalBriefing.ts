@@ -4,9 +4,9 @@ import type { ComponentType } from "react";
 import type { RecommendationArtefactResponse, SignalLeadMapLead } from "../contracts";
 import type { NBAItem, SignalCard } from "../types";
 import {
-  MATCHED_LEADS_COLUMNS,
   matchedLeadsCsvFilename,
-  toMatchedLeadRow,
+  SIGNAL_PREVIEW_COLUMNS,
+  toSignalPreviewRow,
 } from "./matchedLeadsCsv";
 
 import type { ArtefactItem } from "@/features/artifacts";
@@ -196,7 +196,7 @@ export function buildLeadSheetArtefact(
   leads: SignalLeadMapLead[],
 ): ArtefactItem {
   const { agentName, agentIcon, agentColor } = resolveSignalAgentPresentation(signal.agent);
-  const rows = leads.map(toMatchedLeadRow);
+  const rows = leads.map(toSignalPreviewRow);
 
   return {
     id: `lead-sheet-${signal.id}`,
@@ -212,10 +212,10 @@ export function buildLeadSheetArtefact(
     contextRationale: signal.snippet,
     systemImpact: `${leads.length} matched lead(s) available for enrichment`,
     actionPerformed: "Saved matched-leads sheet for enrichment",
-    outputSummary: `${leads.length} leads across ${MATCHED_LEADS_COLUMNS.length} columns — editable in Artefacts`,
+    outputSummary: `${leads.length} leads across ${SIGNAL_PREVIEW_COLUMNS.length} columns — editable in Artefacts`,
     sheet: {
       filename: matchedLeadsCsvFilename(signal.headline),
-      columns: [...MATCHED_LEADS_COLUMNS],
+      columns: [...SIGNAL_PREVIEW_COLUMNS],
       rows,
     },
     fullReport: {
@@ -264,8 +264,8 @@ export function buildCohortOutreachArtefact(
     // then this cohort's sequence (editable). Other cohorts are never included.
     sheet: {
       filename: matchedLeadsCsvFilename(`${signal.headline}-${cohortLabel}`),
-      columns: [...MATCHED_LEADS_COLUMNS],
-      rows: recipients.map(toMatchedLeadRow),
+      columns: [...SIGNAL_PREVIEW_COLUMNS],
+      rows: recipients.map(toSignalPreviewRow),
     },
     sequence: touches.map((t) => ({ ...t })),
     fullReport: {
