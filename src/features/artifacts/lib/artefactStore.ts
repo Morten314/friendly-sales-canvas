@@ -71,7 +71,15 @@ function isAcceptedSignal(item: StoredArtefact): boolean {
 }
 
 /** Columns retired from the lead sheet — stripped from previously stored sheets. */
-const DROPPED_SHEET_COLUMNS = ["Email status", "Email Status", "Phone", "Phone number"];
+const DROPPED_SHEET_COLUMNS = [
+  "Email status",
+  "Email Status",
+  "Phone",
+  "Phone number",
+  "Email",
+  "Seniority",
+  "LinkedIn",
+];
 
 /**
  * Rebuild the briefing's per-lead findings from the sheet when they are missing
