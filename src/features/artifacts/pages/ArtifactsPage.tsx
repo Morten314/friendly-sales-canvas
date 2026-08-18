@@ -227,6 +227,10 @@ const ArtifactsPage = () => {
           <FolderList folders={folders} onOpen={setActiveFolder} />
         )}
 
+        {!activeFolder && !query && visibleFiles.length > 0 && (
+          <div className="text-xs font-medium text-muted-foreground">All artefacts</div>
+        )}
+
         {visibleFiles.length > 0 ? (
           <div className="rounded-lg border">
             {visibleFiles.map((artefact) => (
