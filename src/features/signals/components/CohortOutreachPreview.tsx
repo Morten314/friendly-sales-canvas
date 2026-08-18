@@ -158,8 +158,7 @@ const CohortOutreachPreview = ({
   };
 
   const handleSaveCohortAsArtefact = () => {
-    saveArtefact(
-      buildCohortOutreachArtefact(
+    const artefact = buildCohortOutreachArtefact(
         {
           id: signalId,
           agent,
@@ -176,11 +175,11 @@ const CohortOutreachPreview = ({
           body: resolveTokens(t.body, selectedLead),
         })),
         selectedLead ? [selectedLead] : step.leads,
-      ),
     );
+    saveArtefact(artefact);
     toast({
       title: "Saved as Artefact",
-      description: `${step.label} outreach sequence is now in Artefacts.`,
+      description: `${step.label} sequence filed in Artefacts › ${artefact.folder}.`,
     });
   };
 
