@@ -13,6 +13,8 @@ import {
 import { useState } from "react";
 
 import { ArtefactReport } from "./ArtefactReport";
+import { EnrichableLeadSheet } from "./EnrichableLeadSheet";
+import { useApolloConnected } from "../hooks/useApolloConnected";
 import { artefactName } from "../lib/artefactName";
 import { downloadArtefactSheet } from "../lib/artefactStore";
 import { shareArtefactByEmail } from "../lib/artefactShare";
@@ -33,6 +35,7 @@ interface ArtefactDetailProps {
   onDownloadPdf: (artefact: ArtefactItem) => void;
   onSheetCellChange?: (id: string, rowIndex: number, colIndex: number, value: string) => void;
   onSequenceChange?: (id: string, sequence: NonNullable<ArtefactItem["sequence"]>) => void;
+  onSheetChange?: (id: string, sheet: NonNullable<ArtefactItem["sheet"]>) => void;
 }
 
 /** Full-width file view: the editable sheet gets the whole page. */
@@ -43,7 +46,9 @@ export const ArtefactDetail = ({
   onDownloadPdf,
   onSheetCellChange,
   onSequenceChange,
+  onSheetChange,
 }: ArtefactDetailProps) => {
+  const apolloConnected = useApolloConnected();
   const [tab, setTab] = useState<"sheet" | "sequence" | "briefing">(
     artefact.sheet ? "sheet" : artefact.sequence ? "sequence" : "briefing",
   );
