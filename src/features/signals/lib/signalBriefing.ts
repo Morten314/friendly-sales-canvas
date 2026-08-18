@@ -238,6 +238,7 @@ export function buildCohortOutreachArtefact(
   cohortLabel: string,
   touches: { day: number; channel: string; action: string; subject?: string; body: string }[],
   recipients: SignalLeadMapLead[] = [],
+  options: { includeLeadSheet?: boolean } = {},
 ): ArtefactItem {
   const { agentName, agentIcon, agentColor } = resolveSignalAgentPresentation(signal.agent);
   const slug = cohortLabel.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
@@ -260,13 +261,17 @@ export function buildCohortOutreachArtefact(
     systemImpact: `${recipients.length} recipient(s) in ${cohortLabel}`,
     actionPerformed: "Saved the cohort's outreach sequence from the signal's next steps",
     outputSummary: `${touches.length} touch(es) for ${cohortLabel}`,
-    // Chronological record: signal + blurb (above), this cohort's leads (sheet),
-    // then this cohort's sequence (editable). Other cohorts are never included.
-    sheet: {
-      filename: matchedLeadsCsvFilename(`${signal.headline}-${cohortLabel}`),
-      columns: [...SIGNAL_PREVIEW_COLUMNS],
-      rows: recipients.map(toSignalPreviewRow),
-    },
+    // Chronological record: signal + blurb (above), this cohort's leads (sheet,
+    // only when a lead table was saved), then this cohort's sequence (editable).
+    ...(options.includeLeadSheet === false
+      ? {}
+      : {
+          sheet: {
+            filename: matchedLeadsCsvFilename(`${signal.headline}-${cohortLabel}`),
+            columns: [...SIGNAL_PREVIEW_COLUMNS],
+            rows: recipients.map(toSignalPreviewRow),
+          },
+        }),
     sequence: touches.map((t) => ({ ...t })),
     fullReport: {
       title: `${signal.headline} — ${cohortLabel} outreach sequence`,
