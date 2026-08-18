@@ -26,7 +26,18 @@ export interface ArtefactItem {
    * renders an editable grid (not just a CSV download) so users can enrich rows
    * in place. `rows` is row-major and column-aligned with `columns`.
    */
-  sheet?: { filename: string; columns: string[]; rows: string[][] };
+  sheet?: {
+    filename: string;
+    columns: string[];
+    rows: string[][];
+    /**
+     * Columns added by agentic enrichment (not part of the original matched-leads
+     * export). Rendered with a re-run control and confidence marker.
+     */
+    enriched?: string[];
+    /** "rowIndex:colIndex" → confidence of the enriched value in that cell. */
+    confidence?: Record<string, "high" | "medium" | "low">;
+  };
   /**
    * Optional editable outreach sequence (cohort touches). When present the
    * Artefacts library renders a sequence editor where touches can be edited,
