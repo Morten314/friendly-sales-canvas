@@ -114,8 +114,11 @@ export function pruneSheet<T extends { sheet?: ArtefactItem["sheet"]; fullReport
   item: T,
 ): T {
   if (!item.sheet) return backfillFindings(item);
+  // Enrichment columns the user added are never pruned, even when they share a
+  // name with a retired export column (e.g. "Phone number").
+  const enriched = new Set(item.sheet.enriched ?? []);
   const drop = item.sheet.columns
-    .map((c, i) => (DROPPED_SHEET_COLUMNS.includes(c) ? i : -1))
+    .map((c, i) => (DROPPED_SHEET_COLUMNS.includes(c) && !enriched.has(c) ? i : -1))
     .filter((i) => i !== -1);
   if (drop.length === 0) return backfillFindings(item);
   const keep = (row: string[]) => row.filter((_, i) => !drop.includes(i));

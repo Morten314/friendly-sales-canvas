@@ -31,6 +31,17 @@ export function resolveSignalAgentPresentation(agent: "scout" | "profiler"): Age
 
 const titleCase = (s: string): string => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
+/**
+ * Folder name for everything derived from one signal. The folder is the
+ * signal's case file: it is created at save time (accepting a signal is triage,
+ * saving is intent), and lead sheets, cohort sequences and briefings for the
+ * same signal all land in it.
+ */
+export function signalFolderName(headline: string): string {
+  const clean = headline.replace(/\s+/g, " ").trim();
+  return clean.length > 64 ? `${clean.slice(0, 61).trimEnd()}…` : clean || "Untitled signal";
+}
+
 /** "Name - Title (Company) (Relevance: X): why" — shared by briefing + lead-sheet PDFs. */
 function leadFindings(leads: SignalLeadMapLead[]): string[] {
   return leads.map((lead) => {
