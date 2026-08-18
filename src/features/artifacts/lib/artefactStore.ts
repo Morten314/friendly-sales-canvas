@@ -170,6 +170,14 @@ export function deleteStoredArtefact(id: string): void {
   writeRaw(readRaw().filter((a) => a.id !== id));
 }
 
+/** One persisted artefact by id (icons rehydrated), or null. */
+export function getStoredArtefact(id: string): ArtefactItem | null {
+  const found = readRaw().find((a) => a.id === id);
+  if (!found) return null;
+  const pruned = pruneSheet(found);
+  return { ...pruned, agentIcon: ICONS[pruned.agentName] ?? Bot };
+}
+
 /**
  * Persist an edit to an artefact's editable sheet (cell-level edits from the
  * Artefacts library). No-ops when the artefact is not persisted (e.g. mocks).
