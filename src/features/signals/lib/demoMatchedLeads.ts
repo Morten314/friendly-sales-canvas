@@ -492,7 +492,7 @@ export function getDemoMatchedLeads(signalId: string): SignalLeadMapLead[] {
 export function withDemoMatchedLeads(
   signalId: string,
   real: SignalLeadMapLead[],
-  minimum = 10,
+  minimum = 18,
 ): SignalLeadMapLead[] {
   if (real.length >= minimum) return real;
   const filler = getDemoMatchedLeads(signalId).filter(
