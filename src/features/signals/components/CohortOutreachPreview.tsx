@@ -250,6 +250,9 @@ const CohortOutreachPreview = ({
               {isOpen && (
                 <div className="space-y-1.5 border-t border-gray-100 px-2 py-2">
                   {t.channel === "email" && (
+                    <RecipientsField leads={selectedLead ? [selectedLead] : step.leads} />
+                  )}
+                  {t.channel === "email" && (
                     <input
                       value={subject}
                       onChange={(e) => handleEdit(idx, { subject: e.target.value })}
@@ -268,98 +271,11 @@ const CohortOutreachPreview = ({
                       variant="outline"
                       size="sm"
                       className="h-7 px-2 text-[11px]"
-                      onClick={() =>
-                        handleCopyToClipboard(idx, subject ? `${subject}\n\n${body}` : body)
-                      }
+                      onClick={() => handleSaveAsArtefact(t, subject, body)}
                     >
-                      {copiedIdx === idx ? (
-                        <Check className="mr-1 h-3 w-3" />
-                      ) : (
-                        <Copy className="mr-1 h-3 w-3" />
-                      )}
-                      {copiedIdx === idx ? "Copied" : "Copy"}
+                      <Save className="mr-1 h-3 w-3" />
+                      Save as Artefact
                     </Button>
-                    {t.channel === "email" && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="h-7 px-2 text-[11px]">
-                            <Share2 className="mr-1 h-3 w-3" />
-                            Share
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-40">
-                          <DropdownMenuItem
-                            onClick={() =>
-                              window.open(
-                                composeUrl("gmail", selectedLead?.email ?? "", subject, body),
-                                "_blank",
-                                "noopener,noreferrer",
-                              )
-                            }
-                          >
-                            Gmail
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              window.open(
-                                composeUrl("outlook", selectedLead?.email ?? "", subject, body),
-                                "_blank",
-                                "noopener,noreferrer",
-                              )
-                            }
-                          >
-                            Outlook
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                    {t.channel !== "email" && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="h-7 px-2 text-[11px]">
-                            <Share2 className="mr-1 h-3 w-3" />
-                            Share
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-44">
-                          {t.channel === "linkedin" && (
-                            <DropdownMenuItem
-                              onClick={() =>
-                                window.open(
-                                  "https://www.linkedin.com/feed/",
-                                  "_blank",
-                                  "noopener,noreferrer",
-                                )
-                              }
-                            >
-                              Open LinkedIn
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem
-                            onClick={() =>
-                              window.open(
-                                composeUrl("gmail", "", `${step.label} · Day ${t.day}`, body),
-                                "_blank",
-                                "noopener,noreferrer",
-                              )
-                            }
-                          >
-                            Gmail
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              window.open(
-                                composeUrl("outlook", "", `${step.label} · Day ${t.day}`, body),
-                                "_blank",
-                                "noopener,noreferrer",
-                              )
-                            }
-                          >
-                            Outlook
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
                     <Button
                       variant="outline"
                       size="sm"
