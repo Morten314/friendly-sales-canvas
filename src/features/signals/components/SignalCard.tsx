@@ -304,7 +304,7 @@ export const SignalCard = ({
     <div className="mt-3 overflow-hidden rounded-lg border border-gray-200 bg-white">
       {/* === Who — Matched leads === */}
       <div className="px-3 pt-3">
-        <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="sticky top-0 z-20 -mx-3 mb-2 flex items-center justify-between gap-2 border-b border-gray-100 bg-white px-3 py-2">
           <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
             Matched leads
           </h4>
