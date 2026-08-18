@@ -306,57 +306,16 @@ export const ArtefactDetail = ({
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full table-fixed border-collapse text-[11px]">
-          <thead className="sticky top-0 z-10 bg-muted">
-            <tr>
-              {artefact.sheet.columns.map((col) => (
-                <th
-                  key={col}
-                  className={`whitespace-nowrap border-b border-border px-2 py-2 text-left font-semibold ${
-                    col === "Why" ? "w-[34%]" : ""
-                  }`}
-                >
-                  {col}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {artefact.sheet.rows.map((row, rowIndex) => (
-              <tr
-                key={rowIndex}
-                className={`align-top border-t border-border transition-colors hover:bg-accent/40 ${
-                  rowIndex % 2 === 1 ? "bg-muted/30" : ""
-                }`}
-              >
-                {row.map((cell, colIndex) => {
-                  const isWhy = artefact.sheet?.columns[colIndex] === "Why";
-                  return (
-                    <td key={colIndex} className="border-r border-border/60 p-0 last:border-r-0">
-                      <textarea
-                        value={cell}
-                        rows={isWhy ? 3 : 1}
-                        readOnly={!editing}
-                        onChange={(e) =>
-                          onSheetCellChange?.(artefact.id, rowIndex, colIndex, e.target.value)
-                        }
-                        className={`w-full resize-y bg-transparent px-2 py-2 text-[11px] leading-relaxed outline-none ${
-                          editing
-                            ? "focus:bg-accent focus:ring-1 focus:ring-primary/40"
-                            : "cursor-default"
-                        } ${
-                          isWhy ? "whitespace-pre-wrap" : ""
-                        }`}
-                      />
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        </div>
+        <EnrichableLeadSheet
+          sheet={artefact.sheet}
+          context={artefact.fullReport?.title ?? artefact.outputSummary}
+          editing={editing}
+          apolloConnected={apolloConnected}
+          onCellChange={(rowIndex, colIndex, value) =>
+            onSheetCellChange?.(artefact.id, rowIndex, colIndex, value)
+          }
+          onSheetChange={(sheet) => onSheetChange?.(artefact.id, sheet)}
+        />
       </div>
     ) : (
       <ArtefactReport artefact={artefact} />
