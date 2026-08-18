@@ -1,4 +1,4 @@
-import { Bot, Loader2, RotateCcw, Save, Sparkles } from "lucide-react";
+import { Bot, Loader2, RotateCcw, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import type { SignalLeadMapLead } from "../contracts";
@@ -11,7 +11,7 @@ import {
   saveCohortCopy,
   type TouchCopy,
 } from "../lib/outreachCopy";
-import { buildOutreachCopyArtefact } from "../lib/signalBriefing";
+import { buildCohortOutreachArtefact } from "../lib/signalBriefing";
 import type { SignalCard } from "../types";
 
 import OutreachCopyChat from "./OutreachCopyChat";
@@ -157,9 +157,9 @@ const CohortOutreachPreview = ({
     setPersonalised(false);
   };
 
-  const handleSaveAsArtefact = (t: TouchCopy, subject: string, body: string) => {
+  const handleSaveCohortAsArtefact = () => {
     saveArtefact(
-      buildOutreachCopyArtefact(
+      buildCohortOutreachArtefact(
         {
           id: signalId,
           agent,
@@ -168,13 +168,19 @@ const CohortOutreachPreview = ({
           timestamp: timestamp ?? new Date().toISOString(),
         },
         step.label,
-        { day: t.day, channel: t.channel, action: t.action, subject, body },
+        copy.map((t) => ({
+          day: t.day,
+          channel: t.channel,
+          action: t.action,
+          subject: resolveTokens(t.subject ?? "", selectedLead),
+          body: resolveTokens(t.body, selectedLead),
+        })),
         selectedLead ? [selectedLead] : step.leads,
       ),
     );
     toast({
       title: "Saved as Artefact",
-      description: `Day ${t.day} ${t.channel} copy is now in Artefacts.`,
+      description: `${step.label} outreach sequence is now in Artefacts.`,
     });
   };
 
@@ -220,6 +226,14 @@ const CohortOutreachPreview = ({
             Reset to template
           </Button>
         )}
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 px-2 text-[11px]"
+          onClick={handleSaveCohortAsArtefact}
+        >
+          Save as Artefact
+        </Button>
       </div>
       {error && <p className="mb-2 text-[11px] text-red-600">{error}</p>}
 
@@ -267,15 +281,6 @@ const CohortOutreachPreview = ({
                     className="w-full resize-y whitespace-pre-wrap rounded border border-gray-200 px-2 py-1 text-[11px] leading-relaxed text-gray-700"
                   />
                   <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 px-2 text-[11px]"
-                      onClick={() => handleSaveAsArtefact(t, subject, body)}
-                    >
-                      <Save className="mr-1 h-3 w-3" />
-                      Save as Artefact
-                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
