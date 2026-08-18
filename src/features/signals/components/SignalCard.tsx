@@ -300,40 +300,51 @@ export const SignalCard = ({
 
   // Who (the table) → What now (the outreach plan). Shared by the fast path
   // and by "Go deeper".
+  const leadsToolbar: ReactNode = (
+    <>
+      <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+        Matched leads
+      </h4>
+      <div className="flex items-center gap-1">
+        {matchedLeads.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 px-2 text-[11px]"
+            onClick={onSaveAsArtefact}
+          >
+            Save as Artefact
+          </Button>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-[11px] text-gray-600 hover:text-gray-900"
+          onClick={() => setTableHidden((v) => !v)}
+        >
+          {tableHidden ? (
+            <ChevronDown className="mr-1 h-3 w-3" />
+          ) : (
+            <ChevronUp className="mr-1 h-3 w-3" />
+          )}
+          {tableHidden ? "Show table" : "Hide table"}
+        </Button>
+      </div>
+    </>
+  );
+
+  const showInlineToolbar =
+    tableHidden || leadsLoading || leadsFetching || Boolean(leadsError) || matchedLeads.length === 0;
+
   const leadsBody: ReactNode = (
     <div className="mt-3 overflow-hidden rounded-lg border border-gray-200 bg-white">
       {/* === Who — Matched leads === */}
       <div className="px-3 pt-3">
-        <div className="sticky top-0 z-20 -mx-3 mb-2 flex items-center justify-between gap-2 border-b border-gray-100 bg-white px-3 py-2">
-          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-            Matched leads
-          </h4>
-          <div className="flex items-center gap-1">
-          {matchedLeads.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 px-2 text-[11px]"
-              onClick={onSaveAsArtefact}
-            >
-              Save as Artefact
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-[11px] text-gray-600 hover:text-gray-900"
-            onClick={() => setTableHidden((v) => !v)}
-          >
-            {tableHidden ? (
-              <ChevronDown className="mr-1 h-3 w-3" />
-            ) : (
-              <ChevronUp className="mr-1 h-3 w-3" />
-            )}
-            {tableHidden ? "Show table" : "Hide table"}
-          </Button>
+        {showInlineToolbar && (
+          <div className="-mx-3 mb-2 flex items-center justify-between gap-2 border-b border-gray-100 bg-white px-3 py-2">
+            {leadsToolbar}
           </div>
-        </div>
+        )}
         {!tableHidden &&
           (leadsLoading || leadsFetching ? (
             <div className="flex items-center gap-2 py-3 text-sm text-gray-600">
@@ -359,6 +370,7 @@ export const SignalCard = ({
           ) : (
             <MatchedLeadsTable
               leads={matchedLeads}
+              toolbar={leadsToolbar}
               dismissedLeads={dismissedLeads}
               edits={leadEdits}
               onEditLead={onEditLead}
