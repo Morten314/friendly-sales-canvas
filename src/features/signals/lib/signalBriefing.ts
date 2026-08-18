@@ -240,7 +240,6 @@ export function buildCohortOutreachArtefact(
   recipients: SignalLeadMapLead[] = [],
 ): ArtefactItem {
   const { agentName, agentIcon, agentColor } = resolveSignalAgentPresentation(signal.agent);
-  const day = new Date().toISOString().slice(0, 10);
   const slug = cohortLabel.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
   const to = recipients
     .map((l) => (l.email ? `${l.name || "Unknown"} <${l.email}>` : l.name || "Unknown"))
@@ -255,7 +254,7 @@ export function buildCohortOutreachArtefact(
     timestamp: signal.timestamp,
     status: "new",
     type: "playbook",
-    folder: `Outreach Copy — ${day}`,
+    folder: signalFolderName(signal.headline),
     actionDelegated: `${cohortLabel} · full sequence`,
     contextRationale: signal.snippet,
     systemImpact: `${recipients.length} recipient(s) in ${cohortLabel}`,
@@ -299,7 +298,6 @@ export function buildOutreachCopyArtefact(
   recipients: SignalLeadMapLead[] = [],
 ): ArtefactItem {
   const { agentName, agentIcon, agentColor } = resolveSignalAgentPresentation(signal.agent);
-  const day = new Date().toISOString().slice(0, 10);
   const slug = `${cohortLabel}-${touch.day}-${touch.channel}`.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
   const to = recipients
     .map((l) => (l.email ? `${l.name || "Unknown"} <${l.email}>` : l.name || "Unknown"))
@@ -314,7 +312,7 @@ export function buildOutreachCopyArtefact(
     timestamp: signal.timestamp,
     status: "new",
     type: "playbook",
-    folder: `Outreach Copy — ${day}`,
+    folder: signalFolderName(signal.headline),
     actionDelegated: `${cohortLabel} · Day ${touch.day} ${touch.channel}`,
     contextRationale: signal.snippet,
     systemImpact: `${recipients.length} recipient(s) in ${cohortLabel}`,
