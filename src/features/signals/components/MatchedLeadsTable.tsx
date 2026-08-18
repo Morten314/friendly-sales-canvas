@@ -144,6 +144,11 @@ export const MatchedLeadsTable = ({
 
       <div className="w-full min-w-0 overflow-hidden rounded-md border border-gray-200">
         <div className="max-h-[420px] w-full overflow-x-auto overflow-y-auto">
+          {toolbar && (
+            <div className="sticky top-0 z-30 flex min-w-[640px] items-center justify-between gap-2 border-b border-gray-200 bg-white px-3 py-1.5">
+              {toolbar}
+            </div>
+          )}
           <table className="w-full min-w-[640px] table-fixed border-collapse text-[11px]">
             <colgroup>
               <col className="w-[16%]" />
@@ -153,7 +158,9 @@ export const MatchedLeadsTable = ({
               <col className="w-[35%]" />
               {editable && <col className="w-[4%]" />}
             </colgroup>
-            <thead className="sticky top-0 z-10 bg-gray-100 text-gray-700">
+            <thead
+              className={`sticky z-20 bg-gray-100 text-gray-700 ${toolbar ? "top-[33px]" : "top-0"}`}
+            >
               <tr>
                 {SIGNAL_PREVIEW_COLUMNS.map((col) => (
                   <th
