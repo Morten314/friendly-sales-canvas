@@ -47,6 +47,8 @@ const relevanceClass = (relevance: string): string => {
 
 interface MatchedLeadsTableProps {
   leads: SignalLeadMapLead[];
+  /** Pinned toolbar rendered inside the scroll area, above the header row. */
+  toolbar?: React.ReactNode;
   /** Leads the user marked "not a fit" (restorable). */
   dismissedLeads?: SignalLeadMapLead[];
   edits?: SignalLeadEdits;
@@ -61,6 +63,7 @@ const cellInputClass =
 
 export const MatchedLeadsTable = ({
   leads,
+  toolbar,
   dismissedLeads = [],
   edits = {},
   onEditLead,
