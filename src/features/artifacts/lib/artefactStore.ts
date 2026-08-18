@@ -152,6 +152,19 @@ export function updateStoredArtefactSheet(id: string, rows: string[][]): void {
   writeRaw(next);
 }
 
+/** Persist an edit to an artefact's editable outreach sequence. */
+export function updateStoredArtefactSequence(
+  id: string,
+  sequence: NonNullable<ArtefactItem["sequence"]>,
+): void {
+  const items = readRaw();
+  const index = items.findIndex((a) => a.id === id);
+  if (index === -1) return;
+  const next = [...items];
+  next[index] = { ...next[index], sequence };
+  writeRaw(next);
+}
+
 /** Serialize an editable sheet back to CSV text. */
 export function sheetToCsv(columns: string[], rows: string[][]): string {
   const escape = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;

@@ -27,6 +27,18 @@ export interface ArtefactItem {
    * in place. `rows` is row-major and column-aligned with `columns`.
    */
   sheet?: { filename: string; columns: string[]; rows: string[][] };
+  /**
+   * Optional editable outreach sequence (cohort touches). When present the
+   * Artefacts library renders a sequence editor where touches can be edited,
+   * reordered, added and removed.
+   */
+  sequence?: {
+    day: number;
+    channel: string;
+    action: string;
+    subject?: string;
+    body: string;
+  }[];
   fullReport: {
     title: string;
     executiveSummary: string;

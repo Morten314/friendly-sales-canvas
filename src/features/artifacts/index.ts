@@ -10,6 +10,7 @@ export {
   downloadArtefactCsv,
   downloadArtefactSheet,
   updateStoredArtefactSheet,
+  updateStoredArtefactSequence,
   sheetToCsv,
 } from "./lib/artefactStore";
 export { generateAndDownloadPDF, buildArtefactPdfBlob } from "./lib/artefactPdf";
