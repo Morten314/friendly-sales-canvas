@@ -63,7 +63,7 @@ function templateFor(touch: OutreachTouch, tier: RelevanceTier, s: TemplateInput
       ? {
           ...base,
           subject: `${h} — what it means for ${TOKENS.company}`,
-          body: `Hi ${TOKENS.firstName},\n\n${ctx}\n\nGiven your remit as ${TOKENS.title}, this is the kind of change that usually forces a decision within a quarter — either you move early or you absorb the cost later.\n\nWe've helped teams in exactly this position get ahead of it. Worth 15 minutes this week to see whether it applies to ${TOKENS.company}?\n\nBest,\n[Your name]`,
+          body: `Hi ${TOKENS.firstName},\n\n${ctx}\n\nGiven your remit as ${TOKENS.title}, this is the kind of change that usually forces a decision within a quarter — either you move early or you absorb the cost later.\n\nWe've helped teams in exactly this position get ahead of it. Worth 15 minutes to see whether it applies to ${TOKENS.company}?\n\nBest,\n[Your name]`,
         }
       : {
           ...base,
