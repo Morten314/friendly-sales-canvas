@@ -599,17 +599,51 @@ const SignalsPage = () => {
     setExpandedLeadsSignalId((prev) => (prev === signalId ? null : signalId));
   };
 
-  const handleSaveAsArtefact = (signal: SignalCardType) => {
+  const handleSaveAsArtefact = async (signal: SignalCardType) => {
     const leads = resolveLeads(signal.id);
     // Carry every generated recommendation deep-dive into the briefing document.
     const recList: NBAItem[] =
       signal.NBAs && signal.NBAs.length > 0
         ? signal.NBAs
         : (signal.nextBestMoves ?? []).map((m) => ({ nba: m, prompt: "" }));
+    // The briefing must answer every recommendation, not only the ones the user
+    // happened to expand — fetch the missing ones before writing the artefact.
+    const answerMap: Record<string, string> = { ...recommendationAnswers };
+    const missing = recList
+      .map((r, i) => ({ r, i }))
+      .filter(
+        ({ r, i }) =>
+          (r.prompt ?? "").trim() !== "" &&
+          (answerMap[`${signal.id}-${i}`] ?? "").trim() === "",
+      );
+    if (missing.length > 0 && orgId && currentUser?.uid) {
+      toast({
+        title: "Preparing briefing",
+        description: `Generating answers for ${missing.length} recommendation(s)…`,
+      });
+      await Promise.all(
+        missing.map(async ({ r, i }) => {
+          try {
+            const res = await askMutation.mutateAsync({
+              org_id: orgId,
+              user_id: currentUser.uid,
+              question: r.prompt,
+              history: [],
+            });
+            const rec = res as Record<string, unknown>;
+            const answer = rec?.answer ?? rec?.response ?? (typeof res === "string" ? res : "");
+            if (String(answer).trim()) answerMap[`${signal.id}-${i}`] = String(answer);
+          } catch (err) {
+            console.error("signal_Ask for recommendation (save) error:", err);
+          }
+        }),
+      );
+      setRecommendationAnswers((prev) => ({ ...prev, ...answerMap }));
+    }
     const answers = recList
       .map((r, i) => ({
         question: r.nba,
-        answer: (recommendationAnswers[`${signal.id}-${i}`] ?? "").trim(),
+        answer: (answerMap[`${signal.id}-${i}`] ?? "").trim(),
       }))
       .filter((r) => r.answer !== "");
     // Store the leads table itself (editable sheet) alongside the signal headline
@@ -620,9 +654,18 @@ const SignalsPage = () => {
       filename: matchedLeadsCsvFilename(signal.headline),
       content: buildMatchedLeadsCsv(leads),
     };
-    // Keep any cohort sequences already filed on this signal's case file.
+    // Keep any cohort sequences and previously captured deep dives already filed
+    // on this signal's case file.
     const existing = getStoredArtefact(item.id);
-    saveArtefact(existing?.sequence?.length ? { ...item, sequence: existing.sequence } : item);
+    const priorAnswers = existing?.fullReport?.recommendationAnswers ?? [];
+    saveArtefact({
+      ...item,
+      ...(existing?.sequence?.length ? { sequence: existing.sequence } : {}),
+      fullReport: {
+        ...item.fullReport,
+        recommendationAnswers: answers.length ? answers : priorAnswers,
+      },
+    });
     toast({
       title: "Saved to Artifacts",
       description: "The signal summary and its matched-leads table were saved to Artifacts.",
