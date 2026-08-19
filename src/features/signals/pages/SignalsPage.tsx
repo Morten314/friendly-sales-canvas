@@ -599,17 +599,51 @@ const SignalsPage = () => {
     setExpandedLeadsSignalId((prev) => (prev === signalId ? null : signalId));
   };
 
-  const handleSaveAsArtefact = (signal: SignalCardType) => {
+  const handleSaveAsArtefact = async (signal: SignalCardType) => {
     const leads = resolveLeads(signal.id);
     // Carry every generated recommendation deep-dive into the briefing document.
     const recList: NBAItem[] =
       signal.NBAs && signal.NBAs.length > 0
         ? signal.NBAs
         : (signal.nextBestMoves ?? []).map((m) => ({ nba: m, prompt: "" }));
+    // The briefing must answer every recommendation, not only the ones the user
+    // happened to expand — fetch the missing ones before writing the artefact.
+    const answerMap: Record<string, string> = { ...recommendationAnswers };
+    const missing = recList
+      .map((r, i) => ({ r, i }))
+      .filter(
+        ({ r, i }) =>
+          (r.prompt ?? "").trim() !== "" &&
+          (answerMap[`${signal.id}-${i}`] ?? "").trim() === "",
+      );
+    if (missing.length > 0 && orgId && currentUser?.uid) {
+      toast({
+        title: "Preparing briefing",
+        description: `Generating answers for ${missing.length} recommendation(s)…`,
+      });
+      await Promise.all(
+        missing.map(async ({ r, i }) => {
+          try {
+            const res = await askMutation.mutateAsync({
+              org_id: orgId,
+              user_id: currentUser.uid,
+              question: r.prompt,
+              history: [],
+            });
+            const rec = res as Record<string, unknown>;
+            const answer = rec?.answer ?? rec?.response ?? (typeof res === "string" ? res : "");
+            if (String(answer).trim()) answerMap[`${signal.id}-${i}`] = String(answer);
+          } catch (err) {
+            console.error("signal_Ask for recommendation (save) error:", err);
+          }
+        }),
+      );
+      setRecommendationAnswers((prev) => ({ ...prev, ...answerMap }));
+    }
     const answers = recList
       .map((r, i) => ({
         question: r.nba,
-        answer: (recommendationAnswers[`${signal.id}-${i}`] ?? "").trim(),
+        answer: (answerMap[`${signal.id}-${i}`] ?? "").trim(),
       }))
       .filter((r) => r.answer !== "");
     // Store the leads table itself (editable sheet) alongside the signal headline
