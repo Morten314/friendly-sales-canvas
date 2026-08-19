@@ -247,7 +247,9 @@ export function buildCohortOutreachArtefact(
     .filter(Boolean);
 
   return {
-    id: `outreach-cohort-${signal.id}-${slug}`,
+    // One case file per signal: the cohort sequence lives on the same artefact
+    // as the signal's leads table instead of a separate file.
+    id: `lead-sheet-${signal.id}`,
     agentName,
     agentIcon,
     agentColor,
@@ -260,7 +262,7 @@ export function buildCohortOutreachArtefact(
     contextRationale: signal.snippet,
     systemImpact: `${recipients.length} recipient(s) in ${cohortLabel}`,
     actionPerformed: "Saved the cohort's outreach sequence from the signal's next steps",
-    outputSummary: `${touches.length} touch(es) for ${cohortLabel}`,
+    outputSummary: `${touches.length} touch(es) for ${cohortLabel} (${slug})`,
     // Chronological record: signal + blurb (above), this cohort's leads (sheet,
     // only when a lead table was saved), then this cohort's sequence (editable).
     ...(options.includeLeadSheet === false
