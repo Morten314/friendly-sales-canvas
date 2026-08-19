@@ -150,12 +150,14 @@ function mergeLegacyCohorts(items: StoredArtefact[]): StoredArtefact[] {
   if (legacy.length === 0) return items;
   const rest = items.filter((i) => !i.id.startsWith("outreach-cohort-"));
   for (const item of legacy) {
-    const signalId = item.id.replace(/^outreach-cohort-/, "").split("-")[0];
-    const targetId = `lead-sheet-${signalId}`;
-    const index = rest.findIndex((a) => a.id === targetId);
+    const tail = item.id.replace(/^outreach-cohort-/, "");
+    // Signal ids can contain hyphens: match the longest existing case file.
+    const index = rest.findIndex(
+      (a) => a.id.startsWith("lead-sheet-") && tail.startsWith(a.id.replace(/^lead-sheet-/, "")),
+    );
     const sequence = item.sequence ?? [];
     if (index === -1) {
-      rest.unshift({ ...item, id: targetId });
+      rest.unshift({ ...item, id: `lead-sheet-${tail}` });
     } else {
       rest[index] = {
         ...rest[index],
