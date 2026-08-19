@@ -194,6 +194,7 @@ export function buildRecommendationPlaybookArtefact(
 export function buildLeadSheetArtefact(
   signal: SignalCard,
   leads: SignalLeadMapLead[],
+  recommendationAnswers: { question: string; answer: string }[] = [],
 ): ArtefactItem {
   const { agentName, agentIcon, agentColor } = resolveSignalAgentPresentation(signal.agent);
   const rows = leads.map(toSignalPreviewRow);
@@ -224,6 +225,7 @@ export function buildLeadSheetArtefact(
       keyFindings: leadFindings(leads),
       analysis: `These ${leads.length} leads were matched to the signal based on ICP fit and the signal's context.`,
       recommendations: signalRecommendations(signal),
+      recommendationAnswers,
     },
   };
 }
