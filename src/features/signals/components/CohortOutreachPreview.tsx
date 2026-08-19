@@ -198,7 +198,18 @@ const CohortOutreachPreview = ({
         [],
         { includeLeadSheet: false },
     );
-    saveArtefact(artefact);
+    // Another cohort may already have filed the signal's case file — merge.
+    const prior = getStoredArtefact(artefact.id);
+    const prefix = `${step.label} · `;
+    const kept = (prior?.sequence ?? []).filter((t) => !t.action.startsWith(prefix));
+    saveArtefact({
+      ...artefact,
+      sheet: prior?.sheet ?? artefact.sheet,
+      sequence: [
+        ...kept,
+        ...(artefact.sequence ?? []).map((t) => ({ ...t, action: `${prefix}${t.action}` })),
+      ],
+    });
     toast({
       title: "Saved as Artefact",
       description: `${step.label} sequence filed in Artefacts › ${artefact.folder}.`,
