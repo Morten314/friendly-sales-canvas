@@ -316,7 +316,7 @@ export const ArtefactDetail = ({
         />
       </div>
     ) : (
-      <ArtefactReport artefact={artefact} />
+      <ArtefactReport artefact={artefact} onDownload={onDownloadPdf} />
     )}
   </div>
   );
