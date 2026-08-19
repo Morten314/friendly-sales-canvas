@@ -287,6 +287,15 @@ export const ArtefactDetail = ({
               <Pencil className="mr-1.5 h-3.5 w-3.5" />
               {editing ? "Done" : "Edit"}
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => downloadArtefactSheet(artefact)}
+            >
+              <Download className="mr-1.5 h-3.5 w-3.5" />
+              Download CSV
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
