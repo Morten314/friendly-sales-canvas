@@ -15,7 +15,6 @@ export const ArtefactReport = ({
 }) => {
   const { fullReport } = artefact;
   const answers = fullReport.recommendationAnswers ?? [];
-  const sequence = artefact.sequence ?? [];
 
   return (
     <article className="space-y-5 rounded-lg border bg-card p-5 text-sm leading-relaxed">
@@ -107,26 +106,9 @@ export const ArtefactReport = ({
         </section>
       )}
 
-      {sequence.length > 0 && (
-        <section className="space-y-3">
-          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Detailed outreach plan
-          </h4>
-          <ol className="space-y-2">
-            {sequence.map((touch, i) => (
-              <li key={i} className="space-y-1 rounded-md border bg-muted/20 p-3">
-                <p className="text-xs font-semibold">
-                  Day {touch.day} · {touch.channel} — {touch.action}
-                </p>
-                {touch.subject && (
-                  <p className="text-xs font-medium">Subject: {touch.subject}</p>
-                )}
-                <p className="whitespace-pre-wrap text-xs leading-relaxed">{touch.body}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
+      <p className="border-t pt-3 text-[11px] text-muted-foreground">
+        The downloadable briefing also includes the detailed outreach plan and message templates.
+      </p>
     </article>
   );
 };
