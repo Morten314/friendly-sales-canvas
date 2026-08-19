@@ -601,9 +601,20 @@ const SignalsPage = () => {
 
   const handleSaveAsArtefact = (signal: SignalCardType) => {
     const leads = resolveLeads(signal.id);
+    // Carry every generated recommendation deep-dive into the briefing document.
+    const recList: NBAItem[] =
+      signal.NBAs && signal.NBAs.length > 0
+        ? signal.NBAs
+        : (signal.nextBestMoves ?? []).map((m) => ({ nba: m, prompt: "" }));
+    const answers = recList
+      .map((r, i) => ({
+        question: r.nba,
+        answer: (recommendationAnswers[`${signal.id}-${i}`] ?? "").trim(),
+      }))
+      .filter((r) => r.answer !== "");
     // Store the leads table itself (editable sheet) alongside the signal headline
     // and description, so the Artefacts library shows signal + summary + table.
-    const item = buildLeadSheetArtefact(signal, leads);
+    const item = buildLeadSheetArtefact(signal, leads, answers);
     // The complete matched-leads CSV rides with the artefact into the library.
     item.csv = {
       filename: matchedLeadsCsvFilename(signal.headline),
