@@ -604,7 +604,6 @@ const SignalsPage = () => {
     // Store the leads table itself (editable sheet) alongside the signal headline
     // and description, so the Artefacts library shows signal + summary + table.
     const item = buildLeadSheetArtefact(signal, leads);
-    item.id = `lead-sheet-${signal.id}-${Date.now()}`;
     // The complete matched-leads CSV rides with the artefact into the library.
     item.csv = {
       filename: matchedLeadsCsvFilename(signal.headline),
