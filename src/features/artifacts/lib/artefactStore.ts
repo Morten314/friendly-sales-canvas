@@ -141,13 +141,41 @@ export function pruneSheet<T extends { sheet?: ArtefactItem["sheet"]; fullReport
 }
 
 /**
+ * Legacy migration: cohort sequences used to be filed as their own artefact
+ * (`outreach-cohort-<signal>-<cohort>`). Fold them into the signal's single
+ * case file (`lead-sheet-<signal>`) so one signal = one artefact.
+ */
+function mergeLegacyCohorts(items: StoredArtefact[]): StoredArtefact[] {
+  const legacy = items.filter((i) => i.id.startsWith("outreach-cohort-"));
+  if (legacy.length === 0) return items;
+  const rest = items.filter((i) => !i.id.startsWith("outreach-cohort-"));
+  for (const item of legacy) {
+    const tail = item.id.replace(/^outreach-cohort-/, "");
+    // Signal ids can contain hyphens: match the longest existing case file.
+    const index = rest.findIndex(
+      (a) => a.id.startsWith("lead-sheet-") && tail.startsWith(a.id.replace(/^lead-sheet-/, "")),
+    );
+    const sequence = item.sequence ?? [];
+    if (index === -1) {
+      rest.unshift({ ...item, id: `lead-sheet-${tail}` });
+    } else {
+      rest[index] = {
+        ...rest[index],
+        sequence: [...(rest[index].sequence ?? []), ...sequence],
+      };
+    }
+  }
+  return rest;
+}
+
+/**
  * Newest-first list of persisted artefacts, with icons rehydrated.
  * Accepted signals are excluded: they are a Signals triage collection, not
  * stored work products, and live in the signals feature's own store.
  */
 export function loadStoredArtefacts(): ArtefactItem[] {
   const all = readRaw();
-  const kept = all.filter((item) => !isAcceptedSignal(item)).map(pruneSheet);
+  const kept = mergeLegacyCohorts(all.filter((item) => !isAcceptedSignal(item)).map(pruneSheet));
   // Purge legacy accepted signals so they cannot reappear on later loads.
   writeRaw(kept);
   return kept.map((item) => ({
