@@ -105,17 +105,6 @@ export const ArtefactDetail = ({
         </p>
       </div>
       <div className="flex items-center gap-2">
-        {artefact.sheet && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs"
-            onClick={() => downloadArtefactSheet(artefact)}
-          >
-            <Download className="mr-1.5 h-3.5 w-3.5" />
-            Download CSV
-          </Button>
-        )}
         <Button
           variant="outline"
           size="sm"
