@@ -609,7 +609,9 @@ const SignalsPage = () => {
       filename: matchedLeadsCsvFilename(signal.headline),
       content: buildMatchedLeadsCsv(leads),
     };
-    saveArtefact(item);
+    // Keep any cohort sequences already filed on this signal's case file.
+    const existing = getStoredArtefact(item.id);
+    saveArtefact(existing?.sequence?.length ? { ...item, sequence: existing.sequence } : item);
     toast({
       title: "Saved to Artifacts",
       description: "The signal summary and its matched-leads table were saved to Artifacts.",
