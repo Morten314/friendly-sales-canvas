@@ -1,15 +1,42 @@
+import { FileDown } from "lucide-react";
+
 import type { ArtefactItem } from "../types";
 
+import { Button } from "@/components/ui/button";
+import { sanitizeAnswerText } from "@/shared/lib/sanitizeAnswerText";
+
 /** Read-only briefing view rendered in-page before any PDF download. */
-export const ArtefactReport = ({ artefact }: { artefact: ArtefactItem }) => {
+export const ArtefactReport = ({
+  artefact,
+  onDownload,
+}: {
+  artefact: ArtefactItem;
+  onDownload?: (artefact: ArtefactItem) => void;
+}) => {
   const { fullReport } = artefact;
+  const answers = fullReport.recommendationAnswers ?? [];
+  const sequence = artefact.sequence ?? [];
+
   return (
     <article className="space-y-5 rounded-lg border bg-card p-5 text-sm leading-relaxed">
-      <header className="space-y-1 border-b pb-3">
-        <h3 className="text-base font-semibold">{fullReport.title}</h3>
-        <p className="text-[11px] text-muted-foreground">
-          {artefact.agentName} · {artefact.timestamp} · {artefact.taskNumber}
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b pb-3">
+        <div className="min-w-0 space-y-1">
+          <h3 className="text-base font-semibold">{fullReport.title}</h3>
+          <p className="text-[11px] text-muted-foreground">
+            {artefact.agentName} · {artefact.timestamp} · {artefact.taskNumber}
+          </p>
+        </div>
+        {onDownload && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={() => onDownload(artefact)}
+          >
+            <FileDown className="mr-1.5 h-3.5 w-3.5" />
+            Download briefing
+          </Button>
+        )}
       </header>
 
       {fullReport.executiveSummary && (
@@ -56,6 +83,45 @@ export const ArtefactReport = ({ artefact }: { artefact: ArtefactItem }) => {
               <li key={i} className="flex gap-2">
                 <span className="text-muted-foreground">{i + 1}.</span>
                 <span className="whitespace-pre-wrap">{rec}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
+      {answers.length > 0 && (
+        <section className="space-y-3">
+          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Recommendation deep dives
+          </h4>
+          {answers.map((qa, i) => (
+            <div key={i} className="space-y-1.5 rounded-md border bg-muted/20 p-3">
+              <p className="text-xs font-semibold">
+                {i + 1}. {qa.question}
+              </p>
+              <p className="whitespace-pre-wrap text-xs leading-relaxed">
+                {sanitizeAnswerText(qa.answer)}
+              </p>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {sequence.length > 0 && (
+        <section className="space-y-3">
+          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Detailed outreach plan
+          </h4>
+          <ol className="space-y-2">
+            {sequence.map((touch, i) => (
+              <li key={i} className="space-y-1 rounded-md border bg-muted/20 p-3">
+                <p className="text-xs font-semibold">
+                  Day {touch.day} · {touch.channel} — {touch.action}
+                </p>
+                {touch.subject && (
+                  <p className="text-xs font-medium">Subject: {touch.subject}</p>
+                )}
+                <p className="whitespace-pre-wrap text-xs leading-relaxed">{touch.body}</p>
               </li>
             ))}
           </ol>

@@ -57,5 +57,10 @@ export interface ArtefactItem {
     analysis: string;
     recommendations: string[];
     charts?: string[];
+    /**
+     * Full recommendation Q&A carried into the briefing document (question =
+     * the recommendation/NBA, answer = the generated deep-dive explanation).
+     */
+    recommendationAnswers?: { question: string; answer: string }[];
   };
 }
