@@ -654,9 +654,18 @@ const SignalsPage = () => {
       filename: matchedLeadsCsvFilename(signal.headline),
       content: buildMatchedLeadsCsv(leads),
     };
-    // Keep any cohort sequences already filed on this signal's case file.
+    // Keep any cohort sequences and previously captured deep dives already filed
+    // on this signal's case file.
     const existing = getStoredArtefact(item.id);
-    saveArtefact(existing?.sequence?.length ? { ...item, sequence: existing.sequence } : item);
+    const priorAnswers = existing?.fullReport?.recommendationAnswers ?? [];
+    saveArtefact({
+      ...item,
+      ...(existing?.sequence?.length ? { sequence: existing.sequence } : {}),
+      fullReport: {
+        ...item.fullReport,
+        recommendationAnswers: answers.length ? answers : priorAnswers,
+      },
+    });
     toast({
       title: "Saved to Artifacts",
       description: "The signal summary and its matched-leads table were saved to Artifacts.",
