@@ -3,7 +3,6 @@ import {
   ArrowUp,
   ChevronLeft,
   Download,
-  FileDown,
   Pencil,
   Plus,
   Send,
@@ -12,7 +11,6 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-import { ArtefactReport } from "./ArtefactReport";
 import { EnrichableLeadSheet } from "./EnrichableLeadSheet";
 import { useApolloConnected } from "../hooks/useApolloConnected";
 import { artefactName } from "../lib/artefactName";
@@ -32,7 +30,6 @@ interface ArtefactDetailProps {
   artefact: ArtefactItem;
   onBack: () => void;
   onDelete: (id: string) => void;
-  onDownloadPdf: (artefact: ArtefactItem) => void;
   onSheetCellChange?: (id: string, rowIndex: number, colIndex: number, value: string) => void;
   onSequenceChange?: (id: string, sequence: NonNullable<ArtefactItem["sequence"]>) => void;
   onSheetChange?: (id: string, sheet: NonNullable<ArtefactItem["sheet"]>) => void;
@@ -43,14 +40,13 @@ export const ArtefactDetail = ({
   artefact,
   onBack,
   onDelete,
-  onDownloadPdf,
   onSheetCellChange,
   onSequenceChange,
   onSheetChange,
 }: ArtefactDetailProps) => {
   const apolloConnected = useApolloConnected();
-  const [tab, setTab] = useState<"sheet" | "sequence" | "briefing">(
-    artefact.sheet ? "sheet" : artefact.sequence ? "sequence" : "briefing",
+  const [tab, setTab] = useState<"sheet" | "sequence">(
+    artefact.sheet ? "sheet" : "sequence",
   );
   const [editing, setEditing] = useState(false);
   const showSheet = Boolean(artefact.sheet) && tab === "sheet";
@@ -106,15 +102,6 @@ export const ArtefactDetail = ({
       </div>
       <div className="flex items-center gap-2">
         <Button
-          variant="outline"
-          size="sm"
-          className="text-xs"
-          onClick={() => onDownloadPdf(artefact)}
-        >
-          <FileDown className="mr-1.5 h-3.5 w-3.5" />
-          Download briefing (PDF)
-        </Button>
-        <Button
           variant="ghost"
           size="sm"
           className="text-xs text-destructive"
@@ -132,7 +119,6 @@ export const ArtefactDetail = ({
           [
             ...(artefact.sheet ? (["sheet"] as const) : []),
             ...(artefact.sequence ? (["sequence"] as const) : []),
-            "briefing",
           ] as const
         ).map((key) => (
           <button
@@ -145,7 +131,7 @@ export const ArtefactDetail = ({
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            {key === "sheet" ? "Lead sheet" : key === "sequence" ? "Sequence" : "Briefing"}
+            {key === "sheet" ? "Lead sheet" : "Sequence"}
           </button>
         ))}
       </div>
@@ -315,9 +301,7 @@ export const ArtefactDetail = ({
           onSheetChange={(sheet) => onSheetChange?.(artefact.id, sheet)}
         />
       </div>
-    ) : (
-      <ArtefactReport artefact={artefact} onDownload={onDownloadPdf} />
-    )}
+    ) : null}
   </div>
   );
 };
