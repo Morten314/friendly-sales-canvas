@@ -18,7 +18,6 @@ interface ArtefactRowProps {
   onOpen: (id: string) => void;
   onRename: (artefact: ArtefactItem) => void;
   onDelete: (id: string) => void;
-  onDownloadPdf: (artefact: ArtefactItem) => void;
 }
 
 /** One line per stored artefact — storage row, not an agent activity card. */
@@ -27,7 +26,6 @@ export const ArtefactRow = ({
   onOpen,
   onRename,
   onDelete,
-  onDownloadPdf,
 }: ArtefactRowProps) => {
   const Icon = artefact.sheet ? FileSpreadsheet : FileText;
   const rows = artefact.sheet ? `${artefact.sheet.rows.length} rows` : "Document";
@@ -68,7 +66,6 @@ export const ArtefactRow = ({
               Download source CSV
             </DropdownMenuItem>
           )}
-          <DropdownMenuItem onClick={() => onDownloadPdf(artefact)}>Download PDF</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem className="text-destructive" onClick={() => onDelete(artefact.id)}>
             Delete

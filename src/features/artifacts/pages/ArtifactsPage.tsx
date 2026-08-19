@@ -5,7 +5,6 @@ import { ArtefactDetail } from "../components/ArtefactDetail";
 import { ArtefactRow } from "../components/ArtefactRow";
 import { FolderList } from "../components/FolderList";
 import { artefactName } from "../lib/artefactName";
-import { generateAndDownloadPDF } from "../lib/artefactPdf";
 import { drainArtefactQueue } from "../lib/artefactQueue";
 import {
   deleteStoredArtefact,
@@ -138,15 +137,6 @@ const ArtifactsPage = () => {
     );
   };
 
-  const handleDownloadPdf = (artefact: ArtefactItem) => {
-    // (enrichment edits persist through handleSheetChange below)
-    if (artefact.status === "new") {
-      setArtefacts((prev) =>
-        prev.map((a) => (a.id === artefact.id ? { ...a, status: "viewed" as const } : a)),
-      );
-    }
-    generateAndDownloadPDF(artefact);
-  };
 
   const handleSequenceChange = (
     id: string,
@@ -169,7 +159,6 @@ const ArtifactsPage = () => {
           artefact={openArtefact}
           onBack={() => setOpenId(null)}
           onDelete={handleDelete}
-          onDownloadPdf={handleDownloadPdf}
           onSheetCellChange={handleSheetCellChange}
           onSheetChange={handleSheetChange}
           onSequenceChange={handleSequenceChange}
@@ -249,7 +238,6 @@ const ArtifactsPage = () => {
                 onOpen={setOpenId}
                 onRename={handleRenameStart}
                 onDelete={handleDelete}
-                onDownloadPdf={handleDownloadPdf}
               />
             ))}
           </div>
