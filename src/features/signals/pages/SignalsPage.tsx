@@ -1025,6 +1025,7 @@ const SignalsPage = () => {
         onNavigateToAgentChat={handleNavigateToAgentChat}
         onExpandDescription={() => {
           setExpandedDescriptions((prev) => new Set([...prev, signal.id]));
+          prefetchRecommendationAnswers(signal);
         }}
         onCollapseDescription={() => {
           setExpandedDescriptions((prev) => {
