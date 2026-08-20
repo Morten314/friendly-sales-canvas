@@ -302,9 +302,20 @@ export const SignalCard = ({
   // and by "Go deeper".
   const leadsToolbar: ReactNode = (
     <>
-      <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-        Matched leads
-      </h4>
+      <div className="flex items-center gap-2">
+        <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+          Matched leads
+        </h4>
+        {matchedLeads.length > 0 && (
+          <Badge
+            variant="secondary"
+            className="bg-gray-100 text-gray-700 border-gray-200 text-[10px] font-normal"
+          >
+            {matchedLeads.length} {matchedLeads.length === 1 ? "lead" : "leads"}
+            {highRelevanceCount > 0 ? ` · ${highRelevanceCount} high` : ""}
+          </Badge>
+        )}
+      </div>
       <div className="flex items-center gap-1">
         {matchedLeads.length > 0 && (
           <Button
@@ -572,15 +583,6 @@ export const SignalCard = ({
                     Affects{" "}
                     <span className="font-semibold">{affectedLeadCount || matchedLeads.length}</span>{" "}
                     {(affectedLeadCount || matchedLeads.length) === 1 ? "lead" : "leads"}
-                  </Badge>
-                )}
-                {isAccepted && matchedLeads.length > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="bg-gray-100 text-gray-700 border-gray-200 text-xs font-normal"
-                  >
-                    {matchedLeads.length} {matchedLeads.length === 1 ? "lead" : "leads"}
-                    {highRelevanceCount > 0 ? ` · ${highRelevanceCount} high` : ""}
                   </Badge>
                 )}
                 {hasRecommendations && (
