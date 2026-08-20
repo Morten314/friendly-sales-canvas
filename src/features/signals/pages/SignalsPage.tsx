@@ -327,6 +327,8 @@ const SignalsPage = () => {
     if (!item || !(item.prompt ?? "").trim()) return;
     const key = `${signalId}-${index}`;
     if (recommendationAnswers[key]) return;
+    if (answersInFlightRef.current.has(key)) return;
+    answersInFlightRef.current.add(key);
     setRecommendationAnswerLoading(key);
     askMutation
       .mutateAsync({
@@ -348,7 +350,10 @@ const SignalsPage = () => {
           variant: "destructive",
         });
       })
-      .finally(() => setRecommendationAnswerLoading(null));
+      .finally(() => {
+        answersInFlightRef.current.delete(key);
+        setRecommendationAnswerLoading(null);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- askMutation is a fresh object per render; including it would loop. mutateAsync is stable.
   }, [expandedRecommendation, signals, currentUser?.uid, orgId, recommendationAnswers, toast]);
 
