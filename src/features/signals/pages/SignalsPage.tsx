@@ -123,6 +123,8 @@ const SignalsPage = () => {
   const [recommendationAnswerLoading, setRecommendationAnswerLoading] = useState<string | null>(
     null,
   );
+  /** Answer keys already requested (prefetch or on-expand) so we never double-fetch. */
+  const answersInFlightRef = useRef<Set<string>>(new Set());
   /** Key `${signalId}-${index}` of the recommendation currently generating a playbook. */
   const [recommendationArtefactGenerating, setRecommendationArtefactGenerating] = useState<
     string | null
