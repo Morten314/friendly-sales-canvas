@@ -123,6 +123,8 @@ const SignalsPage = () => {
   const [recommendationAnswerLoading, setRecommendationAnswerLoading] = useState<string | null>(
     null,
   );
+  /** Answer keys already requested (prefetch or on-expand) so we never double-fetch. */
+  const answersInFlightRef = useRef<Set<string>>(new Set());
   /** Key `${signalId}-${index}` of the recommendation currently generating a playbook. */
   const [recommendationArtefactGenerating, setRecommendationArtefactGenerating] = useState<
     string | null
@@ -327,6 +329,8 @@ const SignalsPage = () => {
     if (!item || !(item.prompt ?? "").trim()) return;
     const key = `${signalId}-${index}`;
     if (recommendationAnswers[key]) return;
+    if (answersInFlightRef.current.has(key)) return;
+    answersInFlightRef.current.add(key);
     setRecommendationAnswerLoading(key);
     askMutation
       .mutateAsync({
@@ -348,7 +352,10 @@ const SignalsPage = () => {
           variant: "destructive",
         });
       })
-      .finally(() => setRecommendationAnswerLoading(null));
+      .finally(() => {
+        answersInFlightRef.current.delete(key);
+        setRecommendationAnswerLoading(null);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- askMutation is a fresh object per render; including it would loop. mutateAsync is stable.
   }, [expandedRecommendation, signals, currentUser?.uid, orgId, recommendationAnswers, toast]);
 
@@ -597,6 +604,45 @@ const SignalsPage = () => {
 
   const handleFindMatchedLeads = (signalId: string) => {
     setExpandedLeadsSignalId((prev) => (prev === signalId ? null : signalId));
+  };
+
+  /**
+   * Warm every recommendation answer for a signal the moment "Go deeper" opens,
+   * so expanding a recommendation renders instantly instead of showing a spinner.
+   */
+  const prefetchRecommendationAnswers = (signal: SignalCardType) => {
+    if (!orgId || !currentUser?.uid) return;
+    const list: NBAItem[] =
+      signal.NBAs && signal.NBAs.length > 0
+        ? signal.NBAs
+        : (signal.nextBestMoves ?? []).map((m) => ({ nba: m, prompt: "" }));
+    list.forEach((item, index) => {
+      const prompt = (item.prompt ?? "").trim();
+      if (!prompt) return;
+      const key = `${signal.id}-${index}`;
+      if (recommendationAnswers[key] || answersInFlightRef.current.has(key)) return;
+      answersInFlightRef.current.add(key);
+      askMutation
+        .mutateAsync({
+          org_id: orgId,
+          user_id: currentUser.uid,
+          question: prompt,
+          history: [],
+        })
+        .then((res) => {
+          const r = res as Record<string, unknown>;
+          const answer = r?.answer ?? r?.response ?? (typeof res === "string" ? res : "");
+          if (String(answer).trim()) {
+            setRecommendationAnswers((prev) => ({ ...prev, [key]: String(answer) }));
+          }
+        })
+        .catch((err) => {
+          console.error("signal_Ask prefetch error:", err);
+        })
+        .finally(() => {
+          answersInFlightRef.current.delete(key);
+        });
+    });
   };
 
   const handleSaveAsArtefact = async (signal: SignalCardType) => {
@@ -979,6 +1025,7 @@ const SignalsPage = () => {
         onNavigateToAgentChat={handleNavigateToAgentChat}
         onExpandDescription={() => {
           setExpandedDescriptions((prev) => new Set([...prev, signal.id]));
+          prefetchRecommendationAnswers(signal);
         }}
         onCollapseDescription={() => {
           setExpandedDescriptions((prev) => {
