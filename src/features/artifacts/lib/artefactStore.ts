@@ -208,9 +208,25 @@ export function loadStoredArtefacts(): ArtefactItem[] {
 export function saveArtefact(item: ArtefactItem): void {
   const { agentIcon: _icon, ...rest } = item;
   if (isAcceptedSignal(rest)) return;
-  const existing = readRaw().filter((a) => a.id !== item.id);
-  writeRaw([rest, ...existing]);
-  enqueueArtefact(item);
+  const stored = readRaw();
+  // One signal = one artefact: fold the incoming save into the signal's
+  // existing case file (same folder) instead of filing a sibling item.
+  const prior = stored.find(
+    (a) => a.id !== rest.id && isSignalCaseFile(a) && isSignalCaseFile(rest) && a.folder === rest.folder,
+  );
+  const next: StoredArtefact = prior
+    ? {
+        ...prior,
+        ...rest,
+        id: prior.id.startsWith("lead-sheet-") ? prior.id : rest.id,
+        sheet: rest.sheet ?? prior.sheet,
+        sequence: rest.sequence ?? prior.sequence,
+        fullReport: { ...prior.fullReport, ...rest.fullReport },
+      }
+    : rest;
+  const others = stored.filter((a) => a.id !== next.id && a.id !== prior?.id);
+  writeRaw([next, ...others]);
+  enqueueArtefact({ ...next, agentIcon: item.agentIcon });
 }
 
 /** Remove one artefact from persistence (manual delete). */
