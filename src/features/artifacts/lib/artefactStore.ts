@@ -140,32 +140,52 @@ export function pruneSheet<T extends { sheet?: ArtefactItem["sheet"]; fullReport
   });
 }
 
+/** A signal case file: the lead sheet and/or its cohort outreach sequences. */
+function isSignalCaseFile(item: StoredArtefact): boolean {
+  return item.id.startsWith("lead-sheet-") || item.id.startsWith("outreach-cohort-");
+}
+
 /**
- * Legacy migration: cohort sequences used to be filed as their own artefact
- * (`outreach-cohort-<signal>-<cohort>`). Fold them into the signal's single
- * case file (`lead-sheet-<signal>`) so one signal = one artefact.
+ * One signal = one artefact. Older saves filed cohort sequences separately
+ * (`outreach-cohort-<signal>-<cohort>`), so any case files that share a signal
+ * folder are folded into a single item: the lead sheet is kept and every
+ * cohort's sequence is appended, surfaced through the Lead sheet / Sequence
+ * chips in the artefact view.
  */
-function mergeLegacyCohorts(items: StoredArtefact[]): StoredArtefact[] {
-  const legacy = items.filter((i) => i.id.startsWith("outreach-cohort-"));
-  if (legacy.length === 0) return items;
-  const rest = items.filter((i) => !i.id.startsWith("outreach-cohort-"));
-  for (const item of legacy) {
-    const tail = item.id.replace(/^outreach-cohort-/, "");
-    // Signal ids can contain hyphens: match the longest existing case file.
-    const index = rest.findIndex(
-      (a) => a.id.startsWith("lead-sheet-") && tail.startsWith(a.id.replace(/^lead-sheet-/, "")),
-    );
-    const sequence = item.sequence ?? [];
-    if (index === -1) {
-      rest.unshift({ ...item, id: `lead-sheet-${tail}` });
-    } else {
-      rest[index] = {
-        ...rest[index],
-        sequence: [...(rest[index].sequence ?? []), ...sequence],
-      };
+function mergeSignalCaseFiles(items: StoredArtefact[]): StoredArtefact[] {
+  const groups = new Map<string, StoredArtefact[]>();
+  const out: (StoredArtefact | null)[] = items.map((item) => {
+    const folder = item.folder;
+    if (!folder || !isSignalCaseFile(item)) return item;
+    const group = groups.get(folder);
+    if (group) {
+      group.push(item);
+      return null; // folded into the first case file of this folder
     }
-  }
-  return rest;
+    groups.set(folder, [item]);
+    return item;
+  });
+
+  return out.filter((i): i is StoredArtefact => i !== null).map((item) => {
+    const group = item.folder ? groups.get(item.folder) : undefined;
+    if (!group || group.length < 2) return item;
+    const base = group.find((g) => g.sheet) ?? group[0];
+    const sequence = group.flatMap((g) => g.sequence ?? []);
+    const seen = new Set<string>();
+    const merged = sequence.filter((t) => {
+      const key = `${t.day}|${t.channel}|${t.action}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    return {
+      ...base,
+      id: base.id.startsWith("lead-sheet-")
+        ? base.id
+        : `lead-sheet-${base.id.replace(/^outreach-cohort-/, "")}`,
+      ...(merged.length ? { sequence: merged.sort((a, b) => a.day - b.day) } : {}),
+    };
+  });
 }
 
 /**
@@ -175,7 +195,7 @@ function mergeLegacyCohorts(items: StoredArtefact[]): StoredArtefact[] {
  */
 export function loadStoredArtefacts(): ArtefactItem[] {
   const all = readRaw();
-  const kept = mergeLegacyCohorts(all.filter((item) => !isAcceptedSignal(item)).map(pruneSheet));
+  const kept = mergeSignalCaseFiles(all.filter((item) => !isAcceptedSignal(item)).map(pruneSheet));
   // Purge legacy accepted signals so they cannot reappear on later loads.
   writeRaw(kept);
   return kept.map((item) => ({
