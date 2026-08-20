@@ -606,6 +606,45 @@ const SignalsPage = () => {
     setExpandedLeadsSignalId((prev) => (prev === signalId ? null : signalId));
   };
 
+  /**
+   * Warm every recommendation answer for a signal the moment "Go deeper" opens,
+   * so expanding a recommendation renders instantly instead of showing a spinner.
+   */
+  const prefetchRecommendationAnswers = (signal: SignalCardType) => {
+    if (!orgId || !currentUser?.uid) return;
+    const list: NBAItem[] =
+      signal.NBAs && signal.NBAs.length > 0
+        ? signal.NBAs
+        : (signal.nextBestMoves ?? []).map((m) => ({ nba: m, prompt: "" }));
+    list.forEach((item, index) => {
+      const prompt = (item.prompt ?? "").trim();
+      if (!prompt) return;
+      const key = `${signal.id}-${index}`;
+      if (recommendationAnswers[key] || answersInFlightRef.current.has(key)) return;
+      answersInFlightRef.current.add(key);
+      askMutation
+        .mutateAsync({
+          org_id: orgId,
+          user_id: currentUser.uid,
+          question: prompt,
+          history: [],
+        })
+        .then((res) => {
+          const r = res as Record<string, unknown>;
+          const answer = r?.answer ?? r?.response ?? (typeof res === "string" ? res : "");
+          if (String(answer).trim()) {
+            setRecommendationAnswers((prev) => ({ ...prev, [key]: String(answer) }));
+          }
+        })
+        .catch((err) => {
+          console.error("signal_Ask prefetch error:", err);
+        })
+        .finally(() => {
+          answersInFlightRef.current.delete(key);
+        });
+    });
+  };
+
   const handleSaveAsArtefact = async (signal: SignalCardType) => {
     const leads = resolveLeads(signal.id);
     // Carry every generated recommendation deep-dive into the briefing document.
