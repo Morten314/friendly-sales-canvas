@@ -23,7 +23,6 @@ import {
 import { downloadSignalBundle, shareSignalByEmail, type MailProvider } from "../lib/signalShare";
 import {
   fetchSignals,
-  generateRecommendationArtefact,
   generateSignalsBatch,
 } from "../services/signals";
 import type { Agent, NBAItem, SignalCard as SignalCardType } from "../types";
@@ -32,7 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/components/ui/use-toast";
-import { generateAndDownloadPDF, getStoredArtefact, saveArtefact } from "@/features/artifacts";
+import { getStoredArtefact, saveArtefact } from "@/features/artifacts";
 import {
   buildMatchedLeadsCsv,
   matchedLeadsCsvFilename,
