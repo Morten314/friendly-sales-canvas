@@ -462,9 +462,6 @@ export const SignalCard = ({
             <Download className="h-3.5 w-3.5 mr-1.5" />
             Download
           </Button>
-          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={onSaveAsArtefact}>
-            Save as Artefact
-          </Button>
         </div>
       )}
     </div>
