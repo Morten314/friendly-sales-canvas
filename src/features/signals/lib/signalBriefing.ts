@@ -96,6 +96,44 @@ export function buildAcceptedSignalArtefact(signal: SignalCard): ArtefactItem {
   };
 }
 
+/**
+ * A single "Go deeper" recommendation + its full answer, filed into the
+ * signal's own case file (same id/folder as the lead sheet) so it shows up
+ * under the "Deeper analysis" chip alongside Lead sheet / Sequence.
+ */
+export function buildDeepDiveArtefact(
+  signal: Pick<SignalCard, "id" | "agent" | "headline" | "snippet" | "description" | "timestamp">,
+  question: string,
+  answer: string,
+): ArtefactItem {
+  const { agentName, agentIcon, agentColor } = resolveSignalAgentPresentation(signal.agent);
+  return {
+    id: `lead-sheet-${signal.id}`,
+    agentName,
+    agentIcon,
+    agentColor,
+    taskNumber: "Deeper Analysis",
+    timestamp: signal.timestamp,
+    status: "new",
+    type: "analysis",
+    folder: signalFolderName(signal.headline),
+    actionDelegated: question,
+    contextRationale: signal.snippet,
+    systemImpact: "Recommendation reasoning saved to the signal case file",
+    actionPerformed: "Saved recommendation deep dive",
+    outputSummary: question,
+    deepDives: [{ question, answer }],
+    fullReport: {
+      title: signal.headline,
+      executiveSummary: signal.description,
+      keyFindings: [],
+      analysis: answer,
+      recommendations: [question],
+    },
+  };
+}
+
+
 /** One ArtefactItem from a signal + its matched leads (Spec 38 §5 mapping). */
 export function buildSignalBriefingArtefact(
   signal: SignalCard,
