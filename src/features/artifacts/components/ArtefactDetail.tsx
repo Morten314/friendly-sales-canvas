@@ -116,12 +116,13 @@ export const ArtefactDetail = ({
       </div>
     </div>
 
-    {(artefact.sheet || artefact.sequence) && (
+    {(artefact.sheet || artefact.sequence || deepDives.length > 0) && (
       <div className="flex w-fit items-center gap-1 rounded-md border bg-muted/40 p-0.5">
         {(
           [
             ...(artefact.sheet ? (["sheet"] as const) : []),
             ...(artefact.sequence ? (["sequence"] as const) : []),
+            ...(deepDives.length > 0 ? (["analysis"] as const) : []),
           ] as const
         ).map((key) => (
           <button
@@ -134,10 +135,11 @@ export const ArtefactDetail = ({
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            {key === "sheet" ? "Lead sheet" : "Sequence"}
+            {key === "sheet" ? "Lead sheet" : key === "sequence" ? "Sequence" : "Deeper analysis"}
           </button>
         ))}
       </div>
+
     )}
 
     {showSequence ? (
