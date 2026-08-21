@@ -16,7 +16,7 @@ import { useSignalLeadMap } from "../hooks/useSignalLeadMap";
 import { deleteAcceptedSignal, saveAcceptedSignal } from "../lib/acceptedSignalsStore";
 import { withDemoMatchedLeads } from "../lib/demoMatchedLeads";
 import {
-  buildRecommendationPlaybookArtefact,
+  buildDeepDiveArtefact,
   buildAcceptedSignalArtefact,
   buildLeadSheetArtefact,
 } from "../lib/signalBriefing";
