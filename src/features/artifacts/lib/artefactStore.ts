@@ -178,15 +178,27 @@ function mergeSignalCaseFiles(items: StoredArtefact[]): StoredArtefact[] {
       seen.add(key);
       return true;
     });
+    const deepDives = mergeDeepDives(group.flatMap((g) => g.deepDives ?? []));
     return {
       ...base,
       id: base.id.startsWith("lead-sheet-")
         ? base.id
         : `lead-sheet-${base.id.replace(/^outreach-cohort-/, "")}`,
       ...(merged.length ? { sequence: merged.sort((a, b) => a.day - b.day) } : {}),
+      ...(deepDives.length ? { deepDives } : {}),
     };
   });
 }
+
+/** Append deep dives, de-duplicated by question (latest answer wins). */
+function mergeDeepDives(
+  items: NonNullable<ArtefactItem["deepDives"]>,
+): NonNullable<ArtefactItem["deepDives"]> {
+  const byQuestion = new Map<string, { question: string; answer: string }>();
+  for (const d of items) byQuestion.set(d.question.trim().toLowerCase(), d);
+  return [...byQuestion.values()];
+}
+
 
 /**
  * Newest-first list of persisted artefacts, with icons rehydrated.
