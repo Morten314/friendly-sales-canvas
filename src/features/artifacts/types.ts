@@ -50,6 +50,12 @@ export interface ArtefactItem {
     subject?: string;
     body: string;
   }[];
+  /**
+   * Saved "Go deeper" reasoning: each entry is a recommendation and the full
+   * answer generated for it. Surfaced under the "Deeper analysis" chip.
+   */
+  deepDives?: { question: string; answer: string }[];
+
   fullReport: {
     title: string;
     executiveSummary: string;
