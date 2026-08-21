@@ -18,6 +18,7 @@ import { downloadArtefactSheet } from "../lib/artefactStore";
 import { shareArtefactByEmail } from "../lib/artefactShare";
 import type { ArtefactItem } from "../types";
 
+import RecommendationAnswerView from "@/features/signals/components/RecommendationAnswerView";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
