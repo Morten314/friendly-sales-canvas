@@ -235,7 +235,8 @@ const CohortOutreachPreview = ({
         })}
       </ol>
 
-      <div className="mt-2 flex justify-end">
+      {/* Stays in view while the user reads the copy, so saving never needs a scroll back up. */}
+      <div className="sticky bottom-0 z-10 mt-2 flex justify-end border-t border-gray-100 bg-white/95 py-1.5 backdrop-blur supports-[backdrop-filter]:bg-white/80">
         <Button
           variant="outline"
           size="sm"
@@ -245,6 +246,7 @@ const CohortOutreachPreview = ({
           Save as Artefact
         </Button>
       </div>
+
 
     </div>
   );
