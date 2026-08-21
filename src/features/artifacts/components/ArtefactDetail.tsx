@@ -1,8 +1,10 @@
 import {
   ArrowDown,
   ArrowUp,
+  Bot,
   ChevronLeft,
   Download,
+  Loader2,
   Pencil,
   Plus,
   Send,
@@ -18,7 +20,9 @@ import { downloadArtefactSheet } from "../lib/artefactStore";
 import { shareArtefactByEmail } from "../lib/artefactShare";
 import type { ArtefactItem } from "../types";
 
+import OutreachCopyChat from "@/features/signals/components/OutreachCopyChat";
 import RecommendationAnswerView from "@/features/signals/components/RecommendationAnswerView";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -51,6 +55,9 @@ export const ArtefactDetail = ({
     artefact.sheet ? "sheet" : artefact.sequence ? "sequence" : "analysis",
   );
   const [editing, setEditing] = useState(false);
+  const [chatIndex, setChatIndex] = useState<number | null>(null);
+  const [busyCohort, setBusyCohort] = useState<string | null>(null);
+  const [copyError, setCopyError] = useState<string | null>(null);
   const showSheet = Boolean(artefact.sheet) && tab === "sheet";
   const showSequence = Boolean(artefact.sequence) && tab === "sequence";
   const showAnalysis = deepDives.length > 0 && tab === "analysis";
@@ -73,6 +80,65 @@ export const ArtefactDetail = ({
 
   const removeTouch = (index: number) =>
     commitSequence(sequence.filter((_, i) => i !== index));
+
+  /** Sequence steps are stored as "<Cohort> · <action>" — group them back. */
+  const cohorts = (() => {
+    const map = new Map<string, number[]>();
+    sequence.forEach((touch, index) => {
+      const label = touch.action.includes(" · ")
+        ? touch.action.split(" · ")[0]
+        : "Outreach sequence";
+      map.set(label, [...(map.get(label) ?? []), index]);
+    });
+    return [...map.entries()].map(([label, indices]) => ({ label, indices }));
+  })();
+
+  const stepLabel = (index: number) => {
+    const action = sequence[index]?.action ?? "";
+    return action.includes(" · ") ? action.split(" · ").slice(1).join(" · ") : action;
+  };
+
+  const relevanceOf = (label: string): "high" | "medium" | "low" =>
+    /low/i.test(label) ? "low" : /medium/i.test(label) ? "medium" : "high";
+
+  /** Rewrite a whole cohort's copy with AI, keeping days/channels intact. */
+  const personaliseCohort = async (label: string, indices: number[]) => {
+    setBusyCohort(label);
+    setCopyError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-outreach-copy", {
+        body: {
+          headline: artefact.fullReport.title,
+          snippet: artefact.contextRationale ?? artefact.fullReport.executiveSummary ?? "",
+          cohortLabel: label,
+          relevance: relevanceOf(label),
+          touches: indices.map((i) => ({
+            day: sequence[i].day,
+            channel: sequence[i].channel,
+            action: stepLabel(i),
+          })),
+          leads: [],
+        },
+      });
+      if (error) throw error;
+      const returned = (data?.touches ?? []) as { subject?: string; body?: string }[];
+      if (!returned.length) throw new Error("empty");
+      const next = sequence.map((touch, i) => {
+        const pos = indices.indexOf(i);
+        if (pos === -1) return touch;
+        return {
+          ...touch,
+          subject: returned[pos]?.subject ?? touch.subject,
+          body: returned[pos]?.body?.trim() || touch.body,
+        };
+      });
+      commitSequence(next);
+    } catch {
+      setCopyError("Could not personalise right now — the existing copy is unchanged.");
+    } finally {
+      setBusyCohort(null);
+    }
+  };
 
   const addTouch = () =>
     commitSequence([
