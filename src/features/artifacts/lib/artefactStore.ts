@@ -178,15 +178,27 @@ function mergeSignalCaseFiles(items: StoredArtefact[]): StoredArtefact[] {
       seen.add(key);
       return true;
     });
+    const deepDives = mergeDeepDives(group.flatMap((g) => g.deepDives ?? []));
     return {
       ...base,
       id: base.id.startsWith("lead-sheet-")
         ? base.id
         : `lead-sheet-${base.id.replace(/^outreach-cohort-/, "")}`,
       ...(merged.length ? { sequence: merged.sort((a, b) => a.day - b.day) } : {}),
+      ...(deepDives.length ? { deepDives } : {}),
     };
   });
 }
+
+/** Append deep dives, de-duplicated by question (latest answer wins). */
+function mergeDeepDives(
+  items: NonNullable<ArtefactItem["deepDives"]>,
+): NonNullable<ArtefactItem["deepDives"]> {
+  const byQuestion = new Map<string, { question: string; answer: string }>();
+  for (const d of items) byQuestion.set(d.question.trim().toLowerCase(), d);
+  return [...byQuestion.values()];
+}
+
 
 /**
  * Newest-first list of persisted artefacts, with icons rehydrated.
@@ -210,10 +222,12 @@ export function saveArtefact(item: ArtefactItem): void {
   if (isAcceptedSignal(rest)) return;
   const stored = readRaw();
   // One signal = one artefact: fold the incoming save into the signal's
-  // existing case file (same folder) instead of filing a sibling item.
-  const prior = stored.find(
-    (a) => a.id !== rest.id && isSignalCaseFile(a) && isSignalCaseFile(rest) && a.folder === rest.folder,
-  );
+  // existing case file (same id, or same folder) instead of filing a sibling.
+  const prior =
+    stored.find((a) => a.id === rest.id) ??
+    stored.find(
+      (a) => isSignalCaseFile(a) && isSignalCaseFile(rest) && a.folder === rest.folder,
+    );
   const next: StoredArtefact = prior
     ? {
         ...prior,
@@ -221,12 +235,15 @@ export function saveArtefact(item: ArtefactItem): void {
         id: prior.id.startsWith("lead-sheet-") ? prior.id : rest.id,
         sheet: rest.sheet ?? prior.sheet,
         sequence: rest.sequence ?? prior.sequence,
+        deepDives: mergeDeepDives([...(prior.deepDives ?? []), ...(rest.deepDives ?? [])]),
         fullReport: { ...prior.fullReport, ...rest.fullReport },
       }
     : rest;
+  if (next.deepDives && next.deepDives.length === 0) delete next.deepDives;
   const others = stored.filter((a) => a.id !== next.id && a.id !== prior?.id);
   writeRaw([next, ...others]);
   enqueueArtefact({ ...next, agentIcon: item.agentIcon });
+
 }
 
 /** Remove one artefact from persistence (manual delete). */

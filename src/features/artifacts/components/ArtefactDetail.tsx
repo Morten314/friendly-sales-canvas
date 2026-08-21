@@ -45,13 +45,16 @@ export const ArtefactDetail = ({
   onSheetChange,
 }: ArtefactDetailProps) => {
   const apolloConnected = useApolloConnected();
-  const [tab, setTab] = useState<"sheet" | "sequence">(
-    artefact.sheet ? "sheet" : "sequence",
+  const deepDives = artefact.deepDives ?? [];
+  const [tab, setTab] = useState<"sheet" | "sequence" | "analysis">(
+    artefact.sheet ? "sheet" : artefact.sequence ? "sequence" : "analysis",
   );
   const [editing, setEditing] = useState(false);
   const showSheet = Boolean(artefact.sheet) && tab === "sheet";
   const showSequence = Boolean(artefact.sequence) && tab === "sequence";
+  const showAnalysis = deepDives.length > 0 && tab === "analysis";
   const sequence = artefact.sequence ?? [];
+
 
   const commitSequence = (next: NonNullable<ArtefactItem["sequence"]>) =>
     onSequenceChange?.(artefact.id, next);
@@ -113,12 +116,13 @@ export const ArtefactDetail = ({
       </div>
     </div>
 
-    {(artefact.sheet || artefact.sequence) && (
+    {(artefact.sheet || artefact.sequence || deepDives.length > 0) && (
       <div className="flex w-fit items-center gap-1 rounded-md border bg-muted/40 p-0.5">
         {(
           [
             ...(artefact.sheet ? (["sheet"] as const) : []),
             ...(artefact.sequence ? (["sequence"] as const) : []),
+            ...(deepDives.length > 0 ? (["analysis"] as const) : []),
           ] as const
         ).map((key) => (
           <button
@@ -131,8 +135,36 @@ export const ArtefactDetail = ({
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            {key === "sheet" ? "Lead sheet" : "Sequence"}
+            {key === "sheet" ? "Lead sheet" : key === "sequence" ? "Sequence" : "Deeper analysis"}
           </button>
+        ))}
+      </div>
+
+    )}
+
+    {showAnalysis && (
+      <div className="space-y-3">
+        <div className="rounded-lg border bg-card p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Signal
+          </p>
+          <h3 className="mt-1 text-sm font-semibold">{artefact.fullReport.title}</h3>
+          {(artefact.contextRationale || artefact.fullReport.executiveSummary) && (
+            <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+              {artefact.contextRationale || artefact.fullReport.executiveSummary}
+            </p>
+          )}
+        </div>
+        {deepDives.map((dive, index) => (
+          <div key={index} className="rounded-lg border bg-card p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Recommendation
+            </p>
+            <h4 className="mt-1 text-sm font-semibold">{dive.question}</h4>
+            <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-foreground">
+              {dive.answer}
+            </p>
+          </div>
         ))}
       </div>
     )}
