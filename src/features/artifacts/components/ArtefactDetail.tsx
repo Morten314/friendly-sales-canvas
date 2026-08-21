@@ -142,6 +142,33 @@ export const ArtefactDetail = ({
 
     )}
 
+    {showAnalysis && (
+      <div className="space-y-3">
+        <div className="rounded-lg border bg-card p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Signal
+          </p>
+          <h3 className="mt-1 text-sm font-semibold">{artefact.fullReport.title}</h3>
+          {(artefact.contextRationale || artefact.fullReport.executiveSummary) && (
+            <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+              {artefact.contextRationale || artefact.fullReport.executiveSummary}
+            </p>
+          )}
+        </div>
+        {deepDives.map((dive, index) => (
+          <div key={index} className="rounded-lg border bg-card p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Recommendation
+            </p>
+            <h4 className="mt-1 text-sm font-semibold">{dive.question}</h4>
+            <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-foreground">
+              {dive.answer}
+            </p>
+          </div>
+        ))}
+      </div>
+    )}
+
     {showSequence ? (
       <div className="space-y-3">
         <div className="rounded-lg border bg-card p-4">
