@@ -62,9 +62,8 @@ const RecipientsField = ({ leads }: { leads: SignalLeadMapLead[] }) => {
 
 /**
  * The cohort's outreach plan with real, sendable copy. Templates render
- * immediately (offline, deterministic); "Personalise with AI" rewrites the same
- * touches and caches the result per signal+cohort. Copy is cohort-level by
- * default — the lead picker only resolves merge tokens for preview/sending.
+ * immediately (offline, deterministic) and stay editable inline. AI
+ * personalisation and agentic editing live in Artefacts, not here.
  */
 const CohortOutreachPreview = ({
   signalId,
