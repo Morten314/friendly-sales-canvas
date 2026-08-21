@@ -481,7 +481,11 @@ export function getDemoMatchedLeads(signalId: string): SignalLeadMapLead[] {
   const count = 24 + (seed % 8); // 24–31 leads
   return Array.from({ length: count }, (_, i) => {
     const base = DEMO_POOL[(seed + i) % DEMO_POOL.length];
-    return { ...base, lead_id: `demo-${signalId}-${i}` };
+    return {
+      ...base,
+      lead_id: `demo-${signalId}-${i}`,
+      source: base.source || ((seed + i) % 3 === 0 ? "Apollo" : "CSV/XLSX"),
+    };
   });
 }
 
