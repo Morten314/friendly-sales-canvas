@@ -175,14 +175,6 @@ const CohortOutreachPreview = ({
             </option>
           ))}
         </select>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 px-2 text-[11px]"
-          onClick={handleSaveCohortAsArtefact}
-        >
-          Save as Artefact
-        </Button>
       </div>
 
       {/* Touches with copy */}
