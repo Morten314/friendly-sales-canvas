@@ -45,13 +45,16 @@ export const ArtefactDetail = ({
   onSheetChange,
 }: ArtefactDetailProps) => {
   const apolloConnected = useApolloConnected();
-  const [tab, setTab] = useState<"sheet" | "sequence">(
-    artefact.sheet ? "sheet" : "sequence",
+  const deepDives = artefact.deepDives ?? [];
+  const [tab, setTab] = useState<"sheet" | "sequence" | "analysis">(
+    artefact.sheet ? "sheet" : artefact.sequence ? "sequence" : "analysis",
   );
   const [editing, setEditing] = useState(false);
   const showSheet = Boolean(artefact.sheet) && tab === "sheet";
   const showSequence = Boolean(artefact.sequence) && tab === "sequence";
+  const showAnalysis = deepDives.length > 0 && tab === "analysis";
   const sequence = artefact.sequence ?? [];
+
 
   const commitSequence = (next: NonNullable<ArtefactItem["sequence"]>) =>
     onSequenceChange?.(artefact.id, next);
