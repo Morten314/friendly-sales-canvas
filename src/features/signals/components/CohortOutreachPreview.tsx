@@ -1,11 +1,9 @@
-import { Bot, Loader2, RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import type { SignalLeadMapLead } from "../contracts";
 import type { OutreachPlanStep } from "../lib/aggregateOutreachPlan";
 import {
   buildCohortCopy,
-  clearCohortCopy,
   loadCohortCopy,
   resolveTokens,
   saveCohortCopy,
@@ -14,12 +12,9 @@ import {
 import { buildCohortOutreachArtefact } from "../lib/signalBriefing";
 import type { SignalCard } from "../types";
 
-import OutreachCopyChat from "./OutreachCopyChat";
-
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { getStoredArtefact, saveArtefact } from "@/features/artifacts";
-import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   signalId: string;
@@ -85,22 +80,12 @@ const CohortOutreachPreview = ({
     [step, headline, snippet],
   );
   const [copy, setCopy] = useState<TouchCopy[]>(templates);
-  const [personalised, setPersonalised] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [leadId, setLeadId] = useState<string>("");
   const [openTouch, setOpenTouch] = useState<number | null>(0);
-  const [chatIdx, setChatIdx] = useState<number | null>(null);
 
   useEffect(() => {
     const stored = loadCohortCopy(signalId, step.label);
-    if (stored?.length) {
-      setCopy(stored);
-      setPersonalised(true);
-    } else {
-      setCopy(templates);
-      setPersonalised(false);
-    }
+    setCopy(stored?.length ? stored : templates);
   }, [signalId, step.label, templates]);
 
   const selectedLead: SignalLeadMapLead | null =
@@ -113,48 +98,6 @@ const CohortOutreachPreview = ({
 
   const handleEdit = (idx: number, patch: Partial<TouchCopy>) => {
     persist(copy.map((t, i) => (i === idx ? { ...t, ...patch } : t)));
-  };
-
-  const handlePersonalise = async () => {
-    setGenerating(true);
-    setError(null);
-    try {
-      const { data, error: fnError } = await supabase.functions.invoke("generate-outreach-copy", {
-        body: {
-          headline,
-          snippet,
-          cohortLabel: step.label,
-          relevance: step.relevance,
-          touches: step.touches,
-          leads: step.leads.slice(0, 8).map((l) => ({
-            name: l.name,
-            title: l.title,
-            company: l.company,
-            why: l.why,
-          })),
-        },
-      });
-      if (fnError) throw fnError;
-      const returned = (data?.touches ?? []) as { subject?: string; body?: string }[];
-      if (!returned.length) throw new Error("empty");
-      const next = templates.map((t, i) => ({
-        ...t,
-        subject: returned[i]?.subject ?? t.subject,
-        body: returned[i]?.body?.trim() || t.body,
-      }));
-      persist(next);
-      setPersonalised(true);
-    } catch {
-      setError("Could not personalise right now — the template copy is still usable.");
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  const handleReset = () => {
-    clearCohortCopy(signalId, step.label);
-    setCopy(templates);
-    setPersonalised(false);
   };
 
   const handleSaveCohortAsArtefact = () => {
@@ -237,33 +180,11 @@ const CohortOutreachPreview = ({
           variant="outline"
           size="sm"
           className="h-7 px-2 text-[11px]"
-          onClick={handlePersonalise}
-          disabled={generating}
-        >
-          {generating && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
-          {personalised ? "Regenerate" : "Personalise"}
-        </Button>
-        {personalised && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-[11px] text-gray-500"
-            onClick={handleReset}
-          >
-            <RotateCcw className="mr-1 h-3 w-3" />
-            Reset
-          </Button>
-        )}
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 px-2 text-[11px]"
           onClick={handleSaveCohortAsArtefact}
         >
           Save as Artefact
         </Button>
       </div>
-      {error && <p className="mb-2 text-[11px] text-red-600">{error}</p>}
 
       {/* Touches with copy */}
       <ol className="space-y-1.5">
@@ -308,17 +229,6 @@ const CohortOutreachPreview = ({
                     rows={Math.min(12, Math.max(4, body.split("\n").length + 1))}
                     className="w-full resize-y whitespace-pre-wrap rounded border border-gray-200 px-2 py-1 text-[11px] leading-relaxed text-gray-700"
                   />
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 px-2 text-[11px] border-blue-300 text-blue-700 hover:bg-blue-50"
-                      onClick={() => setChatIdx(idx)}
-                    >
-                      <Bot className="mr-1 h-3 w-3" />
-                      Edit
-                    </Button>
-                  </div>
                 </div>
               )}
             </li>
@@ -337,17 +247,6 @@ const CohortOutreachPreview = ({
         </Button>
       </div>
 
-      {chatIdx !== null && copy[chatIdx] && (
-        <OutreachCopyChat
-          open
-          onOpenChange={(o) => !o && setChatIdx(null)}
-          headline={headline}
-          snippet={snippet}
-          step={step}
-          touch={copy[chatIdx]}
-          onCommit={(patch) => handleEdit(chatIdx, patch)}
-        />
-      )}
     </div>
   );
 };
