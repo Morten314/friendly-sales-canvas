@@ -162,9 +162,11 @@ export const ArtefactDetail = ({
               Recommendation
             </p>
             <h4 className="mt-1 text-sm font-semibold">{dive.question}</h4>
-            <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-foreground">
-              {dive.answer}
-            </p>
+            {/* Same renderer as the Signals "Go deeper" panel so the saved
+                answer reads identically to what the user approved. */}
+            <div className="mt-2">
+              <RecommendationAnswerView answer={dive.answer} />
+            </div>
           </div>
         ))}
       </div>
