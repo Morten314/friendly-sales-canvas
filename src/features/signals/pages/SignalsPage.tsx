@@ -759,32 +759,12 @@ const SignalsPage = () => {
     setRecommendationArtefactError(null); // clear any prior failure on retry
     setRecommendationArtefactGenerating(key);
     try {
-      const leads = resolveLeads(signal.id);
-      const generated = await generateRecommendationArtefact(currentUser.uid, orgId, {
-        signal_headline: signal.headline,
-        signal_description: signal.description,
-        signal_sources: (signal.source ?? []).map((s) => s.citation || s.url).filter(Boolean),
-        matched_leads: leads.map((l) => ({
-          company: l.company,
-          relevance: l.relevance,
-          why: l.why,
-        })),
-        recommendation: item.nba,
-        recommendation_answer: answer,
-      });
-      const artefact = buildRecommendationPlaybookArtefact(
-        signal,
-        item,
-        index,
-        answer,
-        leads,
-        generated,
-      );
-      generateAndDownloadPDF(artefact);
-      saveArtefact(artefact);
+      // Filed into the signal's own case file so it appears under the
+      // "Deeper analysis" chip next to Lead sheet / Sequence.
+      saveArtefact(buildDeepDiveArtefact(signal, item.nba, answer));
       toast({
-        title: "Saved to Artifacts",
-        description: "Your GTM playbook was downloaded and added to the Artifacts library.",
+        title: "Saved to Artefacts",
+        description: `Added under "Deeper analysis" in this signal's artefact.`,
         action: (
           <Button variant="outline" size="sm" onClick={() => navigate("/artifacts")}>
             View →
@@ -792,7 +772,7 @@ const SignalsPage = () => {
         ),
       });
     } catch (error) {
-      console.error("Error generating recommendation artefact:", error);
+      console.error("Error saving recommendation deep dive:", error);
       setRecommendationArtefactError(key); // inline-below-row error (spec §6.3/§10/AC#6), in addition to the toast
       toast({
         title: "Error",
@@ -803,6 +783,7 @@ const SignalsPage = () => {
       setRecommendationArtefactGenerating(null);
     }
   };
+
 
   const handleRejectSignal = (signalId: string) => {
     if (!currentUser?.uid || !orgId) return;
