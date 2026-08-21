@@ -262,77 +262,140 @@ export const ArtefactDetail = ({
           </Button>
         </div>
 
-        <ol className="space-y-2">
-          {sequence.map((touch, index) => (
-            <li key={index} className="rounded-lg border bg-card p-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <label className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                  Day
-                </label>
-                <input
-                  type="number"
-                  value={touch.day}
-                  onChange={(e) => patchTouch(index, { day: Number(e.target.value) || 0 })}
-                  className="h-7 w-14 rounded border bg-background px-1.5 text-xs"
-                />
-                <input
-                  value={touch.channel}
-                  onChange={(e) => patchTouch(index, { channel: e.target.value })}
-                  placeholder="Channel"
-                  className="h-7 w-28 rounded border bg-background px-1.5 text-xs"
-                />
-                <input
-                  value={touch.action}
-                  onChange={(e) => patchTouch(index, { action: e.target.value })}
-                  placeholder="Action"
-                  className="h-7 min-w-0 flex-1 rounded border bg-background px-1.5 text-xs"
-                />
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0"
-                    aria-label="Move step up"
-                    onClick={() => moveTouch(index, -1)}
-                  >
-                    <ArrowUp className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0"
-                    aria-label="Move step down"
-                    onClick={() => moveTouch(index, 1)}
-                  >
-                    <ArrowDown className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0 text-destructive"
-                    aria-label="Remove step"
-                    onClick={() => removeTouch(index)}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-              <input
-                value={touch.subject ?? ""}
-                onChange={(e) => patchTouch(index, { subject: e.target.value })}
-                placeholder="Subject"
-                className="mt-2 w-full rounded border bg-background px-2 py-1 text-xs font-medium"
-              />
-              <textarea
-                value={touch.body}
-                onChange={(e) => patchTouch(index, { body: e.target.value })}
-                rows={Math.min(14, Math.max(4, touch.body.split("\n").length + 1))}
-                placeholder="Message"
-                className="mt-2 w-full resize-y whitespace-pre-wrap rounded border bg-background px-2 py-1 text-xs leading-relaxed"
-              />
-            </li>
-          ))}
-        </ol>
+        {copyError && <p className="text-xs text-destructive">{copyError}</p>}
+
+        {cohorts.map((cohort) => (
+          <div key={cohort.label} className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-medium">{cohort.label}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                disabled={busyCohort === cohort.label}
+                onClick={() => personaliseCohort(cohort.label, cohort.indices)}
+              >
+                {busyCohort === cohort.label && (
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                )}
+                Personalise
+              </Button>
+            </div>
+
+            <ol className="space-y-2">
+              {cohort.indices.map((index) => {
+                const touch = sequence[index];
+                return (
+                  <li key={index} className="rounded-lg border bg-card p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                        Day
+                      </label>
+                      <input
+                        type="number"
+                        value={touch.day}
+                        onChange={(e) => patchTouch(index, { day: Number(e.target.value) || 0 })}
+                        className="h-7 w-14 rounded border bg-background px-1.5 text-xs"
+                      />
+                      <input
+                        value={touch.channel}
+                        onChange={(e) => patchTouch(index, { channel: e.target.value })}
+                        placeholder="Channel"
+                        className="h-7 w-28 rounded border bg-background px-1.5 text-xs"
+                      />
+                      <input
+                        value={touch.action}
+                        onChange={(e) => patchTouch(index, { action: e.target.value })}
+                        placeholder="Action"
+                        className="h-7 min-w-0 flex-1 rounded border bg-background px-1.5 text-xs"
+                      />
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => setChatIndex(index)}
+                        >
+                          <Bot className="mr-1.5 h-3.5 w-3.5" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          aria-label="Move step up"
+                          onClick={() => moveTouch(index, -1)}
+                        >
+                          <ArrowUp className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          aria-label="Move step down"
+                          onClick={() => moveTouch(index, 1)}
+                        >
+                          <ArrowDown className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-destructive"
+                          aria-label="Remove step"
+                          onClick={() => removeTouch(index)}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                    <input
+                      value={touch.subject ?? ""}
+                      onChange={(e) => patchTouch(index, { subject: e.target.value })}
+                      placeholder="Subject"
+                      className="mt-2 w-full rounded border bg-background px-2 py-1 text-xs font-medium"
+                    />
+                    <textarea
+                      value={touch.body}
+                      onChange={(e) => patchTouch(index, { body: e.target.value })}
+                      rows={Math.min(14, Math.max(4, touch.body.split("\n").length + 1))}
+                      placeholder="Message"
+                      className="mt-2 w-full resize-y whitespace-pre-wrap rounded border bg-background px-2 py-1 text-xs leading-relaxed"
+                    />
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        ))}
+
+        {chatIndex !== null && sequence[chatIndex] && (
+          <OutreachCopyChat
+            open
+            onOpenChange={(open) => !open && setChatIndex(null)}
+            headline={artefact.fullReport.title}
+            snippet={artefact.contextRationale ?? artefact.fullReport.executiveSummary ?? ""}
+            step={{
+              label:
+                cohorts.find((c) => c.indices.includes(chatIndex))?.label ?? "Outreach sequence",
+              timing: "",
+              move: "",
+              relevance: relevanceOf(
+                cohorts.find((c) => c.indices.includes(chatIndex))?.label ?? "",
+              ),
+              leads: [],
+              touches: [],
+            }}
+            touch={{
+              day: sequence[chatIndex].day,
+              channel: sequence[chatIndex].channel as "email" | "linkedin" | "call",
+              action: stepLabel(chatIndex),
+              subject: sequence[chatIndex].subject ?? "",
+              body: sequence[chatIndex].body,
+            }}
+            onCommit={(patch) => patchTouch(chatIndex, patch)}
+          />
+        )}
+
       </div>
     ) : showSheet && artefact.sheet ? (
       <div className="space-y-3">
