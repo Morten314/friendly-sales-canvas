@@ -6,13 +6,12 @@
 // persisted by `lib/leadEdits.ts`; the cohort plan and exports read the same
 // edited leads, so a correction here changes everything downstream.
 
-import { ChevronDown, RotateCcw, X } from "lucide-react";
+import { Check, ChevronDown, RotateCcw, X } from "lucide-react";
 import { Fragment, useMemo, useRef, useState } from "react";
 
 import type { SignalLeadMapLead } from "../contracts";
 import { DISMISS_REASONS, isLeadEdited } from "../lib/leadEdits";
 import type { LeadEdit, SignalLeadEdits } from "../lib/leadEdits";
-import { SIGNAL_PREVIEW_COLUMNS } from "../lib/matchedLeadsCsv";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +21,16 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+/** Inline triage columns (Source is display-only, not part of the saved sheet). */
+const TABLE_COLUMNS = ["Name", "Title", "Company", "Source", "Relevance", "Why"] as const;
+
+const SOURCE_OPTIONS = ["CSV/XLSX", "Apollo"] as const;
+
+const sourceClass = (source: string): string =>
+  source.toLowerCase() === "apollo"
+    ? "bg-violet-50 text-violet-700 border-violet-200"
+    : "bg-sky-50 text-sky-700 border-sky-200";
+
 const RELEVANCE_OPTIONS = ["high", "medium", "low"] as const;
 
 const RELEVANCE_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
@@ -126,7 +135,7 @@ export const MatchedLeadsTable = ({
         <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-gray-500">
           <span>
             {selected.size > 0
-              ? `${selected.size} row${selected.size === 1 ? "" : "s"} open for editing — change any field or the relevance.`
+              ? `${selected.size} row${selected.size === 1 ? "" : "s"} open for editing — change any field, then tick to save.`
               : "Click a lead name to correct its details or relevance; click a row for the deep dive."}
           </span>
           {dismissedLeads.length > 0 && (
@@ -151,18 +160,19 @@ export const MatchedLeadsTable = ({
           )}
           <table className="w-full min-w-[640px] table-fixed border-collapse text-[11px]">
             <colgroup>
+              <col className="w-[15%]" />
               <col className="w-[16%]" />
-              <col className="w-[18%]" />
-              <col className="w-[16%]" />
-              <col className="w-[11%]" />
-              <col className="w-[35%]" />
-              {editable && <col className="w-[4%]" />}
+              <col className="w-[14%]" />
+              <col className="w-[10%]" />
+              <col className="w-[10%]" />
+              <col className="w-[28%]" />
+              {editable && <col className="w-[7%]" />}
             </colgroup>
             <thead
               className={`sticky z-20 bg-gray-100 text-gray-700 ${toolbar ? "top-[33px]" : "top-0"}`}
             >
               <tr>
-                {SIGNAL_PREVIEW_COLUMNS.map((col) => (
+                {TABLE_COLUMNS.map((col) => (
                   <th
                     key={col}
                     className="whitespace-nowrap border-b border-gray-200 px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide"
@@ -179,6 +189,7 @@ export const MatchedLeadsTable = ({
                 const isExpanded = expanded.has(lead.lead_id);
                 const wasEdited = isLeadEdited(edits[lead.lead_id]);
                 const why = lead.why ?? "";
+                const source = lead.source ?? "";
                 return (
                   <Fragment key={lead.lead_id}>
                   <tr
@@ -195,7 +206,6 @@ export const MatchedLeadsTable = ({
                           aria-label="Lead name"
                           autoFocus
                           value={lead.name ?? ""}
-                          onBlur={() => toggleSelected(lead.lead_id)}
                           onChange={(e) => onEditLead?.(lead.lead_id, { name: e.target.value })}
                         />
                       ) : (
@@ -271,6 +281,32 @@ export const MatchedLeadsTable = ({
                       )}
                     </td>
 
+                    {/* Source — where the lead came from (upload or Apollo). */}
+                    <td className="px-3 py-2" onClick={(e) => isSelected && e.stopPropagation()}>
+                      {isSelected ? (
+                        <select
+                          className={cellInputClass}
+                          aria-label="Lead source"
+                          value={source || "CSV/XLSX"}
+                          onChange={(e) => onEditLead?.(lead.lead_id, { source: e.target.value })}
+                        >
+                          {SOURCE_OPTIONS.map((opt) => (
+                            <option key={opt} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span
+                          className={`inline-block rounded border px-1.5 py-0.5 text-[10px] font-medium ${sourceClass(
+                            source,
+                          )}`}
+                        >
+                          {source || "CSV/XLSX"}
+                        </span>
+                      )}
+                    </td>
+
                     {/* Relevance — the correction that re-buckets the cohorts. */}
                     <td className="px-3 py-2" onClick={(e) => isSelected && e.stopPropagation()}>
                       {isSelected ? (
@@ -327,6 +363,17 @@ export const MatchedLeadsTable = ({
                     {/* Dismiss — "not a fit", with the reason kept for future matching. */}
                     {editable && (
                       <td className="px-1 py-2 text-right" onClick={(e) => e.stopPropagation()}>
+                        {isSelected ? (
+                          <button
+                            type="button"
+                            aria-label={`Save changes to ${lead.name || "lead"}`}
+                            title="Save changes"
+                            onClick={() => toggleSelected(lead.lead_id)}
+                            className="rounded p-1 text-green-600 hover:bg-green-50 hover:text-green-700"
+                          >
+                            <Check className="h-4 w-4" />
+                          </button>
+                        ) : (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <button
@@ -352,12 +399,13 @@ export const MatchedLeadsTable = ({
                             ))}
                           </DropdownMenuContent>
                         </DropdownMenu>
+                        )}
                       </td>
                     )}
                   </tr>
                   {isExpanded && (
                     <tr className="border-t border-gray-100 bg-blue-50/40">
-                      <td colSpan={editable ? 6 : 5} className="px-3 py-2.5">
+                      <td colSpan={editable ? 7 : 6} className="px-3 py-2.5">
                         <div className="rounded-md border border-blue-100 bg-white p-2.5">
                           <p className="text-[11px] font-semibold text-gray-900">
                             {lead.name}

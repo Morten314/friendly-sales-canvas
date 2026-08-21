@@ -26,6 +26,8 @@ export const SignalLeadMapLeadSchema = z.object({
   email_status: z.string().optional().default(""),
   linkedin: z.string().optional().default(""),
   phone: z.string().optional().default(""),
+  // Where the lead came from: "Apollo" or "CSV/XLSX" (upload). Optional.
+  source: z.string().optional().default(""),
 });
 
 export const SignalLeadMapEntrySchema = z.object({
