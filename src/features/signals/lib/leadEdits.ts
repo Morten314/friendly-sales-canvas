@@ -8,12 +8,13 @@
 
 import type { SignalLeadMapLead } from "../contracts";
 
-export type EditableLeadField = "name" | "title" | "company" | "relevance" | "why";
+export type EditableLeadField = "name" | "title" | "company" | "source" | "relevance" | "why";
 
 export interface LeadEdit {
   name?: string;
   title?: string;
   company?: string;
+  source?: string;
   relevance?: SignalLeadMapLead["relevance"];
   why?: string;
   /** Set when the user marks the lead "not a fit"; drops it from the table. */
@@ -121,7 +122,7 @@ export function restoreAllLeads(signalId: string) {
 /** True when the user changed at least one visible field on this lead. */
 export function isLeadEdited(edit: LeadEdit | undefined): boolean {
   if (!edit) return false;
-  return (["name", "title", "company", "relevance", "why"] as const).some(
+  return (["name", "title", "company", "source", "relevance", "why"] as const).some(
     (f) => edit[f] !== undefined && edit[f] !== "",
   );
 }
@@ -146,6 +147,7 @@ export function applyLeadEdits(signalId: string, leads: SignalLeadMapLead[]): Ap
           name: edit.name ?? lead.name,
           title: edit.title ?? lead.title,
           company: edit.company ?? lead.company,
+          source: edit.source ?? lead.source,
           relevance: edit.relevance ?? lead.relevance,
           why: edit.why ?? lead.why,
         }
