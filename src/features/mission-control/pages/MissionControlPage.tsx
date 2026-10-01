@@ -11,7 +11,11 @@ import ICPManager from "../components/icp/ICPManager";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { Progress } from "@/components/ui/progress";
+import { CompletenessChecklist } from "../components/CompletenessChecklist";
+import { useDataSources } from "../hooks/useDataSources";
+import { useICPs } from "../hooks/useICPs";
+import { computeCompleteness, type CompletenessSection } from "../lib/completeness";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Layout } from "@/features/shell";
 import { qk } from "@/shared/api/queryKeys";
@@ -247,23 +251,34 @@ const MissionControlPage = () => {
     commitMissionControlCompanyProfile(userId, orgIdToUse, data as Record<string, unknown>);
   }, [companyProfileData, currentUser?.uid, orgIdToUse]);
 
-  // Calculate overall completeness based on completed sections
-  const calculateOverallCompleteness = () => {
-    // Check both local dataSources state and the hasDataSources flag
-    const hasLocalDataSources = dataSources.length > 0;
-    const hasAnyDataSources = hasLocalDataSources || hasDataSources;
+  // Field-weighted completeness (weights live in lib/completeness.ts).
+  const { data: icpRows } = useICPs(currentUser?.uid ?? "", orgIdToUse);
+  const { data: docSources } = useDataSources(orgIdToUse, !!currentUser?.uid);
+  const companyFields = companyProfileData
+    ? mapApiDataToCompanyProfileFields(
+        companyProfileData as UntypedBackendApiResponse,
+        currentUser?.uid ?? "",
+      )
+    : null;
+  const sourceCount = Math.max(
+    dataSources.length,
+    Array.isArray(docSources) ? docSources.length : 0,
+    hasDataSources ? 1 : 0,
+  );
+  const completeness = computeCompleteness({
+    company: companyFields,
+    icpRows: (Array.isArray(icpRows) ? icpRows : []) as Record<string, unknown>[],
+    sourceCount,
+  });
+  const overallCompleteness = completeness.score;
 
-    if (hasAnyDataSources && isCustomerProfileSaved && isCompanyProfileSaved) {
-      return 100;
-    } else if (isCustomerProfileSaved && isCompanyProfileSaved) {
-      return 55;
-    } else if (isCompanyProfileSaved) {
-      return 30;
-    }
-    return 0;
+  const goToSection = (section: CompletenessSection) => {
+    if (section === "customer-profile" && isCustomerProfileLocked) return;
+    if (section === "sources" && isDataSourcesLocked) return;
+    setActiveTab(section);
+    if (section === "customer-profile") void refreshCustomerProfileIcps();
+    if (section === "sources") void refreshDataSources();
   };
-
-  const overallCompleteness = calculateOverallCompleteness();
 
   // Listen for customer profile save events from ICPManager and Profiler
   useEffect(() => {
@@ -376,11 +391,11 @@ const MissionControlPage = () => {
       <div className="space-y-6">
         {/* Profile Completeness - Common to all tabs */}
         <div className="flex items-center justify-end gap-2">
-          <span className="text-xs text-muted-foreground">Completeness:</span>
-          <Progress value={overallCompleteness} className="w-32 h-1.5" />
-          <span className="text-xs font-medium min-w-[2rem] text-right">
-            {overallCompleteness}%
-          </span>
+          <CompletenessChecklist
+            score={overallCompleteness}
+            items={completeness.items}
+            onGoTo={goToSection}
+          />
         </div>
 
         {/* Tabs */}
